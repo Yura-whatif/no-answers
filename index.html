@@ -68,7 +68,7 @@ img{max-width:100%}
 html,body{height:100%}
 body{background-color:var(--ground);color:var(--ink);font-family:var(--gothic);transition:background-color .8s ease,color .8s ease;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
-.wrap{position:relative;z-index:1;max-width:720px;margin:0 auto;padding-inline:16px;padding-block:24px 56px;display:flex;flex-direction:column;gap:22px}
+.wrap{position:relative;z-index:1;max-width:720px;margin:0 auto;padding-inline:16px;padding-block:14px 16px;display:flex;flex-direction:column;gap:14px}
 
 /* 全面の空気：キービジュアルを大きくぼかして敷く（白黒でクロスフェード） */
 .aura{position:fixed;inset:-60px;z-index:0;pointer-events:none}
@@ -560,7 +560,7 @@ header > .hdr-r{grid-column:3;grid-row:1}
 #sndbtn[aria-pressed="false"] .off{display:inline}
 #sndbtn[aria-pressed="false"]{color:var(--mute)}
 .libbtn .dot{position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--ribbon);box-shadow:0 0 0 2px var(--paper)}
-.view{display:flex;flex-direction:column;gap:22px}
+.view{display:flex;flex-direction:column;gap:14px}
 /* 並び順：言葉が書かれていく紙片を上、違和感を集める絵を下に */
 #viewMain > *{order:4}
 #viewMain > .slip{order:1}
@@ -602,12 +602,15 @@ header > .hdr-r{grid-column:3;grid-row:1}
 .mode button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 .mode button:focus-visible,.btn:focus-visible,.slip:focus-visible,.shelf a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
-.slip{position:relative;background-color:var(--paper);border:1px solid var(--line);padding:22px 24px 18px;display:flex;flex-direction:column;gap:14px;cursor:pointer;min-height:250px}
+.slip{position:relative;background-color:var(--paper);border:1px solid var(--line);padding:12px 20px 12px;display:flex;flex-direction:column;justify-content:center;gap:8px;cursor:pointer;min-height:0}
+/* meta行（残りN／白ユラ｜3行思考）と「この断片を渡す」は上段から外し、紙片を縦に短く */
+.meta{display:none !important}
+.sharebtn{display:none !important}
 .slip::before{content:"";position:absolute;inset:8px;border:1px solid var(--line);pointer-events:none;opacity:.6}
 .meta{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:.72rem;color:var(--mute);letter-spacing:.12em}
-.title{font-family:var(--gothic);font-weight:500;font-size:.84rem;letter-spacing:.1em;line-height:1.7;text-wrap:balance;color:var(--mute);padding-bottom:14px;border-bottom:1px dotted var(--line);display:flex;align-items:baseline;gap:10px}
+.title{font-family:var(--gothic);font-weight:500;font-size:.82rem;letter-spacing:.1em;line-height:1.55;text-wrap:balance;color:var(--mute);padding-bottom:8px;border-bottom:1px dotted var(--line);display:flex;align-items:baseline;gap:10px}
 .title::before{content:"";flex:none;width:18px;height:1px;background:var(--mute);transform:translateY(-.3em)}
-.lines{display:flex;flex-direction:column;gap:10px;font-family:var(--mincho);font-size:1.12rem;line-height:1.8;letter-spacing:.03em}
+.lines{display:flex;flex-direction:column;gap:7px;font-family:var(--mincho);font-size:1.06rem;line-height:1.65;letter-spacing:.03em}
 .lines p{margin:0}
 .ln{position:relative}
 .lines{position:relative}
@@ -917,6 +920,8 @@ header > .hdr-r{grid-column:3;grid-row:1}
   box-shadow:inset 3px 0 0 var(--ribbon),0 10px 22px -10px rgba(0,0,0,.45),0 1px 0 rgba(0,0,0,.06);
   clip-path:inset(0 100% 0 0);transform:translateX(-14px);opacity:0;transition:clip-path .7s cubic-bezier(.3,.7,.2,1),transform .7s cubic-bezier(.3,.7,.2,1),opacity .4s ease}
 .slip > .dcut{position:absolute;z-index:6}
+/* 辞典の言葉のメッセージは、作品ではなく採集エリア（絵）の下段に重ねて出す */
+.hero > .dcut{left:10px;right:10px;bottom:10px;z-index:7;box-shadow:inset 3px 0 0 var(--ribbon),0 10px 24px -8px rgba(0,0,0,.55),0 1px 0 rgba(0,0,0,.08)}
 .dcut.in{clip-path:inset(0 0 0 0);transform:none;opacity:1}
 .dcut.out{clip-path:inset(0 0 0 100%);transform:translateX(14px);opacity:0;transition-duration:.6s,.6s,.5s}
 .dcut .dc-k{grid-column:1/-1;font-size:.6rem;letter-spacing:.22em;color:color-mix(in srgb,var(--page-ink) 55%,transparent)}
@@ -931,7 +936,7 @@ header > .hdr-r{grid-column:3;grid-row:1}
 .install-guide{margin:0;max-width:420px;padding:10px 14px;border-radius:8px;background:color-mix(in srgb,var(--ground) 70%,transparent);font-size:.78rem;line-height:1.9;color:var(--ink);letter-spacing:.04em}
 .install-guide b{font-weight:600}
 
-@media (max-width:420px){.slip{padding:26px 20px 20px}.lines{font-size:1.04rem}}
+@media (max-width:420px){.slip{padding:12px 18px 12px}.lines{font-size:1.0rem}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.slip.open .third .ch{opacity:1}.slip.open #l3{-webkit-mask-image:none;mask-image:none}}
 </style>
 <!-- アクセス解析（GoatCounter：Cookieを使わない）。公開先でだけ動き、#test で開いた端末は以後数えない（#count で再び数える） -->
@@ -3922,7 +3927,7 @@ function runDictCut(){
   el.addEventListener("click", e => { e.stopPropagation(); finish(true);
     showLib(true); setTab("dict");
     setTimeout(()=>{ const it = document.querySelector(`.dict-item[data-share-word="${CSS.escape(word)}"]`); if(it) it.scrollIntoView({block:"center", behavior:"smooth"}); }, 120); });
-  slip.append(el);
+  (document.querySelector(".hero") || slip).append(el);
   requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add("in")));
   let done = false;
   function finish(now){
@@ -4045,6 +4050,7 @@ function reveal(){
     inkId = d.id; $("libdot").hidden = false;
     open = true;
     render(2);
+    armAutoStore();   // 最後の一行を開いたあと、少し読む間を置いて自動で「思考の断片にしまう」
   });
 }
 function chargeOrbs(cost, done){
@@ -4076,6 +4082,7 @@ function chargeOrbs(cost, done){
 let storing = false;
 function storeAway(){
   if(flood || shattering) return;
+  clearTimeout(autoT);
   storing = true;
   const r = slip.getBoundingClientRect(), b = $("libbtn").getBoundingClientRect();
   const dx = b.left + b.width/2 - (r.left + r.width/2), dy = b.top + b.height/2 - (r.top + r.height/2);
@@ -4085,6 +4092,7 @@ function storeAway(){
     render();
     pageIn();
     storing = false;
+    sprout();
     setTimeout(yuraWord, 1800);
     tut.on("stored");
   };
@@ -4278,9 +4286,61 @@ function lockSlipHeight(){
   }catch(_){}
 }
 let relockT = 0;
-function relockSlip(){ clearTimeout(relockT); relockT = setTimeout(()=>requestAnimationFrame(lockSlipHeight), 120); }
+function relockSlip(){ clearTimeout(relockT); relockT = setTimeout(()=>requestAnimationFrame(()=>{ lockSlipHeight(); fitLayout(); }), 120); }
 addEventListener("resize", relockSlip);
-if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>requestAnimationFrame(lockSlipHeight));
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>requestAnimationFrame(()=>{ lockSlipHeight(); fitLayout(); }));
+
+// ---------- 採集エリア（絵）を、縦スクロールが出ない範囲でできるだけ大きく ----------
+function fitLayout(){
+  try{
+    const hero = document.querySelector(".hero"); if(!hero) return;
+    const vl = $("viewLib"); if(vl && !vl.hidden) return;              // 本棚を見ているときは触らない
+    hero.style.aspectRatio = "auto";
+    const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    const top = hero.getBoundingClientRect().top;                      // 絵の上端（＝ヘッダー＋紙片＋ヒントの下）
+    const w = hero.getBoundingClientRect().width;
+    let h = vh - top - 24;                                             // 残りを絵に充てる（スクロールが出ないよう少し余裕を取る）
+    h = Math.max(210, Math.min(h, Math.max(w * 1.15, 320)));
+    hero.style.height = h + "px";
+  }catch(_){}
+}
+
+// ---------- 最後の一行を「ユーザーが」開いたあと、少し間を置いて自動で「思考の断片にしまう」 ----------
+// 最後の一行を開く操作は自動化しない（ユーザーがボタンを押す）。自動なのは、開いたあとの“しまう”だけ。
+const AUTO_MS = 5000;
+let autoT = 0;
+function armAutoStore(){ clearTimeout(autoT); autoT = setTimeout(autoStore, AUTO_MS); }
+function autoStore(){
+  if(!open) return;                                                   // 開いていなければ何もしない（勝手に進めない）
+  if(libOpen || flood || shattering || storing || charging || document.hidden){ clearTimeout(autoT); autoT = setTimeout(autoStore, 500); return; }
+  storeAway();
+}
+// しまったあと：しまうボタンから採集エリアへ光の玉が飛び、着いた場所に「芽生え」が生まれる
+function sprout(){
+  const hero = document.querySelector(".hero"), drift = $("drift"); if(!hero || !drift) return;
+  const src = $("libbtn").getBoundingClientRect(), hb = hero.getBoundingClientRect();
+  const tx = hb.left + hb.width * (0.26 + Math.random() * 0.48), ty = hb.top + hb.height * (0.30 + Math.random() * 0.40);
+  const sx = src.left + src.width / 2, sy = src.top + src.height / 2;
+  const grow = () => {
+    if(shattering || libOpen || document.hidden) return;
+    forceMulti = true; const w = spawnWord({force:true}); forceMulti = false;
+    if(w){ const fr = drift.getBoundingClientRect();
+      w.style.setProperty("--x", Math.max(2, Math.min(90, (tx - fr.left) / fr.width * 100)).toFixed(1) + "%");
+      w.style.setProperty("--y", Math.max(6, Math.min(80, (ty - fr.top) / fr.height * 100)).toFixed(1) + "%");
+    }
+  };
+  const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(reduce || !document.body.animate){ grow(); return; }
+  const o = document.createElement("span"); o.className = "orb glow-seed"; o.style.left = sx + "px"; o.style.top = sy + "px"; document.body.append(o);
+  sfx.fly(.7);
+  o.animate([
+    {transform:"translate(0,0) scale(.4)", opacity:0},
+    {transform:`translate(${(tx-sx)*.5}px,${(ty-sy)*.5 - 30}px) scale(1.35)`, opacity:1, offset:.5},
+    {transform:`translate(${tx-sx}px,${ty-sy}px) scale(.8)`, opacity:.9}
+  ], {duration:720, easing:"cubic-bezier(.4,0,.5,1)", fill:"forwards"}).onfinish = () => { o.remove(); sfx.arrive(); grow(); };
+}
+
+
 
 function boot(){
   // まずはページに同梱した作品で、すぐに遊べる状態にする
@@ -4295,6 +4355,7 @@ function boot(){
   render();
   updateIkan(false);
   lockSlipHeight();
+  fitLayout();
   setTimeout(spawnLoop, 1300);
   booted = true;
   if(offlineGain) setTimeout(()=>receiveAway(offlineGain), 900);
@@ -4333,7 +4394,7 @@ const sfx = (()=>{
   // 本棚のBGM（夜の和音・弦）の部品
   // スマホでの音切れ（プチプチ・ジリジリ）を防ぐため、弦の和音は最初に一度だけ裏で録音し、それを途切れなくループ再生する
   let clickBuf = null;
-  let bgm = null, bgmBuf = null, bgmMaking = null; const BGM_VOL = .38;
+  let bgm = null, bgmBuf = null, bgmMaking = null; const BGM_VOL = .6;
   const BGM_PROG = [[53,57,60,64],[52,55,59,62],[50,57,60,64],[48,55,59,64]], BGM_STEP = 8.5, BGM_DUR = 11;
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
   function makeBgm(){
