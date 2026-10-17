@@ -1,0 +1,15 @@
+{
+  "name": "ユラの違和感採集",
+  "short_name": "違和感採集",
+  "description": "違和感を集め、ユラの3行思考を一行ずつ言葉にしていく、静かなブラウザゲーム。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eeebe4",
+  "theme_color": "#eeebe4",
+  "lang": "ja",
+  "icons": [
+    { "src": "img/icon2-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "img/icon2-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
