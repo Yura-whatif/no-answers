@@ -211,9 +211,11 @@ body{background-color:var(--ground);color:var(--ink);font-family:var(--gothic);t
 .void-pts{position:fixed;z-index:60;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;font-family:var(--mincho);
   font-size:.9rem;letter-spacing:.08em;color:#f3e4bf;padding:5px 14px;border-radius:999px;background:rgba(20,16,12,.5);
   border:1px solid color-mix(in srgb,#e6b24e 45%,transparent);box-shadow:0 0 16px color-mix(in srgb,#e6b24e 32%,transparent);text-shadow:0 0 8px rgba(224,180,90,.5)}
-.void-pts b{font-size:1.02rem;color:#ffe7a8;font-variant-numeric:tabular-nums;margin-left:3px}
-.void-pts.hit{animation:vpHit .4s ease}
-@keyframes vpHit{0%,100%{transform:translate(-50%,-50%) scale(1)}42%{transform:translate(-50%,-50%) scale(1.14)}}
+.void-pts b{font-size:1.02rem;color:#ffe7a8;font-variant-numeric:tabular-nums;margin-left:3px;display:inline-block;transform-origin:center 70%}
+.void-pts.gain .vpv{animation:vpPop .55s cubic-bezier(.3,1.6,.5,1)}
+.void-pts.gain{animation:vpFlash .7s ease}
+@keyframes vpPop{0%{transform:scale(1)}35%{transform:scale(1.42);color:#fff3cf}100%{transform:scale(1)}}
+@keyframes vpFlash{0%,100%{box-shadow:0 0 16px color-mix(in srgb,#e6b24e 32%,transparent)}40%{box-shadow:0 0 0 3px color-mix(in srgb,#e6b24e 30%,transparent),0 0 26px color-mix(in srgb,#e6b24e 60%,transparent)}}
 html.glow-sun .hero .word:not(.got):not(.special):not(.crack):not(.vortex),html.glow-moon .hero .word:not(.got):not(.special):not(.crack):not(.vortex){box-shadow:0 0 12px color-mix(in srgb,var(--glowc) 50%,transparent)}
 /* 効果中の光の玉と「+」の数字は、その光の色に */
 html.glow-sun .orb{background:radial-gradient(circle,#fff6dc 0%,rgba(244,180,70,.9) 45%,transparent 72%);box-shadow:0 0 16px 6px rgba(240,170,60,.55)}
@@ -3123,7 +3125,7 @@ function shardKit(hero, px, py){
 // ===== 余韻の時（虚無） =====
 // 画面割れで暗転した真っ黒のまま8秒、違和感文字だけが浮かぶ。タップ＝金粉になって天へ昇り+10（連鎖なし）。
 // この間は辞典・ペン・通常湧きなどの通常演出は止め（shatteringのまま）、文言もメーターも出さない。
-const VOID_MS = 8000;
+const VOID_MS = 12000;
 // 違和感ポイントの表示：一行が消える直前にフェードインし、一行のオーブもタップのオーブもここへ集まる
 function makeVoidPoints(){
   const r = $("ikan").getBoundingClientRect();
@@ -3133,7 +3135,7 @@ function makeVoidPoints(){
     rect(){ return el.getBoundingClientRect(); },
     show(){ el.animate([{opacity:0, transform:"translate(-50%,-50%) scale(.9)"},{opacity:1, transform:"translate(-50%,-50%) scale(1)"}], {duration:420, easing:"ease-out", fill:"forwards"}); },
     update(){ el.querySelector(".vpv").textContent = (vp.base + vp.score).toLocaleString("ja-JP"); },
-    bump(){ el.classList.remove("hit"); void el.offsetWidth; el.classList.add("hit"); },
+    bump(){ el.classList.remove("gain"); void el.offsetWidth; el.classList.add("gain"); },
     // (fromX,fromY) から違和感ポイントへオーブを飛ばし、着いたら加点・+N表示（音は鳴らさない）
     add(g, fromX, fromY, big){
       const t = vp.rect(), o = document.createElement("span"); o.className = "orb" + (big ? " big" : ""); o.style.zIndex = 61;
@@ -3162,14 +3164,17 @@ function enterVoid(abyss, vp, onDone){
     w.classList.add("flare");
     w.animate([{opacity:1, transform:"translate(-50%,-50%) scale(1)"},{opacity:1, transform:"translate(-50%,-56%) scale(1.14)", offset:.22},{opacity:0, transform:"translate(-50%,-122%) scale(1)"}], {duration:520, easing:"ease-out", fill:"forwards"}).onfinish = () => w.remove();
     goldDust(x, y);                       // 消える演出（金粉）はそのまま
-    vp.add(10, x, y);                     // 一文オーブと同じデザインのオーブが、単語→違和感ポイントへ飛ぶ（+Nは着弾時にポイント側で出す）
+    vp.add(5, x, y);                      // 一文オーブと同じデザインのオーブが、単語→違和感ポイントへ飛ぶ（1単語=5点、+Nは着弾時にポイント側で出す）
     const nowt = Date.now(); if(nowt - (enterVoid._snd || 0) > 70){ sfx.sharan(); enterVoid._snd = nowt; }   // なぞり連続時は音を間引く
   };
+  const vpOverlap = (px, py) => { const r = vp.rect(), x = px/100 * innerWidth, y = py/100 * innerHeight, m = 70; return x > r.left - m && x < r.right + m && y > r.top - m && y < r.bottom + m; };
   const spawnOne = () => {
     if(!live || !abyss.isConnected) return;
     const list = WORDS[mode], w = document.createElement("button");
     w.type = "button"; w.className = "void-word"; w.textContent = list[Math.floor(Math.random() * list.length)];
-    w.style.left = (12 + Math.random() * 76) + "%"; w.style.top = (20 + Math.random() * 62) + "%";
+    let px, py, tries = 0;
+    do { px = 12 + Math.random() * 76; py = 18 + Math.random() * 60; tries++; } while(tries < 8 && vpOverlap(px, py));   // 違和感ポイント表記に被らない位置へ
+    w.style.left = px + "%"; w.style.top = py + "%";
     abyss.append(w); words.push(w);
     w.animate([{opacity:0, transform:"translate(-50%,-50%) scale(.82)"},{opacity:1, transform:"translate(-50%,-50%) scale(1)"}], {duration:460, easing:"ease-out", fill:"forwards"});
     const life = 3000 + Math.random() * 1600;
@@ -3187,10 +3192,10 @@ function enterVoid(abyss, vp, onDone){
   const onUp = () => { on = false; };
   abyss.addEventListener("pointerdown", onDown); abyss.addEventListener("pointermove", onMove);
   ["pointerup","pointercancel"].forEach(t => abyss.addEventListener(t, onUp));
-  for(let i=0;i<4;i++) setTimeout(spawnOne, i * 190);   // 最初に数個まいておく
+  for(let i=0;i<4;i++) setTimeout(spawnOne, i * 200);   // 最初に数個まいておく
   const loop = () => { if(!live) return;
-    if(words.filter(w => w.isConnected && !w.dataset.got).length < 7) spawnOne();
-    enterVoid._t = setTimeout(loop, 680 + Math.random() * 460); };
+    if(words.filter(w => w.isConnected && !w.dataset.got).length < 5) spawnOne();   // 同時表示は最大5
+    enterVoid._t = setTimeout(loop, 1000 + Math.random() * 500); };
   loop();
   setTimeout(()=>{
     live = false; clearTimeout(enterVoid._t);
@@ -3312,7 +3317,7 @@ function shatter(src){
       [...ph].forEach(ch => { const s = document.createElement("span"); s.textContent = ch; s.style.animationDelay = (ci++ * 95) + "ms"; b.append(s); }); ml.append(b); });
     // 破片がすべて飛び去って闇だけになってから、1秒の間を置いて一行が現れはじめる
     const FALL_END = Math.max(...anims.map(a => a.effect.getComputedTiming().endTime)), LINE_AT = FALL_END + 1000;
-    setTimeout(()=>{ document.body.append(ml); }, LINE_AT);
+    setTimeout(()=>{ document.body.append(ml); sfx.bgmStart(); }, LINE_AT);   // 虚無に入り、メッセージが出始めたらコレクション画面のBGMを流す
     // 闇から先に浮かび上がる「違和感の数字」「連鎖の枠」（動いているときはペンも）。見た目だけの写しを闇の上に置き、本物と同じ位置・中身に保つ
     const risers = [];
     const rise = () => {
@@ -3352,6 +3357,7 @@ function shatter(src){
           abyss.animate([{opacity:1},{opacity:0}], {duration:FADE, easing:"ease-in-out", fill:"forwards"});
           voidEl.animate([{opacity:1},{opacity:0}], {duration:FADE, easing:"ease", fill:"forwards"});
           shattering = false; document.documentElement.classList.remove("shattering"); nextCrackAt = Date.now() + 720000;
+          sfx.bgmStop();   // 元の世界に戻るのでBGMを止める
           // 集めた違和感を反映。暗転解除時に合計は表示しない（二重加算の誤解を避けるため、違和感ポイントは先に消す）
           const total = vp.score, vr = vp.rect();
           vp.el.remove();
