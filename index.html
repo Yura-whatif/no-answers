@@ -128,6 +128,18 @@ body{background-color:var(--ground);color:var(--ink);font-family:var(--gothic);t
   box-shadow:0 0 0 1px color-mix(in srgb,var(--multi) 18%,transparent),0 0 12px color-mix(in srgb,var(--multi) 35%,transparent);font-weight:600;letter-spacing:.2em;
   animation:drift 9s linear forwards,multiPulse 1.6s ease-in-out infinite}
 @keyframes multiPulse{0%,100%{box-shadow:0 0 0 1px color-mix(in srgb,var(--multi) 18%,transparent),0 0 8px color-mix(in srgb,var(--multi) 25%,transparent)}50%{box-shadow:0 0 0 3px color-mix(in srgb,var(--multi) 22%,transparent),0 0 18px color-mix(in srgb,var(--multi) 50%,transparent)}}
+/* 本棚の特典としてやってきた「芽生え」：金色に強く光り、脈打つ光輪で特典だと主張する */
+.word.multi.boon{font-weight:700;font-size:.96rem;color:color-mix(in srgb,#9a6a12 55%,var(--multi));border:0;
+  background:color-mix(in srgb,#f3c650 22%,color-mix(in srgb,var(--multi) 12%,var(--paper) 70%));
+  box-shadow:0 0 0 2px #e4af3e,0 0 10px color-mix(in srgb,var(--multi) 45%,transparent),0 0 20px 2px color-mix(in srgb,#f3c650 80%,transparent),0 0 36px 6px color-mix(in srgb,#f0c24a 50%,transparent)}
+[data-yura="black"] .word.multi.boon{color:color-mix(in srgb,#ffe39a 70%,var(--multi))}
+.word.multi.boon::after{content:"";position:absolute;inset:-6px;border-radius:999px;pointer-events:none;
+  box-shadow:0 0 0 1px color-mix(in srgb,#f3c650 65%,transparent),0 0 20px 4px color-mix(in srgb,#f3c650 78%,transparent),0 0 40px 10px color-mix(in srgb,#f0c24a 48%,transparent);
+  animation:boonHalo 1.4s ease-in-out infinite}
+@keyframes boonHalo{0%,100%{opacity:.6;transform:scale(.94)}50%{opacity:1;transform:scale(1.2)}}
+.boon-burst{position:fixed;z-index:6;width:58px;height:58px;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);
+  border:2px solid color-mix(in srgb,#f3c650 92%,transparent);box-shadow:0 0 22px color-mix(in srgb,#f0c24a 75%,transparent),inset 0 0 14px color-mix(in srgb,#f3c650 55%,transparent)}
+@media (prefers-reduced-motion:reduce){.word.multi.boon::after{animation:none;opacity:.85}}
 .multi-ring{position:absolute;z-index:2;width:150px;height:150px;border-radius:50%;pointer-events:none;border:1.5px solid color-mix(in srgb,var(--multi) 70%,transparent);box-shadow:0 0 16px color-mix(in srgb,var(--multi) 45%,transparent)}
 :root{--multi:#3e8f6f}
 [data-yura="black"]{--multi:#8fd6b4}
@@ -255,7 +267,7 @@ html.glow-moon .up-fly{color:#bcd0ff;text-shadow:0 0 8px rgba(160,190,255,.85);s
 .word.fast{animation-duration:5.5s}
 .hero.flood .drift::before{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 80px color-mix(in srgb,var(--accent) 50%,transparent);animation:floodGlow 1.6s ease-in-out infinite;will-change:opacity}
 @keyframes floodGlow{0%,100%{opacity:.4}50%{opacity:1}}
-/* 連鎖：間を空けずに集めると倍率が上がる（5連続で×2、10連続で×3） */
+/* 連鎖：間を空けずに集めると倍率が上がる（10連続で×2、20連続で×3） */
 .combo{position:absolute;left:12px;bottom:10px;z-index:3;display:flex;align-items:baseline;gap:6px;padding:4px 11px;border-radius:999px;pointer-events:none;
   font-family:var(--mincho);font-size:.74rem;letter-spacing:.12em;color:var(--ink);background:color-mix(in srgb,var(--paper) 78%,transparent);
   border:1px solid var(--line);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);opacity:0;transform:translateY(4px);transition:opacity .35s ease,transform .35s ease}
@@ -602,7 +614,7 @@ header > .hdr-r{grid-column:3;grid-row:1}
 .mode button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 .mode button:focus-visible,.btn:focus-visible,.slip:focus-visible,.shelf a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
-.slip{position:relative;background-color:var(--paper);border:1px solid var(--line);padding:12px 20px 12px;display:flex;flex-direction:column;justify-content:center;gap:8px;cursor:pointer;min-height:0}
+.slip{position:relative;background-color:var(--paper);border:1px solid var(--line);padding:12px 20px 14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;min-height:0}
 /* meta行（残りN／白ユラ｜3行思考）と「この断片を渡す」は上段から外し、紙片を縦に短く */
 .meta{display:none !important}
 .sharebtn{display:none !important}
@@ -610,7 +622,7 @@ header > .hdr-r{grid-column:3;grid-row:1}
 .meta{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:.72rem;color:var(--mute);letter-spacing:.12em}
 .title{font-family:var(--gothic);font-weight:500;font-size:.82rem;letter-spacing:.1em;line-height:1.55;text-wrap:balance;color:var(--mute);padding-bottom:8px;border-bottom:1px dotted var(--line);display:flex;align-items:baseline;gap:10px}
 .title::before{content:"";flex:none;width:18px;height:1px;background:var(--mute);transform:translateY(-.3em)}
-.lines{display:flex;flex-direction:column;gap:7px;font-family:var(--mincho);font-size:1.06rem;line-height:1.65;letter-spacing:.03em}
+.lines{display:flex;flex-direction:column;flex:1 1 auto;gap:7px;font-family:var(--mincho);font-size:1.06rem;line-height:1.65;letter-spacing:.03em}
 .lines p{margin:0}
 .ln{position:relative}
 .lines{position:relative}
@@ -741,7 +753,7 @@ header > .hdr-r{grid-column:3;grid-row:1}
 .third p{position:relative;z-index:1}
 .third .cover{z-index:2}
 /* 最後の一行の覆いは、隠れている行の長さに関わらず同じ高さ（行の縦の中央に置く） */
-.third{min-height:46px}
+.third{min-height:46px;margin-top:auto}
 .third .cover{inset:auto -8px;top:calc(50% - 29px);height:58px}
 /* 白：ぼってりと滲んだ墨が、きゅっと締まって文字になる */
 /* 白：筆で払うように、左から右へ柔らかい縁で書かれていく */
@@ -782,7 +794,25 @@ header > .hdr-r{grid-column:3;grid-row:1}
 .shelfhead{display:flex;justify-content:space-between;align-items:baseline;font-size:.78rem;color:var(--mute);letter-spacing:.12em;border-bottom:1px solid var(--line);padding-bottom:8px}
 .count{font-variant-numeric:tabular-nums}
 /* ---------- ユラの断片帳：革装の一冊を見開きで ---------- */
-.bookhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.bookhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-bottom:1px solid var(--line);padding-bottom:10px;flex-wrap:wrap}
+.bookhead .count{margin-left:auto}
+.idxbtn{flex:none;font:inherit;font-size:.74rem;letter-spacing:.1em;border:1px solid var(--line);background:var(--paper);color:var(--mute);padding:5px 14px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.idxbtn:hover{border-color:var(--accent);color:var(--ink)}
+.idxbtn[aria-expanded="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.bookindex{display:flex;flex-direction:column;gap:10px}
+.bix-lead{margin:0;font-size:.78rem;line-height:1.7;color:var(--mute);letter-spacing:.04em}
+.bix-list{display:flex;flex-direction:column;gap:12px;max-height:min(60vh,520px);overflow:auto;-webkit-overflow-scrolling:touch}
+.bix-sec{display:flex;flex-direction:column}
+.bix-sec h4{position:sticky;top:0;margin:0;padding:6px 2px;background:var(--paper);font-family:var(--mincho);font-size:.88rem;letter-spacing:.14em;color:var(--mute);font-weight:600;z-index:1}
+.bix-sec h4 span{font-size:.72rem;font-variant-numeric:tabular-nums}
+.bix-item{display:flex;align-items:baseline;gap:12px;width:100%;text-align:left;border:0;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent);background:none;padding:11px 6px;cursor:pointer;color:var(--ink);font:inherit}
+.bix-item:hover{background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.bix-item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.bix-no{flex:none;width:2.8em;font-size:.72rem;color:var(--mute);letter-spacing:.08em}
+.bix-tx{min-width:0;display:flex;flex-direction:column;gap:3px}
+.bix-tx b{font-family:var(--mincho);font-weight:600;font-size:.98rem;letter-spacing:.05em;line-height:1.3}
+.bix-tx em{font-style:normal;font-size:.76rem;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bix-empty{color:var(--mute);font-size:.86rem;line-height:1.9;text-align:center;padding:30px 0}
 .bookhead h2{margin:0;font-family:var(--mincho);font-weight:600;font-size:1.25rem;letter-spacing:.2em}
 .bookwrap{display:flex;align-items:center;gap:10px}
 .pgnav{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--paper);color:var(--ink);font-family:var(--mincho);font-size:1.5rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding-bottom:3px}
@@ -877,6 +907,13 @@ header > .hdr-r{grid-column:3;grid-row:1}
 .libtabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .tdot{position:absolute;top:3px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--ribbon)}
 .pane{display:flex;flex-direction:column;gap:14px}
+.statusbox{display:flex;flex-direction:column;gap:2px}
+.stat{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:13px 4px;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.stat:last-child{border-bottom:0}
+.stat dt{margin:0;font-size:.82rem;letter-spacing:.08em;color:var(--mute)}
+.stat dd{margin:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.stat dd b{font-family:var(--mincho);font-size:1.34rem;font-weight:600;letter-spacing:.04em;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+.stat dd span{font-size:.7rem;letter-spacing:.06em;color:var(--mute);font-variant-numeric:tabular-nums}
 .dict-lead{margin:0;font-size:.8rem;color:var(--mute);letter-spacing:.06em}
 .dict{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px}
 .dtabs{display:flex;gap:0;border-bottom:1px solid var(--line);position:sticky;top:var(--hdrH,72px);z-index:5;background:color-mix(in srgb,var(--ground) 88%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
@@ -1087,18 +1124,22 @@ function track(name, title){ try{ if(window.goatcounter && window.goatcounter.co
 
   <section class="shelfbox view" id="viewLib" hidden>
     <div class="libbar">
-      <p class="ikantotal" id="ikantotal"><span>これまでに集めた違和感</span><b id="ikantotalv">0</b></p>
       <div class="libtabs" role="tablist" aria-label="ユラの本棚">
         <button type="button" role="tab" id="tab-book" aria-selected="true">思考の断片</button>
         <button type="button" role="tab" id="tab-dict" aria-selected="false">違和感の辞典<span class="tdot" id="dictdot" hidden></span></button>
+        <button type="button" role="tab" id="tab-status" aria-selected="false">ステータス</button>
       </div>
     </div>
     <div class="pane" id="paneBook">
-      <div class="bookhead"><h2>思考の断片</h2><span class="count" id="count"></span></div>
-      <div class="bookwrap">
+      <div class="bookhead"><h2>思考の断片</h2><span class="count" id="count"></span><button type="button" class="idxbtn" id="idxbtn" aria-expanded="false">目次</button></div>
+      <div class="bookwrap" id="bookwrap">
         <button type="button" class="pgnav" id="pgprev" aria-label="前の頁">‹</button>
         <div class="bookcover"><div class="spread" id="spread"></div></div>
         <button type="button" class="pgnav" id="pgnext" aria-label="次の頁">›</button>
+      </div>
+      <div class="bookindex" id="bookindex" hidden>
+        <p class="bix-lead">集めた断片の題名をタップすると、その頁がすぐに開きます。</p>
+        <div class="bix-list" id="idxlist"></div>
       </div>
     </div>
     <div class="pane" id="paneDict" hidden>
@@ -1109,6 +1150,10 @@ function track(name, title){ try{ if(window.goatcounter && window.goatcounter.co
         <button type="button" role="tab" id="dt-black" aria-selected="false">黒ユラの言葉<span></span></button>
       </div>
       <div class="dict" id="dict"></div>
+    </div>
+    <div class="pane" id="paneStatus" hidden>
+      <div class="bookhead"><h2>ステータス</h2><span class="count" id="statusSub"></span></div>
+      <div class="statusbox" id="statusbox"></div>
     </div>
     <p class="note">点数も正解もありません。トップで3行すべてを言葉にした断片が、この帳面の決まった頁に書き写されます。まだ言葉にしていない断片の頁には、題名だけが薄く滲んでいます。</p>
     <div class="install" id="install" hidden>
@@ -2720,7 +2765,8 @@ function plusSize(n, base){ const step = n < 10 ? 0 : Math.floor(n / 10); return
 const COMBO_BONUS = 100;   // 連鎖が100に届くごとに、違和感 +100
 const COMBO_MS = 2400;
 let combo = 0, comboAt = 0;
-const comboMult = n => n >= 10 ? 3 : n >= 5 ? 2 : 1;
+let maxCombo = store.get("yura-maxcombo", 0);
+const comboMult = n => n >= 20 ? 3 : n >= 10 ? 2 : 1;
 // 連鎖100：絵の中央に「連鎖 100」と「+100」が大きく浮かび、違和感が一気に届く
 function comboBonus(n){
   track("combo100", "連鎖100");
@@ -2757,6 +2803,7 @@ function comboBonus(n){
 function bumpCombo(){
   const now = Date.now();
   combo = (now - comboAt <= COMBO_MS) ? combo + 1 : 1; comboAt = now;
+  if(combo > maxCombo){ maxCombo = combo; store.set("yura-maxcombo", maxCombo); }
   const m = comboMult(combo), el = $("combo"), prevX = el.classList.contains("x3") ? 3 : el.classList.contains("x2") ? 2 : 1;
   $("cbn").textContent = combo; $("cbx").textContent = "×" + Math.max(2, m);
   el.style.setProperty("--ct", COMBO_MS + "ms");
@@ -2883,7 +2930,7 @@ function endFlood(){
     }, 380 + i * 55);
   });
   const cb = $("combo"); cb.classList.remove("hold");
-  if(combo >= 5){ cb.classList.remove("revive"); void cb.offsetWidth; cb.classList.add("revive"); setTimeout(()=>cb.classList.remove("revive"), 1500); sfx.line(0); }
+  if(combo >= 10){ cb.classList.remove("revive"); void cb.offsetWidth; cb.classList.add("revive"); setTimeout(()=>cb.classList.remove("revive"), 1500); sfx.line(0); }
 }
 // ---------- 割れる絵（ひびを3回叩くと、絵が砕けて崩れ落ち、違和感があふれ出す） ----------
 const SHATTER_PT = 20, SHATTER_HOLD = 5200, CRACK_TAPS = 8;
@@ -3224,7 +3271,7 @@ function spawnWord(opt = {}){
     if(w.classList.contains("pull")){ const rr = w.getBoundingClientRect(); pullAll(rr.left + rr.width/2, rr.top + rr.height/2, w); }
     if(w.classList.contains("glow")) startGlow();
     if(w.classList.contains("reso")){ const rr = w.getBoundingClientRect(); resonate(rr.left + rr.width/2, rr.top + rr.height/2, w); }
-    if(w.classList.contains("multi")){ const fr = $("drift").getBoundingClientRect(), rr = w.getBoundingClientRect(); multiply(rr.left + rr.width/2 - fr.left, rr.top + rr.height/2 - fr.top); }
+    if(w.classList.contains("multi")){ const fr = $("drift").getBoundingClientRect(), rr = w.getBoundingClientRect(); multiply(rr.left + rr.width/2 - fr.left, rr.top + rr.height/2 - fr.top, {boon: w.classList.contains("boon")}); }
     const cm = bumpCombo();
     const g = isOdd ? ODD_PT : yieldNow() * (flood ? 1 : cm);   // あふれる時間中は連鎖の数だけ進み、倍率はかからない
     const wordText = w.dataset.word || w.textContent;
@@ -3273,14 +3320,18 @@ function spawnWord(opt = {}){
   return w;
 }
 // 芽生え：触れた場所のまわりに、ふつうの言葉が4〜5個、芽吹くように現れる
-function multiply(x, y){
-  const field = $("drift"), W = field.clientWidth || 1, H = field.clientHeight || 1, n = 4 + Math.floor(Math.random() * 2);
-  track("multiply", "芽生え");
+function multiply(x, y, opt){
+  const boon = !!(opt && opt.boon);
+  const field = $("drift"), W = field.clientWidth || 1, H = field.clientHeight || 1, n = boon ? 3 : 4 + Math.floor(Math.random() * 2);
+  track("multiply", boon ? "解放特典" : "芽生え");
   sfx.multiply(n);
   const ring = document.createElement("span"); ring.className = "multi-ring"; ring.style.left = x + "px"; ring.style.top = y + "px"; field.append(ring);
   ring.animate([{transform:"translate(-50%,-50%) scale(.2)", opacity:.9},{transform:"translate(-50%,-50%) scale(1)", opacity:0}], {duration:700, easing:"cubic-bezier(.2,.7,.3,1)", fill:"forwards"}).onfinish = () => ring.remove();
   for(let i=0;i<n;i++) setTimeout(()=>{
-    const w = spawnWord({force:true, plain:true}); if(!w) return;
+    let w;
+    if(boon){ forceMulti = true; w = spawnWord({force:true}); forceMulti = false; }   // 解放特典からは「芽生え」が生まれる
+    else { w = spawnWord({force:true, plain:true}); }
+    if(!w) return;
     const a = (i / n) * Math.PI * 2 + Math.random() * .8, d = .14 + Math.random() * .1;
     const px = Math.max(3, Math.min(70, (x / W + Math.cos(a) * d * 1.2) * 100)), py = Math.max(12, Math.min(74, (y / H + Math.sin(a) * d) * 100));
     w.style.setProperty("--x", px.toFixed(1) + "%"); w.style.setProperty("--y", py.toFixed(1) + "%");
@@ -3826,16 +3877,11 @@ function playNoteFx(){
   if(!turning) renderShelf();
   const st = document.querySelector(".pg-noted.press");
   setTimeout(()=>{ notedInk = null; }, 1400);
-  const tv = $("ikantotalv"), box = $("ikantotal");
   const from = st ? st.getBoundingClientRect() : null;
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const land = () => {
-    tv.textContent = ikanTotal.toLocaleString("ja-JP");
-    box.classList.remove("gain"); void box.offsetWidth; box.classList.add("gain"); setTimeout(()=>box.classList.remove("gain"), 1300);
-    sfx.arrive();
-  };
-  if(!from || reduce){ land(); return; }
-  // 印が押された瞬間、そこから「+10」が浮かび、光の玉が上の「これまでに集めた違和感」へ飛ぶ
+  sfx.arrive();
+  if(!from || reduce) return;
+  // 押された印から「+10」がふわりと浮かぶ
   setTimeout(()=>{
     const cx = from.left + from.width/2, cy = from.top + from.height/2;
     const p = document.createElement("span"); p.className = "oddplus np"; p.textContent = "+" + NOTE_PT; p.style.fontSize = plusSize(NOTE_PT, 1.2);
@@ -3843,17 +3889,7 @@ function playNoteFx(){
     p.animate([{opacity:0, transform:"translate(-50%,-30%) scale(.8)"},{opacity:1, transform:"translate(-50%,-110%) scale(1.1)", offset:.25},{opacity:1, transform:"translate(-50%,-150%) scale(1)", offset:.7},{opacity:0, transform:"translate(-50%,-200%) scale(1)"}],
       {duration:1600, easing:"ease-out", fill:"forwards"}).onfinish = () => p.remove();
     sfx.touch();
-    const t = tv.getBoundingClientRect(), o = document.createElement("span"); o.className = "orb";
-    o.style.left = cx + "px"; o.style.top = cy + "px"; document.body.append(o);
-    const dx = (t.left + t.width/2) - cx, dy = (t.top + t.height/2) - cy;
-    o.animate([
-      {transform:"translate(0,0) scale(0)", opacity:0},
-      {transform:"translate(0,-4px) scale(1.6)", opacity:1, offset:.2},
-      {transform:`translate(${dx*.35 - 30}px,${dy*.35 - 40}px) scale(1.2)`, opacity:.95, offset:.55},
-      {transform:`translate(${dx}px,${dy}px) scale(.5)`, opacity:.6}
-    ], {duration:1100, delay:350, easing:"cubic-bezier(.45,0,.6,1)", fill:"forwards"}).onfinish = () => { o.remove(); land(); };
-    sfx.fly(.9);
-  }, 800);
+  }, 300);
 }
 function renderShelf(){   // 断片帳を描く（名前は呼び出し元との互換のため）
   $("count").textContent = "集めた断片 " + read.length + (noted.length ? "　noteで読んだ " + noted.length : "");
@@ -3864,6 +3900,26 @@ function renderShelf(){   // 断片帳を描く（名前は呼び出し元との
   sp.innerHTML = spreadHTML(pg);
   $("pgprev").disabled = pg<=0; $("pgnext").disabled = pg>=maxPg();
   $("pgprev").setAttribute("aria-disabled", pg<=0); $("pgnext").setAttribute("aria-disabled", pg>=maxPg());
+}
+// 集めた断片の目次：題名から、その頁へ直接ジャンプできる
+function renderIndex(){
+  const list = $("idxlist");
+  const pick = side => ALL.map((d,i)=>({d,i})).filter(x => read.includes(x.d.id) && x.d.id[0] === side);
+  const gw = pick("w"), gb = pick("b");
+  const sec = (label, arr) => arr.length ? `<div class="bix-sec"><h4>${label}　<span>${arr.length}篇</span></h4>` +
+    arr.map(({d,i}) => `<button type="button" class="bix-item" data-pg="${i}"><span class="bix-no">${kan(i+1)}</span><span class="bix-tx"><b>${esc(d.t)}</b><em>${esc(d.l[0])}</em></span></button>`).join("") + `</div>` : "";
+  list.innerHTML = (gw.length + gb.length)
+    ? (sec("白ユラ", gw) + sec("黒ユラ", gb))
+    : `<p class="bix-empty">まだ集めた断片がありません。<br>トップで3行すべてを言葉にすると、ここに並びます。</p>`;
+}
+function openIndex(){ renderIndex(); $("bookwrap").hidden = true; $("bookindex").hidden = false; $("idxbtn").setAttribute("aria-expanded","true"); $("idxbtn").textContent = "本に戻る"; }
+function closeIndex(){ $("bookindex").hidden = true; $("bookwrap").hidden = false; $("idxbtn").setAttribute("aria-expanded","false"); $("idxbtn").textContent = "目次"; }
+function jumpToFragment(i){
+  closeIndex();
+  pg = per() === 1 ? i : i - (i % 2);
+  inkId = ALL[i] ? ALL[i].id : null;                 // 飛んだ頁をひと目でわかるよう、滲ませる
+  renderShelf();
+  setTimeout(()=>{ inkId = null; if(libOpen && !turning && !$("paneBook").hidden && $("bookindex").hidden) renderShelf(); }, 1800);
 }
 function renderDesk(){} function closeVolume(){}
 
@@ -3981,15 +4037,34 @@ setHdrH(); addEventListener("resize", setHdrH);
   if(top <= h + 2){ const y = $("dict").getBoundingClientRect().top + scrollY - h - tabs.offsetHeight - 6; scrollTo({top:y}); } }; });
 function setTab(t){
   setHdrH();
-  const book = t==="book";
-  $("paneBook").hidden = !book; $("paneDict").hidden = book;
-  $("tab-book").setAttribute("aria-selected", book); $("tab-dict").setAttribute("aria-selected", !book);
-  if(book) renderShelf();
+  const book = t==="book", status = t==="status", dict = !book && !status;
+  $("paneBook").hidden = !book; $("paneDict").hidden = !dict; $("paneStatus").hidden = !status;
+  $("tab-book").setAttribute("aria-selected", book); $("tab-dict").setAttribute("aria-selected", dict); $("tab-status").setAttribute("aria-selected", status);
+  if(book){ closeIndex(); renderShelf(); }
+  else if(status){ renderStatus(); }
   else {
     // 開いたときは、新しく意味が書かれた言葉のある側、なければ今遊んでいる世界の側を見せる
     const fresh = dictNew.find(w=>WORDS.white.includes(w) || WORDS.black.includes(w));
     dictSide = fresh ? (WORDS.white.includes(fresh) ? "white" : "black") : (dictSide || (mode === "black" ? "black" : "white"));
     renderDict(); $("dictdot").hidden = true; setTimeout(()=>{ dictNew = []; }, 2600); }
+}
+
+// ステータス：やりこみ具合を数字でまとめる
+function renderStatus(){
+  const total = ikanTotal || 0;
+  const rw = read.filter(id => DATA.white.some(w => w.id === id)).length;
+  const rb = read.filter(id => DATA.black.some(w => w.id === id)).length;
+  const kw = WORDS.white.filter(w => (dictC[w] || 0) >= needOf(w)).length;
+  const kb = WORDS.black.filter(w => (dictC[w] || 0) >= needOf(w)).length;
+  const wN = DATA.white.length, bN = DATA.black.length, wordW = WORDS.white.length, wordB = WORDS.black.length;
+  $("statusSub").textContent = "";
+  const row = (label, value, sub) => `<div class="stat"><dt>${label}</dt><dd><b>${value}</b>${sub ? `<span>${sub}</span>` : ""}</dd></div>`;
+  $("statusbox").innerHTML =
+    row("これまでに集めた違和感", total.toLocaleString()) +
+    row("集めた断片", (rw + rb) + " / " + (wN + bN), "白 " + rw + "/" + wN + "　黒 " + rb + "/" + bN) +
+    row("noteで読んだ数", noted.length) +
+    row("意味の分かった言葉", (kw + kb) + " / " + (wordW + wordB), "白 " + kw + "/" + wordW + "　黒 " + kb + "/" + wordB) +
+    row("最高連鎖", maxCombo);
 }
 
 // 本棚は別の画面。開いたとき、まだ見ていない書き写しがあればその頁を開いて滲ませる
@@ -4004,7 +4079,6 @@ function showLib(on){
       Object.keys(prog).forEach(id=>{ if(!read.includes(id)){ const p = prog[id] || 0; for(let k=0;k<3;k++) t += Math.max(0, Math.min(1, p - k)) * lineCost(k); } });
       ikanTotal = Math.round(t); store.set("yura-total", ikanTotal);
     }
-    $("ikantotalv").textContent = ikanTotal.toLocaleString("ja-JP");
   }
   const m=$("viewMain"), l=$("viewLib");
   m.hidden = on; l.hidden = !on;
@@ -4327,6 +4401,10 @@ function sprout(){
     if(w){ const fr = drift.getBoundingClientRect();
       w.style.setProperty("--x", Math.max(2, Math.min(90, (tx - fr.left) / fr.width * 100)).toFixed(1) + "%");
       w.style.setProperty("--y", Math.max(6, Math.min(80, (ty - fr.top) / fr.height * 100)).toFixed(1) + "%");
+      w.classList.add("boon"); w.textContent = "解放特典"; w.dataset.word = "解放特典";   // 本棚の特典：光って「解放特典」だと主張する
+      w.setAttribute("aria-label", "解放特典（触れると芽生えが3つ現れる）"); w.title = "解放特典";
+      if(document.body.animate){ const bu = document.createElement("span"); bu.className = "boon-burst"; bu.style.left = tx + "px"; bu.style.top = ty + "px"; document.body.append(bu);
+        bu.animate([{transform:"translate(-50%,-50%) scale(.3)", opacity:.95},{transform:"translate(-50%,-50%) scale(2.6)", opacity:0}], {duration:820, easing:"cubic-bezier(.2,.7,.3,1)", fill:"forwards"}).onfinish = () => bu.remove(); }
     }
   };
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -4764,6 +4842,9 @@ $("libbtn").addEventListener("click", ()=>showLib(!libOpen));
 $("pgprev").addEventListener("click", ()=>turn(-1));
 $("tab-book").addEventListener("click", ()=>setTab("book"));
 $("tab-dict").addEventListener("click", ()=>setTab("dict"));
+$("tab-status").addEventListener("click", ()=>setTab("status"));
+$("idxbtn").addEventListener("click", ()=>{ if($("bookindex").hidden) openIndex(); else closeIndex(); });
+$("idxlist").addEventListener("click", e=>{ const b = e.target.closest(".bix-item"); if(b) jumpToFragment(+b.dataset.pg); });
 $("pgnext").addEventListener("click", ()=>turn(1));
 window.addEventListener("resize", ()=>{ if(libOpen && !turning) renderShelf(); });
 
@@ -4777,7 +4858,7 @@ $("t-c100").onclick=()=>{ combo = 89; comboAt = Date.now(); toast("連鎖を89�
 $("t-odd").onclick=()=>{ forceOdd = true; toast("まもなく、逆さまの言葉が現れます"); };
 $("t-special").onclick=()=>{ forceSpecial = true; toast("まもなく、明滅する言葉が現れます"); };
 $("t-plus").onclick=()=>{ pour(20); };
-$("t-all").onclick=()=>{ store.set("yura-shared",""); store.set("yura-said",[]); noted=[]; store.set("yura-noted",noted); ikan=0; ikanTotal=0; store.set("yura-total",0); read=[]; dispId=null; prog={}; cur={white:null,black:null}; open=false; store.set("yura-prog",prog); store.set("yura-cur",cur); dictC={}; dictNew=[]; store.set("yura-dictc",dictC); store.set("yura-dict",[]); $("dictdot").hidden=true; sel=null; shownBooks=null; closing=null; inkId=null; pendingClose=false; $("libdot").hidden=true; store.set("yura-read",read); saveIkan();
+$("t-all").onclick=()=>{ store.set("yura-shared",""); store.set("yura-said",[]); noted=[]; store.set("yura-noted",noted); ikan=0; ikanTotal=0; store.set("yura-total",0); read=[]; dispId=null; prog={}; cur={white:null,black:null}; open=false; store.set("yura-prog",prog); store.set("yura-cur",cur); dictC={}; dictNew=[]; store.set("yura-dictc",dictC); store.set("yura-dict",[]); $("dictdot").hidden=true; sel=null; shownBooks=null; closing=null; inkId=null; pendingClose=false; $("libdot").hidden=true; store.set("yura-read",read); maxCombo=0; store.set("yura-maxcombo",0); saveIkan();
   open=false; render(); updateIkan(true); toast("違和感と読んだ記録を消しました"); };
 
 /* ---------- 初回の遊び方案内 ---------- */
