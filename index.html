@@ -195,6 +195,25 @@ body{background-color:var(--ground);color:var(--ink);font-family:var(--gothic);t
   scale:var(--s,1);animation:moteFall 7s linear infinite}
 @keyframes moteFall{0%{transform:translate(0,0);opacity:0}12%{opacity:.95}85%{opacity:.8}100%{transform:translate(var(--dx,0),var(--fall,300px));opacity:0}}
 .glow-fx.paused,.glow-fx.paused *{animation-play-state:paused !important}
+/* 余韻の時（虚無）：割れて暗転した真っ黒のまま、違和感文字だけが浮かぶ。タップで金粉になって天へ昇る */
+.abyss .void-word{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;cursor:pointer;pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none;z-index:59;outline:none;-webkit-tap-highlight-color:transparent;-webkit-appearance:none;appearance:none;
+  font-family:var(--mincho);font-size:1rem;letter-spacing:.1em;padding:7px 15px;border-radius:999px;color:#f6e8c6;
+  border:1px solid color-mix(in srgb,#e6b24e 50%,transparent);background:color-mix(in srgb,#e6b24e 10%,rgba(18,15,12,.34));
+  box-shadow:0 0 18px color-mix(in srgb,#e6b24e 42%,transparent);text-shadow:0 0 9px color-mix(in srgb,#e6b24e 60%,transparent)}
+.abyss .void-word.flare{color:#fff7df;border-color:#ffe9a8;box-shadow:0 0 34px 7px rgba(255,224,150,.85);
+  text-shadow:0 0 16px rgba(255,238,185,.95);transition:color .12s ease,box-shadow .12s ease,text-shadow .12s ease,border-color .12s ease}
+.gdust-box,.gbloom,.vplus{position:fixed;z-index:60;pointer-events:none}
+.gdust-box{transform:translate(-50%,-50%)}
+.gdust{position:absolute;left:0;top:0;width:3px;height:3px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,#fffdf4,#ffd96e 50%,rgba(255,196,96,0) 78%);box-shadow:0 0 6px 1px rgba(255,214,120,.85)}
+.gbloom{transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,248,224,.95),rgba(255,222,150,.5) 42%,rgba(255,200,110,0) 72%)}
+.vplus{transform:translate(-50%,-50%);color:#ffe7a8;font-size:1.12rem;letter-spacing:.06em;text-shadow:0 0 10px rgba(255,220,150,.85);font-variant-numeric:tabular-nums}
+.void-pts{position:fixed;z-index:60;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;font-family:var(--mincho);
+  font-size:.9rem;letter-spacing:.08em;color:#f3e4bf;padding:5px 14px;border-radius:999px;background:rgba(20,16,12,.5);
+  border:1px solid color-mix(in srgb,#e6b24e 45%,transparent);box-shadow:0 0 16px color-mix(in srgb,#e6b24e 32%,transparent);text-shadow:0 0 8px rgba(224,180,90,.5)}
+.void-pts b{font-size:1.02rem;color:#ffe7a8;font-variant-numeric:tabular-nums;margin-left:3px}
+.void-pts.hit{animation:vpHit .4s ease}
+@keyframes vpHit{0%,100%{transform:translate(-50%,-50%) scale(1)}42%{transform:translate(-50%,-50%) scale(1.14)}}
 html.glow-sun .hero .word:not(.got):not(.special):not(.crack):not(.vortex),html.glow-moon .hero .word:not(.got):not(.special):not(.crack):not(.vortex){box-shadow:0 0 12px color-mix(in srgb,var(--glowc) 50%,transparent)}
 /* 効果中の光の玉と「+」の数字は、その光の色に */
 html.glow-sun .orb{background:radial-gradient(circle,#fff6dc 0%,rgba(244,180,70,.9) 45%,transparent 72%);box-shadow:0 0 16px 6px rgba(240,170,60,.55)}
@@ -3101,6 +3120,104 @@ function shardKit(hero, px, py){
   });
   return {mode, W, H, px, py, D, N, P, polys, pieces};
 }
+// ===== 余韻の時（虚無） =====
+// 画面割れで暗転した真っ黒のまま8秒、違和感文字だけが浮かぶ。タップ＝金粉になって天へ昇り+10（連鎖なし）。
+// この間は辞典・ペン・通常湧きなどの通常演出は止め（shatteringのまま）、文言もメーターも出さない。
+const VOID_MS = 8000;
+// 違和感ポイントの表示：一行が消える直前にフェードインし、一行のオーブもタップのオーブもここへ集まる
+function makeVoidPoints(){
+  const r = $("ikan").getBoundingClientRect();
+  const el = document.createElement("div"); el.className = "void-pts"; el.innerHTML = '違和感 <b class="vpv">0</b>';
+  el.style.left = (r.left + r.width/2) + "px"; el.style.top = (r.top + r.height/2) + "px"; document.body.append(el);
+  const vp = { el, score: 0, base: ikan,
+    rect(){ return el.getBoundingClientRect(); },
+    show(){ el.animate([{opacity:0, transform:"translate(-50%,-50%) scale(.9)"},{opacity:1, transform:"translate(-50%,-50%) scale(1)"}], {duration:420, easing:"ease-out", fill:"forwards"}); },
+    update(){ el.querySelector(".vpv").textContent = (vp.base + vp.score).toLocaleString("ja-JP"); },
+    bump(){ el.classList.remove("hit"); void el.offsetWidth; el.classList.add("hit"); },
+    // (fromX,fromY) から違和感ポイントへオーブを飛ばし、着いたら加点・+N表示（音は鳴らさない）
+    add(g, fromX, fromY, big){
+      const t = vp.rect(), o = document.createElement("span"); o.className = "orb" + (big ? " big" : ""); o.style.zIndex = 61;
+      o.style.left = fromX + "px"; o.style.top = fromY + "px"; document.body.append(o);
+      const tx = t.left + t.width/2 - fromX, ty = t.top + t.height/2 - fromY, sway = (Math.random()-.5) * 50;
+      o.animate([{transform:"translate(0,0) scale(.3)", opacity:0},
+        {transform:`translate(${sway.toFixed(0)}px,${(-26 - Math.random()*26).toFixed(0)}px) scale(1.3)`, opacity:1, offset:.25},
+        {transform:`translate(${tx.toFixed(0)}px,${ty.toFixed(0)}px) scale(.45)`, opacity:.6}],
+        {duration:820 + Math.random()*220, easing:"cubic-bezier(.35,.1,.55,1)", fill:"forwards"}).onfinish = () => {
+          o.remove(); vp.score += g; vp.update(); vp.bump(); const tr = vp.rect(); voidGain(g, tr.left + tr.width/2, tr.top + tr.height/2); };
+    } };
+  vp.update(); return vp;
+}
+// 「+N」は通常（oddplus・var(--mincho)・plusSize）と同じ表現で、収集した単語の位置に出す
+function voidGain(n, x, y){
+  const p = document.createElement("span"); p.className = "oddplus"; p.textContent = "+" + n; p.style.fontSize = plusSize(n, 1.2);
+  p.style.left = x + "px"; p.style.top = y + "px"; document.body.append(p);
+  p.animate([{opacity:0, transform:"translate(-50%,-30%) scale(.8)"},{opacity:1, transform:"translate(-50%,-110%) scale(1.15)", offset:.25},{opacity:1, transform:"translate(-50%,-150%) scale(1)", offset:.7},{opacity:0, transform:"translate(-50%,-200%) scale(1)"}], {duration:1600, easing:"ease-out", fill:"forwards"}).onfinish = () => p.remove();
+}
+function enterVoid(abyss, vp, onDone){
+  let live = true;
+  document.documentElement.classList.add("in-void");   // 残りorbなど通常演出を虚無のあいだ隠す
+  const words = [];
+  const collect = w => { if(!live || w.dataset.got) return; w.dataset.got = 1; clearTimeout(w._fade);
+    const r = w.getBoundingClientRect(), x = r.left + r.width/2, y = r.top + r.height/2;
+    w.classList.add("flare");
+    w.animate([{opacity:1, transform:"translate(-50%,-50%) scale(1)"},{opacity:1, transform:"translate(-50%,-56%) scale(1.14)", offset:.22},{opacity:0, transform:"translate(-50%,-122%) scale(1)"}], {duration:520, easing:"ease-out", fill:"forwards"}).onfinish = () => w.remove();
+    goldDust(x, y);                       // 消える演出（金粉）はそのまま
+    vp.add(10, x, y);                     // 一文オーブと同じデザインのオーブが、単語→違和感ポイントへ飛ぶ（+Nは着弾時にポイント側で出す）
+    const nowt = Date.now(); if(nowt - (enterVoid._snd || 0) > 70){ sfx.sharan(); enterVoid._snd = nowt; }   // なぞり連続時は音を間引く
+  };
+  const spawnOne = () => {
+    if(!live || !abyss.isConnected) return;
+    const list = WORDS[mode], w = document.createElement("button");
+    w.type = "button"; w.className = "void-word"; w.textContent = list[Math.floor(Math.random() * list.length)];
+    w.style.left = (12 + Math.random() * 76) + "%"; w.style.top = (20 + Math.random() * 62) + "%";
+    abyss.append(w); words.push(w);
+    w.animate([{opacity:0, transform:"translate(-50%,-50%) scale(.82)"},{opacity:1, transform:"translate(-50%,-50%) scale(1)"}], {duration:460, easing:"ease-out", fill:"forwards"});
+    const life = 3000 + Math.random() * 1600;
+    w._fade = setTimeout(()=>{ if(w.isConnected && !w.dataset.got) w.animate([{opacity:1},{opacity:0}], {duration:600, fill:"forwards"}).onfinish = () => w.remove(); }, life);
+    w._hit = () => collect(w);
+    w.addEventListener("pointerdown", e => { e.preventDefault(); collect(w); });
+  };
+  // タップ＆なぞって集める（スワイプ対応）。abyssで指の通り道の違和感文字を拾う
+  abyss.style.pointerEvents = "auto"; abyss.style.touchAction = "none";
+  let on = false, lx = 0, ly = 0;
+  const probe = (x, y) => { const el = document.elementFromPoint(x, y), w = el && el.closest ? el.closest(".void-word") : null; if(w && !w.dataset.got && w._hit) w._hit(); };
+  const sweep = (x, y) => { const d = Math.hypot(x-lx, y-ly), n = Math.max(1, Math.ceil(d/12)); for(let i=1;i<=n;i++) probe(lx + (x-lx)*i/n, ly + (y-ly)*i/n); lx = x; ly = y; };
+  const onDown = e => { on = true; lx = e.clientX; ly = e.clientY; probe(lx, ly); };
+  const onMove = e => { if(!on) return; const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : []; if(!evs.length) evs.push(e); evs.forEach(v => sweep(v.clientX, v.clientY)); };
+  const onUp = () => { on = false; };
+  abyss.addEventListener("pointerdown", onDown); abyss.addEventListener("pointermove", onMove);
+  ["pointerup","pointercancel"].forEach(t => abyss.addEventListener(t, onUp));
+  for(let i=0;i<4;i++) setTimeout(spawnOne, i * 190);   // 最初に数個まいておく
+  const loop = () => { if(!live) return;
+    if(words.filter(w => w.isConnected && !w.dataset.got).length < 7) spawnOne();
+    enterVoid._t = setTimeout(loop, 680 + Math.random() * 460); };
+  loop();
+  setTimeout(()=>{
+    live = false; clearTimeout(enterVoid._t);
+    abyss.removeEventListener("pointerdown", onDown); abyss.removeEventListener("pointermove", onMove);
+    ["pointerup","pointercancel"].forEach(t => abyss.removeEventListener(t, onUp));
+    // 8秒経過：残った違和感文字は全部消す
+    words.forEach(w => { if(w.isConnected && !w.dataset.got) w.animate([{opacity:1},{opacity:0}], {duration:420, fill:"forwards"}).onfinish = () => w.remove(); });
+    // さらに1秒、少し間をおいてから暗転解除へ
+    setTimeout(()=>{ document.documentElement.classList.remove("in-void"); onDone(); }, 1000);
+  }, VOID_MS);
+}
+// 金粉が天へ昇って消える
+function goldDust(x, y){
+  const box = document.createElement("div"); box.className = "gdust-box"; box.style.left = x + "px"; box.style.top = y + "px"; document.body.append(box);
+  for(let i=0;i<24;i++){ const e = document.createElement("i"); e.className = "gdust"; box.append(e);
+    const sx = (Math.random() - .5) * 48, rise = 96 + Math.random() * 130, sway = (Math.random() - .5) * 36, sc = .5 + Math.random() * 1.1, dur = 1000 + Math.random() * 760;
+    e.animate([{transform:`translate(${sx}px,6px) scale(${sc})`, opacity:0},
+      {transform:`translate(${(sx + sway * .4).toFixed(1)}px,${(-rise * .32).toFixed(1)}px) scale(${sc})`, opacity:1, offset:.2},
+      {transform:`translate(${(sx + sway).toFixed(1)}px,${(-rise).toFixed(1)}px) scale(${(sc * .45).toFixed(2)})`, opacity:0}],
+      {duration:dur, easing:"cubic-bezier(.3,.55,.3,1)", fill:"forwards", delay:Math.random() * 90}); }
+  setTimeout(()=>box.remove(), 1900);
+}
+// 一瞬の光のブルーム
+function goldBloom(x, y){
+  const b = document.createElement("div"); b.className = "gbloom"; b.style.left = x + "px"; b.style.top = y + "px"; document.body.append(b);
+  b.animate([{width:"14px", height:"14px", opacity:.9},{width:"150px", height:"150px", opacity:0}], {duration:520, easing:"ease-out", fill:"forwards"}).onfinish = () => b.remove();
+}
 function shatter(src){
   const hero = document.querySelector(".hero"), field = $("drift");
   if(!hero || shattering) return;
@@ -3218,36 +3335,35 @@ function shatter(src){
     setTimeout(()=>sfx.prepRewind(FADE / 1000), 1500);
     setTimeout(()=>{
       anims.forEach(a => a.cancel()); layer.remove();
-      // 一行は、一文字ずつ違和感の玉になって違和感（またはペン）へ飛んでいく。一文字ごとに連鎖が続く
+      // 違和感ポイントを、一行が消える直前にフェードイン。ここへ一行のオーブもタップのオーブも集まる
       const spans = [...ml.querySelectorAll("span")], bonus = Math.round(SHATTER_PT / spans.length);
-      if(combo > 0) comboAt = Date.now();
-      rise(); sfx.fly(1);
+      const vp = makeVoidPoints(); vp.show(); sfx.fly(1);
+      // 一行は一文字ずつ違和感の玉になり、違和感ポイントへ集まる（連鎖なし）
       spans.forEach((sp, i) => setTimeout(()=>{
         const r = sp.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2;
         sp.animate([{opacity:1, filter:"blur(0)", transform:"scale(1)"},{opacity:0, filter:"blur(5px)", transform:"scale(1.6)"}], {duration:380, easing:"ease-out", fill:"forwards"});
-        const m = bumpCombo(), g = yieldNow() * m + bonus, toPen = penActive();
-        const t = (toPen ? $("pen") : $("iv")).getBoundingClientRect(), o = document.createElement("span"); o.className = "orb" + (i % 5 === 0 ? " big" : "");
-        o.style.left = cx + "px"; o.style.top = cy + "px"; o.style.zIndex = 62; document.body.append(o);
-        const tx = t.left + t.width/2 - cx, ty = t.top + t.height/2 - cy, sway = (Math.random()-.5) * 60;
-        o.animate([{transform:"translate(0,0) scale(.3)", opacity:0},
-          {transform:`translate(${sway}px,${-30 - Math.random()*30}px) scale(1.4)`, opacity:1, offset:.25},
-          {transform:`translate(${tx}px,${ty}px) scale(.45)`, opacity:.55}],
-          {duration:950 + Math.random()*250, easing:"cubic-bezier(.35,.1,.55,1)", fill:"forwards"}).onfinish = () => { o.remove(); give(g); if(i % 3 === 0) sfx.arrive(); };
+        vp.add(bonus, cx, cy, i % 5 === 0);
       }, i * STEP));
-      // 数字と連鎖が灯った少しあとに、見出し・作品・絵が闇の向こうからゆっくり浮かび上がる（戻りきる瞬間に音が閉じる）。
-      // 戻りはじめると同時に言葉が漂いはじめるので、急げば連鎖をそのままつなげられる
+      // 一行が集まり切る頃に、虚無（違和感文字をタップ/なぞって集める）へ入る
       setTimeout(()=>{
-        sfx.rewind(FADE / 1000);
-        abyss.animate([{opacity:1},{opacity:0}], {duration:FADE, easing:"ease-in-out", fill:"forwards"});
-        voidEl.animate([{opacity:1},{opacity:0}], {duration:FADE, easing:"ease", fill:"forwards"});
-        shattering = false; document.documentElement.classList.remove("shattering"); nextCrackAt = Date.now() + 720000;
-        [0, 140, 280].forEach(d => setTimeout(()=>{ if(!flood) spawnWord(); }, d));
-        // 完全ボーナス：割れから戻ったら月明かり/陽だまりで始まり、1秒後に懐中時計が落ちてくる
-        setTimeout(()=>{ if(!flood && !shattering && !glowRemain) startGlow(); }, 60);
-        setTimeout(()=>{ if(!flood && !shattering){ forceSpecial = true; spawnWord({force:true}); } }, 1000);
-        setTimeout(()=>{ ml.remove(); }, 420);
-        setTimeout(mend, FADE + 60);
-      }, 350);
+        ml.remove();
+        enterVoid(abyss, vp, () => {
+          // 余韻終了：世界をフェードインで戻す（暗転解除の効果音は不要）
+          abyss.animate([{opacity:1},{opacity:0}], {duration:FADE, easing:"ease-in-out", fill:"forwards"});
+          voidEl.animate([{opacity:1},{opacity:0}], {duration:FADE, easing:"ease", fill:"forwards"});
+          shattering = false; document.documentElement.classList.remove("shattering"); nextCrackAt = Date.now() + 720000;
+          // 集めた違和感を反映。暗転解除時に合計は表示しない（二重加算の誤解を避けるため、違和感ポイントは先に消す）
+          const total = vp.score, vr = vp.rect();
+          vp.el.remove();
+          if(total > 0){ addTotal(total);
+            if(penActive()){ const pr = $("pen").getBoundingClientRect(), fx = vr.left + vr.width/2, fy = vr.top + vr.height/2;
+              const o = document.createElement("span"); o.className = "orb big"; o.style.zIndex = 61; o.style.left = fx + "px"; o.style.top = fy + "px"; document.body.append(o);
+              o.animate([{transform:"translate(0,0) scale(.55)", opacity:0},{transform:"translate(0,-24px) scale(1.2)", opacity:1, offset:.25},{transform:`translate(${(pr.left + pr.width/2 - fx).toFixed(0)}px,${(pr.top + pr.height/2 - fy).toFixed(0)}px) scale(.5)`, opacity:.7}], {duration:760, easing:"cubic-bezier(.35,.1,.55,1)", fill:"forwards"}).onfinish = () => { o.remove(); pour(total); sfx.arrive(); };
+            } else { ikan += total; saveIkan(); updateIkan(true); updateCover(); } }
+          [0, 140, 280].forEach(d => setTimeout(()=>{ if(!flood) spawnWord(); }, d));
+          setTimeout(mend, FADE + 60);
+        });
+      }, spans.length * STEP + 850);
     }, lineEnd);
     const mend = () => { voidEl.remove(); abyss.remove(); risers.forEach(({c}) => c.remove()); risers.length = 0; };
   }, 200);
@@ -3480,7 +3596,7 @@ function orbsFrom(g, cnt, cx, cy){
 }
 // ---------- 陽だまり（白）・月明かり（黒）：絵がほのかに光り、10秒のあいだ違和感が2倍 ----------
 const GLOW_MS = 10000;
-function startGlow(){
+function startGlow(silent){
   const hero = document.querySelector(".hero"); if(!hero) return;
   const moon = mode === "black";
   track("glow/" + mode, moon ? "月明かり" : "陽だまり");
@@ -3505,7 +3621,7 @@ function startGlow(){
   const bar = $("glowbar"); bar.className = "floodbar glowbar " + (moon ? "moon" : "sun"); bar.querySelector("span").textContent = moon ? "月明かり" : "陽だまり"; bar.hidden = false;
   layoutBars();
   document.documentElement.classList.remove("glow-sun", "glow-moon"); document.documentElement.classList.add(moon ? "glow-moon" : "glow-sun");
-  sfx.glow(moon);
+  if(!silent) sfx.glow(moon);
   updateIkan(false);
   cancelAnimationFrame(startGlow.raf);
   let last = performance.now();
@@ -4661,6 +4777,18 @@ const sfx = (()=>{
       }); }
   };
   return {
+    // シャラーン：きらめきが転がり昇る分散音（軽いリバーブ）。白ユラ/黒ユラで音域を変える
+    sharan(){ const a = ac(); if(!a) return; const t = a.currentTime, rv = reverb();
+      const sc = night() ? [1109, 1245, 1480, 1661, 1865, 2217, 2489, 2960] : [1480, 1661, 1975, 2217, 2489, 2960, 3322, 3951];
+      sc.forEach((f, i) => { const o = ctx.createOscillator(), g = ctx.createGain(), at = t + i * .03;
+        o.type = "sine"; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(Math.max(.006, .085 * (1 - i * .07)), at + .01); g.gain.exponentialRampToValueAtTime(0.0004, at + .5 - i * .02);
+        o.connect(g); g.connect(bus); const w = ctx.createGain(); w.gain.value = .6; g.connect(w); w.connect(rv);
+        o.start(at); o.stop(at + .62); });
+      const lo = ctx.createOscillator(), lg = ctx.createGain(); lo.type = "triangle"; lo.frequency.value = night() ? 523 : 740;
+      lg.gain.setValueAtTime(0.0001, t); lg.gain.exponentialRampToValueAtTime(.04, t + .012); lg.gain.exponentialRampToValueAtTime(0.0004, t + .4);
+      lo.connect(lg); lg.connect(bus); lo.start(t); lo.stop(t + .45);
+    },
     // 頁をめくる「ペリッ」：紙がはがれるような、細かく乾いた破裂音の連なり（約0.15秒）と、ごく短い紙の擦れ
     page(){ const a = ac(); if(!a) return; const t = a.currentTime;
       const n = 14 + Math.floor(Math.random()*5), span = .13;
