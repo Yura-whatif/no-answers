@@ -140,7 +140,7 @@ body{background-color:var(--ground);color:var(--ink);font-family:var(--gothic);t
 .boon-burst{position:fixed;z-index:6;width:58px;height:58px;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);
   border:2px solid color-mix(in srgb,#f3c650 92%,transparent);box-shadow:0 0 22px color-mix(in srgb,#f0c24a 75%,transparent),inset 0 0 14px color-mix(in srgb,#f3c650 55%,transparent)}
 /* 読了特典のストック：採集エリア下部に並ぶ。タップで1つ使う */
-.rtray{position:absolute;left:12px;bottom:12px;z-index:5;display:flex;align-items:center;gap:5px;padding:5px 11px 5px 9px;border-radius:999px;
+.rtray{position:absolute;right:12px;bottom:12px;z-index:5;display:flex;align-items:center;gap:5px;padding:5px 11px 5px 9px;border-radius:999px;
   background:color-mix(in srgb,var(--paper) 72%,transparent);border:1px solid color-mix(in srgb,#e9bb4e 55%,transparent);
   -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);box-shadow:0 2px 10px -4px rgba(0,0,0,.4)}
 .rtray[hidden]{display:none}
@@ -153,6 +153,9 @@ body{background-color:var(--ground);color:var(--ink);font-family:var(--gothic);t
 .rtoken.pop .rt-seed{animation:boonPop .5s cubic-bezier(.3,1.5,.5,1)}
 @keyframes boonPop{0%{transform:scale(.3)}55%{transform:scale(1.3)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){.word.multi.boon::after{animation:none;opacity:.85}}
+/* 感謝の言葉：少し特別だが、読了特典ほどは目立たない */
+.word.multi.kind{color:#c35874;border-color:color-mix(in srgb,#dd8aa0 56%,transparent);background:color-mix(in srgb,#f0b8c8 14%,color-mix(in srgb,var(--paper) 72%,transparent));box-shadow:0 0 0 1px color-mix(in srgb,#dd8aa0 18%,transparent),0 0 13px color-mix(in srgb,#eaa0b4 38%,transparent);font-weight:600}
+[data-yura="black"] .word.multi.kind{color:#f1aabd}
 .multi-ring{position:absolute;z-index:2;width:150px;height:150px;border-radius:50%;pointer-events:none;border:1.5px solid color-mix(in srgb,var(--multi) 70%,transparent);box-shadow:0 0 16px color-mix(in srgb,var(--multi) 45%,transparent)}
 :root{--multi:#3e8f6f}
 [data-yura="black"]{--multi:#8fd6b4}
@@ -192,7 +195,7 @@ body{background-color:var(--ground);color:var(--ink);font-family:var(--gothic);t
   scale:var(--s,1);animation:moteFall 7s linear infinite}
 @keyframes moteFall{0%{transform:translate(0,0);opacity:0}12%{opacity:.95}85%{opacity:.8}100%{transform:translate(var(--dx,0),var(--fall,300px));opacity:0}}
 .glow-fx.paused,.glow-fx.paused *{animation-play-state:paused !important}
-html.glow-sun .hero .word:not(.got),html.glow-moon .hero .word:not(.got){box-shadow:0 0 12px color-mix(in srgb,var(--glowc) 50%,transparent)}
+html.glow-sun .hero .word:not(.got):not(.special):not(.crack):not(.vortex),html.glow-moon .hero .word:not(.got):not(.special):not(.crack):not(.vortex){box-shadow:0 0 12px color-mix(in srgb,var(--glowc) 50%,transparent)}
 /* 効果中の光の玉と「+」の数字は、その光の色に */
 html.glow-sun .orb{background:radial-gradient(circle,#fff6dc 0%,rgba(244,180,70,.9) 45%,transparent 72%);box-shadow:0 0 16px 6px rgba(240,170,60,.55)}
 html.glow-moon .orb{background:radial-gradient(circle,#f2f6ff 0%,rgba(150,180,255,.9) 45%,transparent 72%);box-shadow:0 0 16px 6px rgba(140,170,255,.55)}
@@ -294,7 +297,7 @@ html.glow-moon .up-fly{color:#bcd0ff;text-shadow:0 0 8px rgba(160,190,255,.85);s
 .combo b{font-size:1rem;font-weight:600}
 .combo em{position:relative;display:inline-block;font-style:normal;font-weight:600;color:var(--accent);opacity:0;transition:opacity .45s ease}
 .combo em::after{content:"";position:absolute;left:-2px;right:-2px;top:55%;height:1px;background:currentColor;transform:scaleX(0);transform-origin:right center;transition:transform .5s cubic-bezier(.4,0,.2,1)}
-.combo.hold em::after{transform:scaleX(1);transform-origin:left center}
+.combo.hold em::after{transform:scaleX(0)}
 /* あふれる時間が終わり、連鎖が続いていれば：取り消し線がすっと消えて倍率が光る */
 .combo.revive em{animation:comboRevive 1.1s ease .25s}
 .combo.revive{animation:comboRing 1.1s ease .25s}
@@ -315,7 +318,7 @@ html.glow-moon .up-fly{color:#bcd0ff;text-shadow:0 0 8px rgba(160,190,255,.85);s
 .combo100{position:fixed;z-index:60;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-family:var(--mincho);text-align:center}
 .combo100 span{font-size:.95rem;letter-spacing:.3em;color:var(--ink);text-shadow:0 0 6px var(--paper),0 0 14px var(--paper)}
 .combo100 b{font-weight:600;line-height:1;color:var(--accent);text-shadow:0 0 6px var(--paper),0 0 16px var(--paper),0 0 30px color-mix(in srgb,var(--accent) 70%,transparent)}
-.combo.hold em{opacity:.35}
+.combo.hold em{opacity:1}
 .combo.up{animation:comboUp .6s ease}
 .combo i{position:absolute;left:10px;right:10px;bottom:2px;height:1.5px;border-radius:2px;background:var(--accent);transform-origin:left;transform:scaleX(0);opacity:.7}
 .combo.run i{animation:comboTimer var(--ct,2400ms) linear forwards}
@@ -392,7 +395,7 @@ html.glow-moon .up-fly{color:#bcd0ff;text-shadow:0 0 8px rgba(160,190,255,.85);s
   color:#f3ead8;text-shadow:0 0 12px rgba(255,236,200,.35),0 0 2px rgba(255,240,215,.4)}
 .mirror-void{position:absolute;inset:0;z-index:1;background:#060507;pointer-events:none}
 /* 画面全体を覆う闇（作品や見出しの輪郭が、ごくかすかに透ける程度） */
-.abyss{position:fixed;inset:0;z-index:58;background:rgba(5,4,7,.955);pointer-events:none}
+.abyss{position:fixed;inset:0;z-index:58;background:#050407;pointer-events:none}
 /* 闇の上に先に灯る写し（違和感の数字・連鎖の枠・ペンの光） */
 .riser{position:fixed !important;right:auto !important;bottom:auto !important;margin:0 !important;z-index:60 !important;pointer-events:none !important}
 .riser.pen-glow{width:56px;height:56px;margin:-28px 0 0 -28px !important;border-radius:50%;
@@ -982,6 +985,8 @@ header > .hdr-r{grid-column:3;grid-row:1}
 .slip > .dcut{position:absolute;z-index:6}
 /* 辞典の言葉のメッセージは、作品ではなく採集エリア（絵）の下段に重ねて出す */
 .hero > .dcut{left:10px;right:10px;bottom:10px;z-index:7;pointer-events:none;box-shadow:inset 3px 0 0 var(--ribbon),0 10px 24px -8px rgba(0,0,0,.55),0 1px 0 rgba(0,0,0,.08)}
+/* 違和感辞典のテロップは最上段ヘッダーにかぶせて出す */
+body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width:min(calc(100vw - 24px),520px);z-index:12;pointer-events:none;border-radius:0 0 10px 10px;box-shadow:inset 3px 0 0 var(--ribbon),0 10px 26px -6px rgba(0,0,0,.6)}
 .dcut.in{clip-path:inset(0 0 0 0);transform:none;opacity:1}
 .dcut.out{clip-path:inset(0 0 0 100%);transform:translateX(14px);opacity:0;transition-duration:.6s,.6s,.5s}
 .dcut .dc-k{grid-column:1/-1;font-size:.6rem;letter-spacing:.22em;color:color-mix(in srgb,var(--page-ink) 55%,transparent)}
@@ -2789,7 +2794,7 @@ let nextCrackAt = Date.now() + 180000, forceCrack = false, shattering = false;  
 // 「+〇」の大きさ：1〜9は基本の大きさ、そこから10増えるごとに一段ずつ大きく（上限あり）
 function plusSize(n, base){ const step = n < 10 ? 0 : Math.floor(n / 10); return (base * Math.min(3.2, 1 + step * .22)).toFixed(2) + "rem"; }
 const COMBO_BONUS = 100;   // 連鎖が100に届くごとに、違和感 +100
-const COMBO_MS = 2400;
+const COMBO_MS = 2000;
 let combo = 0, comboAt = 0;
 let maxCombo = store.get("yura-maxcombo", 0);
 const comboMult = n => n >= 20 ? 3 : n >= 10 ? 2 : 1;
@@ -2942,17 +2947,17 @@ function endFlood(){
   const total = pend.reduce((s, p) => s + p.g, 0), shown = pend.slice(0, 12);
   // 辞典への記録（保存と音）は一度に行うと重いので、玉が集まり終えたあとに少しずつ
   pend.forEach((p, i) => setTimeout(()=>addToDict(p.word), 1500 + i * 70));
-  let landed = 0;
-  const landAll = () => { if(!total) return; addTotal(total); if(toPen) pour(total); else { ikan += total; saveIkan(); updateIkan(true); updateCover(); } };
-  if(!shown.length) landAll();
-  shown.forEach(({x, y}, i) => {
+  const restG = pend.slice(12).reduce((s, p) => s + p.g, 0);
+  const landOne = (g) => { if(!g) return; addTotal(g); if(toPen) pour(g); else { ikan += g; saveIkan(); updateIkan(true); updateCover(); } };
+  if(!shown.length) landOne(total);
+  shown.forEach(({x, y, g}, i) => {
     const cx = fr.left + x, cy = fr.top + y;
     setTimeout(()=>{
       const t = (toPen ? $("pen") : $("iv")).getBoundingClientRect(), o = document.createElement("span"); o.className = "orb";
       o.style.left = cx + "px"; o.style.top = cy + "px"; document.body.append(o);
       const dx = (t.left + t.width/2) - cx, dy = (t.top + t.height/2) - cy, sway = (Math.random()*2-1) * 30;
       o.animate([{transform:"translate(0,0) scale(0)", opacity:0},{transform:"translate(0,-4px) scale(1.6)", opacity:1, offset:.2},{transform:`translate(${dx*.3 + sway}px,${dy*.3 - 40}px) scale(1.1)`, opacity:.95, offset:.5},{transform:`translate(${dx}px,${dy}px) scale(.45)`, opacity:.5}],
-        {duration:850, easing:"cubic-bezier(.45,0,.6,1)", fill:"forwards"}).onfinish = () => { o.remove(); if(i % 4 === 0) sfx.arrive(); if(++landed === shown.length) landAll(); };
+        {duration:850, easing:"cubic-bezier(.45,0,.6,1)", fill:"forwards"}).onfinish = () => { o.remove(); if(i % 4 === 0) sfx.arrive(); landOne(g + (i === shown.length - 1 ? restG : 0)); };
     }, 380 + i * 55);
   });
   const cb = $("combo"); cb.classList.remove("hold");
@@ -3237,6 +3242,9 @@ function shatter(src){
         voidEl.animate([{opacity:1},{opacity:0}], {duration:FADE, easing:"ease", fill:"forwards"});
         shattering = false; document.documentElement.classList.remove("shattering"); nextCrackAt = Date.now() + 720000;
         [0, 140, 280].forEach(d => setTimeout(()=>{ if(!flood) spawnWord(); }, d));
+        // 完全ボーナス：割れから戻ったら月明かり/陽だまりで始まり、1秒後に懐中時計が落ちてくる
+        setTimeout(()=>{ if(!flood && !shattering && !glowRemain) startGlow(); }, 60);
+        setTimeout(()=>{ if(!flood && !shattering){ forceSpecial = true; spawnWord({force:true}); } }, 1000);
         setTimeout(()=>{ ml.remove(); }, 420);
         setTimeout(mend, FADE + 60);
       }, 350);
@@ -3299,7 +3307,7 @@ function spawnWord(opt = {}){
     if(w.classList.contains("reso")){ const rr = w.getBoundingClientRect(); resonate(rr.left + rr.width/2, rr.top + rr.height/2, w); }
     if(w.classList.contains("multi")){ const fr = $("drift").getBoundingClientRect(), rr = w.getBoundingClientRect(); multiply(rr.left + rr.width/2 - fr.left, rr.top + rr.height/2 - fr.top, {boon: w.classList.contains("boon")}); }
     const cm = bumpCombo();
-    const g = isOdd ? ODD_PT : yieldNow() * (flood ? 1 : cm);   // あふれる時間中は連鎖の数だけ進み、倍率はかからない
+    const g = isOdd ? ODD_PT : yieldNow() * cm;   // 時間停止中も連鎖倍率を引き継ぐ
     const wordText = w.dataset.word || w.textContent;
     const toPen = penActive();
     const arrive = () => { addTotal(g); if(toPen) pour(g); else { ikan += g; saveIkan(); updateIkan(true); updateCover(); } addToDict(wordText); sfx.arrive(); tut.on("touched"); };
@@ -3356,7 +3364,7 @@ function multiply(x, y, opt){
   ring.animate([{transform:"translate(-50%,-50%) scale(.2)", opacity:.9},{transform:"translate(-50%,-50%) scale(1)", opacity:0}], {duration:700, easing:"cubic-bezier(.2,.7,.3,1)", fill:"forwards"}).onfinish = () => ring.remove();
   for(let i=0;i<n;i++) setTimeout(()=>{
     let w;
-    if(boon){ forceMulti = true; w = spawnWord({force:true}); forceMulti = false; if(w){ const kw = KIND_WORDS[Math.floor(Math.random()*KIND_WORDS.length)]; w.textContent = kw; w.dataset.word = kw; w.setAttribute("aria-label", kw); } }   // 読了特典からは「芽生え」と同じ効果・エフェクトの前向きな言葉が生まれる
+    if(boon){ forceMulti = true; w = spawnWord({force:true}); forceMulti = false; if(w){ const kw = KIND_WORDS[Math.floor(Math.random()*KIND_WORDS.length)]; w.textContent = kw; w.dataset.word = kw; w.classList.add("kind"); w.setAttribute("aria-label", kw); } }   // 読了特典からは「芽生え」と同じ効果・エフェクトの前向きな言葉が生まれる
     else { w = spawnWord({force:true, plain:true}); }
     if(!w) return;
     const a = (i / n) * Math.PI * 2 + Math.random() * .8, d = .14 + Math.random() * .1;
@@ -3896,6 +3904,7 @@ let readStock = store.get("yura-readstock", 0); const READ_MAX = 5;
 document.addEventListener("click", e=>{
   const o = e.target.closest && e.target.closest('a[href*="note.com"]:not(.pg-open)'); if(o) track("note/" + (o.classList.contains("brand-note") ? "header" : "about"), "noteへ（見出し・説明）");
   const a = e.target.closest && e.target.closest("a.pg-open[data-note-id]"); if(!a) return;
+  sfx.toggle();   // 「noteで読む」を押した音は、音量ボタンと同じ
   const id = a.dataset.noteId; track("note/" + id, "noteで読む：" + id); if(noted.includes(id)) return;
   noted.push(id); store.set("yura-noted", noted); notedInk = id;
   const gained = readStock < READ_MAX; if(gained){ readStock++; store.set("yura-readstock", readStock); renderTray(); }
@@ -3912,7 +3921,7 @@ function playNoteFx(){
   setTimeout(()=>{ notedInk = null; }, 1400);
   const from = st ? st.getBoundingClientRect() : null;
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  sfx.arrive();
+  sfx.boon();
   toast(kind === 1 ? "読了特典を手に入れた。採集エリアで使えます" : "読了特典は満杯です（最大" + READ_MAX + "）");
   if(!from || reduce) return;
   // 押された印から「読了特典 +1」がふわりと浮かぶ
@@ -3926,7 +3935,7 @@ function playNoteFx(){
   }, 300);
 }
 function renderShelf(){   // 断片帳を描く（名前は呼び出し元との互換のため）
-  $("count").textContent = "集めた断片 " + read.length + (noted.length ? "　noteで読んだ " + noted.length : "");
+  $("count").textContent = "集めた断片 " + read.length;
   if(per()===2) pg -= pg % 2;
   pg = Math.max(0, Math.min(pg, maxPg()));
   const sp = $("spread");
@@ -3988,7 +3997,7 @@ function turn(dir){
 // ---------- 違和感の辞典：漂う言葉に初めて触れると載る。定義文は仮 ----------
 let DICT = {};
 // 何度も触れるほど、言葉が少しずつ辞典に滲み出す。必要な回数は言葉ごとに 3〜8 回
-const needOf = w => 5 + ([...w].reduce((h,c)=>(h*31 + c.codePointAt(0)) >>> 0, 7) % 6);
+const needOf = w => 8 + ([...w].reduce((h,c)=>(h*31 + c.codePointAt(0)) >>> 0, 7) % 8);
 let dictC = store.get("yura-dictc", null);
 if(!dictC){ dictC = {}; store.get("yura-dict", []).forEach(w=>dictC[w]=1); }
 let dictNew = [];
@@ -4017,7 +4026,7 @@ function runDictCut(){
   el.addEventListener("click", e => { e.stopPropagation(); finish(true);
     showLib(true); setTab("dict");
     setTimeout(()=>{ const it = document.querySelector(`.dict-item[data-share-word="${CSS.escape(word)}"]`); if(it) it.scrollIntoView({block:"center", behavior:"smooth"}); }, 120); });
-  (document.querySelector(".hero") || slip).append(el);
+  document.body.append(el);
   requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add("in")));
   let done = false;
   function finish(now){
@@ -4414,7 +4423,7 @@ function fitLayout(){
 
 // ---------- 最後の一行を「ユーザーが」開いたあと、少し間を置いて自動で「思考の断片にしまう」 ----------
 // 最後の一行を開く操作は自動化しない（ユーザーがボタンを押す）。自動なのは、開いたあとの“しまう”だけ。
-const AUTO_MS = 5000;
+const AUTO_MS = 8000;
 let autoT = 0;
 function armAutoStore(){ clearTimeout(autoT); autoT = setTimeout(autoStore, AUTO_MS); }
 function autoStore(){
@@ -4455,7 +4464,7 @@ function releaseReadBoon(srcRect){
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   if(reduce || !document.body.animate){ grow(); return; }
   const o = document.createElement("span"); o.className = "orb glow-seed"; o.style.left = sx + "px"; o.style.top = sy + "px"; document.body.append(o);
-  sfx.fly(.7);
+  sfx.boon();
   o.animate([
     {transform:"translate(0,0) scale(.4)", opacity:0},
     {transform:`translate(${(tx-sx)*.5}px,${(ty-sy)*.5 - 30}px) scale(1.35)`, opacity:1, offset:.5},
@@ -4739,6 +4748,12 @@ const sfx = (()=>{
       notes.forEach((f, i) => { const o = ctx.createOscillator(), g = ctx.createGain(), s = ctx.createGain(); o.type = moon ? "sine" : "triangle"; o.frequency.value = f;
         env(g, t + i * .09, moon ? .035 : .03, 1.6); o.connect(g); g.connect(bus); s.gain.value = .6; g.connect(s); s.connect(rv); o.start(t + i * .09); o.stop(t + i * .09 + 1.7); });
       for(let i=0;i<5;i++) bell(t + .25 + i * .11, (moon ? 2637 : 2093) * (1 + i * .12), 2.0, .5, .012, .4); },
+    // 読了特典を使うときの、豪華なきらめき（上昇アルペジオ＋和音＋高音の尾）
+    boon(){ const a = ac(); if(!a) return; const t = a.currentTime, rv = reverb(), n = notes();
+      click(t, 7000, .04, .012);
+      [n[0], n[2], n[4], n[4]*1.5, n[4]*2].forEach((f,i)=> bell(t + i*.065, f, 3.01, 1.4, .05, i>=3 ? .6 : .2));
+      [n[0], n[2], n[4]].forEach(f=>{ const o=ctx.createOscillator(), g=ctx.createGain(); o.type="triangle"; o.frequency.value=f; env(g, t+.02, .028, 1.1); o.connect(g); g.connect(bus); const s=ctx.createGain(); s.gain.value=.5; g.connect(s); s.connect(rv); o.start(t+.02); o.stop(t+1.3); });
+      for(let i=0;i<5;i++) bell(t + .33 + i*.08, n[4]*2*(1+i*.1), 2.0, .5, .014, .45); },
     dict(full){ const a = ac(); if(!a) return; const t = a.currentTime + .1, k = night() ? .8 : 1;
       // キュ
       const o = ctx.createOscillator(), g = ctx.createGain();
