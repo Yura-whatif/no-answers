@@ -139,6 +139,19 @@ body{background-color:var(--ground);color:var(--ink);font-family:var(--gothic);t
 @keyframes boonHalo{0%,100%{opacity:.6;transform:scale(.94)}50%{opacity:1;transform:scale(1.2)}}
 .boon-burst{position:fixed;z-index:6;width:58px;height:58px;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);
   border:2px solid color-mix(in srgb,#f3c650 92%,transparent);box-shadow:0 0 22px color-mix(in srgb,#f0c24a 75%,transparent),inset 0 0 14px color-mix(in srgb,#f3c650 55%,transparent)}
+/* 読了特典のストック：採集エリア下部に並ぶ。タップで1つ使う */
+.rtray{position:absolute;left:12px;bottom:12px;z-index:5;display:flex;align-items:center;gap:5px;padding:5px 11px 5px 9px;border-radius:999px;
+  background:color-mix(in srgb,var(--paper) 72%,transparent);border:1px solid color-mix(in srgb,#e9bb4e 55%,transparent);
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);box-shadow:0 2px 10px -4px rgba(0,0,0,.4)}
+.rtray[hidden]{display:none}
+.rt-label{font-size:.62rem;letter-spacing:.1em;color:var(--ink);white-space:nowrap;margin-right:2px}
+.rtoken{width:22px;height:22px;padding:0;border:0;background:none;cursor:pointer;display:grid;place-items:center;transition:transform .15s ease}
+.rtoken:hover{transform:scale(1.12)}.rtoken:active{transform:scale(.9)}
+.rtoken:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:50%}
+.rt-seed{width:15px;height:15px;border-radius:42% 58% 45% 55%;background:radial-gradient(circle at 35% 30%,#fff6d9,#f0c24a 55%,#c98f2a);
+  box-shadow:0 0 8px color-mix(in srgb,#f3c650 72%,transparent);animation:boonHalo 1.7s ease-in-out infinite}
+.rtoken.pop .rt-seed{animation:boonPop .5s cubic-bezier(.3,1.5,.5,1)}
+@keyframes boonPop{0%{transform:scale(.3)}55%{transform:scale(1.3)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){.word.multi.boon::after{animation:none;opacity:.85}}
 .multi-ring{position:absolute;z-index:2;width:150px;height:150px;border-radius:50%;pointer-events:none;border:1.5px solid color-mix(in srgb,var(--multi) 70%,transparent);box-shadow:0 0 16px color-mix(in srgb,var(--multi) 45%,transparent)}
 :root{--multi:#3e8f6f}
@@ -164,10 +177,16 @@ body{background-color:var(--ground);color:var(--ink);font-family:var(--gothic);t
 @keyframes glowPulse{0%,100%{box-shadow:0 0 10px color-mix(in srgb,var(--glowc) 30%,transparent)}50%{box-shadow:0 0 24px 2px color-mix(in srgb,var(--glowc) 60%,transparent)}}
 /* 陽だまり・月明かりの空気：絵の上に重ねる光（言葉より奥） */
 .glow-fx{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;animation:fbIn .8s ease both}
-.glow-fx.sun{background:linear-gradient(200deg,rgba(255,214,140,.30),rgba(255,226,170,.12) 45%,rgba(255,200,120,.06));mix-blend-mode:normal}
+.glow-fx.sun{background:radial-gradient(ellipse 90% 78% at 72% 8%,rgba(255,228,150,.46),rgba(255,214,130,.15) 48%,transparent 76%),radial-gradient(ellipse 128% 102% at 50% 46%,transparent 48%,rgba(138,80,16,.24) 100%),linear-gradient(200deg,rgba(255,214,140,.14),transparent 55%)}
 .glow-fx.sun .ray{position:absolute;top:-30%;height:170%;transform-origin:50% 0;transform:rotate(28deg);
   background:linear-gradient(180deg,rgba(255,240,200,.55),rgba(255,226,170,.22) 45%,rgba(255,226,170,0) 85%);filter:blur(6px);animation:raySway 4.5s ease-in-out infinite alternate}
 @keyframes raySway{from{transform:rotate(25deg) translateX(-6px)}to{transform:rotate(31deg) translateX(6px)}}
+.glow-fx.sun .smote{position:absolute;bottom:-6%;width:4px;height:4px;border-radius:50%;
+  background:radial-gradient(circle,#fff7df 0%,#f3c24a 55%,rgba(230,160,40,0) 100%);
+  box-shadow:0 0 7px 1px rgba(255,205,105,.9);scale:var(--s,1);
+  animation:smoteRise var(--d,8s) linear infinite, smoteTw 1.6s ease-in-out infinite}
+@keyframes smoteRise{0%{transform:translate(0,0);opacity:0}14%{opacity:1}82%{opacity:.9}100%{transform:translate(var(--dx,0),var(--rise,-320px));opacity:0}}
+@keyframes smoteTw{0%,100%{filter:brightness(.75)}50%{filter:brightness(1.75)}}
 .glow-fx.moon{background:radial-gradient(ellipse 80% 70% at 22% 8%,rgba(205,220,255,.30),rgba(150,175,235,.12) 50%,transparent 80%),rgba(40,60,120,.16)}
 .glow-fx.moon .mote{position:absolute;top:-6%;width:3px;height:3px;border-radius:50%;background:#eef3ff;box-shadow:0 0 6px 1px rgba(200,215,255,.9);
   scale:var(--s,1);animation:moteFall 7s linear infinite}
@@ -662,6 +681,9 @@ header > .hdr-r{grid-column:3;grid-row:1}
 .ln.now p{animation:lnBrush 1s cubic-bezier(.45,.1,.35,1) .15s both;-webkit-mask-image:linear-gradient(to right,#000 42%,transparent 58%);mask-image:linear-gradient(to right,#000 42%,transparent 58%);-webkit-mask-size:260% 100%;mask-size:260% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
 @keyframes lnBrush{from{-webkit-mask-position:100% 0;mask-position:100% 0}to{-webkit-mask-position:0 0;mask-position:0 0}}
 [data-yura="black"] .ln.now p{-webkit-mask-image:none;mask-image:none;animation:surface 1.2s cubic-bezier(.25,.6,.3,1) .3s both}
+/* 一行が完成した瞬間、その行がふわっと金色に光る */
+.ln.lndone p{animation:lineDone 1.5s ease-out}
+@keyframes lineDone{0%{text-shadow:none}22%{text-shadow:0 0 6px rgba(255,238,185,.95),0 0 17px rgba(240,190,90,.72),0 0 30px rgba(240,170,60,.5)}100%{text-shadow:none}}
 .cover.gone{animation:coverGone .6s cubic-bezier(.6,0,.2,1) forwards;pointer-events:none}
 @keyframes coverGone{to{transform:translateY(-10px) scaleY(0);opacity:0}}
 .cover.charging{background:var(--ink);color:var(--paper);font-family:var(--mincho);font-size:.9rem;letter-spacing:.24em;cursor:default;
@@ -848,8 +870,9 @@ header > .hdr-r{grid-column:3;grid-row:1}
   box-shadow:inset 0 0 0 2.5px color-mix(in srgb,var(--page) 100%,transparent),inset 0 0 0 3.5px color-mix(in srgb,#b0352a 55%,transparent)}
 .pg-noted.press{animation:stampPress .7s cubic-bezier(.3,1.4,.5,1) .35s both}
 .oddplus.np{color:#a8352a;text-shadow:0 0 6px #f4ecd8,0 0 12px #f4ecd8,0 0 20px #f4ecd8}
-.pg-bonus{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;font-size:.62rem;letter-spacing:.06em;line-height:1.6;vertical-align:1px;
-  color:color-mix(in srgb,#b0352a 85%,transparent);border:1px solid color-mix(in srgb,#b0352a 45%,transparent)}
+.pg-bonus{display:inline-block;margin-left:6px;padding:1px 9px;border-radius:999px;font-size:.62rem;letter-spacing:.08em;line-height:1.6;vertical-align:1px;font-weight:600;
+  color:#8a5712;background:color-mix(in srgb,#f3c650 26%,transparent);border:1px solid color-mix(in srgb,#e4af3e 72%,transparent);animation:bonusGlow 1.6s ease-in-out infinite}
+@keyframes bonusGlow{0%,100%{box-shadow:0 0 6px color-mix(in srgb,#f3c650 45%,transparent)}50%{box-shadow:0 0 14px color-mix(in srgb,#f3c650 85%,transparent),0 0 2px color-mix(in srgb,#e4af3e 60%,transparent)}}
 .ikantotal.gain{animation:totalGain 1.2s ease}
 .ikantotal.gain b{animation:pop .7s ease}
 @keyframes totalGain{30%{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent),0 0 22px color-mix(in srgb,var(--accent) 45%,transparent)}}
@@ -958,7 +981,7 @@ header > .hdr-r{grid-column:3;grid-row:1}
   clip-path:inset(0 100% 0 0);transform:translateX(-14px);opacity:0;transition:clip-path .7s cubic-bezier(.3,.7,.2,1),transform .7s cubic-bezier(.3,.7,.2,1),opacity .4s ease}
 .slip > .dcut{position:absolute;z-index:6}
 /* 辞典の言葉のメッセージは、作品ではなく採集エリア（絵）の下段に重ねて出す */
-.hero > .dcut{left:10px;right:10px;bottom:10px;z-index:7;box-shadow:inset 3px 0 0 var(--ribbon),0 10px 24px -8px rgba(0,0,0,.55),0 1px 0 rgba(0,0,0,.08)}
+.hero > .dcut{left:10px;right:10px;bottom:10px;z-index:7;pointer-events:none;box-shadow:inset 3px 0 0 var(--ribbon),0 10px 24px -8px rgba(0,0,0,.55),0 1px 0 rgba(0,0,0,.08)}
 .dcut.in{clip-path:inset(0 0 0 0);transform:none;opacity:1}
 .dcut.out{clip-path:inset(0 0 0 100%);transform:translateX(14px);opacity:0;transition-duration:.6s,.6s,.5s}
 .dcut .dc-k{grid-column:1/-1;font-size:.6rem;letter-spacing:.22em;color:color-mix(in srgb,var(--page-ink) 55%,transparent)}
@@ -1038,6 +1061,7 @@ function track(name, title){ try{ if(window.goatcounter && window.goatcounter.co
     <div class="floodbar" id="floodbar" hidden><span>時が止まっている</span><i></i></div>
     <div class="floodbar glowbar" id="glowbar" hidden><span>陽だまり</span><i></i></div>
     <div class="ikan" id="ikan" aria-live="polite">違和感 <b id="iv">0</b><span class="tm" id="tm"></span><span class="pour" id="pour">ペンに注いでいます</span></div>
+    <div class="rtray" id="rtray" hidden aria-label="読了特典のストック"></div>
   </figure>
 
   <article class="slip" id="slip" tabindex="0" aria-live="polite">
@@ -2549,7 +2573,9 @@ function writeStep(){
   disp++;
   markLines(d);
   if(disp % 3 === 0) sfx.scratch();
-  if(disp === L0 || disp === L0 + L1){ sfx.line(disp === L0 ? 0 : 1); flash("unlock-s", 850); }
+  if(disp === L0 || disp === L0 + L1){ sfx.line(disp === L0 ? 0 : 1); flash("unlock-s", 850);
+    const ln = $(disp === L0 ? "ln0" : "ln1"); if(ln){ ln.classList.remove("lndone"); void ln.offsetWidth; ln.classList.add("lndone"); setTimeout(()=>ln.classList.remove("lndone"), 1600); }
+  }
   pen.classList.add("moving"); placePen();
   setTimeout(writeStep, flood ? 24 : penSpeed);
 }
@@ -3320,16 +3346,17 @@ function spawnWord(opt = {}){
   return w;
 }
 // 芽生え：触れた場所のまわりに、ふつうの言葉が4〜5個、芽吹くように現れる
+const KIND_WORDS = ["ありがとう","好き","スキ","感謝","うれしい","しあわせ","大好き","だいすき","ありがと","いいね","素敵","ありがとね","会えてよかった","そばにいてくれて","だいじょうぶ"];
 function multiply(x, y, opt){
   const boon = !!(opt && opt.boon);
   const field = $("drift"), W = field.clientWidth || 1, H = field.clientHeight || 1, n = boon ? 3 : 4 + Math.floor(Math.random() * 2);
-  track("multiply", boon ? "解放特典" : "芽生え");
+  track("multiply", boon ? "読了特典" : "芽生え");
   sfx.multiply(n);
   const ring = document.createElement("span"); ring.className = "multi-ring"; ring.style.left = x + "px"; ring.style.top = y + "px"; field.append(ring);
   ring.animate([{transform:"translate(-50%,-50%) scale(.2)", opacity:.9},{transform:"translate(-50%,-50%) scale(1)", opacity:0}], {duration:700, easing:"cubic-bezier(.2,.7,.3,1)", fill:"forwards"}).onfinish = () => ring.remove();
   for(let i=0;i<n;i++) setTimeout(()=>{
     let w;
-    if(boon){ forceMulti = true; w = spawnWord({force:true}); forceMulti = false; }   // 解放特典からは「芽生え」が生まれる
+    if(boon){ forceMulti = true; w = spawnWord({force:true}); forceMulti = false; if(w){ const kw = KIND_WORDS[Math.floor(Math.random()*KIND_WORDS.length)]; w.textContent = kw; w.dataset.word = kw; w.setAttribute("aria-label", kw); } }   // 読了特典からは「芽生え」と同じ効果・エフェクトの前向きな言葉が生まれる
     else { w = spawnWord({force:true, plain:true}); }
     if(!w) return;
     const a = (i / n) * Math.PI * 2 + Math.random() * .8, d = .14 + Math.random() * .1;
@@ -3456,9 +3483,14 @@ function startGlow(){
   if(moon) for(let i=0;i<22;i++){ const d = document.createElement("i"); d.className = "mote";
       d.style.left = (Math.random() * 100).toFixed(1) + "%"; d.style.animationDelay = (-Math.random() * 6).toFixed(2) + "s"; d.style.animationDuration = (5 + Math.random() * 4).toFixed(2) + "s";
       d.style.setProperty("--s", (.6 + Math.random() * 1.2).toFixed(2)); d.style.setProperty("--dx", ((Math.random() - .5) * 40).toFixed(0) + "px"); fx.append(d); }
-  else for(let i=0;i<5;i++){ const r = document.createElement("i"); r.className = "ray";
+  else { for(let i=0;i<5;i++){ const r = document.createElement("i"); r.className = "ray";
       r.style.right = (-10 + i * 13 + Math.random() * 6).toFixed(1) + "%"; r.style.width = (8 + Math.random() * 10).toFixed(1) + "%";
       r.style.animationDelay = (-Math.random() * 4).toFixed(2) + "s"; r.style.opacity = (.5 + Math.random() * .5).toFixed(2); fx.append(r); }
+    for(let i=0;i<16;i++){ const d = document.createElement("i"); d.className = "smote";
+      d.style.left = (Math.random() * 100).toFixed(1) + "%"; d.style.setProperty("--d", (6 + Math.random() * 5).toFixed(2) + "s");
+      d.style.animationDelay = (-Math.random() * 8).toFixed(2) + "s, " + (-Math.random() * 1.6).toFixed(2) + "s";
+      d.style.setProperty("--s", (.6 + Math.random() * 1.3).toFixed(2)); d.style.setProperty("--dx", ((Math.random() - .5) * 50).toFixed(0) + "px"); fx.append(d); }
+    fx.style.setProperty("--rise", "-" + Math.round(hero.clientHeight * 1.15) + "px"); }
   fx.style.setProperty("--fall", Math.round(hero.clientHeight * 1.1) + "px");
   hero.insertBefore(fx, $("drift"));
   // 残り時間のバー（時止めのバーと並ぶときは、その下の段へ）
@@ -3849,7 +3881,7 @@ function pageHTML(i, side){
   return `<div class="${cls}${d.id===inkId?" ink":""}">${head}${SCENES[d.id] ? `<div class="pg-img" style="background-image:url('${SCENES[d.id]}')"></div>` : ""}<h3 class="pg-title">${esc(d.t)}</h3>
     <div class="pg-lines"><p>${esc(d.l[0])}</p><p>${esc(d.l[1])}</p><p class="pg-last">${esc(d.l[2])}</p></div>
     ${noted.includes(d.id) ? `<span class="pg-noted${d.id===notedInk?" press":""}" aria-label="noteで読んだ断片">note<br>読了</span>` : ""}
-    <div class="pg-foot">${d.u ? `<a class="pg-open" href="${esc(d.u)}" target="_blank" rel="noopener" data-note-id="${d.id}">${noted.includes(d.id) ? "noteでもう一度読む" : `noteで読む<small class="pg-bonus">違和感 +${NOTE_PT}</small>`}</a>` : "<span></span>"}<button type="button" class="pg-share" data-share-id="${d.id}">${SHARE_ICON}この断片を渡す</button></div></div>`;
+    <div class="pg-foot">${d.u ? `<a class="pg-open" href="${esc(d.u)}" target="_blank" rel="noopener" data-note-id="${d.id}">${noted.includes(d.id) ? "noteでもう一度読む" : `noteで読む<small class="pg-bonus">読了特典</small>`}</a>` : "<span></span>"}<button type="button" class="pg-share" data-share-id="${d.id}">${SHARE_ICON}この断片を渡す</button></div></div>`;
 }
 function spreadHTML(a){
   return per()===1 ? pageHTML(a,"solo") : pageHTML(a,"left") + `<div class="gutter"></div>` + pageHTML(a+1,"right");
@@ -3860,19 +3892,20 @@ function maxPg(){ const n = ALL.length + 1; return per()===1 ? n-1 : Math.floor(
 // はじめて読みに行った作品だけ、お礼に違和感 +NOTE_PT
 const NOTE_PT = 10;
 let noted = store.get("yura-noted", []), notedInk = null, noteFxPending = false;
+let readStock = store.get("yura-readstock", 0); const READ_MAX = 5;
 document.addEventListener("click", e=>{
   const o = e.target.closest && e.target.closest('a[href*="note.com"]:not(.pg-open)'); if(o) track("note/" + (o.classList.contains("brand-note") ? "header" : "about"), "noteへ（見出し・説明）");
   const a = e.target.closest && e.target.closest("a.pg-open[data-note-id]"); if(!a) return;
   const id = a.dataset.noteId; track("note/" + id, "noteで読む：" + id); if(noted.includes(id)) return;
   noted.push(id); store.set("yura-noted", noted); notedInk = id;
-  ikan += NOTE_PT; saveIkan(); addTotal(NOTE_PT); updateIkan(false);
+  const gained = readStock < READ_MAX; if(gained){ readStock++; store.set("yura-readstock", readStock); renderTray(); }
   // noteのタブから戻ってきたところで、印を押してお礼を見せる（開いたままなら少し後に）
-  noteFxPending = true;
+  noteFxPending = gained ? 1 : 2;
   setTimeout(()=>{ if(!document.hidden) playNoteFx(); }, 600);
 });
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && noteFxPending) setTimeout(playNoteFx, 350); });
 function playNoteFx(){
-  if(!noteFxPending) return; noteFxPending = false;
+  const kind = noteFxPending; if(!kind) return; noteFxPending = false;
   if(!libOpen){ notedInk = null; return; }
   if(!turning) renderShelf();
   const st = document.querySelector(".pg-noted.press");
@@ -3880,11 +3913,12 @@ function playNoteFx(){
   const from = st ? st.getBoundingClientRect() : null;
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   sfx.arrive();
+  toast(kind === 1 ? "読了特典を手に入れた。採集エリアで使えます" : "読了特典は満杯です（最大" + READ_MAX + "）");
   if(!from || reduce) return;
-  // 押された印から「+10」がふわりと浮かぶ
+  // 押された印から「読了特典 +1」がふわりと浮かぶ
   setTimeout(()=>{
     const cx = from.left + from.width/2, cy = from.top + from.height/2;
-    const p = document.createElement("span"); p.className = "oddplus np"; p.textContent = "+" + NOTE_PT; p.style.fontSize = plusSize(NOTE_PT, 1.2);
+    const p = document.createElement("span"); p.className = "oddplus np"; p.textContent = kind === 1 ? "読了特典 +1" : "満杯"; p.style.fontSize = "1rem"; p.style.whiteSpace = "nowrap";
     p.style.left = cx + "px"; p.style.top = (cy - 10) + "px"; document.body.append(p);
     p.animate([{opacity:0, transform:"translate(-50%,-30%) scale(.8)"},{opacity:1, transform:"translate(-50%,-110%) scale(1.1)", offset:.25},{opacity:1, transform:"translate(-50%,-150%) scale(1)", offset:.7},{opacity:0, transform:"translate(-50%,-200%) scale(1)"}],
       {duration:1600, easing:"ease-out", fill:"forwards"}).onfinish = () => p.remove();
@@ -3954,7 +3988,7 @@ function turn(dir){
 // ---------- 違和感の辞典：漂う言葉に初めて触れると載る。定義文は仮 ----------
 let DICT = {};
 // 何度も触れるほど、言葉が少しずつ辞典に滲み出す。必要な回数は言葉ごとに 3〜8 回
-const needOf = w => 3 + ([...w].reduce((h,c)=>(h*31 + c.codePointAt(0)) >>> 0, 7) % 6);
+const needOf = w => 5 + ([...w].reduce((h,c)=>(h*31 + c.codePointAt(0)) >>> 0, 7) % 6);
 let dictC = store.get("yura-dictc", null);
 if(!dictC){ dictC = {}; store.get("yura-dict", []).forEach(w=>dictC[w]=1); }
 let dictNew = [];
@@ -4062,7 +4096,7 @@ function renderStatus(){
   $("statusbox").innerHTML =
     row("これまでに集めた違和感", total.toLocaleString()) +
     row("集めた断片", (rw + rb) + " / " + (wN + bN), "白 " + rw + "/" + wN + "　黒 " + rb + "/" + bN) +
-    row("noteで読んだ数", noted.length) +
+    row("読了特典", noted.length) +
     row("意味の分かった言葉", (kw + kb) + " / " + (wordW + wordB), "白 " + kw + "/" + wordW + "　黒 " + kb + "/" + wordB) +
     row("最高連鎖", maxCombo);
 }
@@ -4084,7 +4118,7 @@ function showLib(on){
   m.hidden = on; l.hidden = !on;
   const v = on ? l : m; v.classList.remove("enter"); void v.offsetWidth; v.classList.add("enter");
   if(on) document.documentElement.dataset.view = "lib"; else delete document.documentElement.dataset.view;
-  if(!on) setTimeout(()=>{ updatePour(); placePen(); const d = curPiece(); if(d && disp < targetChars(d)) kickPen(); }, 60);
+  if(!on) setTimeout(()=>{ updatePour(); placePen(); const d = curPiece(); if(d && disp < targetChars(d)) kickPen(); renderTray(); }, 60);
   $("libbtn").setAttribute("aria-pressed", on);
   $("libbtn").setAttribute("aria-label", on ? "トップに戻る" : "思考の断片を開く");
   $("libbtn").title = on ? "トップに戻る" : "思考の断片";
@@ -4166,7 +4200,6 @@ function storeAway(){
     render();
     pageIn();
     storing = false;
-    sprout();
     setTimeout(yuraWord, 1800);
     tut.on("stored");
   };
@@ -4390,9 +4423,21 @@ function autoStore(){
   storeAway();
 }
 // しまったあと：しまうボタンから採集エリアへ光の玉が飛び、着いた場所に「芽生え」が生まれる
-function sprout(){
+function renderTray(){
+  const el = $("rtray"); if(!el) return;
+  el.hidden = readStock <= 0;
+  el.innerHTML = readStock <= 0 ? "" : '<span class="rt-label">読了特典</span>' +
+    Array.from({length: readStock}, (_, i) => '<button type="button" class="rtoken' + (i === readStock - 1 ? " pop" : "") + '" aria-label="読了特典を使う"><span class="rt-seed"></span></button>').join("");
+}
+function useReadStock(btn){
+  if(readStock <= 0 || libOpen || flood || shattering) return;
+  const r = btn.getBoundingClientRect();
+  readStock--; store.set("yura-readstock", readStock); renderTray();
+  releaseReadBoon(r);
+}
+function releaseReadBoon(srcRect){
   const hero = document.querySelector(".hero"), drift = $("drift"); if(!hero || !drift) return;
-  const src = $("libbtn").getBoundingClientRect(), hb = hero.getBoundingClientRect();
+  const src = srcRect || $("libbtn").getBoundingClientRect(), hb = hero.getBoundingClientRect();
   const tx = hb.left + hb.width * (0.26 + Math.random() * 0.48), ty = hb.top + hb.height * (0.30 + Math.random() * 0.40);
   const sx = src.left + src.width / 2, sy = src.top + src.height / 2;
   const grow = () => {
@@ -4401,8 +4446,8 @@ function sprout(){
     if(w){ const fr = drift.getBoundingClientRect();
       w.style.setProperty("--x", Math.max(2, Math.min(90, (tx - fr.left) / fr.width * 100)).toFixed(1) + "%");
       w.style.setProperty("--y", Math.max(6, Math.min(80, (ty - fr.top) / fr.height * 100)).toFixed(1) + "%");
-      w.classList.add("boon"); w.textContent = "解放特典"; w.dataset.word = "解放特典";   // 本棚の特典：光って「解放特典」だと主張する
-      w.setAttribute("aria-label", "解放特典（触れると芽生えが3つ現れる）"); w.title = "解放特典";
+      w.classList.add("boon"); w.textContent = "読了特典"; w.dataset.word = "読了特典";   // 読了特典：光って主張する。触れると芽生えが3つ
+      w.setAttribute("aria-label", "読了特典（触れると芽生えが3つ現れる）"); w.title = "読了特典";
       if(document.body.animate){ const bu = document.createElement("span"); bu.className = "boon-burst"; bu.style.left = tx + "px"; bu.style.top = ty + "px"; document.body.append(bu);
         bu.animate([{transform:"translate(-50%,-50%) scale(.3)", opacity:.95},{transform:"translate(-50%,-50%) scale(2.6)", opacity:0}], {duration:820, easing:"cubic-bezier(.2,.7,.3,1)", fill:"forwards"}).onfinish = () => bu.remove(); }
     }
@@ -4434,6 +4479,7 @@ function boot(){
   updateIkan(false);
   lockSlipHeight();
   fitLayout();
+  renderTray();
   setTimeout(spawnLoop, 1300);
   booted = true;
   if(offlineGain) setTimeout(()=>receiveAway(offlineGain), 900);
@@ -4845,6 +4891,7 @@ $("tab-dict").addEventListener("click", ()=>setTab("dict"));
 $("tab-status").addEventListener("click", ()=>setTab("status"));
 $("idxbtn").addEventListener("click", ()=>{ if($("bookindex").hidden) openIndex(); else closeIndex(); });
 $("idxlist").addEventListener("click", e=>{ const b = e.target.closest(".bix-item"); if(b) jumpToFragment(+b.dataset.pg); });
+$("rtray").addEventListener("click", e=>{ const b = e.target.closest(".rtoken"); if(b) useReadStock(b); });
 $("pgnext").addEventListener("click", ()=>turn(1));
 window.addEventListener("resize", ()=>{ if(libOpen && !turning) renderShelf(); });
 
@@ -4858,7 +4905,7 @@ $("t-c100").onclick=()=>{ combo = 89; comboAt = Date.now(); toast("連鎖を89�
 $("t-odd").onclick=()=>{ forceOdd = true; toast("まもなく、逆さまの言葉が現れます"); };
 $("t-special").onclick=()=>{ forceSpecial = true; toast("まもなく、明滅する言葉が現れます"); };
 $("t-plus").onclick=()=>{ pour(20); };
-$("t-all").onclick=()=>{ store.set("yura-shared",""); store.set("yura-said",[]); noted=[]; store.set("yura-noted",noted); ikan=0; ikanTotal=0; store.set("yura-total",0); read=[]; dispId=null; prog={}; cur={white:null,black:null}; open=false; store.set("yura-prog",prog); store.set("yura-cur",cur); dictC={}; dictNew=[]; store.set("yura-dictc",dictC); store.set("yura-dict",[]); $("dictdot").hidden=true; sel=null; shownBooks=null; closing=null; inkId=null; pendingClose=false; $("libdot").hidden=true; store.set("yura-read",read); maxCombo=0; store.set("yura-maxcombo",0); saveIkan();
+$("t-all").onclick=()=>{ store.set("yura-shared",""); store.set("yura-said",[]); noted=[]; store.set("yura-noted",noted); ikan=0; ikanTotal=0; store.set("yura-total",0); read=[]; dispId=null; prog={}; cur={white:null,black:null}; open=false; store.set("yura-prog",prog); store.set("yura-cur",cur); dictC={}; dictNew=[]; store.set("yura-dictc",dictC); store.set("yura-dict",[]); $("dictdot").hidden=true; sel=null; shownBooks=null; closing=null; inkId=null; pendingClose=false; $("libdot").hidden=true; store.set("yura-read",read); maxCombo=0; store.set("yura-maxcombo",0); readStock=0; store.set("yura-readstock",0); renderTray(); saveIkan();
   open=false; render(); updateIkan(true); toast("違和感と読んだ記録を消しました"); };
 
 /* ---------- 初回の遊び方案内 ---------- */
