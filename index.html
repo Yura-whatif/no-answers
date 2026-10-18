@@ -3399,11 +3399,19 @@ function shatter(src){
     const mend = () => { voidEl.remove(); abyss.remove(); risers.forEach(({c}) => c.remove()); risers.length = 0; };
   }, 200);
 }
-function spawnLoop(){ if(!flood) spawnWord(); setTimeout(spawnLoop, flood ? 400 : 1300); }
+function spawnLoop(){
+  if(!flood){
+    spawnWord();
+    // たまに通常の違和感を2〜3個まとめて湧かせる（手持ち無沙汰を減らす）
+    if(Math.random() < .3){ const extra = Math.random() < .35 ? 2 : 1; for(let i=0;i<extra;i++) setTimeout(()=>{ if(!flood) spawnWord({plain:true}); }, 140 + i*150 + Math.random()*170); }
+  }
+  // 湧く間隔をばらつかせる（一定間隔で1つ、の単調さをなくす）
+  setTimeout(spawnLoop, flood ? 400 : 600 + Math.random()*1100);
+}
 
 function spawnWord(opt = {}){
   const field = $("drift");
-  const max = flood ? 14 : Math.min(8, 3 + booksNow());
+  const max = flood ? 14 : Math.min(8, 4 + booksNow());
   if(shattering || (!opt.force && field.querySelectorAll(".word:not(.got)").length >= max) || document.hidden || libOpen) return;
   const list = WORDS[mode], w = document.createElement("button");
   w.type = "button"; w.className = "word" + (flood ? " fast" : ""); w.textContent = list[Math.floor(Math.random()*list.length)];
@@ -3417,7 +3425,8 @@ function spawnWord(opt = {}){
   if(multi){ w.textContent = "芽生え"; w.dataset.word = "芽生え"; w.classList.add("multi"); forceMulti = false; nextMultiAt = Date.now() + 40000; w.setAttribute("aria-label", "芽生え（触れると言葉が芽吹く）"); }
   // 引き寄せ：触れると、画面の言葉をすべて吸い寄せる
   const pull = !opt.plain && !special && !odd && !multi && !flood && (forcePull || (Date.now() > nextPullAt && Math.random() < .04));
-  if(pull){ w.textContent = "引き寄せ"; w.dataset.word = "引き寄せ"; w.classList.add("pull"); forcePull = false; nextPullAt = Date.now() + 50000; w.setAttribute("aria-label", "引き寄せ（触れると言葉を吸い寄せる）"); }
+  if(pull){ w.textContent = "引き寄せ"; w.dataset.word = "引き寄せ"; w.classList.add("pull"); forcePull = false; nextPullAt = Date.now() + 50000; w.setAttribute("aria-label", "引き寄せ（触れると言葉を吸い寄せる）");
+    for(let i=0;i<3;i++) setTimeout(()=>{ if(!flood && !shattering && !libOpen) spawnWord({force:true, plain:true}); }, 120 + i*160 + Math.random()*150); }   // 引き寄せと一緒に、吸い寄せる言葉を数個まいておく
   // 陽だまり（白）・月明かり（黒）：触れると、しばらく違和感が2倍
   // 懐中時計が近いとき（現れる20秒前から、漂っているあいだ）は、陽だまり・月明かりが来やすい（待ち時間も短く）
   const preStop = Date.now() > nextSpecialAt - 20000 || !!field.querySelector(".word.special:not(.got)");
