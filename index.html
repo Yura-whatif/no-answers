@@ -4909,7 +4909,6 @@ const sfx = (()=>{
       for(let i=0;i<5;i++) bell(t + .25 + i * .11, (moon ? 2637 : 2093) * (1 + i * .12), 2.0, .5, .012, .4); },
     // 読了特典を使うときの、豪華なきらめき（上昇アルペジオ＋和音＋高音の尾）
     boon(){ const a = ac(); if(!a) return; const t = a.currentTime, rv = reverb(), n = notes();
-      click(t, 7000, .04, .012);
       [n[0], n[2], n[4], n[4]*1.5, n[4]*2].forEach((f,i)=> bell(t + i*.065, f, 3.01, 1.4, .05, i>=3 ? .6 : .2));
       [n[0], n[2], n[4]].forEach(f=>{ const o=ctx.createOscillator(), g=ctx.createGain(); o.type="triangle"; o.frequency.value=f; env(g, t+.02, .028, 1.1); o.connect(g); g.connect(bus); const s=ctx.createGain(); s.gain.value=.5; g.connect(s); s.connect(rv); o.start(t+.02); o.stop(t+1.3); });
       for(let i=0;i<5;i++) bell(t + .33 + i*.08, n[4]*2*(1+i*.1), 2.0, .5, .014, .45); },
