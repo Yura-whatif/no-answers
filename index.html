@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#eeebe4">
 <!-- SNSで共有したときの表示（公開後、URL の「USERNAME」を自分の GitHub ユーザー名に書き換えてください） -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="ユラの違和感採集">
+<meta property="og:title" content="No Answers ー違和感採集ー">
 <meta property="og:description" content="違和感を集め、ユラの3行思考を一行ずつ言葉にしていく、静かなブラウザゲーム。">
 <meta property="og:url" content="https://yura-whatif.github.io/no-answers/">
 <meta property="og:image" content="https://yura-whatif.github.io/no-answers/img/ogp.jpg">
@@ -25,7 +25,7 @@ body{margin:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif}
 img{max-width:100%}
 [hidden]{display:none!important}
 </style>
-<title>ユラの違和感採集</title>
+<title>No Answers ー違和感採集ー</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap">
@@ -644,6 +644,9 @@ header > .hdr-r{grid-column:3;grid-row:1}
 .brand span,.brand a{font-size:.75rem;color:var(--mute);letter-spacing:.06em}
 .brand a{align-self:flex-start;max-width:100%;text-decoration:none;border-bottom:1px dotted color-mix(in srgb,var(--mute) 55%,transparent);transition:color .2s,border-color .2s}
 .brand a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+.brand .logo{display:flex;flex-wrap:wrap;align-items:baseline;gap:1px 7px;min-width:0;max-width:100%}
+.brand .logo b{flex:none}
+.brand .sub{font-family:var(--mincho);font-weight:600;font-size:.84rem;letter-spacing:.2em;color:var(--mute);white-space:nowrap}
 /* 節目にだけ、ユラがそっと話しかける（noteとこの場所のこと）。一度きり */
 .yura-word{position:fixed;left:50%;top:calc(18px + env(safe-area-inset-top,0px));z-index:40;width:min(420px,calc(100% - 32px));transform:translate(-50%,-16px);opacity:0;
   padding:16px 18px 12px;border-radius:12px;background:color-mix(in srgb,var(--paper) 94%,transparent);color:var(--ink);border:1px solid var(--line);
@@ -1050,7 +1053,7 @@ function track(name, title){ try{ if(window.goatcounter && window.goatcounter.co
 <div class="aura" aria-hidden="true"><i class="w"></i><i class="b"></i><i class="s"></i></div>
 <div class="wrap">
   <header>
-    <div class="brand"><b>違和感採集</b><a class="brand-note" href="https://note.com/whatif_lab/n/nbf153664dc6b" target="_blank" rel="noopener" title="noteで「ユラ｜思考実験の記録」を開く">ユラ｜思考実験の記録</a></div>
+    <div class="brand"><span class="logo"><b>No Answers</b><span class="sub">ー違和感採集ー</span></span></div>
     <div class="hdr-r">
       <button type="button" class="libbtn" id="sndbtn" aria-label="効果音" aria-pressed="true" title="効果音">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="off" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
@@ -1160,7 +1163,7 @@ function track(name, title){ try{ if(window.goatcounter && window.goatcounter.co
       <button type="button" class="about-close" id="aboutClose" aria-label="閉じる">×</button>
       <div class="about-img"><img id="aboutImg" src="img/about.webp" alt="手を組んで祈るユラ" loading="lazy"></div>
       <div class="about-body">
-        <h2 id="aboutTitle">ユラの違和感採集</h2>
+        <h2 id="aboutTitle">No Answers ー違和感採集ー</h2>
         <p class="about-lead">日々の小さな違和感から生まれた、ユラの「3行思考」。<br>漂う言葉に触れて違和感を集め、その思考を一篇ずつ開いていく、小さな読みものです。</p>
         <dl>
           <div><dt>遊び方</dt><dd>絵の上を漂う言葉に触れると、違和感が集まり、ペンが一行ずつ書き進めます。最後の一行は、集めた違和感で開きます。読み終えた断片は「思考の断片」の本に、触れた言葉は「違和感の辞典」に残ります。</dd></div>
@@ -1220,7 +1223,7 @@ function track(name, title){ try{ if(window.goatcounter && window.goatcounter.co
 
 <script type="text/plain" id="works-fallback">
 # ─────────────────────────────────────────────
-# ユラの違和感採集　作品データ
+# No Answers ー違和感採集ー　作品データ
 # ─────────────────────────────────────────────
 # ・作品は「---」の行で区切ります。
 # ・上に書いた作品ほど「新しい作品」として、トップに先に出ます。
@@ -2241,7 +2244,7 @@ note: https://note.com/whatif_lab/n/n52b77b5c4bf6
 </script>
 <script type="text/plain" id="words-fallback">
 # ─────────────────────────────────────────────
-# ユラの違和感採集　違和感の辞典
+# No Answers ー違和感採集ー　違和感の辞典
 # ─────────────────────────────────────────────
 # ・1行に1語、「世界 | 言葉 | 意味」の形で書きます。
 # ・世界は 白 または 黒。その世界の絵の上を、言葉として漂います。
@@ -3875,7 +3878,7 @@ async function cardFragment(d){
   // 署名
   if("letterSpacing" in x) x.letterSpacing = "5px";
   x.fillStyle = P.line; x.fillRect(L, H - 128, 64, 2);
-  x.fillStyle = P.acc; x.font = '600 30px ' + MIN; x.fillText("ユラの違和感採集", L, H - 80);
+  x.fillStyle = P.acc; x.font = '600 30px ' + MIN; x.fillText("No Answers ー違和感採集ー", L, H - 80);
   x.fillStyle = P.mute; x.font = '400 22px ' + GOT; x.textAlign = "right"; if("letterSpacing" in x) x.letterSpacing = "1px";
   x.fillText("yura-whatif.github.io/no-answers", R, H - 82); x.textAlign = "left";
   grain(x, W, H, white ? 10 : 14);
@@ -3902,7 +3905,7 @@ async function cardWord(word){
   for(const t of wrapJa(x, DICT[word] || "", maxW)){ x.fillText(t, L, y); y += 70; }
   if("letterSpacing" in x) x.letterSpacing = "5px";
   x.fillStyle = P.line; x.fillRect(L, H - 140, 64, 2);
-  x.fillStyle = P.acc; x.font = '600 30px ' + MIN; x.fillText("ユラの違和感採集", L, H - 92);
+  x.fillStyle = P.acc; x.font = '600 30px ' + MIN; x.fillText("No Answers ー違和感採集ー", L, H - 92);
   x.fillStyle = P.mute; x.font = '400 22px ' + GOT; x.textAlign = "right"; if("letterSpacing" in x) x.letterSpacing = "1px";
   x.fillText("yura-whatif.github.io/no-answers", W - 110, H - 94); x.textAlign = "left";
   grain(x, W, H, white ? 10 : 14);
@@ -3918,15 +3921,15 @@ async function openShare(kind, key){
     const d = ALL.find(v=>v.id===key); if(!d){ box.hidden = true; return; }
     // noteの記事があれば、その入口を先に添える
     const nl = d.u ? `この思考の記録 → ${d.u}\n` : "";
-    share.text = `「${d.t}」\n${d.l.join("\n")}\n\n${nl}#ユラの違和感採集\n${SITE}`;
+    share.text = `「${d.t}」\n${d.l.join("\n")}\n\n${nl}#違和感採集\n${SITE}`;
     // Xは全角を2字と数えて280字まで。収まらない作品は、題名と最後の1行に縮める。それでも長ければゲームのURLを外す（コピーは全文）
-    const xs = [share.text, `「${d.t}」\n${d.l[2]}\n\n${nl}#ユラの違和感採集\n${SITE}`, `「${d.t}」\n${d.l[2]}\n\n${nl}#ユラの違和感採集`];
+    const xs = [share.text, `「${d.t}」\n${d.l[2]}\n\n${nl}#違和感採集\n${SITE}`, `「${d.t}」\n${d.l[2]}\n\n${nl}#違和感採集`];
     share.xtext = xs.find(s=>xLen(s) <= 280) || xs[2];
     share.name = `yura-${d.id}.png`;
     $("shareTitle").textContent = "この断片を渡す"; $("shareTitle").hidden = false; box.querySelector(".share-box").classList.remove("notitle");
     canvas = await cardFragment(d);
   } else {
-    share.text = `「${key}」――${DICT[key] || ""}\n\n#ユラの違和感採集 #違和感の辞典\n${SITE}`;
+    share.text = `「${key}」――${DICT[key] || ""}\n\n#違和感採集 #違和感の辞典\n${SITE}`;
     share.xtext = share.text;
     share.name = "yura-word.png";
     $("shareTitle").textContent = "言葉のカード"; $("shareTitle").hidden = true; box.querySelector(".share-box").classList.add("notitle");
@@ -4385,9 +4388,9 @@ function hideYuraWord(){ const box = $("yword"); box.classList.remove("show"); s
 $("ywClose").onclick = hideYuraWord;
 // この場所（アプリ）そのものを教える：共有シートがあればそれで、なければURLをコピー
 async function shareApp(){
-  const text = "ユラの違和感採集――漂う言葉に触れて、3行の思考を集める場所。";
+  const text = "No Answers ー違和感採集ー――漂う言葉に触れて、3行の思考を集める場所。";
   try{
-    if(navigator.share){ await navigator.share({title:"ユラの違和感採集", text, url:SITE}); shareThanks(); return; }
+    if(navigator.share){ await navigator.share({title:"No Answers ー違和感採集ー", text, url:SITE}); shareThanks(); return; }
     await navigator.clipboard.writeText(text + "\n" + SITE); toast("この場所のURLをコピーしました"); shareThanks();
   }catch(_){}
 }
