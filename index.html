@@ -844,6 +844,9 @@ header > .hdr-r{grid-column:3;grid-row:1}
 .src{font-size:.78rem;color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor}
 
 .shelfbox{display:flex;flex-direction:column;gap:12px}
+/* 本棚・辞典・ステータスの下地：書斎の絵を活かしつつ、文字が常に読めるよう薄い暗幕を敷く */
+#viewLib{position:relative;z-index:0}
+#viewLib::before{content:"";position:absolute;inset:-16px -14px;z-index:-1;border-radius:16px;background:linear-gradient(180deg,rgba(18,12,8,.5),rgba(16,11,7,.66));-webkit-backdrop-filter:blur(2.5px);backdrop-filter:blur(2.5px)}
 .shelfhead{display:flex;justify-content:space-between;align-items:baseline;font-size:.78rem;color:var(--mute);letter-spacing:.12em;border-bottom:1px solid var(--line);padding-bottom:8px}
 .count{font-variant-numeric:tabular-nums}
 /* ---------- ユラの断片帳：革装の一冊を見開きで ---------- */
@@ -964,10 +967,10 @@ header > .hdr-r{grid-column:3;grid-row:1}
 .statusbox{display:flex;flex-direction:column;gap:2px}
 .stat{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:13px 4px;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
 .stat:last-child{border-bottom:0}
-.stat dt{margin:0;font-size:.82rem;letter-spacing:.08em;color:var(--mute)}
+.stat dt{margin:0;font-size:.82rem;letter-spacing:.08em;color:color-mix(in srgb,var(--ink) 52%,var(--mute))}
 .stat dd{margin:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
 .stat dd b{font-family:var(--mincho);font-size:1.34rem;font-weight:600;letter-spacing:.04em;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
-.stat dd span{font-size:.7rem;letter-spacing:.06em;color:var(--mute);font-variant-numeric:tabular-nums}
+.stat dd span{font-size:.72rem;letter-spacing:.06em;color:color-mix(in srgb,var(--ink) 40%,var(--mute));font-variant-numeric:tabular-nums}
 .dict-lead{margin:0;font-size:.8rem;color:var(--mute);letter-spacing:.06em}
 .dict{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px}
 .dtabs{display:flex;gap:0;border-bottom:1px solid var(--line);position:sticky;top:var(--hdrH,72px);z-index:5;background:color-mix(in srgb,var(--ground) 88%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
@@ -4152,8 +4155,8 @@ function turn(dir){
 
 // ---------- 違和感の辞典：漂う言葉に初めて触れると載る。定義文は仮 ----------
 let DICT = {};
-// 何度も触れるほど、言葉が少しずつ辞典に滲み出す。必要な回数は言葉ごとに 3〜8 回
-const needOf = w => 8 + ([...w].reduce((h,c)=>(h*31 + c.codePointAt(0)) >>> 0, 7) % 8);
+// 何度も触れるほど、言葉が少しずつ辞典に滲み出す。必要な回数は言葉ごとに 4〜20 回（語ごとにばらつかせ、まとめて載りにくくする）
+const needOf = w => 4 + ([...w].reduce((h,c)=>(h*31 + c.codePointAt(0)) >>> 0, 7) % 17);
 let dictC = store.get("yura-dictc", null);
 if(!dictC){ dictC = {}; store.get("yura-dict", []).forEach(w=>dictC[w]=1); }
 let dictNew = [];
