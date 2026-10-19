@@ -65,6 +65,7 @@ img{max-width:100%}
 }
 :root[data-view="lib"] .mode{display:none}
 html,body{height:100%}
+html{scrollbar-gutter:stable}   /* タブ切替で縦スクロールバーが出入りしても、ヘッダ・背景の幅がずれないよう領域を常に確保 */
 body{background-color:var(--ground);color:var(--ink);font-family:var(--gothic);transition:background-color .8s ease,color .8s ease;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 .wrap{position:relative;z-index:1;max-width:720px;margin:0 auto;padding-inline:16px;padding-block:14px 16px;display:flex;flex-direction:column;gap:14px}
