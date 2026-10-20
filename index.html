@@ -129,6 +129,7 @@ body{background-color:var(--ground);color:var(--ink);font-family:var(--gothic);t
 .word:hover{border-color:var(--accent)}
 .word:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .word.got{animation:got .45s ease forwards;pointer-events:none}
+.word.late{pointer-events:none}   /* 遅れて現れる言葉は、見えるまで触れない */
 /* 逆さまの言葉（稀）：文字が上下逆さ。縁はわずかにいびつで、輪郭が少しずれて二重に見える。触れると違和感+10 */
 .word.odd{border-radius:999px 16px 999px 22px/999px 26px 999px 14px;border-color:color-mix(in srgb,var(--ink) 38%,transparent);
   box-shadow:1.5px -1px 0 -.5px color-mix(in srgb,var(--accent) 45%,transparent),-1px 1.5px 0 -.5px color-mix(in srgb,var(--ink) 18%,transparent);
@@ -212,6 +213,9 @@ body{background-color:var(--ground);color:var(--ink);font-family:var(--gothic);t
 .sakura-fx.moon{background:radial-gradient(ellipse 80% 70% at 22% 8%,rgba(216,224,255,.34),rgba(176,164,232,.13) 50%,transparent 80%),radial-gradient(ellipse 130% 100% at 50% 50%,transparent 55%,rgba(30,30,80,.28)),rgba(40,42,100,.16)}
 .sk-c{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .sk-front{z-index:2}
+/* 桜のあいだは負荷を下げる：髪のなびき（毎フレーム描き直す揺らぎフィルタ）を止め、降る文字のすりガラス効果を外す */
+html.sakura-on .hero img.hair{display:none!important}
+.word.sk-fall{-webkit-backdrop-filter:none;backdrop-filter:none;background:color-mix(in srgb,var(--paper) 88%,transparent);will-change:transform,opacity}
 .glowbar.sakurabar.sun{border-color:#e9a3b6}.glowbar.sakurabar.sun i{background:linear-gradient(90deg,#ffd6e1,#e88aa4)}
 .glowbar.sakurabar.moon{border-color:#bfb4ee}.glowbar.sakurabar.moon i{background:linear-gradient(90deg,#efeaff,#a99ce8)}
 /* 花びらと一緒に降る違和感の文字：上からふわりと現れ、下に落ちきる前に消える */
@@ -3010,7 +3014,7 @@ function resumeCombo(){
 }   // 逆さまの言葉は稀に（出たあとは2分あける）
 const ODD_PT = 5;
 // ---------- 止まった時間（懐中時計に触れたとき） ----------
-const STOP_CELLS = (()=>{ const c = []; [3, 35, 64].forEach(x => [21, 37, 53, 69].forEach(y => c.push([x, y]))); return c; })();
+const STOP_CELLS = (()=>{ const c = []; [3, 35, 64].forEach(x => [22, 44, 66].forEach(y => c.push([x, y]))); return c; })();   // 止まった時間の言葉は9か所（以前は12）
 let stopPend = [], stopWatch = null;
 const STOP_WORDS = 8;   // 止まった時間の中に並ぶ言葉の数（全12か所のうち）
 function placeStill(cell){
@@ -3567,7 +3571,14 @@ function spawnWord(opt = {}){
   if(crack){ w.style.setProperty("--x", (12 + Math.random()*56).toFixed(1)+"%"); w.style.setProperty("--y", (22 + Math.random()*44).toFixed(1)+"%"); }
   if(vortex){ w.style.setProperty("--x", (10 + Math.random()*62).toFixed(1)+"%"); w.style.setProperty("--y", (16 + Math.random()*52).toFixed(1)+"%"); }
   w.addEventListener("animationend", e => { if(e.animationName==="drift" || e.animationName==="gemFall" || e.animationName==="vxLife" || e.animationName==="crLife") w.remove(); });
-  if(!vortex && !crack) setTimeout(()=>w.isConnected && !w.classList.contains("got") && !w.dataset.frozen && !w.classList.contains("still") && w.remove(), flood ? 6000 : 9500);
+  // 連鎖をシビアに：通常の言葉のうち、たまに「早く消える言葉」と「遅れて現れる言葉」を混ぜる（見た目は同じ）
+  let lifeMs = flood ? 6000 : 9500;
+  const plainWord = !special && !odd && !multi && !pull && !glowW && !petalW && !reso && !vortex && !crack && !opt.force && !flood && !sakuraOn;
+  if(plainWord){ const r = Math.random();
+    if(r < .1){ const d = 3.4 + Math.random() * .8; w.style.animationDuration = d.toFixed(2) + "s"; w.dataset.quick = "1"; lifeMs = d * 1000 + 300; }   // 早く消える（見えているのは約2.5〜3秒）
+    else if(r < .18){ const dl = 1.5 + Math.random() * .6; w.style.animationDelay = dl.toFixed(2) + "s"; w.style.animationFillMode = "both"; w.classList.add("late"); w.dataset.late = "1";   // 遅れて現れる（1.5〜2.1秒は見えず、触れない）
+      setTimeout(()=>w.classList.remove("late"), dl * 1000 + 250); lifeMs += dl * 1000; } }
+  if(!vortex && !crack) setTimeout(()=>w.isConnected && !w.classList.contains("got") && !w.dataset.frozen && !w.classList.contains("still") && w.remove(), lifeMs);
   w.addEventListener("click", e => {
     e.stopPropagation();
     if(w.classList.contains("vortex") || w.classList.contains("crack")) return;   // 渦は長押し、ひびは専用の処理で使う
@@ -3596,7 +3607,7 @@ function spawnWord(opt = {}){
     if(isGem){ f.getAnimations().forEach(x=>x.cancel()); gemBurst(r, f); } else {
     // 言葉が霧になってほどける：文字は広がりながらぼやけ、周りに淡い靄が立ちのぼって消える
     // あふれる時間は、ぼかしと字間の変化（重い）を省き、拡大と透明化だけで軽くほどく
-    const lite = flood;
+    const lite = flood || sakuraOn;   // 時止め・桜のあいだは、ぼかしを使わず軽くほどく
     f.animate(lite ? [
       {transform:"scale(1)", opacity:1},
       {transform:"scale(1.18) translateY(-6px)", opacity:.35, offset:.55},
@@ -3832,9 +3843,9 @@ function skSprites(moon){
                    : [["#e27896","#ffe6ee"],["#ea92ab","#fff0f4"],["#d96c8c","#ffe2eb"],["#f1a9bd","#fff6f8"]];
   const base = (x, b, t) => {
     const g = x.createLinearGradient(32, 60, 32, 6); g.addColorStop(0, b); g.addColorStop(.6, t); g.addColorStop(1, t); return g; };
-  const petal = ([b, t]) => {
-    const c = document.createElement("canvas"); c.width = c.height = S; const x = c.getContext("2d");
-    x.translate(S/2 - 32, S/2 - 34);
+  const petal = ([b, t]) => {   // 奥の花びらは小さく描くので、画像も半分の大きさで持つ（縮小描画の負荷を下げる）
+    const c = document.createElement("canvas"); c.width = c.height = S / 2; const x = c.getContext("2d");
+    x.scale(.5, .5); x.translate(S/2 - 32, S/2 - 34);
     if(moon){ x.shadowColor = "rgba(206,214,255,.42)"; x.shadowBlur = 5; }
     else { x.shadowColor = "rgba(190,80,120,.32)"; x.shadowBlur = 2.5; }
     x.fillStyle = base(x, b, t); x.fill(P); x.shadowBlur = 0;
@@ -3869,9 +3880,11 @@ function startSakura(from){
   const back = document.createElement("canvas"); back.className = "sk-c"; fx.append(back);
   hero.insertBefore(fx, field);
   const front = document.createElement("canvas"); front.className = "sk-c sk-front"; field.after(front);
-  const W = hero.clientWidth || 1, H = hero.clientHeight || 1, dpr = Math.min(2, window.devicePixelRatio || 1);
-  [back, front].forEach(c => { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); });
-  const bc = back.getContext("2d"), fc = front.getContext("2d");
+  // スマホでの負荷を抑える：奥の画布は解像度を最大1.5倍、手前（ぼけた花びら中心）は1.25倍まで
+  const W = hero.clientWidth || 1, H = hero.clientHeight || 1, dprB = Math.min(1.5, window.devicePixelRatio || 1), dprF = Math.min(1.25, window.devicePixelRatio || 1);
+  back.width = Math.round(W * dprB); back.height = Math.round(H * dprB); front.width = Math.round(W * dprF); front.height = Math.round(H * dprF);
+  const ctxOpt = {alpha:true, desynchronized:true}, bc = back.getContext("2d", ctxOpt), fc = front.getContext("2d", ctxOpt);
+  document.documentElement.classList.add("sakura-on");   // 桜のあいだは、髪のなびき（重い揺らぎフィルタ）を止める
   const spr = skSprites(moon);
   // 残り時間のバー
   const bar = $("sakurabar"); bar.className = "floodbar glowbar sakurabar " + (moon ? "moon" : "sun"); bar.querySelector("span").textContent = moon ? "夜桜" : "桜吹雪"; bar.hidden = false; bar.style.top = "10px";
@@ -3879,16 +3892,20 @@ function startSakura(from){
   const P = [], F = [];
   const newPetal = (isFront, side) => {
     const z = isFront ? 1 : .42 + Math.random() * .8;
-    const p = { z, s: isFront ? 34 + Math.random() * 22 : (10 + Math.random() * 9) * z,
+    // 手前の花びら：大きくぼけたもの（bokeh）と、くっきり見える近めのもの（言葉の上を横切って立体感を出す）
+    const near = isFront && Math.random() < .6;
+    const p = { z, near, s: isFront ? (near ? 17 + Math.random() * 9 : 34 + Math.random() * 22) : (10 + Math.random() * 9) * z,
       x: side ? -30 : -W * .3 + Math.random() * W * 1.25, y: side ? Math.random() * H * .75 : -20 - Math.random() * 50,
       vx: (side ? 60 : 6) + Math.random() * 18, vy: 40 + Math.random() * 34,
       rot: Math.random() * 6.283, vr: (Math.random() - .5) * 2.6, fl: Math.random() * 6.283, vf: 1.4 + Math.random() * 2.8,
       ph: Math.random() * 6.283, vp: .7 + Math.random() * 1.3, sw: 12 + Math.random() * 24, k: Math.floor(Math.random() * 4), a: 0 };
-    if(isFront){ p.vy *= 1.9; p.vx += 30; }
+    if(isFront){ p.vy *= near ? 1.35 : 1.9; p.vx += near ? 16 : 30; }
     return p; };
   // 最初の一陣：触れた瞬間に、絵の上半分へすでに花びらが舞っている
-  for(let i = 0; i < (reduce ? 12 : 40); i++){ const p = newPetal(false); p.x = Math.random() * W; p.y = Math.pow(Math.random(), 1.4) * H * .85; p.a = Math.random() * .6; P.push(p); }
+  for(let i = 0; i < (reduce ? 12 : 32); i++){ const p = newPetal(false); p.x = Math.random() * W; p.y = Math.pow(Math.random(), 1.4) * H * .85; p.a = Math.random() * .6; P.push(p); }
   let t = 0, last = performance.now(), pAcc = 0, fAcc = 0, wAcc = .6, raf = 0, done = false, recent = [];
+  // 端末が追いつかないときは、奥の花びらの数を自動で減らす（1フレームの間隔をならして見る）
+  let ema = 16.7, cap = reduce ? 60 : 140;
   const dropWord = () => {
     const w = spawnWord({force:true, plain:true}); if(!w) return;
     w.classList.add("sk-fall");
@@ -3904,17 +3921,25 @@ function startSakura(from){
     if(w.offsetLeft + w.offsetWidth > fw - 6) w.style.setProperty("--x", Math.max(4, fw - 6 - w.offsetWidth) + "px");
     w.addEventListener("animationend", e => { if(e.animationName === "skFall") w.remove(); });
   };
-  const draw = (ctx, list, isFront, G) => {
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
-    for(const p of list){
-      const c = Math.cos(p.fl), sy = Math.max(.07, Math.abs(c)), img = isFront ? spr.front[p.k] : spr.back[p.k], d = p.s * 1.5;
-      ctx.globalAlpha = p.a * G * (isFront ? .55 : (moon ? .34 + .5 * Math.min(1, p.z) : .5 + .5 * Math.min(1, p.z))) * (c < 0 ? .8 : 1);
-      ctx.setTransform(dpr, 0, 0, dpr, p.x * dpr, p.y * dpr); ctx.rotate(p.rot); ctx.scale(1, c < 0 ? -sy : sy);
+  const glints = [];
+  const draw = (ctx, list, isFront, G, dpr) => {
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    if(!list.length) return;
+    glints.length = 0;
+    for(let i = 0; i < list.length; i++){
+      const p = list[i], c = Math.cos(p.fl), sy = c < 0 ? -Math.max(.07, -c) : Math.max(.07, c), ay = Math.abs(sy);
+      const sharp = !isFront || p.near, img = sharp ? spr.back[p.k] : spr.front[p.k], d = p.s * 1.5, cr = Math.cos(p.rot) * dpr, sr = Math.sin(p.rot) * dpr;
+      ctx.globalAlpha = p.a * G * (isFront ? (p.near ? .92 : .55) : (moon ? .34 + .5 * Math.min(1, p.z) : .5 + .5 * Math.min(1, p.z))) * (c < 0 ? .8 : 1);
+      // 回転と裏返り（縦の縮み）を1回の行列でまとめて描く（save/restore を使わず軽く）
+      ctx.setTransform(cr, sr, -sr * sy, cr * sy, p.x * dpr, p.y * dpr);
       ctx.drawImage(img, -d / 2, -d / 2, d, d);
-      // 花びらが光の方を向いた一瞬だけ、きらりと光る
-      if(!isFront && sy > .97 && p.z > .8){ ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = (sy - .97) / .03 * .8 * G * p.a; ctx.drawImage(spr.glint, -d * .4, -d * .4, d * .8, d * .8); ctx.globalCompositeOperation = "source-over"; }
+      if(!isFront && ay > .97 && p.z > .8) glints.push(p.x, p.y, d, (ay - .97) / .03 * p.a);
     }
-    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
+    // 花びらが光の方を向いた一瞬のきらめきは、まとめて最後に
+    if(glints.length){ ctx.globalCompositeOperation = "lighter"; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      for(let i = 0; i < glints.length; i += 4){ const d = glints[i + 2]; ctx.globalAlpha = glints[i + 3] * .8 * G; ctx.drawImage(spr.glint, glints[i] - d * .4, glints[i + 1] - d * .4, d * .8, d * .8); }
+      ctx.globalCompositeOperation = "source-over"; }
+    ctx.globalAlpha = 1;
   };
   const step = (list, dt, wind, gust, isFront) => {
     for(let i = list.length - 1; i >= 0; i--){
@@ -3927,7 +3952,7 @@ function startSakura(from){
     }
   };
   const finish = fast => {
-    if(done) return; done = true; cancelAnimationFrame(raf); sakuraOn = false;
+    if(done) return; done = true; cancelAnimationFrame(raf); sakuraOn = false; document.documentElement.classList.remove("sakura-on");
     const out = [fx, front];
     if(fast) out.forEach(e => e.remove());
     else out.forEach(e => e.animate([{opacity:getComputedStyle(e).opacity},{opacity:0}], {duration:600, fill:"forwards"}).onfinish = () => e.remove());
@@ -3938,20 +3963,22 @@ function startSakura(from){
   const tick = now => {
     const dt = Math.min(.05, (now - last) / 1000); last = now;
     const paused = libOpen || document.hidden;
+    ema += ((dt * 1000) - ema) * .08;
+    if(t > 700){ if(ema > 21 && cap > 50) cap -= 1.2; else if(ema < 17.5 && cap < (reduce ? 60 : 140)) cap += .3; }
     if(!paused){
       t += dt * 1000;
       const e = skEnv(t), gust = Math.exp(-Math.pow((t - 5600) / 1500, 2));
       const wind = 20 + 74 * gust;
       // 花びらを生む（ピークで最も多く。突風のあいだは左の縁からも吹き込む）
-      pAcc += (reduce ? 28 : 96) * e * dt;
-      while(pAcc >= 1){ pAcc--; if(P.length < (reduce ? 70 : 200)) P.push(newPetal(false, gust > .35 && Math.random() < .4)); }
-      if(!reduce && t > 1400){ fAcc += 1.3 * e * dt; while(fAcc >= 1){ fAcc--; if(F.length < 6) F.push(newPetal(true)); } }
+      pAcc += (reduce ? 24 : 70) * e * dt;
+      while(pAcc >= 1){ pAcc--; if(P.length < cap) P.push(newPetal(false, gust > .35 && Math.random() < .4)); }
+      if(!reduce && t > 900){ fAcc += 3 * e * dt; while(fAcc >= 1){ fAcc--; if(F.length < 12) F.push(newPetal(true)); } }
       // 違和感の文字を降らせる（増える→ピーク→減る）
       if(t < SK_WORD_END){ wAcc += SK_WORD_RATE * e * dt; while(wAcc >= 1){ wAcc--; dropWord(); } }
       step(P, dt, wind, gust, false); step(F, dt, wind, gust, true);
       const G = Math.min(1, t / 500) * Math.max(0, Math.min(1, (SAKURA_MS - t) / 1600));
       fx.style.opacity = (Math.min(1, t / 900) * Math.max(0, Math.min(1, (SAKURA_MS - t) / 1800))).toFixed(3);
-      draw(bc, P, false, G); draw(fc, F, true, G);
+      draw(bc, P, false, G, dprB); draw(fc, F, true, G, dprF);
       bar.querySelector("i").style.transform = `scaleX(${Math.max(0, 1 - t / SAKURA_MS).toFixed(4)})`;
       if(t >= SAKURA_MS) return finish(false);
     }
