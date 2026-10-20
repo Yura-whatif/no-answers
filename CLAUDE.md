@@ -52,7 +52,7 @@
 ## 5. ファイル構成
 - `index.html` … 本番の単一HTML（CSS/JS/埋め込みデータ全部入り、約400KB）。**これが唯一の本番ファイル。**
 - `data/works.txt` `data/words.txt` … 編集元データ。
-- `img/` … キービジュアル（key-white/key-black/study.webp）、作品画像（w*/b*.webp）、OGP（ogp.jpg）、アイコン類。
+- `img/` … キービジュアル（key-white/key-black/study.webp）、作品画像（w*/b*.webp）、OGP（ogp.jpg＝1200×630・JPEG。2026-10にタイトルロゴ入りの白黒キービジュアルへ差し替え。`og:image` は `?v=2` 付きでSNSのキャッシュを更新。次に差し替えるときは番号を上げる）、アイコン類。
 - `manifest.webmanifest` … PWA。`display:standalone`、`background_color`/`theme_color` は #eeebe4。
 - 旧 `yura-3gyo.html`（claude.ai アーティファクト用の複製）は今後使わない。本番は `index.html` のみ。
 
