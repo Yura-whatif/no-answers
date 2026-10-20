@@ -2598,6 +2598,9 @@ const remaining = () => DATA[mode].filter(x=>!read.includes(x.id)).length;
 
 function render(nowLine){
   document.documentElement.dataset.yura = mode;
+  // 最後の一行を読んでいる（open）・開いている途中（charging）以外で連鎖が止まったままなら、再開する
+  // （開いたまま白黒を切り替えたときなど、「しまう」を通らずに断片が閉じた場合の取り残しを防ぐ）
+  if(!open && !charging && comboPaused) resumeCombo();
   $("m-white").setAttribute("aria-pressed", mode==="white");
   $("m-black").setAttribute("aria-pressed", mode==="black");
   $("kind").textContent = mode==="white" ? "白ユラ｜3行思考" : "黒ユラ｜3行思考";
@@ -2606,7 +2609,7 @@ function render(nowLine){
   $("lines").hidden = empty; $("cover").hidden = empty; $("slipEmpty").hidden = !empty;
   slip.classList.toggle("empty", empty);
   if(empty){
-    open = false; slip.classList.remove("open","held"); dispId = null; $("stow").hidden = true;
+    open = false; slip.classList.remove("open","held"); dispId = null; $("stow").hidden = true; if(!charging && comboPaused) resumeCombo();
     $("no").textContent = "";
     $("title").textContent = mode==="white" ? "白ユラの断片は、すべて言葉になりました" : "黒ユラの断片は、すべて言葉になりました";
     $("hint").textContent = "違和感と辞典は、このまま集め続けられます";
@@ -2994,6 +2997,7 @@ function comboBonus(n){
 }
 function bumpCombo(){
   const now = Date.now();
+  if(comboPaused && !open && !charging) resumeCombo();   // 念のため：読んでいないのに止まっていたら、触れた時点で戻す
   combo = (comboPaused || now - comboAt <= COMBO_MS) ? combo + 1 : 1; comboAt = now;
   if(combo > maxCombo){ maxCombo = combo; store.set("yura-maxcombo", maxCombo); }
   const m = comboMult(combo), el = $("combo"), prevX = el.classList.contains("x3") ? 3 : el.classList.contains("x2") ? 2 : 1;
