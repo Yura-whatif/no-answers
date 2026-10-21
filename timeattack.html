@@ -130,6 +130,16 @@ html[data-view="lib"] #taPlay{display:none!important}
 @keyframes taFrameFlash{0%{border-color:var(--ta-frame-border);box-shadow:0 0 5px var(--ta-frame-glow),inset 0 0 6px var(--ta-frame-glow)}35%{border-color:var(--ta-frame-border);box-shadow:0 0 16px var(--ta-frame-glow),inset 0 0 12px var(--ta-frame-glow)}100%{box-shadow:0 0 0 transparent,inset 0 0 0 transparent}}
 @media(prefers-reduced-motion:reduce){#taHud .ta-stats>div.ta-frame-flash{animation:none}}
 
+/* 100-chain milestone: light up the entire score box, not just its outline. */
+#taHud #taScoreBox.ta-century-score-flash{animation:taCenturyScoreFlash .9s ease-out both}
+@keyframes taCenturyScoreFlash{
+  0%{border-color:#fff3c6;background:rgba(255,225,144,.48);box-shadow:0 0 25px 8px rgba(255,206,108,.75),inset 0 0 28px 12px rgba(255,230,160,.66)}
+  28%{border-color:#ffe4a0;background:rgba(255,220,140,.35);box-shadow:0 0 34px 11px rgba(255,205,102,.72),inset 0 0 28px 10px rgba(255,227,155,.55)}
+  100%{border-color:rgba(235,197,126,.40);background:rgba(255,255,255,.018);box-shadow:0 0 0 transparent,inset 0 0 0 transparent}
+}
+.ta-century-afterglow{box-shadow:0 0 9px 3px rgba(255,213,122,.75),0 0 20px rgba(255,192,92,.35)}
+@media(prefers-reduced-motion:reduce){#taHud #taScoreBox.ta-century-score-flash{animation:none}}
+
 /* タイムアタック: オーブ到着時の加算表示を獲得量で強調 */
 .ta-plus.ta-plus-lg{font-size:2.05rem;font-weight:700}
 .ta-plus.ta-plus-xl{font-size:2.85rem;font-weight:800}
@@ -3156,8 +3166,8 @@ let nextCrackAt = Date.now() + 180000, forceCrack = false, shattering = false;  
 // 連鎖：前に集めてから COMBO_MS 以内に次を集めるとつながる
 // 「+〇」の大きさ：1〜9は基本の大きさ、そこから10増えるごとに一段ずつ大きく（上限あり）
 function plusSize(n, base){ const step = n < 10 ? 0 : Math.floor(n / 10); return (base * Math.min(3.2, 1 + step * .22)).toFixed(2) + "rem"; }
-const COMBO_BONUS = 100;   // 100連鎖のボーナスは100点
-const COMBO_STEP_FROM = 10; // 10連鎖ごとに連鎖数と同じ得点を一度だけ加算
+const COMBO_BONUS = 100;   // 100連鎖ごとのボーナス
+const COMBO_STEP_FROM = 10; // 10連鎖ごとに10点、100連鎖ごとに100点
 const COMBO_MS = 2000;
 let combo = 0, comboAt = 0, comboPaused = false;
 let maxCombo = store.get("ta-yura-maxcombo", 0);
@@ -3174,17 +3184,17 @@ function comboBurst(n){
   const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
   const reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   if(reduced) return;
-  const tier = n >= 100 ? 3 : n >= 50 ? 2 : 1;
+  const tier = n % 100 === 0 ? 3 : n >= 50 ? 2 : 1;
   // 元の連鎖表示を一瞬だけ大きくして戻す。既存の hit/run は維持。
   el.animate([
     {transform:"scale(1)",offset:0},
-    {transform:`scale(${tier === 3 ? 1.7 : tier === 2 ? 1.6 : 1.5})`,offset:.34},
+    {transform:`scale(${tier === 3 ? 2 : tier === 2 ? 1.6 : 1.5})`,offset:.34},
     {transform:"scale(1)",offset:1}
-  ],{duration:420,easing:"cubic-bezier(.16,.8,.25,1)"});
-  const count = tier === 3 ? 16 : tier === 2 ? 12 : 8;
+  ],{duration:tier===3?650:420,easing:"cubic-bezier(.16,.8,.25,1)"});
+  const count = tier === 3 ? 0 : tier === 2 ? 12 : 8;
   for(let i=0;i<count;i++){
     const a=2*Math.PI*i/count+(Math.random()-.5)*.2;
-    const dist=(tier===3?65:tier===2?51:39)*(0.8+Math.random()*.4);
+    const dist=(tier===3?112:tier===2?51:39)*(0.8+Math.random()*.4);
     const dot=document.createElement("span");
     dot.className="ta-combo-spark";
     dot.style.left=cx+"px";dot.style.top=cy+"px";
@@ -3193,6 +3203,35 @@ function comboBurst(n){
       {transform:"translate(-50%,-50%) scale(1)",opacity:1},
       {transform:`translate(calc(-50% + ${Math.cos(a)*dist}px),calc(-50% + ${Math.sin(a)*dist}px)) scale(.2)`,opacity:0}
     ],{duration:380+Math.random()*180,easing:"cubic-bezier(.1,.65,.3,1)",fill:"forwards"}).onfinish=()=>dot.remove();
+  }
+}
+// Every hundred chains: a short golden resonance across the screen.
+// Purely decorative; no timers, hit detection or input are paused.
+function taCenturyResonance(cx,cy){
+  if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const veil=document.createElement('div');
+  veil.style.cssText='position:fixed;inset:0;z-index:10017;pointer-events:none;background:radial-gradient(circle at '+cx+'px '+cy+'px,rgba(255,219,137,.19),rgba(230,164,58,.07) 45%,rgba(5,4,10,.18) 100%);';
+  document.body.append(veil);
+  veil.animate([{opacity:0},{opacity:1,offset:.27},{opacity:.65,offset:.55},{opacity:0}],{duration:1800,easing:'ease-in-out'}).onfinish=()=>veil.remove();
+  // After the big rings, leave a shimmering golden afterglow that rises gently.
+  // No radial spray: motes appear around the combo area and drift upward.
+  for(let i=0;i<26;i++){
+    const dot=document.createElement('span');dot.className='ta-combo-spark ta-century-afterglow';
+    const dx=(Math.random()-.5)*115, dy=(Math.random()-.5)*54;
+    dot.style.left=(cx+dx)+'px';dot.style.top=(cy+dy)+'px';
+    const size=1.5+Math.random()*3.6;
+    dot.style.width=dot.style.height=size+'px';
+    dot.style.background=i%4===0?'#fffbe6':'#ffda8b';
+    document.body.append(dot);
+    const rise=45+Math.random()*105, drift=(Math.random()-.5)*28;
+    const delay=870+Math.random()*510;
+    dot.animate([
+      {transform:'translate(-50%,-50%) scale(.4)',opacity:0,offset:0},
+      {transform:'translate(-50%,-50%) scale(1.3)',opacity:.9,offset:.16},
+      {transform:`translate(calc(-50% + ${drift*.35}px),calc(-50% - ${rise*.4}px)) scale(.7)`,opacity:.32,offset:.47},
+      {transform:`translate(calc(-50% + ${drift*.7}px),calc(-50% - ${rise*.72}px)) scale(1.35)`,opacity:.9,offset:.68},
+      {transform:`translate(calc(-50% + ${drift}px),calc(-50% - ${rise}px)) scale(.05)`,opacity:0,offset:1}
+    ],{duration:1150+Math.random()*650,delay,easing:'ease-in-out',fill:'both'}).onfinish=()=>dot.remove();
   }
 }
 // Two separate circular waves: expand from combo, then contract into score.
@@ -3205,7 +3244,9 @@ function comboStepBonus(n){
   const scoreRect=scoreEl.getBoundingClientRect();
   const reduce=window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const session=taFinishToken;
-  const land=()=>{if(session!==taFinishToken || !taRunning)return;taAward(false,n,true);sfx.arrive();};
+  const century=n%100===0;
+  const bonus=century?100:10;
+  const land=()=>{if(session!==taFinishToken || !taRunning)return;taAward(false,bonus,true);sfx.arrive();};
   if(reduce || !comboRect.width || !scoreRect.width){taFlashScoreFrame();land();return;}
   const makeWave=(x,y,startScale,endScale,duration,delay,opacity)=>{
     const ring=document.createElement('span');
@@ -3221,7 +3262,13 @@ function comboStepBonus(n){
   };
   const cx=comboRect.left+comboRect.width/2,cy=comboRect.top+comboRect.height/2;
   const sx=scoreRect.left+scoreRect.width/2,sy=scoreRect.top+scoreRect.height/2;
-  const tier=n>=100?3:n>=50?2:1;
+  const tier=century?3:n>=50?2:1;
+  if(century){
+    taCenturyResonance(cx,cy);
+    makeWave(cx,cy,.15,10.5,1180,0,1);
+    makeWave(cx,cy,.25,9.3,1110,220,.88);
+    makeWave(cx,cy,.3,8.4,1040,450,.7);
+  }
   // More deliberate two-stage ripple: luminous expanding rings, then a contracting score halo.
   makeWave(cx,cy,.25,tier===3?7.6:tier===2?6.8:5.9,780,0,1);
   makeWave(cx,cy,.2,tier===3?6.8:tier===2?6.0:5.2,810,145,.66);
@@ -3229,10 +3276,22 @@ function comboStepBonus(n){
   // The second set of rings stays centered on the score area.
   makeWave(sx,sy,tier===3?7.8:tier===2?7.0:6.3,.12,810,690,1);
   makeWave(sx,sy,tier===3?7.0:6.0,.14,790,805,.65);
-  if(tier===3)makeWave(sx,sy,5.6,.18,710,900,.38);
+  if(tier===3){
+    makeWave(sx,sy,5.6,.18,710,900,.65);
+    makeWave(sx,sy,8.5,.12,920,650,.75);
+    makeWave(sx,sy,7.3,.14,840,790,.6);
+  }
   // As the contracting rings reach the score box, flash its rectangular frame first.
-  setTimeout(()=>{if(session===taFinishToken && taRunning)taFlashScoreFrame();},1260);
-  setTimeout(land,1540);
+  setTimeout(()=>{
+    if(session!==taFinishToken || !taRunning)return;
+    if(century){
+      const frame=$('taScoreBox');
+      frame.classList.remove('ta-century-score-flash');void frame.offsetWidth;
+      frame.classList.add('ta-century-score-flash');
+      setTimeout(()=>frame.classList.remove('ta-century-score-flash'),920);
+    }else taFlashScoreFrame();
+  },century?1390:1260);
+  setTimeout(land,century?1650:1540);
 }
 // 連鎖100以降（Lv3）は採集エリアの枠を脈打たせ、連鎖が切れたら止める
 function comboRush(on){ const hero = document.querySelector(".hero"); if(hero) hero.classList.toggle("rush", !!on); }
