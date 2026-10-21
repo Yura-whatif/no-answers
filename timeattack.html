@@ -129,6 +129,54 @@ html[data-view="lib"] #taPlay{display:none!important}
 /* タイムアタック: オーブ到着時の加算表示を獲得量で強調 */
 .ta-plus.ta-plus-lg{font-size:2.05rem;font-weight:700}
 .ta-plus.ta-plus-xl{font-size:2.85rem;font-weight:800}
+
+/* DEMO: upper manuscript stays quiet until START. Use the original
+   No Answers .slip.unlock animation for the transition into play. */
+#slip.ta-demo-frame{border-color:transparent!important;box-shadow:none!important}
+#slip.ta-demo-frame::before{border-color:transparent!important;opacity:0!important}
+
+/* START: frame and inner line brighten continuously from fully transparent.
+   Explicit zero-alpha shadows avoid a discrete `none` -> shadow jump. */
+#slip.ta-soft-reveal{animation:taSoftFrameReveal 1.6s cubic-bezier(.42,0,.58,1) both}
+#slip.ta-soft-reveal::before{animation:taSoftInnerReveal 1.6s cubic-bezier(.42,0,.58,1) both}
+#slip.ta-soft-reveal::after{animation:none!important;opacity:0!important}
+@keyframes taSoftFrameReveal{
+  0%{border-color:transparent;box-shadow:0 0 0 0 transparent,0 18px 40px -24px transparent}
+  25%{border-color:color-mix(in srgb,var(--line) 20%,transparent);box-shadow:0 0 9px 2px color-mix(in srgb,var(--accent) 5%,transparent),0 18px 40px -24px color-mix(in srgb,var(--ink) 10%,transparent)}
+  58%{border-color:color-mix(in srgb,var(--accent) 48%,transparent);box-shadow:0 0 20px 4px color-mix(in srgb,var(--accent) 18%,transparent),0 18px 40px -24px color-mix(in srgb,var(--ink) 32%,transparent)}
+  100%{border-color:var(--line);box-shadow:0 0 0 0 transparent,0 18px 40px -24px color-mix(in srgb,var(--ink) 50%,transparent)}
+}
+@keyframes taSoftInnerReveal{
+  0%{opacity:0;border-color:transparent}
+  25%{opacity:.16;border-color:color-mix(in srgb,var(--line) 20%,transparent)}
+  58%{opacity:.72;border-color:color-mix(in srgb,var(--accent) 48%,var(--line))}
+  100%{opacity:.6;border-color:var(--line)}
+}
+@media(prefers-reduced-motion:reduce){#slip.ta-soft-reveal,#slip.ta-soft-reveal::before{animation:none}}
+/* DEMO: mute the time/score numbers and their frames. START: reveal both
+   in lockstep with the manuscript's 1.6-second soft-frame animation. */
+#taHud.ta-hud-demo .ta-stats>div{border-color:rgba(140,143,150,.17)!important;background:rgba(255,255,255,.008);box-shadow:none!important}
+#taHud.ta-hud-demo .ta-stats strong{color:#777b84!important;text-shadow:none!important;opacity:.62}
+#taHud.ta-hud-demo .ta-stats small{color:#777b84!important;opacity:.68}
+#taHud.ta-hud-reveal .ta-stats>div{animation:taHudFrameReveal 1.6s cubic-bezier(.42,0,.58,1) both}
+#taHud.ta-hud-reveal .ta-stats strong{animation:taHudNumberReveal 1.6s cubic-bezier(.42,0,.58,1) both}
+#taHud.ta-hud-reveal .ta-stats small{animation:taHudLabelReveal 1.6s cubic-bezier(.42,0,.58,1) both}
+@keyframes taHudFrameReveal{
+  0%{opacity:.5;filter:grayscale(1);border-color:rgba(140,143,150,.17);box-shadow:0 0 0 transparent}
+  25%{opacity:.62;filter:grayscale(.78);box-shadow:0 0 5px rgba(235,210,170,.025)}
+  58%{opacity:1;filter:grayscale(.2);box-shadow:0 0 12px rgba(235,210,170,.12)}
+  100%{opacity:1;filter:grayscale(0);box-shadow:0 0 0 transparent}
+}
+@keyframes taHudNumberReveal{
+  0%{opacity:.62;filter:grayscale(1) brightness(.58);text-shadow:none}
+  25%{opacity:.72;filter:grayscale(.75) brightness(.72);text-shadow:none}
+  58%{opacity:1;filter:grayscale(.12) brightness(1.17);text-shadow:0 0 10px currentColor}
+  100%{opacity:1;filter:grayscale(0) brightness(1);text-shadow:none}
+}
+@keyframes taHudLabelReveal{0%{opacity:.68}58%,100%{opacity:1}}
+@media(prefers-reduced-motion:reduce){#taHud.ta-hud-reveal .ta-stats>div,#taHud.ta-hud-reveal .ta-stats strong,#taHud.ta-hud-reveal .ta-stats small{animation:none}}
+
+
 </style>
 <script>
 /* 最初の描画より前に、前回の世界（白/黒）を決めておく。万一起動処理が止まっても4秒で必ず見せる */
@@ -5833,6 +5881,10 @@ function taRender(){
   document.getElementById('taScore').textContent=String(taScore);
 }
 function taSyncDemo(){
+  const slip=document.getElementById('slip');
+  if(slip)slip.classList.toggle('ta-demo-frame',!taRunning&&!taStarting);
+  const hud=document.getElementById('taHud');
+  if(hud)hud.classList.toggle('ta-hud-demo',!taRunning&&!taStarting);
   const demo=document.getElementById('taDemoPlay');
   const result=document.getElementById('taLaunch');
   const library=document.getElementById('viewLib');
@@ -5855,6 +5907,7 @@ function taFinish(){
   const flash=document.getElementById('taStartFlash');
   flash.hidden=false;flash.classList.remove('ta-start-active','ta-end-active');
   flash.textContent='Time Over';void flash.offsetWidth;flash.classList.add('ta-end-active');
+  document.getElementById('taHud').classList.remove('ta-hud-reveal');
   taSeconds=Math.max(0,taSeconds);taRender();
   taSaveRecord();taUpdatePlay();
   setTimeout(()=>{
@@ -5871,6 +5924,17 @@ let taStarting=false;
 function taBegin(){
   if(taRunning||taStarting)return;
   taStarting=true;++taFinishToken;taUpdatePlay();
+  // Keep the existing START text fade; softly illuminate only the manuscript frame.
+  const manuscript=document.getElementById('slip');
+  manuscript.classList.remove('ta-demo-frame','unlock','ta-soft-reveal');
+  void manuscript.offsetWidth;
+  manuscript.classList.add('ta-soft-reveal');
+  const hud=document.getElementById('taHud');
+  hud.classList.remove('ta-hud-demo','ta-hud-reveal');
+  void hud.offsetWidth;
+  hud.classList.add('ta-hud-reveal');
+  const revealToken=taFinishToken;
+  setTimeout(()=>{if(revealToken===taFinishToken){manuscript.classList.remove('ta-soft-reveal');hud.classList.remove('ta-hud-reveal');}},1600);
   document.getElementById('taLaunch').hidden=true;
   if(!document.getElementById('viewLib').hidden)document.getElementById('libbtn').click();
   taSeconds=60;taScore=0;
