@@ -113,6 +113,10 @@ html[data-view="lib"] #taPlay{display:none!important}
 @keyframes taFixedEndFade{0%{opacity:0}25%,72%{opacity:1}100%{opacity:0}}
 @media(prefers-reduced-motion:reduce){#taDemoPlay{animation:none;opacity:.85}#taStartFlash.ta-start-active,#taStartFlash.ta-end-active{animation:none}}
 
+
+/* Combo milestone: separate expanding and contracting golden circular waves. */
+.ta-combo-wave{position:fixed;z-index:10019;width:48px;height:48px;border:2px solid rgba(255,222,151,.94);border-radius:50%;pointer-events:none;box-sizing:border-box;box-shadow:0 0 26px 7px rgba(246,187,89,.64),0 0 52px 10px rgba(246,187,89,.24),inset 0 0 17px rgba(255,224,161,.38);will-change:transform,opacity}
+
 /* 連鎖ボーナスの小さな破裂粒子（引き寄せより控えめ） */
 .ta-combo-spark{position:fixed;z-index:10020;width:5px;height:5px;border-radius:50%;pointer-events:none;background:#ffe5a1;box-shadow:0 0 6px 2px rgba(255,203,112,.65);}
 
@@ -144,7 +148,7 @@ html[data-view="lib"] #taPlay{display:none!important}
   0%{border-color:transparent;box-shadow:0 0 0 0 transparent,0 18px 40px -24px transparent}
   25%{border-color:color-mix(in srgb,var(--line) 20%,transparent);box-shadow:0 0 9px 2px color-mix(in srgb,var(--accent) 5%,transparent),0 18px 40px -24px color-mix(in srgb,var(--ink) 10%,transparent)}
   58%{border-color:color-mix(in srgb,var(--accent) 48%,transparent);box-shadow:0 0 20px 4px color-mix(in srgb,var(--accent) 18%,transparent),0 18px 40px -24px color-mix(in srgb,var(--ink) 32%,transparent)}
-  100%{border-color:var(--line);box-shadow:0 0 0 0 transparent,0 18px 40px -24px color-mix(in srgb,var(--ink) 50%,transparent)}
+  100%{border-color:var(--line);box-shadow:0 0 12px 2px color-mix(in srgb,var(--accent) 13%,transparent),0 18px 40px -24px color-mix(in srgb,var(--ink) 50%,transparent)}
 }
 @keyframes taSoftInnerReveal{
   0%{opacity:0;border-color:transparent}
@@ -177,6 +181,17 @@ html[data-view="lib"] #taPlay{display:none!important}
 @media(prefers-reduced-motion:reduce){#taHud.ta-hud-reveal .ta-stats>div,#taHud.ta-hud-reveal .ta-stats strong,#taHud.ta-hud-reveal .ta-stats small{animation:none}}
 
 
+
+/* Gameplay: slightly brighter persistent manuscript glow, without affecting DEMO. */
+#slip.ta-game-frame{box-shadow:0 0 12px 2px color-mix(in srgb,var(--accent) 13%,transparent),0 18px 40px -24px color-mix(in srgb,var(--ink) 50%,transparent)}
+
+/* DEMO only: a quiet breathing cue on the actual start button. */
+#taPlay.ta-demo-pulse{animation:taDemoStartPulse 2.8s ease-in-out infinite;}
+@keyframes taDemoStartPulse{
+  0%,100%{color:rgba(236,217,187,.62);border-color:rgba(235,209,167,.26);background-color:rgba(225,202,161,.025);box-shadow:0 0 3px rgba(239,208,155,.04)}
+  50%{color:rgba(255,240,210,1);border-color:rgba(255,224,173,.72);background-color:rgba(225,202,161,.13);box-shadow:0 0 17px rgba(239,208,155,.33)}
+}
+@media(prefers-reduced-motion:reduce){#taPlay.ta-demo-pulse{animation:none;color:rgba(255,232,191,.85);border-color:rgba(241,210,161,.4)}}
 </style>
 <script>
 /* 最初の描画より前に、前回の世界（白/黒）を決めておく。万一起動処理が止まっても4秒で必ず見せる */
@@ -1433,7 +1448,7 @@ body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width
   </div>
 
     <div class="testbar" id="testbar" hidden>テスト用
-      <button type="button" id="t-all">違和感と読んだ記録を消す</button>
+      <button type="button" id="t-all">ランキング初期化</button>
       <button type="button" id="t-special">明滅する言葉を呼ぶ</button>
       <button type="button" id="t-c100">連鎖 +9</button>
       <button type="button" id="t-pull">引き寄せを呼ぶ</button>
@@ -3166,18 +3181,6 @@ function comboBurst(n){
     {transform:`scale(${tier === 3 ? 1.7 : tier === 2 ? 1.6 : 1.5})`,offset:.34},
     {transform:"scale(1)",offset:1}
   ],{duration:420,easing:"cubic-bezier(.16,.8,.25,1)"});
-  const rings = tier === 3 ? 2 : 1;
-  for(let j=0;j<rings;j++){
-    const ring=document.createElement("span");
-    ring.className="vx-ring gold";
-    ring.style.left=cx+"px";ring.style.top=cy+"px";
-    ring.style.pointerEvents="none";
-    document.body.append(ring);
-    ring.animate([
-      {transform:"scale(.45)",opacity:.85},
-      {transform:`scale(${tier===3?5.5:tier===2?4.5:3.5})`,opacity:0}
-    ],{duration:440+j*100,delay:j*80,easing:"ease-out",fill:"forwards"}).onfinish=()=>ring.remove();
-  }
   const count = tier === 3 ? 16 : tier === 2 ? 12 : 8;
   for(let i=0;i<count;i++){
     const a=2*Math.PI*i/count+(Math.random()-.5)*.2;
@@ -3192,62 +3195,46 @@ function comboBurst(n){
     ],{duration:380+Math.random()*180,easing:"cubic-bezier(.1,.65,.3,1)",fill:"forwards"}).onfinish=()=>dot.remove();
   }
 }
+// Two separate circular waves: expand from combo, then contract into score.
+// Bonus is awarded only after the score-side wave has arrived.
 function comboStepBonus(n){
   comboGlow();
   comboBurst(n);
-  const g = n, cb = $("combo"), c = cb.getBoundingClientRect(), cx = c.left + c.width/2, cy = c.top + c.height/2;
-  const land = () => { taAward(false,g); sfx.arrive(); };
-  const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if(reduce || !c.width){ land(); return; }
-  const o = document.createElement("span"); o.className = "orb mid"; o.style.left = cx + "px"; o.style.top = cy + "px"; document.body.append(o);
-  const target = () => { const t = $("taScore").getBoundingClientRect(); return [t.left + t.width/2, t.top + t.height/2]; };
-  const side = cx > innerWidth / 2 ? -1 : 1, dur = 800, t0 = performance.now();
-  sfx.fly(.7);
-  const step = now => {
-    const q = Math.min(1, (now - t0) / dur), e = q < .5 ? 2*q*q : 1 - Math.pow(-2*q + 2, 2) / 2;
-    const [tx, ty] = target(), mx = (cx + tx) / 2 + side * 60, my = Math.min(cy, ty) - 60;
-    const x = (1-e)*(1-e)*cx + 2*(1-e)*e*mx + e*e*tx, y = (1-e)*(1-e)*cy + 2*(1-e)*e*my + e*e*ty;
-    o.style.left = x + "px"; o.style.top = y + "px";
-    o.style.transform = `scale(${q < .15 ? .4 + q / .15 * 1.1 : 1.5 - q * .8})`; o.style.opacity = q > .9 ? (1 - q) / .1 : 1;
-    if(q < 1) requestAnimationFrame(step); else { o.remove(); land(); }
+  const comboRect=$('combo').getBoundingClientRect();
+  const scoreEl=$('taScoreBox') || $('taScore');
+  const scoreRect=scoreEl.getBoundingClientRect();
+  const reduce=window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const session=taFinishToken;
+  const land=()=>{if(session!==taFinishToken || !taRunning)return;taAward(false,n);sfx.arrive();};
+  if(reduce || !comboRect.width || !scoreRect.width){land();return;}
+  const makeWave=(x,y,startScale,endScale,duration,delay,opacity)=>{
+    const ring=document.createElement('span');
+    ring.className='ta-combo-wave';
+    ring.style.left=x+'px';ring.style.top=y+'px';
+    document.body.append(ring);
+    const animation=ring.animate([
+      {transform:`translate(-50%,-50%) scale(${startScale})`,opacity:0,offset:0},
+      {transform:`translate(-50%,-50%) scale(${startScale+(endScale-startScale)*.14})`,opacity,offset:.15},
+      {transform:`translate(-50%,-50%) scale(${endScale})`,opacity:0,offset:1}
+    ],{duration,delay,easing:'cubic-bezier(.2,.7,.3,1)',fill:'both'});
+    animation.onfinish=()=>ring.remove();
   };
-  requestAnimationFrame(step);
+  const cx=comboRect.left+comboRect.width/2,cy=comboRect.top+comboRect.height/2;
+  const sx=scoreRect.left+scoreRect.width/2,sy=scoreRect.top+scoreRect.height/2;
+  const tier=n>=100?3:n>=50?2:1;
+  // More deliberate two-stage ripple: luminous expanding rings, then a contracting score halo.
+  makeWave(cx,cy,.25,tier===3?7.6:tier===2?6.8:5.9,780,0,1);
+  makeWave(cx,cy,.2,tier===3?6.8:tier===2?6.0:5.2,810,145,.66);
+  if(tier>=2)makeWave(cx,cy,.3,5.2,740,265,.38);
+  // The second set of rings stays centered on the score area.
+  makeWave(sx,sy,tier===3?7.8:tier===2?7.0:6.3,.12,810,690,1);
+  makeWave(sx,sy,tier===3?7.0:6.0,.14,790,805,.65);
+  if(tier===3)makeWave(sx,sy,5.6,.18,710,900,.38);
+  setTimeout(land,1540);
 }
 // 連鎖100以降（Lv3）は採集エリアの枠を脈打たせ、連鎖が切れたら止める
 function comboRush(on){ const hero = document.querySelector(".hero"); if(hero) hero.classList.toggle("rush", !!on); }
-function comboBonus(n){
-  track("combo100", "連鎖100");
-  comboGlow();
-  // 連鎖の表示を中心に、白い閃光と光の輪が弾け、絵がその位置から一瞬明るくなる（+100 は違和感の横にだけ出る）
-  const g = COMBO_BONUS, cb = $("combo"), c = cb.getBoundingClientRect(), cx = c.left + c.width/2, cy = c.top + c.height/2;
-  const f = document.createElement("span"); f.className = "vx-flash gold"; f.style.left = cx + "px"; f.style.top = cy + "px"; document.body.append(f);
-  f.animate([{transform:"scale(.6)", opacity:1},{transform:"scale(8)", opacity:.9, offset:.35},{transform:"scale(13)", opacity:0}], {duration:900, easing:"cubic-bezier(.2,.7,.3,1)", fill:"forwards"}).onfinish = () => f.remove();
-  [0, 140].forEach(d => { const r = document.createElement("span"); r.className = "vx-ring"; r.style.left = cx + "px"; r.style.top = cy + "px"; document.body.append(r);
-    r.classList.add("gold"); r.animate([{transform:"scale(1)", opacity:1},{transform:"scale(9)", opacity:0}], {duration:900, delay:d, easing:"cubic-bezier(.2,.7,.3,1)", fill:"both"}).onfinish = () => r.remove(); });
-  const hero = document.querySelector(".hero");
-  if(hero){ const h = hero.getBoundingClientRect(), hf = document.createElement("div"); hf.className = "hero-flash";
-    hf.style.setProperty("--fx", (cx - h.left) + "px"); hf.style.setProperty("--fy", (cy - h.top) + "px"); hero.append(hf);
-    hf.animate([{opacity:0},{opacity:1, offset:.12},{opacity:0}], {duration:850, easing:"ease-out", fill:"forwards"}).onfinish = () => hf.remove(); }
-  cb.classList.remove("up"); void cb.offsetWidth; cb.classList.add("up");
-  sfx.burst();
-  // 大きな違和感の玉が連鎖の位置から弧を描いて違和感の数字へ飛ぶ。+100 は必ず違和感の横に見せたいので、ペンには注がない
-  setTimeout(()=>{
-    const o = document.createElement("span"); o.className = "orb big"; o.style.left = cx + "px"; o.style.top = cy + "px"; document.body.append(o);
-    const target = () => { const r = $("taScore").getBoundingClientRect(); return [r.left + r.width/2, r.top + r.height/2]; };
-    const side = cx > innerWidth / 2 ? -1 : 1, dur = 1100, t0 = performance.now();
-    sfx.fly(1);
-    const step = now => {
-      const q = Math.min(1, (now - t0) / dur), e = q < .5 ? 2*q*q : 1 - Math.pow(-2*q + 2, 2) / 2;
-      const [tx, ty] = target(), mx = (cx + tx) / 2 + side * 90, my = Math.min(cy, ty) - 90;
-      const x = (1-e)*(1-e)*cx + 2*(1-e)*e*mx + e*e*tx, y = (1-e)*(1-e)*cy + 2*(1-e)*e*my + e*e*ty;
-      o.style.left = x + "px"; o.style.top = y + "px";
-      o.style.transform = `scale(${q < .15 ? .3 + q / .15 * .9 : 1.2 - q * .55})`; o.style.opacity = q > .92 ? (1 - q) / .08 : 1;
-      if(q < 1) requestAnimationFrame(step);
-      else { o.remove(); taAward(false,g); sfx.arrive(); }
-    };
-    requestAnimationFrame(step);
-  }, 260);
-}
+function comboBonus(n){comboStepBonus(n);}
 function bumpCombo(){
   const now = Date.now();
   if(comboPaused && !open && !charging) resumeCombo();   // 念のため：読んでいないのに止まっていたら、触れた時点で戻す
@@ -3800,7 +3787,7 @@ function spawnLoop(){
     if(Math.random() < .3){ const extra = Math.random() < .35 ? 2 : 1; for(let i=0;i<extra;i++) setTimeout(()=>{ if(!flood && !sakuraOn) spawnWord({plain:true}); }, 140 + i*150 + Math.random()*170); }
   }
   // 湧く間隔をばらつかせる（一定間隔で1つ、の単調さをなくす）
-  setTimeout(spawnLoop, flood ? 400 : 600 + Math.random()*1100);
+  setTimeout(spawnLoop, flood ? 400 : 500 + Math.random()*900);
 }
 
 function spawnWord(opt = {}){
@@ -5797,8 +5784,12 @@ $("t-petal").onclick=()=>{ forceSakura = true; toast("まもなく、ひとひ�
 $("t-glow").onclick=()=>{ forceGlow = true; toast(mode === "black" ? "まもなく、「月明かり」が現れます" : "まもなく、「陽だまり」が現れます"); };
 $("t-c100").onclick=()=>{ combo += 8; comboAt = Date.now(); bumpCombo(); toast("連鎖を9増やしました"); };
 $("t-special").onclick=()=>{ forceSpecial = true; toast("まもなく、明滅する言葉が現れます"); };
-$("t-all").onclick=()=>{ store.set("ta-yura-shared",""); store.set("ta-yura-said",[]); noted=[]; store.set("ta-yura-noted",noted); ikan=0; ikanTotal=0; store.set("ta-yura-total",0); read=[]; dispId=null; prog={}; cur={white:null,black:null}; open=false; store.set("ta-yura-prog",prog); store.set("ta-yura-cur",cur); dictC={}; dictNew=[]; store.set("ta-yura-dictc",dictC); store.set("ta-yura-dict",[]); $("dictdot").hidden=true; sel=null; shownBooks=null; closing=null; inkId=null; pendingClose=false; $("libdot").hidden=true; store.set("ta-yura-read",read); maxCombo=0; store.set("ta-yura-maxcombo",0); readStock=0; store.set("ta-yura-readstock",0); renderTray(); saveIkan();
-  open=false; render(); updateIkan(true); toast("違和感と読んだ記録を消しました"); };
+$("t-all").onclick=()=>{
+  if(!confirm("得点ランキングの全記録を削除しますか？"))return;
+  try{localStorage.removeItem('ta-time-attack-records-v1');}catch(e){}
+  taRenderRecords();
+  toast("ランキングを初期化しました");
+};
 
 /* タイムアタックでは初回案内を使用しない。元コードの呼び出し先だけ保持。 */
 const tut = {start(){}, on(){}, reset(){}};
@@ -5882,18 +5873,21 @@ function taRender(){
 }
 function taSyncDemo(){
   const slip=document.getElementById('slip');
-  if(slip)slip.classList.toggle('ta-demo-frame',!taRunning&&!taStarting);
+  if(slip){slip.classList.toggle('ta-demo-frame',!taRunning&&!taStarting);if(!taRunning&&!taStarting)slip.classList.remove('ta-game-frame');}
   const hud=document.getElementById('taHud');
   if(hud)hud.classList.toggle('ta-hud-demo',!taRunning&&!taStarting);
   const demo=document.getElementById('taDemoPlay');
   const result=document.getElementById('taLaunch');
   const library=document.getElementById('viewLib');
   if(demo)demo.hidden=taRunning||taStarting||(result&&!result.hidden)||(library&&!library.hidden);
+  const play=document.getElementById('taPlay');
+  if(play)play.classList.toggle('ta-demo-pulse',!taRunning&&!taStarting&&!(result&&!result.hidden)&&!(library&&!library.hidden));
 }
 function taUpdatePlay(){
   const btn=document.getElementById('taPlay');
   const active=taRunning||taStarting;
   btn.classList.toggle('ta-is-running',active);
+  if(active)btn.classList.remove('ta-demo-pulse');
   btn.setAttribute('aria-label',active?'ゲームを終了':'タイムアタックを開始');
   btn.title=active?'ゲームを終了':'タイムアタックを開始';
   taSyncDemo();
@@ -5923,18 +5917,21 @@ function taTick(now){if(!taRunning)return;const delta=Math.min(0.1,(now-taLast)/
 let taStarting=false;
 function taBegin(){
   if(taRunning||taStarting)return;
-  taStarting=true;++taFinishToken;taUpdatePlay();
+  taStarting=true;++taFinishToken;
+  // Keep DEMO styling until reveal classes are ready, avoiding a one-frame flash.
   // Keep the existing START text fade; softly illuminate only the manuscript frame.
   const manuscript=document.getElementById('slip');
-  manuscript.classList.remove('ta-demo-frame','unlock','ta-soft-reveal');
+  manuscript.classList.remove('ta-demo-frame','unlock','ta-soft-reveal','ta-game-frame');
   void manuscript.offsetWidth;
   manuscript.classList.add('ta-soft-reveal');
   const hud=document.getElementById('taHud');
   hud.classList.remove('ta-hud-demo','ta-hud-reveal');
+  hud.querySelectorAll('.ta-frame-flash').forEach(el=>el.classList.remove('ta-frame-flash'));
   void hud.offsetWidth;
   hud.classList.add('ta-hud-reveal');
+  taUpdatePlay();
   const revealToken=taFinishToken;
-  setTimeout(()=>{if(revealToken===taFinishToken){manuscript.classList.remove('ta-soft-reveal');hud.classList.remove('ta-hud-reveal');}},1600);
+  setTimeout(()=>{if(revealToken===taFinishToken){manuscript.classList.remove('ta-soft-reveal');manuscript.classList.add('ta-game-frame');hud.classList.remove('ta-hud-reveal');}},1600);
   document.getElementById('taLaunch').hidden=true;
   if(!document.getElementById('viewLib').hidden)document.getElementById('libbtn').click();
   taSeconds=60;taScore=0;
