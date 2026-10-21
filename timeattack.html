@@ -3205,8 +3205,8 @@ function comboStepBonus(n){
   const scoreRect=scoreEl.getBoundingClientRect();
   const reduce=window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const session=taFinishToken;
-  const land=()=>{if(session!==taFinishToken || !taRunning)return;taAward(false,n);sfx.arrive();};
-  if(reduce || !comboRect.width || !scoreRect.width){land();return;}
+  const land=()=>{if(session!==taFinishToken || !taRunning)return;taAward(false,n,true);sfx.arrive();};
+  if(reduce || !comboRect.width || !scoreRect.width){taFlashScoreFrame();land();return;}
   const makeWave=(x,y,startScale,endScale,duration,delay,opacity)=>{
     const ring=document.createElement('span');
     ring.className='ta-combo-wave';
@@ -3230,6 +3230,8 @@ function comboStepBonus(n){
   makeWave(sx,sy,tier===3?7.8:tier===2?7.0:6.3,.12,810,690,1);
   makeWave(sx,sy,tier===3?7.0:6.0,.14,790,805,.65);
   if(tier===3)makeWave(sx,sy,5.6,.18,710,900,.38);
+  // As the contracting rings reach the score box, flash its rectangular frame first.
+  setTimeout(()=>{if(session===taFinishToken && taRunning)taFlashScoreFrame();},1260);
   setTimeout(land,1540);
 }
 // 連鎖100以降（Lv3）は採集エリアの枠を脈打たせ、連鎖が切れたら止める
@@ -5843,8 +5845,9 @@ function taRenderRecords(){
     row.append(pos,score,date);rankBox.append(row);
   });
 }
+function taFlashScoreFrame(){const frame=document.getElementById('taScoreBox');if(!frame)return;frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}
 let taPlusLastArrival=0,taPlusArrivalCount=0;
-function taAward(isTime,pts){if(!taRunning)return;const id=isTime?'taTime':'taScore';if(isTime)taSeconds+=1;else taScore+=pts;taRender();const el=document.getElementById(id);el.classList.remove('ta-pop');void el.offsetWidth;el.classList.add('ta-pop');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame){frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'')+(pts>=100?' ta-plus-xl':pts>=10?' ta-plus-lg':'');p.textContent=isTime?'+1秒':'+'+pts;// Closely spaced arrivals fan out so each collected orb remains visible.
+function taAward(isTime,pts,skipFrameFlash=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';if(isTime)taSeconds+=1;else taScore+=pts;taRender();const el=document.getElementById(id);el.classList.remove('ta-pop');void el.offsetWidth;el.classList.add('ta-pop');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'')+(pts>=100?' ta-plus-xl':pts>=10?' ta-plus-lg':'');p.textContent=isTime?'+1秒':'+'+pts;// Closely spaced arrivals fan out so each collected orb remains visible.
 const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
