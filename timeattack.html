@@ -5384,6 +5384,17 @@ let newIds = [];
 const sfx = (()=>{
   let ctx = null, noise = null, bus = null, on = store.get("ta-yura-sound", true);
   const sfxKoto = {};   // 桜の発動音：作った神楽鈴の音と、残響を取っておく
+  const comboAudioBuffers={ten:null,century:null};
+  const comboAudioFiles={ten:'audio/combo_10_gold_quartet.wav',century:'audio/combo_100_gold_cathedral.wav'};
+  // Decode after the shared AudioContext is initialized; never block gameplay.
+  function prepareComboAudio(){
+    Object.keys(comboAudioFiles).forEach(key=>{
+      fetch(comboAudioFiles[key]).then(r=>{if(!r.ok)throw Error(r.status);return r.arrayBuffer();})
+        .then(data=>ctx.decodeAudioData(data)).then(buf=>{comboAudioBuffers[key]=buf;})
+        .catch(err=>console.warn('Combo audio unavailable:',key,err));
+    });
+  }
+
   const ac = () => {
     if(!on) return null;
     if(!ctx){
@@ -5396,6 +5407,7 @@ const sfx = (()=>{
       const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -8; lim.knee.value = 12; lim.ratio.value = 3; lim.attack.value = .006; lim.release.value = .2;
       bus.connect(hp); hp.connect(master); master.connect(lim); lim.connect(ctx.destination);
       noise = ctx.createBuffer(1, ctx.sampleRate * .2, ctx.sampleRate); const d = noise.getChannelData(0); for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+      prepareComboAudio();
       setTimeout(()=>makeBgm(), 4000);   // 本棚を開いたときすぐ流せるよう、少し後に裏でBGMを用意しておく
     }
     if(ctx.state === "suspended") ctx.resume();
@@ -5592,25 +5604,23 @@ const sfx = (()=>{
       g2.gain.setValueAtTime(0.0001, t); g2.gain.exponentialRampToValueAtTime(.035, t + d*.4); g2.gain.exponentialRampToValueAtTime(0.0001, t + d);
       src.connect(bp); bp.connect(g2); g2.connect(bus); src.start(t); src.stop(t + d + .02);
     },
-    // 10連鎖の節目：上昇する二音の金色の鈴。100連鎖では低い鐘を重ねる。
+    // 採用された試聴音源をそのまま使用（10連：黄金の四重奏／100連：黄金の大聖堂）。
+    // AudioContextのマスターを通し、既存のサウンド設定と音量調整を共有する。
     comboMilestone(century=false){
       const a=ac(); if(!a) return;
-      const t=a.currentTime, rv=reverb();
-      const ring=(f,at,vol,dur)=>{
-        bell(at,f,2.01,.42,vol,dur);
-        const o=ctx.createOscillator(), g=ctx.createGain(), wet=ctx.createGain();
-        o.type='sine'; o.frequency.value=f;
-        g.gain.setValueAtTime(.0001,at);
-        g.gain.exponentialRampToValueAtTime(vol*.42,at+.012);
-        g.gain.exponentialRampToValueAtTime(.0001,at+dur+.28);
-        o.connect(g);g.connect(bus);wet.gain.value=.23;g.connect(wet);wet.connect(rv);
-        o.start(at);o.stop(at+dur+.3);
-      };
-      ring(880,t,.055,.31);
-      ring(1318.5,t+.16,.069,.64);
-      if(century){
-        ring(440,t+.03,.075,.8);
-        ring(1760,t+.36,.048,.92);
+      const key=century?'century':'ten';
+      const src=comboAudioBuffers[key];
+      if(src){
+        const player=ctx.createBufferSource(), gain=ctx.createGain();
+        player.buffer=src;
+        gain.gain.value=century?.72:.68;
+        player.connect(gain);gain.connect(bus);
+        player.start();
+      }else{
+        // 初回ロードが未完了の場合も無音にしない。
+        const t=a.currentTime, f=century?523.25:880;
+        bell(t,f,2.01,.65,.055,.38);
+        bell(t+.13,f*1.5,2.01,.85,.065,.6);
       }
     },
     arrive(){ const a = ac(); if(!a) return; const t = a.currentTime;
