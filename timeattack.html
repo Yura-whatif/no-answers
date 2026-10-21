@@ -116,6 +116,16 @@ html[data-view="lib"] #taPlay{display:none!important}
 /* 連鎖ボーナスの小さな破裂粒子（引き寄せより控えめ） */
 .ta-combo-spark{position:fixed;z-index:10020;width:5px;height:5px;border-radius:50%;pointer-events:none;background:#ffe5a1;box-shadow:0 0 6px 2px rgba(255,203,112,.65);}
 
+/* 残り時間・得点の独立した枠。オーブ到着時に枠ごと短く発光する。 */
+#taHud .ta-stats>div{position:relative;border:1px solid rgba(176,182,194,.38);border-radius:5px;padding:11px 6px 12px;box-sizing:border-box;min-width:0;background:rgba(255,255,255,.018)}
+#taHud #taTimeBox{border-color:rgba(135,197,236,.40)}
+#taHud #taScoreBox{border-color:rgba(235,197,126,.40)}
+#taHud .ta-stats>div.ta-frame-flash{animation:taFrameFlash .65s ease-out both}
+#taHud #taTimeBox.ta-frame-flash{--ta-frame-glow:rgba(107,200,255,.64);--ta-frame-border:rgba(155,223,255,.95)}
+#taHud #taScoreBox.ta-frame-flash{--ta-frame-glow:rgba(248,198,109,.62);--ta-frame-border:rgba(255,225,160,.95)}
+@keyframes taFrameFlash{0%{border-color:var(--ta-frame-border);box-shadow:0 0 5px var(--ta-frame-glow),inset 0 0 6px var(--ta-frame-glow)}35%{border-color:var(--ta-frame-border);box-shadow:0 0 16px var(--ta-frame-glow),inset 0 0 12px var(--ta-frame-glow)}100%{box-shadow:0 0 0 transparent,inset 0 0 0 transparent}}
+@media(prefers-reduced-motion:reduce){#taHud .ta-stats>div.ta-frame-flash{animation:none}}
+
 /* タイムアタック: オーブ到着時の加算表示を獲得量で強調 */
 .ta-plus.ta-plus-lg{font-size:2.05rem;font-weight:700}
 .ta-plus.ta-plus-xl{font-size:2.85rem;font-weight:800}
@@ -5795,7 +5805,7 @@ function taRenderRecords(){
   });
 }
 let taPlusLastArrival=0,taPlusArrivalCount=0;
-function taAward(isTime,pts){if(!taRunning)return;const id=isTime?'taTime':'taScore';if(isTime)taSeconds+=1;else taScore+=pts;taRender();const el=document.getElementById(id);el.classList.remove('ta-pop');void el.offsetWidth;el.classList.add('ta-pop');const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'')+(pts>=100?' ta-plus-xl':pts>=10?' ta-plus-lg':'');p.textContent=isTime?'+1秒':'+'+pts;// Closely spaced arrivals fan out so each collected orb remains visible.
+function taAward(isTime,pts){if(!taRunning)return;const id=isTime?'taTime':'taScore';if(isTime)taSeconds+=1;else taScore+=pts;taRender();const el=document.getElementById(id);el.classList.remove('ta-pop');void el.offsetWidth;el.classList.add('ta-pop');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame){frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'')+(pts>=100?' ta-plus-xl':pts>=10?' ta-plus-lg':'');p.textContent=isTime?'+1秒':'+'+pts;// Closely spaced arrivals fan out so each collected orb remains visible.
 const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
