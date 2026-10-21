@@ -3239,6 +3239,7 @@ function taCenturyResonance(cx,cy){
 function comboStepBonus(n){
   comboGlow();
   comboBurst(n);
+  sfx.comboMilestone(n % 100 === 0);
   const comboRect=$('combo').getBoundingClientRect();
   const scoreEl=$('taScoreBox') || $('taScore');
   const scoreRect=scoreEl.getBoundingClientRect();
@@ -5590,6 +5591,27 @@ const sfx = (()=>{
       bp.frequency.setValueAtTime(800*k, t); bp.frequency.exponentialRampToValueAtTime(5200*k, t + d);
       g2.gain.setValueAtTime(0.0001, t); g2.gain.exponentialRampToValueAtTime(.035, t + d*.4); g2.gain.exponentialRampToValueAtTime(0.0001, t + d);
       src.connect(bp); bp.connect(g2); g2.connect(bus); src.start(t); src.stop(t + d + .02);
+    },
+    // 10連鎖の節目：上昇する二音の金色の鈴。100連鎖では低い鐘を重ねる。
+    comboMilestone(century=false){
+      const a=ac(); if(!a) return;
+      const t=a.currentTime, rv=reverb();
+      const ring=(f,at,vol,dur)=>{
+        bell(at,f,2.01,.42,vol,dur);
+        const o=ctx.createOscillator(), g=ctx.createGain(), wet=ctx.createGain();
+        o.type='sine'; o.frequency.value=f;
+        g.gain.setValueAtTime(.0001,at);
+        g.gain.exponentialRampToValueAtTime(vol*.42,at+.012);
+        g.gain.exponentialRampToValueAtTime(.0001,at+dur+.28);
+        o.connect(g);g.connect(bus);wet.gain.value=.23;g.connect(wet);wet.connect(rv);
+        o.start(at);o.stop(at+dur+.3);
+      };
+      ring(880,t,.055,.31);
+      ring(1318.5,t+.16,.069,.64);
+      if(century){
+        ring(440,t+.03,.075,.8);
+        ring(1760,t+.36,.048,.92);
+      }
     },
     arrive(){ const a = ac(); if(!a) return; const t = a.currentTime;
       click(t, 8000, .045, .01); bell(t, notes()[4] * (night() ? 1 : 1.5), 2, .6, .03, .05); },
