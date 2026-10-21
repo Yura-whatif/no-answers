@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="ja">
 <head>
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <!-- 公開を伏せているあいだは検索エンジンに載せない。公表するときはこの1行を消す -->
@@ -38,7 +41,7 @@ html.boot .wrap{opacity:0}
 .ta-stats{display:flex;justify-content:space-around;align-items:center;width:100%;gap:8px}.ta-stats>div{flex:1;text-align:center;min-width:0}.ta-stats small{display:block;font-size:.7rem;letter-spacing:.12em;margin-bottom:8px;color:#bfb0a4}.ta-stats strong{font-weight:500;font-size:clamp(1.8rem,6vw,3.5rem);font-variant-numeric:tabular-nums;white-space:nowrap;text-shadow:0 0 13px currentColor}#taTime{color:#8fc9ed}#taScore{color:#f0d18f}.ta-foot{font-size:.7rem;letter-spacing:.2em;opacity:.7}
 .ta-blue{color:#9fd5ff!important;text-shadow:0 0 9px #6dbbff!important}
 #taHud .ta-pop{display:inline-block;animation:taPulse .38s ease-out}@keyframes taPulse{0%,100%{transform:scale(1);filter:brightness(1)}45%{transform:scale(1.055);filter:brightness(1.28)}}
-.ta-plus{position:fixed;z-index:100;pointer-events:none;color:#f1d59a;font-family:var(--mincho);font-size:1.4rem;animation:taFloat 1.15s ease-out forwards;text-shadow:0 0 14px currentColor}.ta-plus.time{color:#9fdcff}@keyframes taFloat{from{transform:translate(-50%,-50%);opacity:1}to{transform:translate(calc(-50% + var(--ta-plus-drift, 0px)),calc(-50% - 45px));opacity:0}}
+.ta-plus{position:fixed;z-index:100;pointer-events:none;color:#f1d59a;font-family:var(--mincho);font-size:1.4rem;animation:taFloat 1.15s ease-out forwards;text-shadow:0 0 14px currentColor}.ta-plus.time{color:#9fdcff}@keyframes taFloat{from{transform:translate(-50%,-50%);opacity:1}to{transform:translate(-50%,calc(-50% - 45px));opacity:0}}
 #slip>.slip-bg,#slip>.meta,#slip>.title,#slip>.lines,#slip>.cover,#slip>.stow,#slip>.sharebtn,#slip>.slip-empty{visibility:hidden!important}
 #ikan,#rtray,#coach,#yword,.controls,.aboutlink{display:none!important}
 .mode{display:none!important}
@@ -1221,7 +1224,7 @@ body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width
 .ta-stats{display:flex;justify-content:space-around;align-items:center;width:100%;gap:8px}.ta-stats>div{flex:1;text-align:center;min-width:0}.ta-stats small{display:block;font-size:.7rem;letter-spacing:.12em;margin-bottom:8px;color:#bfb0a4}.ta-stats strong{font-weight:500;font-size:clamp(1.8rem,6vw,3.5rem);font-variant-numeric:tabular-nums;white-space:nowrap;text-shadow:0 0 13px currentColor}#taTime{color:#8fc9ed}#taScore{color:#f0d18f}.ta-foot{font-size:.7rem;letter-spacing:.2em;opacity:.7}
 .ta-blue{color:#9fd5ff!important;text-shadow:0 0 9px #6dbbff!important}
 #taHud .ta-pop{display:inline-block;animation:taPulse .38s ease-out}@keyframes taPulse{0%,100%{transform:scale(1);filter:brightness(1)}45%{transform:scale(1.055);filter:brightness(1.28)}}
-.ta-plus{position:fixed;z-index:100;pointer-events:none;color:#f1d59a;font-family:var(--mincho);font-size:1.4rem;animation:taFloat 1.15s ease-out forwards;text-shadow:0 0 14px currentColor}.ta-plus.time{color:#9fdcff}@keyframes taFloat{from{transform:translate(-50%,-50%);opacity:1}to{transform:translate(calc(-50% + var(--ta-plus-drift, 0px)),calc(-50% - 45px));opacity:0}}
+.ta-plus{position:fixed;z-index:100;pointer-events:none;color:#f1d59a;font-family:var(--mincho);font-size:1.4rem;animation:taFloat 1.15s ease-out forwards;text-shadow:0 0 14px currentColor}.ta-plus.time{color:#9fdcff}@keyframes taFloat{from{transform:translate(-50%,-50%);opacity:1}to{transform:translate(-50%,calc(-50% - 45px));opacity:0}}
 #slip>.slip-bg,#slip>.meta,#slip>.title,#slip>.lines,#slip>.cover,#slip>.stow,#slip>.sharebtn,#slip>.slip-empty{visibility:hidden!important}
 #ikan,#rtray,#coach,#yword,.controls,.aboutlink{display:none!important}
 .mode{display:none!important}
@@ -1282,21 +1285,7 @@ body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width
 @keyframes taDemoFade{0%,100%{opacity:0}40%,60%{opacity:.52}}
 @media(prefers-reduced-motion:reduce){#taStartFlash.ta-start-active,#taStartFlash.ta-end-active{animation:none!important;opacity:1}}
 </style>
-<!-- アクセス解析（GoatCounter：Cookieを使わない）。公開先でだけ動き、#test で開いた端末は以後数えない（#count で再び数える） -->
-<script>
-(function(){
-  try{
-    if(location.hash === "#test") localStorage.setItem("ta-yura-nocount", "1");
-    if(location.hash === "#count") localStorage.removeItem("ta-yura-nocount");
-    if(localStorage.getItem("ta-yura-nocount") === "1") return;
-  }catch(_){}
-  if(!/\.github\.io$/.test(location.hostname)) return;
-  var s = document.createElement("script"); s.async = true; s.src = "https://gc.zgo.at/count.js";
-  s.setAttribute("data-goatcounter", "https://yura.goatcounter.com/count"); document.head.appendChild(s);
-})();
-// ゲーム内の出来事を数える（解析が読み込まれていないときは何もしない）
-function track(name, title){ try{ if(window.goatcounter && window.goatcounter.count) window.goatcounter.count({path:name, title:title || name, event:true}); }catch(_){} }
-</script>
+<script>function track(){} // 既存イベント呼び出しとの互換性のみ維持（通信なし）</script>
 </head>
 <body>
 
@@ -5811,11 +5800,11 @@ const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
 taPlusLastArrival=arrivalNow;
-const spread=[0,-17,17,-30,30,-9,9,-24,24,-36,36];
-const dx=spread[n%spread.length]+(n>=spread.length?((Math.floor(n/spread.length)%3)-1)*5:0);
-const dy=n===0?0:([-6,5,-12,9,-3,12][(n-1)%6]);
+// Tiny positional differences only; every label travels straight upward.
+const spread=[0,-4,3,5,-3,2,-5,4,-2,1];
+const dx=spread[n%spread.length];
+const dy=n===0?0:([0,-2,1,2,-1][(n-1)%5]);
 p.style.left=(r.left+r.width/2+dx)+'px';p.style.top=(r.top+r.height/2+dy)+'px';
-p.style.setProperty('--ta-plus-drift',(dx===0?0:Math.sign(dx)*Math.min(12,Math.abs(dx)*.4))+'px');
 document.body.append(p);setTimeout(()=>p.remove(),1200)}
 let taLastCountdownNumber=null;
 function taRender(){
