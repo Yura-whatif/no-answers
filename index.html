@@ -5088,7 +5088,18 @@ const sfx = (()=>{
   let bgm = null, bgmBuf = null, bgmMaking = null; const BGM_VOL = .6;
   const BGM_PROG = [[53,57,60,64],[52,55,59,62],[50,57,60,64],[48,55,59,64]], BGM_STEP = 8.5, BGM_DUR = 11;
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
-  function makeBgm(){
+  // 本棚（コレクション画面）の曲「Where the Map Ends」（audio/where-the-map-ends.mp3）。読み込めないとき（file:// で開いた等）は、下の弦の和音で代わりに鳴らす
+  const BGM_URL = "audio/where-the-map-ends.mp3", SONG_VOL = .13, SONG_GAP = 2.5;   // 曲は音が大きめなので控えめに。1曲終わったら少し間を置いて頭から
+  let song = null, songLoading = null, songPos = 0;
+  function loadSong(){
+    if(songLoading) return songLoading;
+    songLoading = fetch(BGM_URL).then(r => { if(!r.ok) throw 0; return r.arrayBuffer(); })
+      .then(ab => new Promise((ok, ng) => { const p = ctx.decodeAudioData(ab, ok, ng); if(p && p.then) p.then(ok, ng); }))
+      .then(buf => (song = buf)).catch(() => null);
+    return songLoading;
+  }
+  function makeBgm(){ return loadSong().then(b => b || makeSynthBgm()); }
+  function makeSynthBgm(){
     if(bgmMaking) return bgmMaking;
     const SR = 32000, LOOP = BGM_STEP * BGM_PROG.length, len = Math.ceil(SR * LOOP * 2);
     const O = window.OfflineAudioContext || window.webkitOfflineAudioContext; if(!O) return Promise.resolve(null);
@@ -5440,21 +5451,29 @@ const sfx = (()=>{
         o.connect(og); og.connect(bus); sg.gain.value = .6; og.connect(sg); sg.connect(rv); o.start(t + .24); o.stop(t + 1.9); });
       for(let i=0;i<7;i++){ const f = 3000 + Math.random()*2400; bell(t + .3 + i*.07 + Math.random()*.03, f, 1.5, .4, .018, .35); }
     },
-    // ---------- 本棚のBGM「夜の和音（弦）」：本棚を開いているあいだ、弦の和音がゆっくりループする ----------
-    get bgmState(){ return {playing: !!(bgm && bgm.src), buf: bgmBuf}; },
+    // ---------- 本棚のBGM：本棚（と余韻の時）のあいだ流れる。曲「Where the Map Ends」は前回止めたところから続きを流し、終わったら少し間を置いて頭から ----------
+    get bgmState(){ return {playing: !!(bgm && bgm.src), buf: song || bgmBuf, song: !!song}; },
     bgmStart(){
       const a = ac(); if(!a || bgm) return;
       const st = {stopped:false}; bgm = st;
       makeBgm().then(buf => {
         if(!buf || st.stopped || bgm !== st) return;
-        const g = ctx.createGain(), src = ctx.createBufferSource(), now = ctx.currentTime;
-        src.buffer = buf; src.loop = true; g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(BGM_VOL, now + 2.5);
-        src.connect(g); g.connect(bus); src.start(now, Math.random() * buf.duration); st.g = g; st.src = src;
+        const g = ctx.createGain(), now = ctx.currentTime, isSong = buf === song, vol = isSong ? SONG_VOL : BGM_VOL;
+        g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(vol, now + (isSong ? 1.8 : 2.5)); g.connect(bus); st.g = g;
+        if(!isSong){ const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(g); src.start(now, Math.random() * buf.duration); st.src = src; return; }
+        const play = (at, from) => {
+          if(st.stopped) return;
+          const src = ctx.createBufferSource(); src.buffer = buf; src.connect(g); src.start(at, from); st.src = src; st.at = at; st.from = from;
+          src.onended = () => { if(st.stopped || st.src !== src) return; play(ctx.currentTime + SONG_GAP, 0); };
+        };
+        play(now, songPos < buf.duration - 4 ? songPos : 0);
       });
     },
     bgmStop(){
       const st = bgm; if(!st) return; bgm = null; st.stopped = true; if(!st.g) return;
-      const t = ctx.currentTime; st.g.gain.cancelScheduledValues(t); st.g.gain.setValueAtTime(st.g.gain.value, t); st.g.gain.linearRampToValueAtTime(0, t + 1.6);
+      const t = ctx.currentTime;
+      if(song && st.src && st.src.buffer === song){ songPos = Math.max(0, st.from + (t - st.at)); if(songPos > song.duration - 4) songPos = 0; }   // 次はここから続きを流す
+      st.g.gain.cancelScheduledValues(t); st.g.gain.setValueAtTime(st.g.gain.value, t); st.g.gain.linearRampToValueAtTime(0, t + 1.6);
       try{ st.src.stop(t + 1.7); }catch(_){}
       setTimeout(()=>st.g.disconnect(), 2000);
     },

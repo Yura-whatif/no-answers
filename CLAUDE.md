@@ -53,6 +53,7 @@
 - `index.html` … 本番の単一HTML（CSS/JS/埋め込みデータ全部入り、約400KB）。**これが唯一の本番ファイル。**
 - `data/works.txt` `data/words.txt` … 編集元データ。
 - `img/` … キービジュアル（key-white/key-black/study.webp）、作品画像（w*/b*.webp）、OGP（ogp.jpg＝1200×630・JPEG。2026-10にタイトルロゴ入りの白黒キービジュアルへ差し替え。`og:image` は `?v=2` 付きでSNSのキャッシュを更新。次に差し替えるときは番号を上げる）、アイコン類。
+- `audio/where-the-map-ends.mp3` … 本棚（コレクション画面）の曲「Where the Map Ends」（約57秒・192kbps・1.4MB）。余韻の時（虚無）でも同じ曲が流れる。
 - `manifest.webmanifest` … PWA。`display:standalone`、`background_color`/`theme_color` は #eeebe4。
 - 旧 `yura-3gyo.html`（claude.ai アーティファクト用の複製）は今後使わない。本番は `index.html` のみ。
 
@@ -76,6 +77,7 @@
 - 連鎖の一時停止：最後の一行を開く（charging）〜読んでいる（open）あいだは連鎖メーターを止め、「しまう」で再開。「しまう」を通らずに断片が閉じた場合（開いたまま白黒切替など）に止まったままになるバグがあった（2026-10修正）。今は render() のたびと、言葉に触れたときに「読んでいないのに止まっていたら再開」する。
 - 時止め中に止まる言葉は9か所（`STOP_CELLS`、以前は12）。
 - 辞典掲載：語ごとに 4〜20 回触れると意味が滲み出る（`needOf`）。まとめて載りにくいよう範囲を広げてある。
+- BGM（2026-10）：本棚を開いているあいだと余韻の時に `audio/where-the-map-ends.mp3` を流す（`sfx.bgmStart/bgmStop`）。音源が大きめ（約-11 LUFS）なので `SONG_VOL`=.13 で控えめに。閉じた位置から続きを流し、曲が終わったら2.5秒あけて頭から。起動4秒後に裏で読み込む。読み込めないとき（file:// 等）は以前の合成した弦の和音で代わりに鳴らす。
 - 本棚/辞典/ステータス画面は書斎の絵の上に薄い暗幕（`#viewLib::before`）を敷いて可読性を確保。
 
 ## 8. 検証（ローカル）
