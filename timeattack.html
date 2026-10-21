@@ -41,7 +41,7 @@ html.boot .wrap{opacity:0}
 .ta-stats{display:flex;justify-content:space-around;align-items:center;width:100%;gap:8px}.ta-stats>div{flex:1;text-align:center;min-width:0}.ta-stats small{display:block;font-size:.7rem;letter-spacing:.12em;margin-bottom:8px;color:#bfb0a4}.ta-stats strong{font-weight:500;font-size:clamp(1.8rem,6vw,3.5rem);font-variant-numeric:tabular-nums;white-space:nowrap;text-shadow:0 0 13px currentColor}#taTime{color:#8fc9ed}#taScore{color:#f0d18f}.ta-foot{font-size:.7rem;letter-spacing:.2em;opacity:.7}
 .ta-blue{color:#9fd5ff!important;text-shadow:0 0 9px #6dbbff!important}
 #taHud .ta-pop{display:inline-block;animation:taPulse .38s ease-out}@keyframes taPulse{0%,100%{transform:scale(1);filter:brightness(1)}45%{transform:scale(1.055);filter:brightness(1.28)}}
-.ta-plus{position:fixed;z-index:100;pointer-events:none;color:#f1d59a;font-family:var(--mincho);font-size:1.4rem;animation:taFloat 1.15s ease-out forwards;text-shadow:0 0 14px currentColor}.ta-plus.time{color:#9fdcff}@keyframes taFloat{from{transform:translate(-50%,-50%);opacity:1}to{transform:translate(-50%,calc(-50% - 45px));opacity:0}}
+.ta-plus{position:fixed;z-index:100;pointer-events:none;color:#f1d59a;font-family:var(--mincho);font-size:1.4rem;animation:taFloat 1.15s ease-out forwards;text-shadow:0 0 14px currentColor}.ta-plus.time{color:#9fdcff}@keyframes taFloat{from{transform:translate(-50%,-50%);opacity:1}to{transform:translate(-50%,-50%) translateY(-45px);opacity:0}}
 #slip>.slip-bg,#slip>.meta,#slip>.title,#slip>.lines,#slip>.cover,#slip>.stow,#slip>.sharebtn,#slip>.slip-empty{visibility:hidden!important}
 #ikan,#rtray,#coach,#yword,.controls,.aboutlink{display:none!important}
 .mode{display:none!important}
@@ -1224,7 +1224,7 @@ body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width
 .ta-stats{display:flex;justify-content:space-around;align-items:center;width:100%;gap:8px}.ta-stats>div{flex:1;text-align:center;min-width:0}.ta-stats small{display:block;font-size:.7rem;letter-spacing:.12em;margin-bottom:8px;color:#bfb0a4}.ta-stats strong{font-weight:500;font-size:clamp(1.8rem,6vw,3.5rem);font-variant-numeric:tabular-nums;white-space:nowrap;text-shadow:0 0 13px currentColor}#taTime{color:#8fc9ed}#taScore{color:#f0d18f}.ta-foot{font-size:.7rem;letter-spacing:.2em;opacity:.7}
 .ta-blue{color:#9fd5ff!important;text-shadow:0 0 9px #6dbbff!important}
 #taHud .ta-pop{display:inline-block;animation:taPulse .38s ease-out}@keyframes taPulse{0%,100%{transform:scale(1);filter:brightness(1)}45%{transform:scale(1.055);filter:brightness(1.28)}}
-.ta-plus{position:fixed;z-index:100;pointer-events:none;color:#f1d59a;font-family:var(--mincho);font-size:1.4rem;animation:taFloat 1.15s ease-out forwards;text-shadow:0 0 14px currentColor}.ta-plus.time{color:#9fdcff}@keyframes taFloat{from{transform:translate(-50%,-50%);opacity:1}to{transform:translate(-50%,calc(-50% - 45px));opacity:0}}
+.ta-plus{position:fixed;z-index:100;pointer-events:none;color:#f1d59a;font-family:var(--mincho);font-size:1.4rem;animation:taFloat 1.15s ease-out forwards;text-shadow:0 0 14px currentColor}.ta-plus.time{color:#9fdcff}@keyframes taFloat{from{transform:translate(-50%,-50%);opacity:1}to{transform:translate(-50%,-50%) translateY(-45px);opacity:0}}
 #slip>.slip-bg,#slip>.meta,#slip>.title,#slip>.lines,#slip>.cover,#slip>.stow,#slip>.sharebtn,#slip>.slip-empty{visibility:hidden!important}
 #ikan,#rtray,#coach,#yword,.controls,.aboutlink{display:none!important}
 .mode{display:none!important}
@@ -5801,10 +5801,10 @@ if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
 taPlusLastArrival=arrivalNow;
 // Tiny positional differences only; every label travels straight upward.
-const spread=[0,-4,3,5,-3,2,-5,4,-2,1];
+const spread=[0,-1,1,-2,2,0,1,-1];
 const dx=spread[n%spread.length];
-const dy=n===0?0:([0,-2,1,2,-1][(n-1)%5]);
-p.style.left=(r.left+r.width/2+dx)+'px';p.style.top=(r.top+r.height/2+dy)+'px';
+// All labels share the exact same vertical starting point and rise straight up.
+p.style.left=(r.left+r.width/2+dx)+'px';p.style.top=(r.top+r.height/2)+'px';
 document.body.append(p);setTimeout(()=>p.remove(),1200)}
 let taLastCountdownNumber=null;
 function taRender(){
