@@ -290,7 +290,7 @@ body{background-color:var(--ground);color:var(--ink);font-family:var(--gothic);t
 @media (max-width:600px){
   .hero{aspect-ratio:780/540}
   .hero img.w{object-position:100% 50%}
-  .hero img.b{object-position:0% 50%}
+  .hero img.b{object-fit:contain;object-position:center;background:#070b12}
 }
 .hero::after{content:"";position:absolute;inset:auto 0 0 0;height:38%;background:linear-gradient(transparent,color-mix(in srgb,var(--ground) 85%,transparent));pointer-events:none;transition:background .8s ease}
 /* 違和感：キービジュアルの上を漂う日常の言葉。触れると集まる */
@@ -1399,10 +1399,9 @@ body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width
 
   <figure class="hero">
     <img class="w" src="img/key-white.webp" alt="白ユラ：祈るように手を組む人物。The world is less in order than I expected.">
-    <img class="b" src="img/key-black.webp" alt="黒ユラ：夜の街を背に手を組む人物。The world is more in order than I expected.">
+    <img class="b" src="img/timeattack-night-library.webp" alt="夜桜の城都と、光る古書。The world is more in order than I expected.">
     <!-- 髪だけを、ゆるやかな揺らぎで重ねてなびかせる -->
     <img class="w hair hair-w" src="img/key-white.webp" alt="" aria-hidden="true">
-    <img class="b hair hair-b" src="img/key-black.webp" alt="" aria-hidden="true">
     <svg class="fx" width="0" height="0" aria-hidden="true" focusable="false">
       <filter id="hairWind" x="-5%" y="-5%" width="110%" height="110%">
         <feTurbulence type="fractalNoise" baseFrequency="0.012 0.06" numOctaves="2" seed="7" result="n">
@@ -1494,7 +1493,7 @@ body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width
           <div><dt>遊び方</dt><dd>絵の上を漂う言葉に触れると、違和感が集まり、ペンが一行ずつ書き進めます。最後の一行は、集めた違和感で開きます。読み終えた断片は「思考の断片」の本に、触れた言葉は「違和感の辞典」に残ります。</dd></div>
           <div><dt>白ユラと黒ユラ</dt><dd>上の切り替えで、二つの世界を行き来できます。それぞれの世界にだけ漂う、特別な言葉もあります。</dd></div>
           <div><dt>作者</dt><dd>3行思考はすべて、note「<a href="https://note.com/whatif_lab" target="_blank" rel="noopener">ユラ｜思考実験の記録</a>」で書いているものです。断片の頁から、元の記事も読めます。</dd></div>
-          <div><dt>遊んだ記録</dt><dd>記録は、この端末のブラウザの中だけに保存されます。どこにも送られません。ブラウザのデータを消すと、記録も消えます。ホーム画面に追加して開くと、消えにくくなります。</dd></div>
+          <div><dt>遊んだ記録</dt><dd>記録は、この端末のブラウザの中だけに保存されます。どこにも送られません。ブラウザのデータを消すと、記録も消えます。</dd></div>
           <div><dt>音</dt><dd>右上のスピーカーのボタンで、効果音を切り替えられます。</dd></div>
         </dl>
         <p class="about-foot">作品と画像の無断転載はご遠慮ください。</p>
@@ -1549,10 +1548,6 @@ body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width
       <div class="statusbox" id="statusbox"></div>
     </div>
     
-    <div class="install" id="install" hidden>
-      <button type="button" id="installBtn">ホーム画面に追加</button>
-      <p class="install-guide" id="installGuide" hidden></p>
-    </div>
     <p class="aboutlink"><button type="button" id="aboutBtn">このゲームについて</button></p>
   </section>
 </div>
@@ -3860,6 +3855,7 @@ function spawnLoop(){
 }
 
 function spawnWord(opt = {}){
+  if(!taRunning && !taStarting) opt = {...opt, plain:true}; // DEMO: ordinary / time-extension words only
   const field = $("drift");
   const max = flood ? 14 : Math.min(8, 4 + booksNow());
   if(shattering || (!opt.force && field.querySelectorAll(".word:not(.got)").length >= max) || document.hidden || libOpen) return;
@@ -5118,25 +5114,6 @@ async function askPersist(){
     await navigator.storage.persist();
   }catch(_){}
 }
-let installEvt = null;
-addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); installEvt = e; updateInstall(); });
-addEventListener("appinstalled", ()=>{ installEvt = null; $("install").hidden = true; toast("ホーム画面に追加しました"); askPersist(); });
-function updateInstall(){ $("install").hidden = isStandalone(); }
-function installGuide(){
-  const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1), android = /Android/i.test(ua);
-  if(ios) return "Safariの下にある<b>共有ボタン</b>（四角から矢印が出ているマーク）を押し、<b>「ホーム画面に追加」</b>を選んでください。";
-  if(android) return "ブラウザ右上の<b>︙メニュー</b>から、<b>「アプリをインストール」</b>または<b>「ホーム画面に追加」</b>を選んでください。";
-  return "アドレスバーの右端にある<b>インストールのマーク</b>、またはブラウザのメニューの<b>「インストール」</b>から追加できます（ブラウザによっては対応していません）。";
-}
-$("installBtn").onclick = async ()=>{
-  if(installEvt){
-    const e = installEvt; installEvt = null;
-    try{ await e.prompt(); const r = await e.userChoice; if(r && r.outcome === "accepted"){ $("install").hidden = true; return; } }catch(_){}
-  }
-  const g = $("installGuide"); g.innerHTML = installGuide(); g.hidden = !g.hidden;
-};
-updateInstall();
-if(read.length > 0) askPersist();
 // 新しい作品の上に紙を一枚かぶせ、左端を綴じ目にしてめくり上げる
 function pageIn(){
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -6003,6 +5980,9 @@ function taUpdatePlay(){
 function taFinish(){
   if(!taRunning&&!taStarting)return;
   taRunning=false;taStarting=false;
+  document.querySelectorAll("#drift .word:not(.got)").forEach(w=>{
+    if([...w.classList].some(c=>!["word","fast","ta-blue"].includes(c))) w.remove();
+  });
   const token=++taFinishToken;
   cancelAnimationFrame(taRaf);
   const flash=document.getElementById('taStartFlash');
