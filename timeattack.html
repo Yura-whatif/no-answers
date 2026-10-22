@@ -217,6 +217,12 @@ html[data-view="lib"] #taPlay{display:none!important}
   }
 }
 @media(prefers-reduced-motion:reduce){#taPlay.ta-demo-pulse{animation:none;color:rgba(255,232,191,.85);border-color:rgba(241,210,161,.4)}}
+
+/* 全方向の直線スワイプ発光軌跡。背景や操作判定には干渉しない */
+.ta-issen-layer{position:absolute;height:3px;transform-origin:left center;pointer-events:none;z-index:32;border-radius:999px;background:linear-gradient(90deg,transparent,#d8efff 18%,#fff 50%,#b4e7ff 82%,transparent);box-shadow:0 0 9px 3px rgba(144,212,255,.7),0 0 22px 7px rgba(130,187,255,.3)}
+.ta-issen-layer.perfect{height:3px;background:linear-gradient(90deg,transparent,#f8cf83 16%,#fff8df 50%,#f8cf83 84%,transparent);box-shadow:0 0 11px 4px rgba(255,222,141,.9),0 0 28px 10px rgba(255,194,90,.42)}
+.ta-issen-plus{position:absolute;pointer-events:none;z-index:34;white-space:nowrap;font:700 15px var(--mincho,serif);color:#d6efff;text-shadow:0 0 9px rgba(113,201,255,.85),0 2px 5px #000}.ta-issen-plus.perfect{color:#ffe0a0;text-shadow:0 0 11px rgba(255,198,80,.9),0 2px 5px #000}
+.ta-issen-label{position:absolute;pointer-events:none;z-index:33;white-space:nowrap;font:600 12px var(--mincho,serif);letter-spacing:.12em;color:#e9e4d8;text-shadow:0 0 9px rgba(255,220,153,.9),0 2px 6px #000}
 </style>
 <script>
 /* 最初の描画より前に、前回の世界（白/黒）を決めておく。万一起動処理が止まっても4秒で必ず見せる */
@@ -4584,24 +4590,95 @@ function vortexRelease(){
     }, 120 + i * 110);
   }
 }
-// なぞって集める：絵の上を指（またはマウスを押したまま）でなぞると、通り道の言葉にまとめて触れられる
+// 全方向の「一閃採集」。縦・横・斜めを問わず直線的に複数採集すると発光する。
 (function(){
-  const field = $("drift"); let on = false, lx = 0, ly = 0;
-  const hit = (x, y) => {
-    const el = document.elementFromPoint(x, y), w = el && el.closest ? el.closest(".word") : null;
-    if(w && field.contains(w) && !w.classList.contains("got") && !w.classList.contains("vortex") && !w.classList.contains("crack") && !w.dataset.swiped){ w.dataset.swiped = "1"; w.click(); }
-  };
-  // 速くなぞっても取りこぼさないよう、前の位置との間も補って調べる
-  const sweep = (x, y) => { const d = Math.hypot(x-lx, y-ly), n = Math.max(1, Math.ceil(d / 12)); for(let i=1;i<=n;i++) hit(lx + (x-lx)*i/n, ly + (y-ly)*i/n); lx = x; ly = y; };
-  field.addEventListener("pointerdown", e => {
-    const vx = e.target.closest && e.target.closest(".word.vortex");
-    if(vx){ e.preventDefault(); on = false; try{ field.setPointerCapture(e.pointerId); }catch(_){} vortexHold(vx); return; }
-    // ひびは、なぞりではなく一回ずつ叩いて広げる
-    const cr = e.target.closest && e.target.closest(".word.crack");
-    if(cr){ e.preventDefault(); on = false; crackTap(cr); return; }
-    on = true; lx = e.clientX; ly = e.clientY; try{ field.setPointerCapture(e.pointerId); }catch(_){} hit(lx, ly); });
-  field.addEventListener("pointermove", e => { if(!on) return; (e.getCoalescedEvents ? e.getCoalescedEvents() : [e]).forEach(v => sweep(v.clientX, v.clientY)); });
-  ["pointerup","pointercancel","lostpointercapture"].forEach(t => field.addEventListener(t, () => { on = false; vortexRelease(); }));
+  const field = $("drift");
+  let active = false, pointer = null, points = [], collected = new Set(), started = 0, lastAward = 0;
+  let lx = 0, ly = 0, flashed = false, flashedTier = 0, awardedBonus = 0;
+  const MIN_SPEED = 360; // px/s: ゆっくりなぞった場合は発光しない
+  // 通常文字と特殊効果文字を一閃採集の対象にする。長押し・専用タップ型は誤作動防止のため除外。
+  const isSwipeable = w => !w.matches('.vortex,.crack') && !w.classList.contains('got') && (!w.classList.contains('still') || flood);
+  function hit(x,y){
+    // elementFromPointはポインターキャプチャ・重なったエフェクトの影響を受けるため、
+    // 採集可能な言葉の実際の表示矩形と軌跡の交差で判定する。
+    for(const w of field.querySelectorAll('.word')){
+      if(w.classList.contains('got') || w.dataset.swiped || !isSwipeable(w) || w.classList.contains('late')) continue;
+      const r=w.getBoundingClientRect();
+      if(x<r.left-5 || x>r.right+5 || y<r.top-8 || y>r.bottom+8) continue;
+      w.dataset.swiped='1';collected.add(w);w.click(); // 時止め中のstillはstopTapで消去・保留加算
+    }
+  }
+  function sweep(x,y){
+    const d=Math.hypot(x-lx,y-ly), n=Math.max(1,Math.ceil(d/9));
+    for(let i=1;i<=n;i++) hit(lx+(x-lx)*i/n,ly+(y-ly)*i/n);
+    lx=x;ly=y;
+  }
+  function flash(from,to,tier,count,bonus){
+    const layer=document.createElement('div'); layer.className='ta-issen-layer'; layer.setAttribute('aria-hidden','true');
+    const rect=field.getBoundingClientRect();
+    const x1=from.x-rect.left,y1=from.y-rect.top,x2=to.x-rect.left,y2=to.y-rect.top;
+    const length=Math.hypot(x2-x1,y2-y1),angle=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
+    layer.style.left=x1+'px';layer.style.top=y1+'px';layer.style.width=length+'px';layer.style.transform=`rotate(${angle}deg)`;
+    layer.classList.add(tier===2?'perfect':'clean'); field.append(layer);
+    layer.animate([{opacity:0,filter:'blur(2px)'},{opacity:1,filter:'blur(0px)',offset:.16},{opacity:.75,offset:.42},{opacity:0,filter:'blur(5px)'}],{duration:540,easing:'ease-out'}).onfinish=()=>layer.remove();
+    const label=document.createElement('div');label.className='ta-issen-label';label.textContent='一閃';label.classList.toggle('perfect',tier===2);
+    label.style.left=((x1+x2)/2)+'px';label.style.top=((y1+y2)/2-24)+'px';field.append(label);
+    label.animate([{opacity:0,transform:'translate(-50%,4px) scale(.9)'},{opacity:1,transform:'translate(-50%,-9px) scale(1)',offset:.22},{opacity:0,transform:'translate(-50%,-26px) scale(1)'}],{duration:1350,easing:'ease-out'}).onfinish=()=>label.remove();
+    if(bonus>0){
+      const plus=document.createElement('div');plus.className='ta-issen-plus'+(tier===2?' perfect':'');plus.textContent='+'+bonus;
+      plus.style.left=((x1+x2)/2)+'px';plus.style.top=((y1+y2)/2+5)+'px';field.append(plus);
+      plus.animate([{opacity:0,transform:'translate(-50%,5px) scale(.8)'},{opacity:1,transform:'translate(-50%,-7px) scale(1.12)',offset:.2},{opacity:1,transform:'translate(-50%,-15px)',offset:.55},{opacity:0,transform:'translate(-50%,-30px)'}],{duration:1350,easing:'ease-out'}).onfinish=()=>plus.remove();
+    }
+    // 短いステレオの輝き。既存の効果音のON/OFFに従う。
+    if(typeof sfx!=='undefined' && typeof sfx.line==='function') sfx.line(tier===2?1:0);
+  }
+  function assessPath(){
+    if(!taRunning || flood || collected.size<3 || points.length<2 || flashedTier===2) return;
+    const first=points[0], last=points[points.length-1];
+    const dx=last.x-first.x,dy=last.y-first.y,dist=Math.hypot(dx,dy);
+    const elapsed=performance.now()-started;
+    if(dist<45 || elapsed<20 || elapsed>1200 || dist/(elapsed/1000)<MIN_SPEED) return;
+    let travel=0,maxDeviation=0;
+    for(let i=0;i<points.length;i++){
+      const pt=points[i];
+      maxDeviation=Math.max(maxDeviation,Math.abs(dx*(pt.y-first.y)-dy*(pt.x-first.x))/dist);
+      if(i)travel+=Math.hypot(pt.x-points[i-1].x,pt.y-points[i-1].y);
+    }
+    if(travel>dist*1.4 || maxDeviation>Math.max(18,dist*.105))return;
+    const perfect=collected.size>=4 && travel<=dist*1.2 && maxDeviation<=Math.max(10,dist*.06) && dist/(elapsed/1000)>=580;
+    const tier=perfect?2:1;
+    // 3語で青白く発光し、同じスワイプで4語に達したら金色に昇格する。
+    if(tier<=flashedTier)return;
+    const now=performance.now();
+    const awardReady=flashedTier>0 || now-lastAward>=800;
+    const totalBonus=awardReady?(perfect?5:2):0;
+    const bonus=Math.max(0,totalBonus-awardedBonus);
+    if(awardReady){lastAward=now;if(bonus>0 && taRunning){taScore+=bonus;taRender();}awardedBonus+=bonus;}
+    flashed=true;flashedTier=tier;
+    flash(first,last,tier,collected.size,bonus);
+  }
+  function finish(){
+    if(!active)return;
+    active=false;points=[];collected.clear();pointer=null;flashed=false;flashedTier=0;awardedBonus=0;
+  }
+  field.addEventListener('pointerdown',e=>{
+    const vx=e.target.closest&&e.target.closest('.word.vortex');
+    if(vx){e.preventDefault();active=false;try{field.setPointerCapture(e.pointerId)}catch(_){}vortexHold(vx);return;}
+    const cr=e.target.closest&&e.target.closest('.word.crack');
+    if(cr){e.preventDefault();active=false;crackTap(cr);return;}
+    if(active)return;
+    active=true;pointer=e.pointerId;started=performance.now();lx=e.clientX;ly=e.clientY;
+    points=[{x:lx,y:ly}];collected.clear();flashed=false;flashedTier=0;awardedBonus=0;
+    try{field.setPointerCapture(e.pointerId)}catch(_){}hit(lx,ly);
+  });
+  field.addEventListener('pointermove',e=>{
+    if(!active||e.pointerId!==pointer)return;
+    const evs=e.getCoalescedEvents?e.getCoalescedEvents():[];
+    (evs.length?evs:[e]).forEach(v=>{sweep(v.clientX,v.clientY);points.push({x:v.clientX,y:v.clientY});assessPath();});
+  });
+  field.addEventListener('pointerup',e=>{if(e.pointerId===pointer){sweep(e.clientX,e.clientY);points.push({x:e.clientX,y:e.clientY});assessPath();finish();}vortexRelease();});
+  field.addEventListener('pointercancel',()=>{finish();vortexRelease();});
+  field.addEventListener('lostpointercapture',()=>{finish();vortexRelease();});
 })();
 // ---------- 断片を渡す（SNS共有） ----------
 const SITE = "https://yura-whatif.github.io/no-answers/";
