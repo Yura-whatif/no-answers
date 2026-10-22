@@ -195,11 +195,26 @@ html[data-view="lib"] #taPlay{display:none!important}
 /* Gameplay: slightly brighter persistent manuscript glow, without affecting DEMO. */
 #slip.ta-game-frame{box-shadow:0 0 12px 2px color-mix(in srgb,var(--accent) 13%,transparent),0 18px 40px -24px color-mix(in srgb,var(--ink) 50%,transparent)}
 
-/* DEMO only: a quiet breathing cue on the actual start button. */
-#taPlay.ta-demo-pulse{animation:taDemoStartPulse 2.8s ease-in-out infinite;}
+/* DEMO start: one continuous sinusoidal-looking breathing cycle, without intermediate holds. */
+#taPlay.ta-demo-pulse{
+  animation:taDemoStartPulse 2.8s ease-in-out infinite !important;
+  will-change:filter;
+}
 @keyframes taDemoStartPulse{
-  0%,100%{color:rgba(236,217,187,.62);border-color:rgba(235,209,167,.26);background-color:rgba(225,202,161,.025);box-shadow:0 0 3px rgba(239,208,155,.04)}
-  50%{color:rgba(255,240,210,1);border-color:rgba(255,224,173,.72);background-color:rgba(225,202,161,.13);box-shadow:0 0 17px rgba(239,208,155,.33)}
+  0%,100%{
+    color:rgba(255,231,189,.88);
+    border-color:rgba(255,214,143,.60);
+    background-color:rgba(225,202,161,.10);
+    box-shadow:0 0 10px rgba(239,208,155,.23),inset 0 0 6px rgba(255,225,169,.07);
+    filter:brightness(1);
+  }
+  50%{
+    color:rgba(255,249,225,1);
+    border-color:rgba(255,234,178,.98);
+    background-color:rgba(225,202,161,.22);
+    box-shadow:0 0 25px rgba(239,208,155,.55),inset 0 0 12px rgba(255,231,183,.19);
+    filter:brightness(1.12);
+  }
 }
 @media(prefers-reduced-motion:reduce){#taPlay.ta-demo-pulse{animation:none;color:rgba(255,232,191,.85);border-color:rgba(241,210,161,.4)}}
 </style>
@@ -1361,7 +1376,7 @@ body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width
 
 /* Final transition overrides: opacity only, with stable glyph dimensions. */
 #taStartFlash.ta-start-active{animation:taFixedStartFade 1.8s ease-in-out both!important;transform:none!important}
-#taStartFlash.ta-end-active{animation:taFixedEndFade 1.6s ease-in-out both!important;transform:none!important}
+#taStartFlash.ta-end-active{animation:taFixedEndFade 1.95s ease-in-out both!important;transform:none!important}
 @keyframes taFixedStartFade{0%{opacity:0}35%,62%{opacity:1}100%{opacity:0}}
 @keyframes taFixedEndFade{0%{opacity:0}32%,65%{opacity:1}100%{opacity:0}}
 #taDemoPlay{color:rgba(242,223,186,.55);text-shadow:0 0 14px rgba(250,220,163,.23),0 2px 8px rgba(0,0,0,.4)}
@@ -1369,6 +1384,37 @@ body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width
 @media(prefers-reduced-motion:reduce){#taStartFlash.ta-start-active,#taStartFlash.ta-end-active{animation:none!important;opacity:1}}
 </style>
 <script>function track(){} // 既存イベント呼び出しとの互換性のみ維持（通信なし）</script>
+<style>
+/* Result redesign: restrained typography, manuscript and falling light. */
+#taLaunch .ta-card{padding:27px 28px 30px;width:min(410px,100%);border-color:rgba(186,150,98,.62);background:radial-gradient(ellipse at 50% 18%,rgba(89,72,64,.28),transparent 62%),linear-gradient(155deg,#1c1d27,#10141b)}
+#taLaunch .ta-card::before{inset:8px;border-color:rgba(219,178,113,.15)}
+#taLaunch #taResultHeading{font-size:1.02rem;font-weight:400;letter-spacing:.22em;margin:3px 0 13px;color:#d8c9b3}
+#taLaunch .ta-result-eyebrow{font-size:.61rem;letter-spacing:.23em;margin:4px 0 7px;color:#a89a87}
+#taLaunch .ta-result-score{margin:0 0 19px;gap:6px;align-items:baseline}
+#taLaunch .ta-result-score strong{font:400 clamp(2.4rem,9vw,3.3rem) var(--mincho);line-height:1.16;text-shadow:0 0 20px rgba(235,179,89,.14)}
+#taLaunch .ta-result-score span{font-size:.8rem;font-weight:400;color:#c7ad88}
+#taLaunch .ta-result-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;border-top:1px solid rgba(198,167,118,.23);padding-top:17px;margin:0 7px}
+#taLaunch .ta-result-stats>div{display:flex;flex-direction:column;gap:6px;align-items:center;min-width:0}
+#taLaunch .ta-result-stats>div+div{border-left:1px solid rgba(198,167,118,.18)}
+#taLaunch .ta-result-stats span{font-size:.69rem;letter-spacing:.12em;color:#a99d91}
+#taLaunch .ta-result-stats strong{font:400 1.35rem var(--mincho);font-variant-numeric:tabular-nums;color:#e8d8bd}
+#taLaunch .ta-book-scene{height:152px;max-width:340px;margin:0 auto 8px;position:relative;overflow:hidden;isolation:isolate;background:radial-gradient(ellipse at 50% 90%,rgba(208,159,95,.10),transparent 63%)}
+#taLaunch .ta-book-illustration{position:absolute;bottom:0;left:0;width:100%;height:150px;filter:drop-shadow(0 5px 9px rgba(0,0,0,.45));z-index:2}
+#taLaunch .ta-book-rays{position:absolute;left:50%;top:-30px;width:190px;height:156px;transform:translateX(-50%);background:conic-gradient(from 155deg at 50% 100%,transparent,rgba(250,213,144,.10),transparent 18%,rgba(255,229,172,.15),transparent 37%);filter:blur(8px);animation:taBookBreath 3.6s ease-in-out infinite alternate}
+#taLaunch .ta-book-center-glow{position:absolute;left:50%;top:80px;width:92px;height:44px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse,rgba(255,219,140,.46),transparent 72%);filter:blur(10px);z-index:3;pointer-events:none;animation:taBookBreath 2.7s ease-in-out infinite alternate}
+#taLaunch .ta-book-motes{position:absolute;inset:0;z-index:4;pointer-events:none}
+#taLaunch .ta-book-motes i{position:absolute;left:var(--x);top:-12px;width:var(--sz);height:var(--sz);border-radius:50%;background:#fff0bf;box-shadow:0 0 7px 2px rgba(255,204,114,.52);opacity:0;animation:taBookFall var(--dur) linear var(--delay) infinite}
+#taLaunch .ta-book-motes i:nth-child(1){--x:32%;--sz:3px;--dur:3.2s;--delay:-.7s}#taLaunch .ta-book-motes i:nth-child(2){--x:48%;--sz:4px;--dur:3.8s;--delay:-2.3s}#taLaunch .ta-book-motes i:nth-child(3){--x:60%;--sz:2px;--dur:2.9s;--delay:-1.2s}#taLaunch .ta-book-motes i:nth-child(4){--x:71%;--sz:3px;--dur:4.1s;--delay:-3s}#taLaunch .ta-book-motes i:nth-child(5){--x:41%;--sz:2px;--dur:3.4s;--delay:-2.7s}#taLaunch .ta-book-motes i:nth-child(6){--x:56%;--sz:3px;--dur:3.6s;--delay:-.1s}#taLaunch .ta-book-motes i:nth-child(7){--x:25%;--sz:2px;--dur:4.3s;--delay:-1.8s}#taLaunch .ta-book-motes i:nth-child(8){--x:65%;--sz:2px;--dur:3.1s;--delay:-.9s}#taLaunch .ta-book-motes i:nth-child(9){--x:38%;--sz:4px;--dur:4.5s;--delay:-3.4s}#taLaunch .ta-book-motes i:nth-child(10){--x:52%;--sz:2px;--dur:3.9s;--delay:-1.5s}#taLaunch .ta-book-motes i:nth-child(11){--x:75%;--sz:2px;--dur:3.5s;--delay:-2.1s}#taLaunch .ta-book-motes i:nth-child(12){--x:45%;--sz:3px;--dur:4s;--delay:-3.8s}
+@keyframes taBookFall{0%{transform:translate(-8px,-8px);opacity:0}15%{opacity:.8}72%{opacity:.75}100%{transform:translate(9px,121px);opacity:0}}
+@keyframes taBookBreath{from{opacity:.45}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){#taLaunch .ta-book-motes i,#taLaunch .ta-book-rays,#taLaunch .ta-book-center-glow{animation:none!important}#taLaunch .ta-book-motes i{opacity:.4;top:45%}}
+/* Result: static crop from the time-attack scenery, no book animation. */
+#taLaunch .ta-book-scene{height:154px;max-width:340px;margin:0 auto 13px;background:#11151d;border:1px solid rgba(206,166,106,.2);border-radius:3px}
+#taLaunch .ta-book-photo{display:block;width:100%;height:100%;object-fit:cover;object-position:center;filter:brightness(.9) saturate(.93)}
+/* Darken the scenery only, not floating words or score overlays. */
+.hero img.b{filter:brightness(.46) saturate(.82);transition:opacity 1.1s ease,transform 6s cubic-bezier(.2,.6,.2,1),filter .75s ease}
+.hero.ta-active-visual img.b{filter:brightness(1) saturate(1)}
+</style>
 </head>
 <body>
 
@@ -3303,6 +3349,7 @@ function bumpCombo(){
   const now = Date.now();
   if(comboPaused && !open && !charging) resumeCombo();   // 念のため：読んでいないのに止まっていたら、触れた時点で戻す
   combo = (comboPaused || now - comboAt <= COMBO_MS) ? combo + 1 : 1; comboAt = now;
+  if(combo>taSessionMaxCombo) taSessionMaxCombo=combo;
   if(combo > maxCombo){ maxCombo = combo; store.set("ta-yura-maxcombo", maxCombo); }
   const m = comboMult(combo), el = $("combo"), prevX = el.classList.contains("x3") ? 3 : el.classList.contains("x2") ? 2 : 1;
   $("cbn").textContent = combo; $("cbx").textContent = "";
@@ -5934,18 +5981,25 @@ setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
 <div id="taLaunch" hidden role="dialog" aria-modal="true" aria-labelledby="taResultHeading">
   <div class="ta-card" role="document">
     <button type="button" id="taResultClose" aria-label="結果画面を閉じる" title="閉じる">×</button>
-    <div class="ta-result-art-wrap">
-      <img class="ta-result-art" src="img/ogp.jpg" alt="No Answers" />
+    <div class="ta-book-scene" role="img" aria-label="夜桜の城都に佇む、光を帯びた古書">
+      <img class="ta-book-photo" src="img/timeattack-result-book.webp" alt="" aria-hidden="true">
     </div>
-    <h2 id="taResultHeading">今回の得点</h2>
+    <p class="ta-result-eyebrow">TIME ATTACK / RECORD</p>
+    <h2 id="taResultHeading">採集の記録</h2>
     <p class="ta-result-score"><strong id="taEndDetail">0</strong><span>点</span></p>
+    <div class="ta-result-stats">
+      <div><span>最大連鎖</span><strong id="taEndCombo">0</strong></div>
+      <div><span>今回の順位</span><strong id="taEndRank">—</strong></div>
+    </div>
 
   </div>
 </div><div id="taStartFlash" hidden aria-live="polite">START</div>
 <script>
 /* Rules only. All original FX remain in the original inline script. */
 let taRunning=false,taSeconds=60,taScore=0,taLast=0,taRaf=0,taFinishToken=0;
+let taSessionMaxCombo=0;
 const TA_RECORD_KEY = 'ta-time-attack-records-v1';
+let taSessionRecordAt=null;
 function taGetRecords(){
   try {const records=JSON.parse(localStorage.getItem(TA_RECORD_KEY)||'[]');
     return Array.isArray(records)?records.filter(r=>r&&Number.isFinite(r.score)&&r.score>0&&Number.isFinite(r.at)):[];
@@ -5954,7 +6008,8 @@ function taGetRecords(){
 function taSaveRecord(){
   if(taScore<=0){taRenderRecords();return;}
   const records=taGetRecords();
-  records.push({score:taScore,at:Date.now()});
+  taSessionRecordAt=Date.now();
+  records.push({score:taScore,at:taSessionRecordAt});
   try{localStorage.setItem(TA_RECORD_KEY,JSON.stringify(records.slice(-500)))}catch(e){}
   taRenderRecords();
 }
@@ -6005,6 +6060,8 @@ function taRender(){
   document.getElementById('taScore').textContent=String(taScore);
 }
 function taSyncDemo(){
+  const hero=document.querySelector('#viewMain > .hero');
+  if(hero)hero.classList.toggle('ta-active-visual',taRunning||taStarting);
   const slip=document.getElementById('slip');
   if(slip){slip.classList.toggle('ta-demo-frame',!taRunning&&!taStarting);if(!taRunning&&!taStarting)slip.classList.remove('ta-game-frame');}
   const hud=document.getElementById('taHud');
@@ -6050,11 +6107,15 @@ function taFinish(){
     if(token!==taFinishToken)return;
     flash.hidden=true;flash.classList.remove('ta-end-active');
     document.getElementById('taEndDetail').textContent=taScore.toLocaleString('ja-JP');
+    document.getElementById('taEndCombo').textContent=taSessionMaxCombo.toLocaleString('ja-JP');
+    const sorted=taGetRecords().slice().sort((a,b)=>b.score-a.score||a.at-b.at);
+    const position=sorted.findIndex(r=>r.at===taSessionRecordAt&&r.score===taScore);
+    document.getElementById('taEndRank').textContent=position>=0?(position+1)+'位':'—';
     document.getElementById('taLaunch').hidden=false;
     sfx.resultFanfare();
     taSyncDemo();
     document.getElementById('taResultClose').focus();
-  },2100);
+  },2450);
 }
 function taTick(now){if(!taRunning)return;const delta=Math.min(0.1,(now-taLast)/1000);taLast=now;if(typeof flood!=='undefined'&&!flood){taSeconds-=delta;}if(taSeconds<=0){taSeconds=0;taFinish();}taRender();if(taRunning)taRaf=requestAnimationFrame(taTick)}
 let taStarting=false;
@@ -6082,7 +6143,7 @@ function taBegin(){
   setTimeout(()=>{if(revealToken===taFinishToken){manuscript.classList.remove('ta-soft-reveal');manuscript.classList.add('ta-game-frame');hud.classList.remove('ta-hud-reveal');}},1600);
   document.getElementById('taLaunch').hidden=true;
   if(!document.getElementById('viewLib').hidden)document.getElementById('libbtn').click();
-  taSeconds=60;taScore=0;
+  taSeconds=60;taScore=0;taSessionMaxCombo=0;taSessionRecordAt=null;
   document.querySelectorAll('#drift .word').forEach(w=>w.remove());
   taRender();cancelAnimationFrame(taRaf);
   const flash=document.getElementById('taStartFlash');
