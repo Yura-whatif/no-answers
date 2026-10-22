@@ -223,6 +223,12 @@ html[data-view="lib"] #taPlay{display:none!important}
 .ta-issen-layer.perfect{height:3px;background:linear-gradient(90deg,transparent,#f8cf83 16%,#fff8df 50%,#f8cf83 84%,transparent);box-shadow:0 0 11px 4px rgba(255,222,141,.9),0 0 28px 10px rgba(255,194,90,.42)}
 .ta-issen-plus{position:absolute;pointer-events:none;z-index:34;white-space:nowrap;font:700 15px var(--mincho,serif);color:#d6efff;text-shadow:0 0 9px rgba(113,201,255,.85),0 2px 5px #000}.ta-issen-plus.perfect{color:#ffe0a0;text-shadow:0 0 11px rgba(255,198,80,.9),0 2px 5px #000}
 .ta-issen-label{position:absolute;pointer-events:none;z-index:33;white-space:nowrap;font:600 12px var(--mincho,serif);letter-spacing:.12em;color:#e9e4d8;text-shadow:0 0 9px rgba(255,220,153,.9),0 2px 6px #000}
+
+/* Last five seconds: pulse the entire time frame once on each integer countdown. */
+#taHud #taTimeBox.ta-countdown-frame{border-color:rgba(240,78,88,.82);}
+#taHud #taTimeBox.ta-countdown-frame-beat{animation:taCountdownFrameBeat .75s ease-in-out both;}
+@keyframes taCountdownFrameBeat{0%,100%{border-color:rgba(240,78,88,.75);box-shadow:0 0 0 transparent,inset 0 0 0 transparent;background:rgba(255,255,255,.018)}35%{border-color:#ff535f;box-shadow:0 0 18px 3px rgba(245,46,64,.65),inset 0 0 13px rgba(245,46,64,.35);background:rgba(120,17,31,.17)}65%{border-color:#fa7d85;box-shadow:0 0 8px 1px rgba(245,46,64,.32),inset 0 0 6px rgba(245,46,64,.2)}}
+@media(prefers-reduced-motion:reduce){#taHud #taTimeBox.ta-countdown-frame-beat{animation:none}}
 </style>
 <script>
 /* 最初の描画より前に、前回の世界（白/黒）を決めておく。万一起動処理が止まっても4秒で必ず見せる */
@@ -4605,7 +4611,9 @@ function vortexRelease(){
       if(w.classList.contains('got') || w.dataset.swiped || !isSwipeable(w) || w.classList.contains('late')) continue;
       const r=w.getBoundingClientRect();
       if(x<r.left-5 || x>r.right+5 || y<r.top-8 || y>r.bottom+8) continue;
-      w.dataset.swiped='1';collected.add(w);w.click(); // 時止め中のstillはstopTapで消去・保留加算
+      w.dataset.swiped='1';w.click();
+      // 青い時間延長文字も通常得点文字と同様に一閃の採集数へ算入する。
+      if(!w.isConnected || w.classList.contains('got') || w.classList.contains('still'))collected.add(w);
     }
   }
   function sweep(x,y){
@@ -5911,6 +5919,15 @@ const sfx = (()=>{
       if(libOpen){
         if(!window.taRankingAudio){
           window.taRankingAudio=new Audio('audio/where-the-map-ends.mp3');
+          window.taRankingAudio.addEventListener('error',()=>{
+            const player=window.taRankingAudio;
+            if(!player || player.dataset.fallbackTried)return;
+            player.dataset.fallbackTried='1';
+            // Support deployments that keep the shared audio directory one level above timeattack.html.
+            player.src='../audio/where-the-map-ends.mp3';
+            player.load();
+            if(libOpen&&on)player.play().catch(err=>console.warn('Ranking BGM unavailable: check audio/where-the-map-ends.mp3',err));
+          });
           window.taRankingAudio.preload='auto';
           window.taRankingAudio.loop=false;
           window.taRankingAudio.volume=0;
@@ -6128,12 +6145,15 @@ function taRender(){
   const count=countdown?Math.ceil(seconds):null;
   timeEl.textContent=seconds.toFixed(1);
   timeEl.classList.toggle('ta-countdown',countdown);
+  const timeFrame=document.getElementById('taTimeBox');
+  if(timeFrame)timeFrame.classList.toggle('ta-countdown-frame',countdown);
   if(count!==taLastCountdownNumber){
     timeEl.classList.remove('ta-countdown-beat');
-    if(countdown){void timeEl.offsetWidth;timeEl.classList.add('ta-countdown-beat');}
+    if(timeFrame)timeFrame.classList.remove('ta-countdown-frame-beat');
+    if(countdown){void timeEl.offsetWidth;timeEl.classList.add('ta-countdown-beat');if(timeFrame){void timeFrame.offsetWidth;timeFrame.classList.add('ta-countdown-frame-beat');}}
     taLastCountdownNumber=count;
   }
-  if(!countdown)timeEl.classList.remove('ta-countdown-beat');
+  if(!countdown){timeEl.classList.remove('ta-countdown-beat');if(timeFrame)timeFrame.classList.remove('ta-countdown-frame-beat');}
   document.getElementById('taScore').textContent=String(taScore);
 }
 function taSyncDemo(){
