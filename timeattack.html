@@ -5581,21 +5581,33 @@ const sfx = (()=>{
     // 得点側の輪が収束するときは、吸い込み音ではなく得点獲得を予感させる鈴の音。
     comboAbsorb(){ /* 得点側の吸い込み音は再生しない */ },
     // Time Overからリザルトまで、添付曲を基にしたピアノBGMを一続きで再生。
-    resultStop(){
+    resultStop(immediate=false){
       ++resultPlaybackTicket;
       const player=window.taResultAudio;
-      if(player){player.pause();player.currentTime=0;}
+      if(!player)return;
+      const ticket=resultPlaybackTicket;
+      const startVolume=player.volume;
+      if(immediate||player.paused){player.pause();player.currentTime=0;return;}
+      const start=performance.now();
+      const fade=now=>{
+        if(ticket!==resultPlaybackTicket)return;
+        const k=Math.min(1,(now-start)/1600);
+        player.volume=Math.max(0,startVolume*(1-k));
+        if(k<1&&!player.paused)requestAnimationFrame(fade);
+        else{player.pause();player.currentTime=0;}
+      };
+      requestAnimationFrame(fade);
     },
     resultStart(){
-      this.resultStop();
+      this.resultStop(true);
       if(!on)return;
       if(!window.taResultAudio){
         window.taResultAudio=new Audio('audio/winters-gentle-close.mp3');
         window.taResultAudio.preload='auto';
         window.taResultAudio.loop=false;
-        window.taResultAudio.volume=.28;
       }
       const player=window.taResultAudio;
+      player.volume=.21;
       player.currentTime=0;
       player.play().catch(err=>console.warn('Result BGM could not play:',err));
     },
@@ -5776,11 +5788,35 @@ const sfx = (()=>{
         if(!window.taRankingAudio){
           window.taRankingAudio=new Audio('audio/where-the-map-ends.mp3');
           window.taRankingAudio.preload='auto';
-          window.taRankingAudio.loop=true;
-          window.taRankingAudio.volume=.32;
+          window.taRankingAudio.loop=false;
+          window.taRankingAudio.volume=0;
+          window.taRankingAudio.addEventListener('ended',()=>{
+            if(!libOpen||!on)return;
+            const ticket=++window.taRankingMusicTicket;
+            window.taRankingRepeatTimer=setTimeout(()=>{
+              if(ticket===window.taRankingMusicTicket&&libOpen&&on){
+                window.taRankingAudio.currentTime=0;
+                sfx.bgmStart();
+              }
+            },2500);
+          });
         }
+        clearTimeout(window.taRankingRepeatTimer);
+        const ticket=window.taRankingMusicTicket=(window.taRankingMusicTicket||0)+1;
         const player=window.taRankingAudio;
-        if(player.paused){player.currentTime=0;player.play().catch(err=>console.warn('Ranking BGM could not play:',err));}
+        const startVolume=player.volume;
+        const started=performance.now();
+        const fade=now=>{
+          if(ticket!==window.taRankingMusicTicket||!libOpen||!on)return;
+          const k=Math.min(1,(now-started)/1800);
+          player.volume=startVolume+(.13-startVolume)*k;
+          if(k<1)requestAnimationFrame(fade);
+        };
+        if(player.paused){
+          if(player.ended||player.duration&&player.currentTime>=player.duration)player.currentTime=0;
+          player.play().catch(err=>console.warn('Ranking BGM could not play:',err));
+        }
+        requestAnimationFrame(fade);
         return;
       }
       if(bgm)return;
@@ -5793,7 +5829,20 @@ const sfx = (()=>{
       });
     },
     bgmStop(){
-      if(window.taRankingAudio){window.taRankingAudio.pause();window.taRankingAudio.currentTime=0;}
+      clearTimeout(window.taRankingRepeatTimer);
+      const rankingTicket=window.taRankingMusicTicket=(window.taRankingMusicTicket||0)+1;
+      if(window.taRankingAudio){
+        const player=window.taRankingAudio;
+        const from=player.volume,start=performance.now();
+        const fade=now=>{
+          if(rankingTicket!==window.taRankingMusicTicket)return;
+          const k=Math.min(1,(now-start)/1600);
+          player.volume=Math.max(0,from*(1-k));
+          if(k<1&&!player.paused)requestAnimationFrame(fade);
+          else player.pause();
+        };
+        requestAnimationFrame(fade);
+      }
       const st=bgm;if(!st)return;bgm=null;st.stopped=true;if(!st.g)return;
       const t=ctx.currentTime;st.g.gain.cancelScheduledValues(t);st.g.gain.setValueAtTime(st.g.gain.value,t);st.g.gain.linearRampToValueAtTime(0,t+1.6);
       try{st.src.stop(t+1.7)}catch(_){}
@@ -5986,9 +6035,14 @@ function taFinish(){
   const token=++taFinishToken;
   cancelAnimationFrame(taRaf);
   const flash=document.getElementById('taStartFlash');
-  flash.hidden=false;flash.classList.remove('ta-start-active','ta-end-active');
-  flash.textContent='Time Over';void flash.offsetWidth;flash.classList.add('ta-end-active');
-   sfx.resultStart();
+  // 曲を先に開始し、0.5秒後にTime Overの文字を表示する。
+  flash.hidden=true;flash.classList.remove('ta-start-active','ta-end-active');
+  sfx.resultStart();
+  setTimeout(()=>{
+    if(token!==taFinishToken)return;
+    flash.textContent='Time Over';flash.hidden=false;
+    void flash.offsetWidth;flash.classList.add('ta-end-active');
+  },500);
   document.getElementById('taHud').classList.remove('ta-hud-reveal');
   taSeconds=Math.max(0,taSeconds);taRender();
   taSaveRecord();taUpdatePlay();
@@ -6000,7 +6054,7 @@ function taFinish(){
     sfx.resultFanfare();
     taSyncDemo();
     document.getElementById('taResultClose').focus();
-  },1600);
+  },2100);
 }
 function taTick(now){if(!taRunning)return;const delta=Math.min(0.1,(now-taLast)/1000);taLast=now;if(typeof flood!=='undefined'&&!flood){taSeconds-=delta;}if(taSeconds<=0){taSeconds=0;taFinish();}taRender();if(taRunning)taRaf=requestAnimationFrame(taTick)}
 let taStarting=false;
