@@ -305,6 +305,7 @@ body{background-color:var(--ground);color:var(--ink);font-family:var(--gothic);t
 .hero{position:relative;margin:0;aspect-ratio:780/408;max-width:100%;overflow:hidden;border:1px solid var(--line);box-shadow:0 30px 60px -30px color-mix(in srgb,var(--ink) 45%,transparent)}
 .hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.06);transition:opacity 1.1s ease,transform 6s cubic-bezier(.2,.6,.2,1)}
 :root:not([data-yura="black"]) .hero .w,:root[data-yura="black"] .hero .b{opacity:1;transform:scale(1)}
+.hero img.b{object-fit:cover;object-position:68% center}
 /* 髪のなびき：揺らぎをかけた同じ絵を、髪の辺りだけ柔らかく重ねる */
 .hero .fx{position:absolute;width:0;height:0}
 .hero img.hair{display:none;filter:url(#hairWind);pointer-events:none;transform-origin:50% 0;animation:hairSway 5.6s ease-in-out infinite}
@@ -317,7 +318,7 @@ body{background-color:var(--ground);color:var(--ink);font-family:var(--gothic);t
 @media (max-width:600px){
   .hero{aspect-ratio:780/540}
   .hero img.w{object-position:100% 50%}
-  .hero img.b{object-fit:contain;object-position:center;background:#070b12}
+  .hero img.b{object-fit:cover;object-position:68% center;background:#070b12}
 }
 .hero::after{content:"";position:absolute;inset:auto 0 0 0;height:38%;background:linear-gradient(transparent,color-mix(in srgb,var(--ground) 85%,transparent));pointer-events:none;transition:background .8s ease}
 /* 違和感：キービジュアルの上を漂う日常の言葉。触れると集まる */
@@ -5917,16 +5918,11 @@ const sfx = (()=>{
     bgmStart(){
       const a=ac();if(!a)return;
       if(libOpen){
+        window.taRankingRetryPending=false;
         if(!window.taRankingAudio){
           window.taRankingAudio=new Audio('audio/where-the-map-ends.mp3');
           window.taRankingAudio.addEventListener('error',()=>{
-            const player=window.taRankingAudio;
-            if(!player || player.dataset.fallbackTried)return;
-            player.dataset.fallbackTried='1';
-            // Support deployments that keep the shared audio directory one level above timeattack.html.
-            player.src='../audio/where-the-map-ends.mp3';
-            player.load();
-            if(libOpen&&on)player.play().catch(err=>console.warn('Ranking BGM unavailable: check audio/where-the-map-ends.mp3',err));
+            console.warn('Ranking BGM: audio/where-the-map-ends.mp3 could not be loaded');
           });
           window.taRankingAudio.preload='auto';
           window.taRankingAudio.loop=false;
@@ -5955,7 +5951,7 @@ const sfx = (()=>{
         };
         if(player.paused){
           if(player.ended||player.duration&&player.currentTime>=player.duration)player.currentTime=0;
-          player.play().catch(err=>console.warn('Ranking BGM could not play:',err));
+          player.play().catch(err=>{console.warn('Ranking BGM playback blocked:',err); if(libOpen&&on){window.taRankingRetryPending=true;} });
         }
         requestAnimationFrame(fade);
         return;
@@ -6034,11 +6030,17 @@ const sfx = (()=>{
   };
 })();
 $("sndbtn").setAttribute("aria-pressed", sfx.on);
-$("sndbtn").addEventListener("click", ()=>{ sfx.on = !sfx.on; $("sndbtn").setAttribute("aria-pressed", sfx.on); if(sfx.on){ sfx.toggle(); if(libOpen) sfx.bgmStart(); } else {sfx.bgmStop();sfx.resultStop();} });
+$("sndbtn").addEventListener("click", ()=>{ sfx.on = !sfx.on; $("sndbtn").setAttribute("aria-pressed", sfx.on); if(sfx.on){ sfx.toggle(); if(libOpen) sfx.bgmStart(); if(taRunning&&taSeconds>0&&taSeconds<=5){taHeartbeatStop();taHeartbeatStart();} } else {taHeartbeatStop();sfx.bgmStop();sfx.resultStop();} });
 // 別のアプリへ移ったら止め、戻ったら本棚にいれば再開する
 document.addEventListener("visibilitychange", ()=>{ if(document.hidden){sfx.bgmStop();sfx.resultStop();} else if(libOpen) sfx.bgmStart(); });
 
 $("libbtn").addEventListener("click", ()=>showLib(!libOpen));
+document.addEventListener('pointerdown',()=>{
+  if(libOpen && sfx.on && window.taRankingAudio && window.taRankingAudio.paused && window.taRankingRetryPending){
+    window.taRankingRetryPending=false;
+    sfx.bgmStart();
+  }
+}, {passive:true});
 
 $("pgprev").addEventListener("click", ()=>turn(-1));
 $("tab-book").addEventListener("click", ()=>setTab("book"));
@@ -6137,6 +6139,26 @@ const dx=spread[n%spread.length];
 // All labels share the exact same vertical starting point and rise straight up.
 p.style.left=(r.left+r.width/2+dx)+'px';p.style.top=(r.top+r.height/2)+'px';
 document.body.append(p);setTimeout(()=>p.remove(),1200)}
+// Countdown heartbeat: one five-second sample, started when the 5-second warning begins.
+// Keep it separate from the music channels and respect the game's sound toggle.
+const taHeartbeatAudio = new Audio('audio/heartbeat-deep.wav');
+taHeartbeatAudio.preload = 'auto';
+taHeartbeatAudio.loop = false;
+taHeartbeatAudio.volume = 0.42;
+let taHeartbeatActive = false;
+function taHeartbeatStop(){
+  taHeartbeatActive = false;
+  taHeartbeatAudio.pause();
+  try{taHeartbeatAudio.currentTime = 0;}catch(_){}
+}
+function taHeartbeatStart(){
+  if(taHeartbeatActive)return;
+  taHeartbeatActive = true;
+  if(!sfx.on)return;
+  try{taHeartbeatAudio.currentTime = 0;}catch(_){}
+  const attempt = taHeartbeatAudio.play();
+  if(attempt && typeof attempt.catch === 'function')attempt.catch(()=>{});
+}
 let taLastCountdownNumber=null;
 function taRender(){
   const timeEl=document.getElementById('taTime');
@@ -6147,6 +6169,8 @@ function taRender(){
   timeEl.classList.toggle('ta-countdown',countdown);
   const timeFrame=document.getElementById('taTimeBox');
   if(timeFrame)timeFrame.classList.toggle('ta-countdown-frame',countdown);
+  if(countdown && !taHeartbeatActive)taHeartbeatStart();
+  if(!countdown && taHeartbeatActive)taHeartbeatStop();
   if(count!==taLastCountdownNumber){
     timeEl.classList.remove('ta-countdown-beat');
     if(timeFrame)timeFrame.classList.remove('ta-countdown-frame-beat');
@@ -6183,6 +6207,7 @@ function taUpdatePlay(){
 function taFinish(){
   if(!taRunning&&!taStarting)return;
   taRunning=false;taStarting=false;
+  taHeartbeatStop();
   document.querySelectorAll("#drift .word:not(.got)").forEach(w=>{
     if([...w.classList].some(c=>!["word","fast","ta-blue"].includes(c))) w.remove();
   });
