@@ -3401,9 +3401,17 @@ const ODD_PT = 5;
 const STOP_CELLS = (()=>{ const c = []; [3, 35, 64].forEach(x => [22, 44, 66].forEach(y => c.push([x, y]))); return c; })();   // 止まった時間の言葉は9か所（以前は12）
 let stopPend = [], stopWatch = null;
 const STOP_WORDS = 8;   // 止まった時間の中に並ぶ言葉の数（全12か所のうち）
+// Time Attack: draw words from both Yura dictionaries, regardless of visual mode.
+function taMixedWord(){
+  const white = WORDS.white || [], black = WORDS.black || [];
+  const total = white.length + black.length;
+  if(!total) return "違和感";
+  const n = Math.floor(Math.random() * total);
+  return n < white.length ? white[n] : black[n - white.length];
+}
 function placeStill(cell){
-  const list = WORDS[mode], w = document.createElement("button");
-  w.type = "button"; w.className = "word still"; w.textContent = list[Math.floor(Math.random()*list.length)];
+  const w = document.createElement("button");
+  w.type = "button"; w.className = "word still"; w.textContent = taMixedWord();
   w.dataset.cell = cell;
   // 時止め中の文字は約半数を時間延長文字にする。
   if(Math.random() < .50){ w.dataset.taTime = "1"; w.classList.add("ta-blue"); }
@@ -3699,8 +3707,8 @@ function enterVoid(abyss, vp, onDone){
   const vpOverlap = (px, py) => { const r = vp.rect(), x = px/100 * innerWidth, y = py/100 * innerHeight, m = 70; return x > r.left - m && x < r.right + m && y > r.top - m && y < r.bottom + m; };
   const spawnOne = () => {
     if(!live || !abyss.isConnected) return;
-    const list = WORDS[mode], w = document.createElement("button");
-    w.type = "button"; w.className = "void-word"; w.textContent = list[Math.floor(Math.random() * list.length)];
+    const w = document.createElement("button");
+    w.type = "button"; w.className = "void-word"; w.textContent = taMixedWord();
     let px, py, tries = 0;
     do { px = 12 + Math.random() * 76; py = 18 + Math.random() * 60; tries++; } while(tries < 8 && vpOverlap(px, py));   // 違和感ポイント表記に被らない位置へ
     w.style.left = px + "%"; w.style.top = py + "%";
@@ -3911,7 +3919,7 @@ function spawnLoop(){
     if(Math.random() < .3){ const extra = Math.random() < .35 ? 2 : 1; for(let i=0;i<extra;i++) setTimeout(()=>{ if(!flood && !sakuraOn) spawnWord({plain:true}); }, 140 + i*150 + Math.random()*170); }
   }
   // 湧く間隔をばらつかせる（一定間隔で1つ、の単調さをなくす）
-  setTimeout(spawnLoop, flood ? 400 : 500 + Math.random()*900);
+  setTimeout(spawnLoop, flood ? 400 : 425 + Math.random()*765); // ~15% more frequent normal words
 }
 
 function spawnWord(opt = {}){
@@ -3919,8 +3927,8 @@ function spawnWord(opt = {}){
   const field = $("drift");
   const max = flood ? 14 : Math.min(8, 4 + booksNow());
   if(shattering || (!opt.force && field.querySelectorAll(".word:not(.got)").length >= max) || document.hidden || libOpen) return;
-  const list = WORDS[mode], w = document.createElement("button");
-  w.type = "button"; w.className = "word" + (flood ? " fast" : ""); w.textContent = list[Math.floor(Math.random()*list.length)];
+  const w = document.createElement("button");
+  w.type = "button"; w.className = "word" + (flood ? " fast" : ""); w.textContent = taMixedWord();
   if(Math.random()<(flood ? .50 : .10)){w.dataset.taTime="1";w.classList.add("ta-blue");}
   const special = !opt.plain && !flood && !sakuraOn && (forceSpecial || (Date.now() > nextSpecialAt && Math.random() < .08));
   if(special){ w.dataset.word = w.textContent; w.innerHTML = '<span class="sw"><i class="ch"></i><span class="pd"><i class="k"></i>' + [-2.4,-2,-1.6,-1.2,-.8,-.4,0,.4,.8,1.2,1.6,2,2.4].map(z=>'<i class="r" style="--z:'+z+'px"></i>').join("") + '<i class="f"></i></span></span>'; w.classList.add("special"); forceSpecial = false; nextSpecialAt = Date.now() + 120000; w.setAttribute("aria-label", "古びたペンダント（触れると言葉があふれる）"); w.title = "触れると言葉があふれる";
