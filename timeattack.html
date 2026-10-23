@@ -1569,6 +1569,13 @@ body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width
 #viewMain>.ta-items{gap:clamp(5px,1.1vw,13px)}
 @media(max-width:440px){#viewMain>.ta-items .ta-orb{width:42px!important;height:42px!important;font-size:20px!important}#viewMain>.ta-items{padding-inline:7px!important;gap:6px!important}}
 </style>
+<style id="ta-balanced-viewport">
+#viewMain>.slip{box-sizing:border-box!important;min-height:0!important;overflow:hidden!important;flex-shrink:0!important}
+#viewMain>.slip #taHud{inset:0!important;box-sizing:border-box!important}
+#viewMain>.slip #taHud .ta-stats{width:100%;height:100%;align-items:stretch}
+#viewMain>.slip #taHud .ta-stats>div{display:flex;flex-direction:column;justify-content:center;min-height:0}
+#viewMain>.hero{min-height:0!important;flex-shrink:0!important}
+</style>
 </head>
 <body>
 
@@ -5493,7 +5500,9 @@ async function fetchText(path){
 // そこで全作品を実物と同じ幅で測り、いちばん高くなる作品に合わせて紙片の高さを固定する（下段を動かさないため）。
 function lockSlipHeight(){
   try{
-    const slip = $("slip"); if(!slip || !ALL.length) return;
+    const slip = $("slip"); if(!slip) return;
+    if(document.getElementById("taHud")){ slip.style.minHeight = "0px"; return; }
+    if(!ALL.length) return;
     const cs = getComputedStyle(slip);
     const contentW = slip.clientWidth - parseFloat(cs.paddingLeft||0) - parseFloat(cs.paddingRight||0);
     if(!(contentW > 0)) return;
@@ -5527,16 +5536,28 @@ if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>request
 // ---------- 採集エリア（絵）を、縦スクロールが出ない範囲でできるだけ大きく ----------
 function fitLayout(){
   try{
-    const hero = document.querySelector(".hero"); if(!hero) return;
-    const vl = $("viewLib"); if(vl && !vl.hidden) return;              // 本棚を見ているときは触らない
-    hero.style.aspectRatio = "auto";
-    const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
-    const top = hero.getBoundingClientRect().top;                      // 絵の上端（＝ヘッダー＋紙片＋ヒントの下）
-    const w = hero.getBoundingClientRect().width;
-    let h = vh - top - 24;                                             // 残りを絵に充てる（スクロールが出ないよう少し余裕を取る）
-    h = Math.max(210, Math.min(h, Math.max(w * 1.15, 320)));
-    hero.style.height = h + "px";
-  }catch(_){}
+    const hero = document.querySelector('#viewMain > .hero');
+    const view = document.getElementById('viewMain');
+    const slip = document.querySelector('#viewMain > .slip');
+    if(!hero || !view || !slip) return;
+    const vl = document.getElementById('viewLib');
+    if(vl && !vl.hidden) return;
+    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    // Preserve score/time numerals at 1.8rem; vary only the HUD's surrounding whitespace.
+    const hudH = Math.max(64, Math.min(84, 64 + (vh - 600) * 20 / 300));
+    slip.style.height = hudH + 'px';
+    slip.style.minHeight = '0px';
+    slip.style.flexShrink = '0';
+    hero.style.aspectRatio = 'auto';
+    // Account for the real bottom of the containing layout, not just the viewport.
+    const r = hero.getBoundingClientRect();
+    const wrap = view.closest('.wrap');
+    const bottomPad = wrap ? parseFloat(getComputedStyle(wrap).paddingBottom) || 0 : 0;
+    const reserve = Math.max(8, bottomPad);
+    const available = Math.floor(vh - r.top - reserve);
+    // Do not enforce the old 210px minimum when the screen is short: it caused page scrolling.
+    hero.style.height = Math.max(96, available) + 'px';
+  }catch(_){ }
 }
 
 // ---------- 最後の一行を「ユーザーが」開いたあと、少し間を置いて自動で「思考の断片にしまう」 ----------
@@ -6332,7 +6353,7 @@ function taRenderRecords(){
   document.getElementById('taRankCount').textContent='挑戦回数　'+records.length+'回';
   rankBox.replaceChildren();
   if(!ranked.length){const empty=document.createElement('p');empty.className='ta-record-empty';empty.textContent='まだ記録がありません。';rankBox.append(empty);return}
-  ranked.forEach((r,i)=>{
+  ranked.slice(0,20).forEach((r,i)=>{
     const row=document.createElement('div');row.className='ta-record-row';
     const pos=document.createElement('span');pos.className='ta-record-pos';pos.textContent=String(i+1).padStart(2,'0');
     const score=document.createElement('strong');score.className='ta-record-score';score.textContent=r.score.toLocaleString('ja-JP')+' 点';
@@ -6507,7 +6528,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  let selected=null,gesture=null,traces=[],particles=[],summonBursts=[],summonTimers=[],crossBursts=[],last=performance.now(),wasActive=false;
  let usesLeft=0; const MAX_USES=5; let previousPips=0; let pipFlashTimer=null; let startupTimers=[]; let startupGeneration=0;
  const GESTURE_MAX_MS=340, GESTURE_MAX_PX=390;
- const elementalSounds={fire:new Audio('audio/element-fire-cast.wav'),ice:new Audio('audio/element-ice-cast.wav')};
+ const elementalSounds={fire:new Audio('audio/element-fire-cast.wav'),ice:new Audio('audio/element-ice-cast.wav'),cross:new Audio('audio/element-cross-burst.wav')};
  Object.values(elementalSounds).forEach(a=>{a.preload='auto';a.volume=.48;});
  function playElementSound(type){
   if(typeof sfx!=='undefined'&&!sfx.on)return;
@@ -6548,15 +6569,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  };
  ui.addEventListener('click',e=>{const b=e.target.closest('[data-orb]');if(!b||!active()||usesLeft<=0)return;selected=selected===b.dataset.orb?null:b.dataset.orb;sync();});
  function clear(){selected=null;sync();gesture=null;consumedPointer=null;traces=[];particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.clearRect(0,0,canvas.width,canvas.height)}
- // Keep the magical stroke itself inside the word collection area. The separate
- // full-screen FX canvas still allows sparks, shards and shockwaves to escape.
- const loc=e=>{
-  const h=hero.getBoundingClientRect(),f=field.getBoundingClientRect();
-  const pad=2;
-  const x=Math.max(f.left+pad,Math.min(f.right-pad,e.clientX));
-  const y=Math.max(f.top+pad,Math.min(f.bottom-pad,e.clientY));
-  return {x:x-h.left,y:y-h.top};
- };
+ const loc=e=>{const r=hero.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
  function cancelStartup(){startupGeneration++;startupTimers.forEach(clearTimeout);startupTimers=[];ui.classList.remove('ta-items-revealing');}
  document.addEventListener('ta-item-reset',()=>{cancelStartup();clearRechargeTimers();usesLeft=0;previousPips=0;clear();sync();});
  document.addEventListener('ta-item-start-activate',()=>{
@@ -6767,7 +6780,8 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    taSeconds+=count;taRender();
    const box=document.getElementById('taTimeBox');if(box){box.classList.remove('ta-frame-flash');void box.offsetWidth;box.classList.add('ta-frame-flash');}
   }
-  if(typeof sfx!=='undefined'&&sfx.on){try{sfx.special?.();}catch(_){}}
+  // Dedicated fire-ice resonance impact, synchronized with the first explosion frame.
+  playElementSound('cross');
  }
  function renderCrossBursts(now){
   crossBursts=crossBursts.filter(b=>now-b.start<1700);
