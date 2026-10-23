@@ -229,6 +229,101 @@ html[data-view="lib"] #taPlay{display:none!important}
 #taHud #taTimeBox.ta-countdown-frame-beat{animation:taCountdownFrameBeat .75s ease-in-out both;}
 @keyframes taCountdownFrameBeat{0%,100%{border-color:rgba(240,78,88,.75);box-shadow:0 0 0 transparent,inset 0 0 0 transparent;background:rgba(255,255,255,.018)}35%{border-color:#ff535f;box-shadow:0 0 18px 3px rgba(245,46,64,.65),inset 0 0 13px rgba(245,46,64,.35);background:rgba(120,17,31,.17)}65%{border-color:#fa7d85;box-shadow:0 0 8px 1px rgba(245,46,64,.32),inset 0 0 6px rgba(245,46,64,.2)}}
 @media(prefers-reduced-motion:reduce){#taHud #taTimeBox.ta-countdown-frame-beat{animation:none}}
+
+/* Ice time orbs: bright crystalline core with a soft cyan halo. */
+.ta-ice-time-orb{position:fixed;z-index:110;pointer-events:none;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:radial-gradient(circle,#f9ffff 0%,#b9f2ff 24%,rgba(81,195,245,.8) 47%,transparent 72%);box-shadow:0 0 12px 4px rgba(94,215,255,.52);filter:blur(.6px);will-change:transform,opacity;}
+
+/* Item control layout v2: larger, separated touch targets; compact score/time header. */
+#viewMain>.slip{padding:2px 9px 3px!important}
+#viewMain>.slip #taHud{padding:2px 8px!important;outline-offset:-2px}
+#viewMain>.slip #taHud .ta-stats{gap:7px}
+#viewMain>.slip #taHud .ta-stats>div{padding:2px 6px 3px!important}
+#viewMain>.slip #taHud .ta-stats small{font-size:.59rem!important;margin-bottom:0!important;line-height:1.05}
+#viewMain>.slip #taHud .ta-stats strong{font-size:clamp(1.24rem,4.2vw,2.08rem)!important;line-height:1.05!important}
+.ta-items{width:min(100%,480px)!important;max-width:calc(100% - 12px)!important;min-height:64px;gap:12px!important;padding:6px 12px!important;border-radius:16px!important;justify-content:space-between!important;box-sizing:border-box}
+.ta-items-label{flex:0 0 auto;font-size:10px}
+.ta-orb{width:62px!important;height:52px!important;flex:0 0 62px;border-radius:14px!important;font-size:25px!important;touch-action:manipulation;position:relative}
+.ta-orb.fire{border:2px solid #c76d4c!important}
+.ta-orb.ice{border:2px solid #6dbadf!important}
+.ta-orb[aria-pressed=true]{transform:none!important;outline:3px solid #f4dcaa!important;outline-offset:1px!important}
+.ta-orb:focus-visible{outline:3px solid #fff4ca;outline-offset:2px}
+.ta-item-counter{margin-left:auto;flex:0 0 auto;font-size:19px!important;gap:3px!important}
+.ta-item-pips{letter-spacing:1px!important;margin-left:4px!important;font-size:10px!important}
+@media(max-width:420px){.ta-items{gap:7px!important;padding:6px 8px!important;min-height:62px}.ta-items-label{font-size:9px}.ta-orb{width:58px!important;flex-basis:58px;height:50px!important}.ta-item-counter{font-size:17px!important}.ta-item-pips{font-size:9px!important;margin-left:2px!important}}
+@media(max-width:350px){.ta-items-label{display:none}.ta-items{justify-content:space-around!important}}
+
+
+/* Item bar v3: full collection width, spherical controls and responsive height. */
+#viewMain>.ta-items{
+ width:100%!important;max-width:100%!important;margin:0!important;
+ box-sizing:border-box!important;min-height:72px!important;padding:7px clamp(10px,2vw,22px)!important;
+ border-radius:15px!important;display:flex!important;align-items:center!important;
+ justify-content:space-between!important;gap:clamp(12px,2.5vw,28px)!important;
+}
+#viewMain>.ta-items .ta-items-label{flex:0 0 auto!important;letter-spacing:.16em}
+#viewMain>.ta-items .ta-orb{
+ width:58px!important;height:58px!important;flex:0 0 58px!important;
+ border-radius:50%!important;aspect-ratio:1!important;font-size:25px!important;
+ border-width:2px!important;box-shadow:inset -6px -8px 14px #0009,inset 3px 4px 8px #fff5,0 4px 12px #0008!important;
+}
+#viewMain>.ta-items .ta-orb.fire{background:radial-gradient(circle at 32% 24%,#fff1c7 0%,#ff9a4e 19%,#cf4227 49%,#651b20 77%,#260f1a 100%)!important}
+#viewMain>.ta-items .ta-orb.ice{background:radial-gradient(circle at 32% 24%,#ffffff 0%,#b9efff 20%,#4aa8d6 49%,#24528b 77%,#14213c 100%)!important}
+#viewMain>.ta-items .ta-orb[aria-pressed=true]{outline:3px solid #ffe5a4!important;outline-offset:3px!important;filter:brightness(1.15)}
+#viewMain>.ta-items .ta-item-counter{margin-left:auto!important;gap:5px!important;white-space:nowrap}
+#viewMain>.ta-items .ta-item-pips{display:inline-flex!important;align-items:center;gap:5px!important;margin-left:9px!important;letter-spacing:normal!important}
+.ta-item-pip{display:inline-block;width:11px;height:11px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe8ad,#d9ac59 68%,#8b6634);box-shadow:0 0 3px #d5ad6280;transition:opacity .3s,background .3s,box-shadow .3s;}
+.ta-item-pip.spent{background:#48505b;box-shadow:inset 0 1px 2px #0008;opacity:.48}
+.ta-item-pip.burning-out{animation:taItemPipBurn .55s ease-out forwards!important}
+@keyframes taItemPipBurn{0%{opacity:1;transform:scale(1);box-shadow:0 0 3px #d5ad6280}32%{opacity:1;transform:scale(1.48);background:#fff4c9;box-shadow:0 0 15px 5px #ffd475,0 0 27px 9px #ffb54a80}100%{opacity:.48;transform:scale(1);background:#48505b;box-shadow:inset 0 1px 2px #0008}}
+/* Gain room for the item bar without changing collection area height. */
+#viewMain>.slip{padding:1px 7px 2px!important}
+#viewMain>.slip #taHud{padding:1px 6px!important}
+#viewMain>.slip #taHud .ta-stats>div{padding:1px 5px 2px!important}
+#viewMain>.slip #taHud .ta-stats strong{font-size:clamp(1.17rem,3.8vw,1.9rem)!important;line-height:1!important}
+#viewMain>.slip #taHud .ta-stats small{font-size:.57rem!important;line-height:1!important}
+@media(max-width:480px){
+ #viewMain>.ta-items{min-height:65px!important;padding:5px 9px!important;gap:8px!important}
+ #viewMain>.ta-items .ta-orb{width:52px!important;height:52px!important;flex-basis:52px!important}
+ #viewMain>.ta-items .ta-item-counter{font-size:17px!important}
+ #viewMain>.ta-items .ta-item-pips{gap:3px!important;margin-left:3px!important}
+ .ta-item-pip{width:8px;height:8px}
+}
+@media(max-width:350px){#viewMain>.ta-items .ta-items-label{display:none}}
+@media(max-height:760px){#viewMain{gap:4px!important}#viewMain>.slip{padding:0 5px 1px!important}#viewMain>.slip #taHud .ta-stats strong{font-size:clamp(1.08rem,3.5vw,1.7rem)!important}#viewMain>.ta-items{min-height:58px!important;padding-top:3px!important;padding-bottom:3px!important}#viewMain>.ta-items .ta-orb{width:49px!important;height:49px!important;flex-basis:49px!important}}
+@media(prefers-reduced-motion:reduce){.ta-item-pip.burning-out{animation:none!important}}
+/* Stable score/time typography across viewport resize and short screens. */
+#viewMain>.slip #taHud .ta-stats strong,
+#viewMain>.slip #taHud #taTime,
+#viewMain>.slip #taHud #taScore{
+  font-size:1.8rem!important;
+  line-height:1.05!important;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+
+/* Armed item: unmistakable white/gold glow hugging the spherical button. */
+#viewMain>.ta-items{position:relative!important;overflow:visible!important}
+#viewMain>.ta-items .ta-orb[aria-pressed="true"]:not(:disabled){
+ animation:taArmedOrbFlashStrong .78s ease-in-out infinite!important;
+ outline:0!important;
+ border-color:#fff6c9!important;
+ z-index:2!important;
+}
+#viewMain>.ta-items .ta-orb[aria-pressed="true"]:not(:disabled)::after{
+ animation:taOrbInnerPulseStrong .78s ease-in-out infinite!important;
+ border-radius:inherit!important;
+ box-shadow:inset 0 0 0 2px #fff9db,inset 0 0 17px 5px #fff3c6e8!important;
+}
+@keyframes taArmedOrbFlashStrong{
+ 0%,100%{filter:brightness(.93) saturate(1.05);box-shadow:inset -6px -8px 14px #0009,inset 0 0 5px #fff4cf,0 0 6px 1px #ffe4a6!important}
+ 50%{filter:brightness(2.6) saturate(1.05);box-shadow:inset 0 0 19px 7px #fffbd5,0 0 11px 3px #fffce0,0 0 23px 6px #ffd67ca8!important}
+}
+@keyframes taOrbInnerPulseStrong{
+ 0%,100%{opacity:.55}
+ 50%{opacity:1}
+}
+#viewMain>.ta-items .ta-orb:disabled{animation:none!important;outline:none!important}
+@media(prefers-reduced-motion:reduce){#viewMain>.ta-items .ta-orb[aria-pressed="true"]:not(:disabled){animation:none!important;filter:brightness(2)!important;box-shadow:inset 0 0 15px #fff9,0 0 15px 3px #ffe3a4!important}}
 </style>
 <script>
 /* 最初の描画より前に、前回の世界（白/黒）を決めておく。万一起動処理が止まっても4秒で必ず見せる */
@@ -627,7 +722,7 @@ html.glow-moon .up-fly{color:#bcd0ff;text-shadow:0 0 8px rgba(160,190,255,.85);s
   background:color-mix(in srgb,var(--paper) 82%,transparent);border:1px solid var(--accent);font-family:var(--mincho);font-size:.78rem;font-weight:600;letter-spacing:.14em;color:var(--ink);
   -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);animation:fbIn .4s ease both}
 .floodbar i{display:block;height:2px;border-radius:2px;background:var(--accent);transform-origin:left}
-.floodbar.run i{animation:fbDrain 8s linear forwards}
+.floodbar.run i{animation:fbDrain 6.5s linear forwards}
 .glowbar i{animation:none !important}
 @keyframes fbDrain{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @keyframes fbIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
@@ -1427,6 +1522,52 @@ body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width
 /* Darken the scenery only, not floating words or score overlays. */
 .hero img.b{filter:brightness(.46) saturate(.82);transition:opacity 1.1s ease,transform 6s cubic-bezier(.2,.6,.2,1),filter .75s ease}
 .hero.ta-active-visual img.b{filter:brightness(1) saturate(1)}
+
+/* Elemental items: compact HUD without changing the collection image height. */
+#viewMain{gap:8px}
+#viewMain>.slip{padding:5px 12px 6px;gap:0}
+#viewMain>.slip #taHud{padding:5px 12px;outline-offset:-5px}
+#viewMain>.slip #taHud .ta-stats>div{padding:4px 5px 5px}
+#viewMain>.slip #taHud .ta-stats small{font-size:.61rem;margin-bottom:1px}
+#viewMain>.slip #taHud .ta-stats strong{font-size:clamp(1.35rem,4.7vw,2.45rem);line-height:1.15}
+#viewMain>.hero{flex-shrink:0;aspect-ratio:780/408}
+@media(max-width:600px){#viewMain>.hero{aspect-ratio:780/540}}
+.ta-items{order:2;display:flex;align-items:center;justify-content:center;gap:11px;margin:0 auto;padding:3px 12px;width:max-content;max-width:calc(100% - 20px);border:1px solid rgba(187,155,109,.36);border-radius:999px;background:rgba(15,21,31,.84);color:#d5c5aa;box-shadow:0 3px 13px #0003}
+.ta-items-label{font:10px sans-serif;letter-spacing:.15em;color:#c2b198}
+.ta-orb{width:34px;height:34px;border-radius:50%;border:1px solid #9d8465;background:radial-gradient(circle at 35% 28%,#ffd6a0,#ad382c 48%,#461e24 86%);color:white;font-size:18px;cursor:pointer;box-shadow:inset -3px -5px 9px #0006,0 0 9px #a3483b50;transition:transform .18s,box-shadow .18s}
+.ta-orb.ice{background:radial-gradient(circle at 35% 28%,#fff,#66bbdf 45%,#214d89 85%);box-shadow:inset -3px -5px 9px #0006,0 0 9px #61bce350}
+.ta-orb[aria-pressed=true]{transform:scale(1.1);outline:2px solid #f4dcaa;outline-offset:2px;box-shadow:0 0 17px #f3cf8a88}
+.ta-item-counter{display:flex;align-items:center;gap:2px;font:600 16px sans-serif;color:#f3dcac;font-variant-numeric:tabular-nums}.ta-item-counter small{font-size:10px;color:#b8a78f}.ta-item-pips{margin-left:6px;letter-spacing:2px;font-size:10px;color:#d7b878}.ta-orb:disabled{filter:grayscale(1);opacity:.35;cursor:default;box-shadow:none}.ta-items-empty .ta-item-counter{color:#8d929a}.ta-items-empty .ta-item-pips{color:#707784}
+/* Viewport FX overlay: elemental particles and shockwaves can escape the collection frame. */
+.ta-element-layer{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:35;overflow:visible;contain:layout style}
+.ta-element-layer canvas{display:block;width:100%;height:100%}
+.ta-element-word-fx{position:fixed;z-index:95;pointer-events:none;transform-origin:center;white-space:nowrap;font-family:serif;font-weight:600;will-change:transform,opacity,filter}
+@media(max-width:500px){.ta-items{gap:9px}.ta-orb{width:32px;height:32px}}
+</style>
+<style>
+/* Item indicator state is authoritative; unused pips never appear charged. */
+#viewMain>.ta-items .ta-item-pip.spent:not(.burning-out){background:#48505b!important;box-shadow:inset 0 1px 2px #0008!important;opacity:.48!important;animation:none!important}
+</style>
+<style>
+/* Summoned words: one uninterrupted lifecycle, no post-appearance opacity reset. */
+#viewMain .drift .word.ta-summoned-word:not(.got){
+  animation:taSummonedWordLife 9s linear both;
+}
+@keyframes taSummonedWordLife{
+  0%{opacity:0;transform:translateY(7px) scale(.86);filter:blur(7px) brightness(1.9);box-shadow:0 0 0 rgba(139,255,191,0)}
+  3%{opacity:1;transform:translateY(2px) scale(1.025);filter:blur(1px) brightness(1.65);box-shadow:0 0 19px 5px rgba(170,255,187,.75),0 0 29px 7px rgba(255,224,142,.45)}
+  9%{opacity:1;transform:translateY(0) scale(1);filter:blur(0) brightness(1);box-shadow:0 0 0 rgba(139,255,191,0)}
+  80%{opacity:1;transform:translateY(-17px) scale(1);filter:none;box-shadow:none}
+  100%{opacity:0;transform:translate(var(--dx),-26px);filter:none;box-shadow:none}
+}
+/* Third item: emerald word summoning; preserves the existing fire/ice visual treatment. */
+#viewMain>.ta-items .ta-orb.summon{background:radial-gradient(circle at 32% 23%,#f5ffe6 0%,#9af2bd 17%,#34aa80 47%,#155b55 75%,#102e36 100%)!important;border:2px solid #65bda2!important;color:#f1ffe3;text-shadow:0 0 9px #b5ffe6;box-shadow:inset -3px -5px 10px #071d1eaa,0 0 10px #4ee6a255}
+#viewMain>.ta-items .ta-orb.summon{--orb-glow:rgba(98,255,183,.85)}
+#viewMain>.ta-items[data-selected="summon"] .ta-orb.summon{filter:brightness(1.55) saturate(1.3);box-shadow:inset 0 0 7px #efffe0,0 0 10px 3px #f2e5a7,0 0 22px 6px #68f4be!important;animation:taSummonPulse .78s ease-in-out infinite alternate}
+@keyframes taSummonPulse{from{filter:brightness(1.12);box-shadow:inset 0 0 4px #c4ffe0,0 0 6px #f3dca8}to{filter:brightness(2.1);box-shadow:inset 0 0 11px #fff,0 0 16px 4px #fff4bc,0 0 27px 8px #6affc4}}
+#viewMain>.ta-items .ta-orb.summon:disabled{filter:grayscale(1)!important;opacity:.35;animation:none!important;box-shadow:none!important}
+#viewMain>.ta-items{gap:clamp(5px,1.1vw,13px)}
+@media(max-width:440px){#viewMain>.ta-items .ta-orb{width:42px!important;height:42px!important;font-size:20px!important}#viewMain>.ta-items{padding-inline:7px!important;gap:6px!important}}
 </style>
 </head>
 <body>
@@ -3205,7 +3346,7 @@ function mist(r, n = 7){
   }
 }
 // あふれる時間：ときどき明滅する言葉が現れ、触れると短いあいだ言葉が大量にあふれ出す
-const FLOOD_MS = 8000;   // 時間が止まっている長さ
+const FLOOD_MS = 6500;   // 時間が止まっている長さ
 let flood = false, nextSpecialAt = Date.now() + 40000, forceSpecial = false;
 let nextOddAt = Date.now() + 30000, forceOdd = false;
 let nextMultiAt = Date.now() + 20000, forceMulti = false;
@@ -3302,6 +3443,14 @@ function comboStepBonus(n){
   const century=n%100===0;
   const bonus=century?100:10;
   const land=()=>{if(session!==taFinishToken || !taRunning)return;taAward(false,bonus,true);};
+  // Item recharge animation starts just after the score bonus animation begins,
+  // rather than waiting for the score-side ring to land.
+  if(n%50===0){
+    setTimeout(()=>{
+      if(session!==taFinishToken || !taRunning)return;
+      document.dispatchEvent(new CustomEvent('ta-item-combo-recharge',{detail:{chain:n}}));
+    },reduce?0:730);
+  }
   if(reduce || !comboRect.width || !scoreRect.width){taFlashScoreFrame();land();return;}
   const makeWave=(x,y,startScale,endScale,duration,delay,opacity)=>{
     const ring=document.createElement('span');
@@ -3919,13 +4068,13 @@ function spawnLoop(){
     if(Math.random() < .3){ const extra = Math.random() < .35 ? 2 : 1; for(let i=0;i<extra;i++) setTimeout(()=>{ if(!flood && !sakuraOn) spawnWord({plain:true}); }, 140 + i*150 + Math.random()*170); }
   }
   // 湧く間隔をばらつかせる（一定間隔で1つ、の単調さをなくす）
-  setTimeout(spawnLoop, flood ? 400 : 425 + Math.random()*765); // ~15% more frequent normal words
+  setTimeout(spawnLoop, flood ? 400 : (taRunning ? 350 + Math.random()*620 : 425 + Math.random()*765)); // ~15% more frequent normal words
 }
 
 function spawnWord(opt = {}){
   if(!taRunning && !taStarting) opt = {...opt, plain:true}; // DEMO: ordinary / time-extension words only
   const field = $("drift");
-  const max = flood ? 14 : Math.min(8, 4 + booksNow());
+  const max = flood ? 14 : (taRunning ? Math.min(10, 5 + Math.ceil(booksNow() * 1.25)) : Math.min(8, 4 + booksNow()));
   if(shattering || (!opt.force && field.querySelectorAll(".word:not(.got)").length >= max) || document.hidden || libOpen) return;
   const w = document.createElement("button");
   w.type = "button"; w.className = "word" + (flood ? " fast" : ""); w.textContent = taMixedWord();
@@ -3962,8 +4111,8 @@ function spawnWord(opt = {}){
   const crack = false && !opt.plain && !special && !odd && !multi && !pull && !glowW && !petalW && !reso && !vortex && !flood && (forceCrack || (Date.now() > nextCrackAt && Math.random() < .02));
   if(crack){ w.textContent = ""; w.innerHTML = crackSVG(); w.classList.add("crack"); forceCrack = false; nextCrackAt = Date.now() + 720000;
     w.setAttribute("aria-label", "ひび（何度も叩くと広がる）"); setTimeout(()=>sfx.crackAppear(), 250); w.addEventListener("click", e => { e.stopPropagation(); if(e.detail === 0) crackTap(w); }); }   // キーボード操作のときだけ（指やマウスは押した瞬間に処理）
-  w.style.setProperty("--x", (4 + Math.random()*62).toFixed(1)+"%");
-  w.style.setProperty("--y", (14 + Math.random()*58).toFixed(1)+"%");
+  w.style.setProperty("--x", (opt.summonX != null ? Math.max(5,Math.min(81,opt.summonX)) : 4 + Math.random()*62).toFixed(1)+"%");
+  w.style.setProperty("--y", (opt.summonY != null ? Math.max(12,Math.min(78,opt.summonY)) : 14 + Math.random()*58).toFixed(1)+"%");
   w.style.setProperty("--dx", (Math.random()*60-30).toFixed(0)+"px");
   if(crack){ w.style.setProperty("--x", (12 + Math.random()*56).toFixed(1)+"%"); w.style.setProperty("--y", (22 + Math.random()*44).toFixed(1)+"%"); }
   if(vortex){ w.style.setProperty("--x", (10 + Math.random()*62).toFixed(1)+"%"); w.style.setProperty("--y", (16 + Math.random()*52).toFixed(1)+"%"); }
@@ -4242,7 +4391,7 @@ function startGlow(silent){
   else { for(let i=0;i<5;i++){ const r = document.createElement("i"); r.className = "ray";
       r.style.right = (-10 + i * 13 + Math.random() * 6).toFixed(1) + "%"; r.style.width = (8 + Math.random() * 10).toFixed(1) + "%";
       r.style.animationDelay = (-Math.random() * 4).toFixed(2) + "s"; r.style.opacity = (.5 + Math.random() * .5).toFixed(2); fx.append(r); }
-    for(let i=0;i<16;i++){ const d = document.createElement("i"); d.className = "smote";
+    for(let i=0;i<24;i++){ const d = document.createElement("i"); d.className = "smote";
       d.style.left = (Math.random() * 100).toFixed(1) + "%"; d.style.setProperty("--d", (6 + Math.random() * 5).toFixed(2) + "s");
       d.style.animationDelay = (-Math.random() * 8).toFixed(2) + "s, " + (-Math.random() * 1.6).toFixed(2) + "s";
       d.style.setProperty("--s", (.6 + Math.random() * 1.3).toFixed(2)); d.style.setProperty("--dx", ((Math.random() - .5) * 50).toFixed(0) + "px"); fx.append(d); }
@@ -6193,7 +6342,7 @@ function taRenderRecords(){
 }
 function taFlashScoreFrame(){const frame=document.getElementById('taScoreBox');if(!frame)return;frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}
 let taPlusLastArrival=0,taPlusArrivalCount=0;
-function taAward(isTime,pts,skipFrameFlash=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';if(isTime)taSeconds+=1;else taScore+=pts;taRender();const el=document.getElementById(id);el.classList.remove('ta-pop');void el.offsetWidth;el.classList.add('ta-pop');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'')+(pts>=100?' ta-plus-xl':pts>=10?' ta-plus-lg':'');p.textContent=isTime?'+1秒':'+'+pts;// Closely spaced arrivals fan out so each collected orb remains visible.
+function taAward(isTime,pts,skipFrameFlash=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';if(isTime)taSeconds+=1;else taScore+=pts;taRender();const el=document.getElementById(id);el.classList.remove('ta-pop');void el.offsetWidth;el.classList.add('ta-pop');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+1秒':'+'+pts;// Closely spaced arrivals fan out so each collected orb remains visible.
 const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
@@ -6202,7 +6351,7 @@ taPlusLastArrival=arrivalNow;
 const spread=[0,-1,1,-2,2,0,1,-1];
 const dx=spread[n%spread.length];
 // All labels share the exact same vertical starting point and rise straight up.
-p.style.left=(r.left+r.width/2+dx)+'px';p.style.top=(r.top+r.height/2)+'px';
+p.style.left=(r.left+r.width/2+dx)+'px';p.style.top=(r.top+r.height/2-24)+'px';
 document.body.append(p);setTimeout(()=>p.remove(),1200)}
 // Countdown heartbeat: one five-second sample, started when the 5-second warning begins.
 // Keep it separate from the music channels and respect the game's sound toggle.
@@ -6267,6 +6416,7 @@ function taUpdatePlay(){
   btn.setAttribute('aria-label',active?'ゲームを終了':'タイムアタックを開始');
   btn.title=active?'ゲームを終了':'タイムアタックを開始';
   taSyncDemo();
+  document.dispatchEvent(new Event('ta-item-state-change'));
   btn.querySelector('svg').innerHTML=active?'<path d="M6 6 18 18 M18 6 6 18"/>':'<path d="M8 5.5 18 12 8 18.5Z"/>';
 }
 function taFinish(){
@@ -6331,22 +6481,521 @@ function taBegin(){
   document.getElementById('taLaunch').hidden=true;
   if(!document.getElementById('viewLib').hidden)document.getElementById('libbtn').click();
   taSeconds=60;taScore=0;taSessionMaxCombo=0;taSessionRecordAt=null;
+  document.dispatchEvent(new Event('ta-item-reset'));
   document.querySelectorAll('#drift .word').forEach(w=>w.remove());
   taRender();cancelAnimationFrame(taRaf);
   const flash=document.getElementById('taStartFlash');
   flash.textContent='START';flash.hidden=false;flash.classList.remove('ta-start-active','ta-end-active');void flash.offsetWidth;flash.classList.add('ta-start-active');
    // スタート音は音量ボタンON時と同じ2音の鈴。
    sfx.toggle();
-  const token=taFinishToken;setTimeout(()=>{if(token!==taFinishToken||!taStarting)return;flash.hidden=true;taStarting=false;taRunning=true;taUpdatePlay();taLast=performance.now();taRaf=requestAnimationFrame(taTick)},1800);
+  const token=taFinishToken;setTimeout(()=>{if(token!==taFinishToken||!taStarting)return;flash.hidden=true;taStarting=false;taRunning=true;document.dispatchEvent(new Event('ta-item-start-activate'));taUpdatePlay();taLast=performance.now();taRaf=requestAnimationFrame(taTick)},1800);
 }
 document.getElementById('taPlay').addEventListener('click',()=>{if(taRunning||taStarting)taFinish();else taBegin()});
 document.getElementById('taResultClose').addEventListener('click',()=>{document.getElementById('taLaunch').hidden=true;sfx.resultStop();taSyncDemo()});
 document.getElementById('taLaunch').addEventListener('click',e=>{if(e.target.id==='taLaunch'){e.currentTarget.hidden=true;sfx.resultStop();taSyncDemo()}});
 taSyncDemo();
 new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{attributes:true,attributeFilter:['hidden']});
-</script></body>
+</script>
+<script>
+/* Residual elemental traces: fire collects; ice instantly shatters for +0.5s. */
+(()=>{
+ const field=document.getElementById('drift'),hero=field&&field.closest('.hero');if(!field||!hero)return;
+ const ui=document.createElement('div');ui.className='ta-items';ui.innerHTML='<span class="ta-items-label">ITEM</span><button class="ta-orb fire" type="button" data-orb="fire" aria-label="赤玉・炎" aria-pressed="false">🔥</button><button class="ta-orb ice" type="button" data-orb="ice" aria-label="青玉・氷" aria-pressed="false">❄</button><button class="ta-orb summon" type="button" data-orb="summon" aria-label="緑玉・言霊召喚" aria-pressed="false">✧</button><span class="ta-item-counter" aria-live="polite"><b id="taItemRemaining">5</b><small>/5</small><span class="ta-item-pips" aria-hidden="true"></span></span>';
+ hero.insertAdjacentElement('afterend',ui);
+ const layer=document.createElement('div');layer.className='ta-element-layer';layer.setAttribute('aria-hidden','true');document.body.append(layer);
+ const canvas=document.createElement('canvas');layer.append(canvas);const ctx=canvas.getContext('2d');
+ let selected=null,gesture=null,traces=[],particles=[],summonBursts=[],summonTimers=[],crossBursts=[],last=performance.now(),wasActive=false;
+ let usesLeft=0; const MAX_USES=5; let previousPips=0; let pipFlashTimer=null; let startupTimers=[]; let startupGeneration=0;
+ const GESTURE_MAX_MS=340, GESTURE_MAX_PX=390;
+ const elementalSounds={fire:new Audio('audio/element-fire-cast.wav'),ice:new Audio('audio/element-ice-cast.wav')};
+ Object.values(elementalSounds).forEach(a=>{a.preload='auto';a.volume=.48;});
+ function playElementSound(type){
+  if(typeof sfx!=='undefined'&&!sfx.on)return;
+  if(type==='summon'){playSummonSound();return;}const a=elementalSounds[type];if(!a)return;
+  try{a.pause();a.currentTime=0;const result=a.play();if(result&&result.catch)result.catch(()=>{});}catch(_){}
+ }
+ function playSummonSound(){
+  try{const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;const ac=new AudioCtx();const t=ac.currentTime;
+   [392,493.88,587.33,783.99,987.77].forEach((f,i)=>{const o=ac.createOscillator(),g=ac.createGain(),pan=ac.createStereoPanner?ac.createStereoPanner():null;o.type='sine';o.frequency.setValueAtTime(f*.94,t+i*.065);o.frequency.exponentialRampToValueAtTime(f,t+i*.065+.16);g.gain.setValueAtTime(.0001,t+i*.065);g.gain.exponentialRampToValueAtTime(.025,t+i*.065+.055);g.gain.exponentialRampToValueAtTime(.0001,t+i*.065+.52);o.connect(g);if(pan){pan.pan.value=(i-2)*.25;g.connect(pan);pan.connect(ac.destination);}else g.connect(ac.destination);o.start(t+i*.065);o.stop(t+i*.065+.55);});setTimeout(()=>ac.close().catch(()=>{}),1300);
+  }catch(_){}
+ }
+ let consumedPointer=null;
+ const active=()=>typeof taRunning!=='undefined'&&taRunning&&!document.hidden;
+ const specials='.special,.vortex,.crack,.petal,.multi,.pull,.glow,.reso,.odd';
+ const valid=w=>w.matches('.word')&&!w.classList.contains('got')&&!w.classList.contains('late')&&!w.classList.contains('still');
+ const pipBox=ui.querySelector('.ta-item-pips');
+ const pipNodes=Array.from({length:MAX_USES},()=>{const pip=document.createElement('span');pip.className='ta-item-pip';pipBox.appendChild(pip);return pip;});
+ const sync=()=>{
+  ui.querySelectorAll('button').forEach(b=>{b.setAttribute('aria-pressed',String(selected===b.dataset.orb));b.disabled=usesLeft<=0||!active();});
+  const displayUses=active()?usesLeft:0;
+  const count=ui.querySelector('#taItemRemaining');if(count)count.textContent=displayUses;
+  const decreasing=usesLeft<previousPips;
+  pipNodes.forEach((pip,i)=>{
+   const spent=i>=displayUses;
+   // Remove stale recharge animations: animation-fill-mode must not keep a spent pip golden.
+   if(spent) pip.classList.remove('ta-item-pip-recharged');
+   if(decreasing&&i<previousPips&&spent&&active()){
+    pip.classList.remove('spent','burning-out');void pip.offsetWidth;pip.classList.add('burning-out');
+    pip.addEventListener('animationend',()=>{
+     pip.classList.remove('burning-out');
+     pip.classList.toggle('spent',i>=(active()?usesLeft:0));
+    },{once:true});
+   }else if(!pip.classList.contains('burning-out')){
+    pip.classList.toggle('spent',spent);
+   }
+  });
+  previousPips=usesLeft;ui.classList.toggle('ta-items-empty',displayUses===0);ui.classList.toggle('ta-items-inactive',!active());ui.dataset.selected=active()&&selected?selected:'none';
+ };
+ ui.addEventListener('click',e=>{const b=e.target.closest('[data-orb]');if(!b||!active()||usesLeft<=0)return;selected=selected===b.dataset.orb?null:b.dataset.orb;sync();});
+ function clear(){selected=null;sync();gesture=null;consumedPointer=null;traces=[];particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.clearRect(0,0,canvas.width,canvas.height)}
+ // Keep the magical stroke itself inside the word collection area. The separate
+ // full-screen FX canvas still allows sparks, shards and shockwaves to escape.
+ const loc=e=>{
+  const h=hero.getBoundingClientRect(),f=field.getBoundingClientRect();
+  const pad=2;
+  const x=Math.max(f.left+pad,Math.min(f.right-pad,e.clientX));
+  const y=Math.max(f.top+pad,Math.min(f.bottom-pad,e.clientY));
+  return {x:x-h.left,y:y-h.top};
+ };
+ function cancelStartup(){startupGeneration++;startupTimers.forEach(clearTimeout);startupTimers=[];ui.classList.remove('ta-items-revealing');}
+ document.addEventListener('ta-item-reset',()=>{cancelStartup();clearRechargeTimers();usesLeft=0;previousPips=0;clear();sync();});
+ document.addEventListener('ta-item-start-activate',()=>{
+  cancelStartup();usesLeft=0;previousPips=0;
+  pipNodes.forEach(p=>p.classList.remove('burning-out','ta-item-pip-recharged'));
+  sync();
+  ui.classList.add('ta-items-revealing');
+  const generation=startupGeneration;
+  // Fill each pip individually after the START overlay has completed.
+  for(let i=1;i<=MAX_USES;i++){
+   startupTimers.push(setTimeout(()=>{
+    if(generation!==startupGeneration||!active())return;
+    usesLeft=i;sync();
+    const pip=pipNodes[i-1];pip.classList.remove('ta-item-pip-recharged');void pip.offsetWidth;pip.classList.add('ta-item-pip-recharged');
+    pip.addEventListener('animationend',()=>pip.classList.remove('ta-item-pip-recharged'),{once:true});
+   },220+(i-1)*155));
+  }
+  startupTimers.push(setTimeout(()=>{if(generation===startupGeneration)ui.classList.remove('ta-items-revealing');},1150));
+ });
+ // Recharge begins 430ms after the score bonus starts, independently of its completion.
+ const rechargeAnimations=new Set();
+ function clearRechargeTimers(){
+  rechargeAnimations.forEach(entry=>{entry.animation.cancel();entry.element.remove();});
+  rechargeAnimations.clear();
+ }
+ document.addEventListener('ta-item-combo-recharge',()=>{
+  if(!active())return;
+  const counter=ui.querySelector('.ta-item-counter');
+  if(!counter)return;
+  // Aim at the first vacant pip; when already full, animate the final pip without exceeding five.
+  const target=pipNodes[Math.min(usesLeft,MAX_USES-1)];
+  if(!target)return;
+  const rect=target.getBoundingClientRect();
+  if(!rect.width||!rect.height)return;
+  const token=typeof taFinishToken!=='undefined'?taFinishToken:null;
+  const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ring=document.createElement('span');ring.className='ta-item-recharge-ring';
+  ring.style.left=(rect.left+rect.width/2)+'px';
+  ring.style.top=(rect.top+rect.height/2)+'px';
+  document.body.appendChild(ring);
+  const entry={element:ring,animation:null};rechargeAnimations.add(entry);
+  const duration=reduce?120:760;
+  const animation=ring.animate(reduce?[
+   {transform:'translate(-50%,-50%) scale(1.5)',opacity:.7},
+   {transform:'translate(-50%,-50%) scale(.25)',opacity:0}
+  ]:[
+   {transform:'translate(-50%,-50%) scale(5.8)',opacity:0,offset:0},
+   {transform:'translate(-50%,-50%) scale(5.1)',opacity:.92,offset:.12},
+   {transform:'translate(-50%,-50%) scale(1.5)',opacity:1,offset:.79},
+   {transform:'translate(-50%,-50%) scale(.28)',opacity:.95,offset:1}
+  ],{duration,easing:'cubic-bezier(.25,.05,.2,1)',fill:'forwards'});
+  entry.animation=animation;
+  animation.onfinish=()=>{
+   ring.remove();rechargeAnimations.delete(entry);
+   if(!active()||(token!==null&&token!==taFinishToken))return;
+   const before=usesLeft;usesLeft=Math.min(MAX_USES,usesLeft+1);sync();
+   counter.classList.remove('ta-item-bonus-flash');void counter.offsetWidth;
+   counter.classList.add('ta-item-bonus-flash');
+   counter.addEventListener('animationend',()=>counter.classList.remove('ta-item-bonus-flash'),{once:true});
+   const pip=usesLeft>before?pipNodes[usesLeft-1]:target;
+   pip.classList.remove('ta-item-pip-recharged');void pip.offsetWidth;
+   pip.classList.add('ta-item-pip-recharged');
+   pip.addEventListener('animationend',()=>pip.classList.remove('ta-item-pip-recharged'),{once:true});
+  };
+ });
+ document.addEventListener('ta-item-state-change',()=>{if(!active()){selected=null;cancelStartup();}sync();});
+ document.addEventListener('visibilitychange',()=>{if(!active())selected=null;sync();});
+ sync();
+ function spark(x,y,type,n=12){for(let i=0;i<n;i++){const a=type==='fire'?(Math.PI*1.5+(Math.random()-.5)*1.28):Math.random()*Math.PI*2,v=25+Math.random()*85;particles.push({x,y,vx:Math.cos(a)*v*(type==='fire'?.62:1),vy:type==='fire'?-(60+Math.random()*115):Math.sin(a)*v,life:.4+Math.random()*.65,max:1,r:1+Math.random()*3,type,...(type==='fire'?{heat:Math.random(),sway:Math.random()*6.283,trail:Math.random()>.28}:{} )});}if(particles.length>380)particles.splice(0,particles.length-380)}
+ function wordFx(w,type){const r=w.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;const fx=document.createElement('span');fx.className='ta-element-word-fx';fx.textContent=w.textContent;fx.style.left=x+'px';fx.style.top=y+'px';fx.style.color=type==='fire'?'#ffba69':'#d9faff';fx.style.textShadow=type==='fire'?'0 0 10px #ff4b16,0 0 20px #f86a20':'0 0 10px #8ce6ff,0 0 20px #65b9ff';document.body.append(fx);
+ const k=type==='fire'?[{opacity:1,transform:'translate(-50%,-50%) scale(1)',filter:'brightness(1)'},{opacity:.95,transform:'translate(-50%,-75%) scale(1.14)',filter:'brightness(2)',offset:.4},{opacity:0,transform:'translate(-50%,-145%) scale(.25) rotate(-9deg)',filter:'blur(8px)'}]:[{opacity:1,transform:'translate(-50%,-50%) scale(1)',filter:'brightness(1)'},{opacity:1,transform:'translate(-50%,-50%) scale(1.25)',filter:'brightness(2.5)',offset:.22},{opacity:0,transform:'translate(-50%,-50%) scale(1.7) rotate(8deg)',filter:'blur(9px)'}];
+ const anim=fx.animate(k,{duration:type==='fire'?650:470,easing:'ease-out',fill:'forwards'});anim.onfinish=()=>fx.remove();
+ const hr=hero.getBoundingClientRect();spark(x-hr.left,y-hr.top,type,type==='fire'?18:24);
+ }
+ function collect(w,type){if(!valid(w)||w.dataset.taElementClaim)return;w.dataset.taElementClaim='1';wordFx(w,type);
+ // Elemental contact activates the original special effect before destruction.
+ // Keep the element available while its effect handler reads its position.
+ const isSpecial=w.matches(specials);
+ if(isSpecial){
+  const rr=w.getBoundingClientRect(),cx=rr.left+rr.width/2,cy=rr.top+rr.height/2;
+  if(w.classList.contains('special')){startFlood(w);sfx.special();sfx.timeStop();}
+  else if(w.classList.contains('petal'))sakuraBloom(w);
+  else if(w.classList.contains('pull'))pullAll(cx,cy,w);
+  else if(w.classList.contains('glow'))startGlow();
+  else if(w.classList.contains('reso'))resonate(cx,cy,w);
+  else if(w.classList.contains('multi')){const fr=field.getBoundingClientRect();multiply(cx-fr.left,cy-fr.top,{boon:w.classList.contains('boon')});}
+  else if(w.classList.contains('vortex'))pullAll(cx,cy,w);
+  else if(w.classList.contains('crack')){for(let i=0;i<CRACK_TAPS&&w.isConnected;i++)crackTap(w);}
+  else if(w.classList.contains('odd'))track('odd','逆さまの言葉');
+  // Do not trigger the normal word click as that would duplicate the special effect.
+  if(w.isConnected){w.classList.add('got');w.remove();}
+  if(typeof bumpCombo==='function')bumpCombo();
+  if(type==='fire'&&typeof taAward==='function')taAward(false,2);
+  if(type==='fire')return;
+ }
+ if(type==='ice'){
+  const wr=w.getBoundingClientRect(),sx=wr.left+wr.width/2,sy=wr.top+wr.height/2;
+  w.classList.add('got');w.remove();if(!isSpecial&&typeof bumpCombo==='function')bumpCombo();
+  // Each frozen word releases one orb toward the countdown display.
+  const target=document.getElementById('taTimeBox')||document.getElementById('taTime');
+  const tr=target?.getBoundingClientRect();
+  const tx=tr?tr.left+tr.width/2:sx,ty=tr?tr.top+tr.height/2:sy-60;
+  // Match the ordinary time-orb flight: 14px orb, 900-1150ms,
+  // outward spread, quadratic Bezier arc, and ease-in-out timing.
+  const orb=document.createElement('span');orb.className='ta-ice-time-orb';
+  document.body.append(orb);
+  const ang=Math.random()*Math.PI*2,spread=26+Math.random()*18;
+  const ox=sx+Math.cos(ang)*spread,oy=sy+Math.sin(ang)*spread;
+  const dur=900+Math.random()*250,t0=performance.now();
+  const step=now=>{
+   const q=Math.min(1,(now-t0)/dur),e=q<.5?2*q*q:1-Math.pow(-2*q+2,2)/2;
+   const r=document.getElementById('taTime')?.getBoundingClientRect();
+   const tx=r?r.left+r.width/2:sx,ty=r?r.top+r.height/2:sy-60;
+   const mx=(ox+tx)/2+Math.cos(ang)*40,my=(oy+ty)/2-50;
+   const u=Math.max(0,Math.min(1,(e-.08)/.92));
+   const px=q<.2?sx+(ox-sx)*(q/.2):(1-u)*(1-u)*ox+2*(1-u)*u*mx+u*u*tx;
+   const py=q<.2?sy+(oy-sy)*(q/.2):(1-u)*(1-u)*oy+2*(1-u)*u*my+u*u*ty;
+   orb.style.left=px+'px';orb.style.top=py+'px';
+   orb.style.transform=`scale(${q<.2?.4+q*6:Math.max(.45,1.6-q)})`;
+   orb.style.opacity=q>.9?(1-q)*10:1;
+   if(q<1){requestAnimationFrame(step);return;}
+   orb.remove();if(!taRunning)return;
+   taSeconds+=1;taRender();
+   const target=document.getElementById('taTimeBox');
+   if(target){target.classList.remove('ta-frame-flash');void target.offsetWidth;target.classList.add('ta-frame-flash');}
+   const label=document.createElement('span');label.textContent='+1秒';label.className='ta-element-word-fx';
+   label.style.cssText='left:'+tx+'px;top:'+(ty-24)+'px;color:#c4f1ff;text-shadow:0 0 12px #67c8ff';document.body.append(label);
+   label.animate([{opacity:1,transform:'translate(-50%,-50%)'},{opacity:0,transform:'translate(-50%,-95%)'}],{duration:850}).onfinish=()=>label.remove();
+   if(typeof sfx!=='undefined'&&sfx.arrive)sfx.arrive();
+  };
+  requestAnimationFrame(step);
+ }
+ else{w.click();if(w.isConnected&&!w.classList.contains('got')){delete w.dataset.taElementClaim;}else if(typeof taAward==='function'){taAward(false,1);}}
+ }
+ function near(x,y,a,b,r){const dx=b.x-a.x,dy=b.y-a.y,d=dx*dx+dy*dy,t=d?Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/d)):0;return Math.hypot(x-a.x-t*dx,y-a.y-t*dy)<=r}
+ // Emerald word-summoning: atmospheric runic fragments converge, then real collectible words materialize.
+ function summon(g){
+  const pts=g.points;if(!pts.length)return;
+  let length=0;for(let i=1;i<pts.length;i++)length+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
+  const tap=length<22,n=tap?6:9;
+  const fw=field.clientWidth||1,fh=field.clientHeight||1;
+  const centers=[];
+  for(let i=0;i<n;i++){
+   let x,y;
+   if(tap){const a=i*Math.PI*2/n-.55,r=56+(i%2)*28;x=pts[0].x+Math.cos(a)*r;y=pts[0].y+Math.sin(a)*r*.75;}
+   else{const t=(i+.45)/n,at=t*(pts.length-1),k=Math.min(pts.length-2,Math.floor(at)),q=at-k,a=pts[k],b=pts[k+1];const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,side=(i%2?1:-1)*(13+(i%3)*10);x=a.x+(b.x-a.x)*q-dy/L*side;y=a.y+(b.y-a.y)*q+dx/L*side;}
+   x=Math.max(28,Math.min(fw-95,x));y=Math.max(30,Math.min(fh-40,y));centers.push({x,y});
+  }
+  // Burst geometry and fragments are generated once, rather than jittering randomly each frame.
+  centers.forEach((c,i)=>{
+   const fragments=Array.from({length:18},(_,j)=>({angle:Math.random()*Math.PI*2,radius:27+Math.random()*68,phase:Math.random()*6.28,size:.6+Math.random()*1.7,kind:j%5===0?'glyph':'spark'}));
+   summonBursts.push({x:c.x,y:c.y,start:performance.now()+i*57,fragments});
+   summonTimers.push(setTimeout(()=>{
+    if(!active()||typeof spawnWord!=='function')return;
+    const w=spawnWord({force:true,plain:true,summonX:c.x/fw*100,summonY:c.y/fh*100});
+    if(!w)return;
+    // A single animation owns opacity, transform and glow for the whole lifetime.
+    // Avoid a separate WAAPI animation reverting to drift's initial (invisible) frame.
+    w.classList.add('ta-summoned-word');
+   },210+i*57));
+  });
+  // A small expanding pressure-wave makes the spell feel powerful without an RPG magic circle.
+  const anchor=pts[Math.floor(pts.length/2)];summonBursts.push({x:anchor.x,y:anchor.y,start:performance.now(),wave:true,fragments:[]});
+ }
+ function renderSummons(now){
+  ctx.save();ctx.globalCompositeOperation='screen';
+  for(const b of summonBursts){const age=(now-b.start)/1000;if(age<0||age>.95)continue;
+   const t=Math.max(0,Math.min(1,age/.75)),fade=Math.min(1,age*9,Math.max(0,(.95-age)*4));
+   if(b.wave){const r=16+135*t;ctx.globalAlpha=.3*fade;ctx.strokeStyle='#85f2b4';ctx.lineWidth=2.5*(1-t);ctx.beginPath();ctx.arc(b.x,b.y,r,0,Math.PI*2);ctx.stroke();continue;}
+   const glow=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,38*(1-t*.3));glow.addColorStop(0,'rgba(240,255,193,.62)');glow.addColorStop(.28,'rgba(94,255,171,.32)');glow.addColorStop(1,'rgba(9,110,80,0)');ctx.globalAlpha=fade*.85;ctx.fillStyle=glow;ctx.beginPath();ctx.arc(b.x,b.y,42,0,Math.PI*2);ctx.fill();
+   for(const f of b.fragments){const q=Math.min(1,Math.max(0,age/.48));const spiral=f.angle+(1-q)*2.4+f.phase*.12;const r=f.radius*(1-q)*(1-q);const x=b.x+Math.cos(spiral)*r,y=b.y+Math.sin(spiral)*r*.75;ctx.globalAlpha=fade*(.35+.65*q);ctx.fillStyle=f.kind==='glyph'?'#e7d4a0':'#8afac9';ctx.shadowColor=f.kind==='glyph'?'#f4cf84':'#6afac0';ctx.shadowBlur=7;ctx.save();ctx.translate(x,y);ctx.rotate(spiral);if(f.kind==='glyph'){ctx.font='12px serif';ctx.fillText('✧',0,0);}else{ctx.fillRect(-f.size/2,-f.size/2,f.size*1.4,f.size*2.3);}ctx.restore();}
+  }
+  ctx.restore();summonBursts=summonBursts.filter(b=>now-b.start<1000);
+ }
+ // Fire x ice resonance: require a clean near-perpendicular cross around BOTH stroke centers.
+ function crossCandidate(a,b){
+  if(a.isTap||b.isTap||a.type===b.type)return null;
+  const center=(f)=>{const path=f.path;if(path.length<2)return null;let total=0;const lengths=[];for(let i=1;i<path.length;i++){const n=Math.hypot(path[i].x-path[i-1].x,path[i].y-path[i-1].y);lengths.push(n);total+=n;}return total>=105?{path,lengths,total}:null};
+  const A=center(a),B=center(b);if(!A||!B)return null;
+  let best=null;
+  let da=0;for(let i=1;i<A.path.length;i++){const p=A.path[i-1],q=A.path[i],u={x:q.x-p.x,y:q.y-p.y},lu=A.lengths[i-1];if(lu<.001){da+=lu;continue;}
+   let db=0;for(let j=1;j<B.path.length;j++){const r=B.path[j-1],t=B.path[j],v={x:t.x-r.x,y:t.y-r.y},lv=B.lengths[j-1];if(lv<.001){db+=lv;continue;}
+    const cross=u.x*v.y-u.y*v.x;if(Math.abs(cross)<.00001){db+=lv;continue;}
+    const dx=r.x-p.x,dy=r.y-p.y,ta=(dx*v.y-dy*v.x)/cross,tb=(dx*u.y-dy*u.x)/cross;
+    if(ta>=0&&ta<=1&&tb>=0&&tb<=1){
+     const fractionA=(da+ta*lu)/A.total,fractionB=(db+tb*lv)/B.total;
+     const cos=Math.abs((u.x*v.x+u.y*v.y)/(lu*lv));
+     // 72-108 degrees; both intersections in the central 42% of their strokes.
+     if(cos<=.3091&&Math.abs(fractionA-.5)<=.21&&Math.abs(fractionB-.5)<=.21){
+      const quality=Math.abs(fractionA-.5)+Math.abs(fractionB-.5)+cos*.3;
+      if(!best||quality<best.quality)best={x:p.x+u.x*ta,y:p.y+u.y*ta,quality};
+     }
+    }db+=lv;
+   }da+=lu;
+  }return best;
+ }
+ function triggerCross(a,b){
+  const hit=crossCandidate(a,b);if(!hit||a.resonated||b.resonated)return;
+  a.resonated=true;b.resonated=true;
+  const now=performance.now();crossBursts.push({x:hit.x,y:hit.y,start:now,shards:Array.from({length:116},(_,i)=>({angle:i*Math.PI*2/116+(Math.random()-.5)*.28,speed:160+Math.random()*360,size:1.3+Math.random()*5,kind:i%3}))});
+  spark(hit.x,hit.y,'fire',60);spark(hit.x,hit.y,'ice',60);
+  const hr=hero.getBoundingClientRect();let count=0;
+  for(const w of Array.from(field.querySelectorAll('.word'))){if(!valid(w))continue;const r=w.getBoundingClientRect(),x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;
+   if(Math.hypot(x-hit.x,y-hit.y)>165)continue;
+   collect(w,'fire');count++;
+  }
+  if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
+   taSeconds+=count;taRender();
+   const box=document.getElementById('taTimeBox');if(box){box.classList.remove('ta-frame-flash');void box.offsetWidth;box.classList.add('ta-frame-flash');}
+  }
+  if(typeof sfx!=='undefined'&&sfx.on){try{sfx.special?.();}catch(_){}}
+ }
+ function renderCrossBursts(now){
+  crossBursts=crossBursts.filter(b=>now-b.start<1700);
+  for(const b of crossBursts){
+   const t=(now-b.start)/1000,fade=Math.max(0,1-t/1.7),burst=Math.min(1,t/.39),r=12+285*burst;
+   ctx.save();ctx.globalCompositeOperation='screen';
+   // Bright, tight ignition at the exact intersection; fast initial flash.
+   const flash=Math.max(0,1-t/.30),hot=Math.max(0,1-t/.72);
+   if(hot>0){
+    const halo=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,155+115*burst);
+    halo.addColorStop(0,`rgba(255,255,255,${.98*hot})`);
+    halo.addColorStop(.12,`rgba(255,253,222,${.86*hot})`);
+    halo.addColorStop(.34,`rgba(190,235,255,${.50*hot})`);
+    halo.addColorStop(.72,`rgba(105,190,250,${.19*hot})`);
+    halo.addColorStop(1,'rgba(100,175,250,0)');
+    ctx.fillStyle=halo;ctx.beginPath();ctx.arc(b.x,b.y,155+115*burst,0,Math.PI*2);ctx.fill();
+    ctx.shadowColor='#ffffff';ctx.shadowBlur=48*hot;
+    ctx.fillStyle=`rgba(255,255,255,${.98*flash})`;
+    ctx.beginPath();ctx.arc(b.x,b.y,12+43*burst,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+   }
+   // Cross-shaped lens flare: luminous core with rapidly stretching beams.
+   if(t<.44){
+    const strength=Math.pow(1-t/.44,1.4);
+    ctx.save();ctx.translate(b.x,b.y);ctx.globalAlpha=strength;
+    for(const axis of [0,Math.PI/2]){
+     ctx.save();ctx.rotate(axis);
+     const beam=ctx.createLinearGradient(-250,0,250,0);
+     beam.addColorStop(0,'rgba(140,212,255,0)');beam.addColorStop(.38,'rgba(188,231,255,.30)');
+     beam.addColorStop(.5,'rgba(255,255,255,.95)');beam.addColorStop(.62,'rgba(255,217,160,.30)');beam.addColorStop(1,'rgba(255,170,100,0)');
+     ctx.fillStyle=beam;ctx.shadowColor='#fff';ctx.shadowBlur=24;
+     ctx.beginPath();ctx.ellipse(0,0,115+160*burst,4+8*(1-burst),0,0,Math.PI*2);ctx.fill();ctx.restore();
+    }
+    ctx.restore();
+   }
+   // Two distinct, fast expanding pressure fronts with luminous rims.
+   for(let ring=0;ring<3;ring++){
+    const phase=Math.max(0,Math.min(1,(t-ring*.085)/.48));
+    if(t<ring*.085||phase>=1)continue;
+    const rr=16+310*phase,alpha=(1-phase)*(.98-ring*.14);
+    ctx.strokeStyle=`rgba(246,253,255,${alpha})`;ctx.lineWidth=(12-ring*3)*(1-phase)+1.5;
+    ctx.shadowColor=ring===0?'#ffffff':'#7cd8ff';ctx.shadowBlur=36*(1-phase);
+    ctx.beginPath();ctx.arc(b.x,b.y,rr,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle=`rgba(118,211,255,${alpha*.62})`;ctx.lineWidth=20*(1-phase)+2;
+    ctx.beginPath();ctx.arc(b.x,b.y,rr+8,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;
+   }
+   const steam=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,r);
+   steam.addColorStop(0,`rgba(255,255,251,${.45*fade})`);
+   steam.addColorStop(.22,`rgba(234,249,255,${.38*fade})`);
+   steam.addColorStop(.6,`rgba(178,218,233,${.20*fade})`);
+   steam.addColorStop(1,'rgba(140,195,220,0)');
+   ctx.fillStyle=steam;ctx.beginPath();ctx.arc(b.x,b.y,r,0,Math.PI*2);ctx.fill();
+   // Radial energy rays, strongest in the first fraction of a second.
+   if(t<.48){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(t*.6);const rayAlpha=Math.pow(1-t/.48,1.5);
+    for(let i=0;i<24;i++){const ang=i*Math.PI/12,inner=14+15*burst,outer=68+(i%3)*28+155*burst;
+     ctx.beginPath();ctx.moveTo(Math.cos(ang)*inner,Math.sin(ang)*inner);
+     ctx.lineTo(Math.cos(ang+.025)*outer,Math.sin(ang+.025)*outer);
+     ctx.strokeStyle=`rgba(255,250,228,${rayAlpha*.8})`;ctx.lineWidth=i%4===0?3.5:1.7;ctx.stroke();}
+    ctx.restore();}
+   for(const p of b.shards){const travel=p.speed*(t-.11*t*t),x=b.x+Math.cos(p.angle)*travel,y=b.y+Math.sin(p.angle)*travel*.83-18*t*t;
+    ctx.globalAlpha=fade*(p.kind===0?.85:.73);ctx.fillStyle=p.kind===0?'#ffb36d':p.kind===1?'#c5f3ff':'#ffffff';
+    ctx.shadowColor=p.kind===0?'#ff7c31':'#9ce8ff';ctx.shadowBlur=11;
+    ctx.beginPath();ctx.ellipse(x,y,p.size*.65,p.size*2,p.angle,0,Math.PI*2);ctx.fill();}
+   ctx.restore();
+  }
+ }
+ function makeTrace(g){if(g.type==='summon'){summon(g);return;}const pts=g.points;let len=0;for(let i=1;i<pts.length;i++)len+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
+ // A stationary tap places a round 68px-radius elemental field (not a short stroke).
+ const isTap=len<22;
+ const segs=[];if(isTap){const c=pts[0];segs.push([c,{x:c.x+.01,y:c.y},94]);}
+ else for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(Math.hypot(b.x-a.x,b.y-a.y)>1)segs.push([a,b,23]);}
+ if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:4,total:4,age:0,resonated:false};traces.push(trace);if(traces.length>2)traces.shift();for(const other of traces){if(other!==trace&&other.type!==trace.type)triggerCross(trace,other);}for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
+ checkWords();}
+ // Capture the armed gesture before the normal word/tap collectors can consume it.
+ field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<=0||gesture||consumedPointer!==null)return;playElementSound(selected);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
+ field.addEventListener('pointermove',e=>{if(!gesture||e.pointerId!==gesture.id)return;const pt=loc(e),prev=gesture.points.at(-1);const d=Math.hypot(pt.x-prev.x,pt.y-prev.y),n=Math.max(1,Math.ceil(d/10));for(let i=1;i<=n;i++)gesture.points.push({x:prev.x+(pt.x-prev.x)*i/n,y:prev.y+(pt.y-prev.y)*i/n});gesture.distance+=d;if(performance.now()-gesture.started>=GESTURE_MAX_MS||gesture.distance>=GESTURE_MAX_PX){const g=gesture;gesture=null;makeTrace(g);try{field.releasePointerCapture(e.pointerId)}catch(_){}}e.stopImmediatePropagation();e.preventDefault();},true);
+ function finish(e){if(e.pointerId!==consumedPointer)return;consumedPointer=null;if(gesture&&e.pointerId===gesture.id){const g=gesture;gesture=null;if(active()){g.points.push(loc(e));makeTrace(g)}}e.stopImmediatePropagation();e.preventDefault();}
+ field.addEventListener('pointerup',finish,true);field.addEventListener('pointercancel',e=>{if(e.pointerId===consumedPointer)consumedPointer=null;if(gesture&&e.pointerId===gesture.id)gesture=null},true);
+ field.addEventListener('pointermove',e=>{if(e.pointerId===consumedPointer){e.stopImmediatePropagation();e.preventDefault()}},false);
+ function checkWords(){if(!traces.length)return;const hr=hero.getBoundingClientRect();for(const w of field.querySelectorAll('.word')){if(!valid(w))continue;const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;const x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;for(const f of traces){if(f.segs.some(([a,b,radius])=>near(x,y,a,b,radius+Math.min(20,r.width*.24)))){collect(w,f.type);break}}}}
+ function draw(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(!active()){if(wasActive)clear();wasActive=false;requestAnimationFrame(draw);return}wasActive=true;
+ const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);renderSummons(now);
+ if(gesture&&performance.now()-gesture.started>=GESTURE_MAX_MS){const g=gesture;gesture=null;makeTrace(g)}
+ const paused=typeof flood!=='undefined'&&flood;
+ const fract=v=>v-Math.floor(v);
+ const hash=v=>fract(Math.sin(v*127.1+17.23)*43758.5453);
+ function fxPoint(seg,t){return{x:seg[0].x+(seg[1].x-seg[0].x)*t,y:seg[0].y+(seg[1].y-seg[0].y)*t}}
+ function renderFire(f,alpha){
+  ctx.save();ctx.globalCompositeOperation='screen';
+  for(let si=0;si<f.segs.length;si++){
+   const seg=f.segs[si],a=seg[0],b=seg[1],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
+   const steps=Math.max(2,Math.ceil(L/9));
+   for(let j=0;j<=steps;j++){
+    const t=j/steps,pt=fxPoint(seg,t),seed=si*211+j*19;
+    const flick=Math.sin(now*.013+seed)*.5+.5;
+    const radius=seg[2]*(.7+hash(seed)*.55),rise=(14+hash(seed+3)*31)*(0.65+flick*.7);
+    // Smoky, low-opacity turbulent outer volume rather than a solid glowing stripe.
+    const smokeX=pt.x+nx*(hash(seed+4)-.5)*radius*.7,smokeY=pt.y-rise*.65;
+    const smoke=ctx.createRadialGradient(smokeX,smokeY,0,smokeX,smokeY,radius*1.6);
+    smoke.addColorStop(0,'rgba(100,73,65,.18)');smoke.addColorStop(.5,'rgba(60,54,58,.10)');smoke.addColorStop(1,'rgba(30,29,34,0)');
+    ctx.globalAlpha=alpha*.65;ctx.fillStyle=smoke;ctx.beginPath();ctx.arc(smokeX,smokeY,radius*1.6,0,Math.PI*2);ctx.fill();
+    for(let k=0;k<3;k++){
+     const wobble=Math.sin(now*.009+seed*1.7+k*2.8)*radius*.35;
+     const baseX=pt.x+nx*(k-1)*radius*.35,baseY=pt.y+ny*(k-1)*radius*.35;
+     const tipX=baseX+wobble+nx*(hash(seed+k+10)-.5)*radius;
+     const tipY=baseY-rise*(.45+k*.23);
+     const flame=ctx.createLinearGradient(baseX,baseY,tipX,tipY);
+     flame.addColorStop(0,k===1?'rgba(255,219,127,.78)':'rgba(255,111,23,.53)');
+     flame.addColorStop(.35,k===1?'rgba(255,155,43,.72)':'rgba(216,56,18,.44)');
+     flame.addColorStop(.72,'rgba(135,32,20,.19)');flame.addColorStop(1,'rgba(65,29,28,0)');
+     ctx.globalAlpha=alpha*(.65+flick*.3);ctx.fillStyle=flame;
+     ctx.beginPath();ctx.moveTo(baseX-radius*.42,baseY+radius*.25);
+     ctx.bezierCurveTo(baseX-radius*.9,baseY-rise*.38,tipX-radius*.35,tipY+rise*.15,tipX,tipY);
+     ctx.bezierCurveTo(tipX+radius*.25,tipY+rise*.2,baseX+radius*.8,baseY-rise*.22,baseX+radius*.45,baseY+radius*.2);
+     ctx.closePath();ctx.fill();
+    }
+    const hot=ctx.createRadialGradient(pt.x,pt.y,0,pt.x,pt.y,radius*.8);
+    hot.addColorStop(0,'rgba(255,239,176,.68)');hot.addColorStop(.28,'rgba(255,139,40,.35)');hot.addColorStop(1,'rgba(244,51,12,0)');
+    ctx.globalAlpha=alpha*.78;ctx.fillStyle=hot;ctx.beginPath();ctx.arc(pt.x,pt.y,radius*.8,0,Math.PI*2);ctx.fill();
+   }
+  }
+  ctx.restore();
+ }
+ function renderIce(f,alpha){
+  ctx.save();ctx.globalCompositeOperation='screen';
+  for(let si=0;si<f.segs.length;si++){
+   const seg=f.segs[si],a=seg[0],b=seg[1],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
+   const steps=Math.max(2,Math.ceil(L/13));
+   for(let j=0;j<=steps;j++){
+    const t=j/steps,pt=fxPoint(seg,t),seed=si*307+j*41,sz=9+hash(seed+2)*23;
+    const drift=Math.sin(now*.0018+seed)*1.8;
+    const frost=ctx.createRadialGradient(pt.x,pt.y,0,pt.x,pt.y,sz*1.8);
+    frost.addColorStop(0,'rgba(205,242,255,.24)');frost.addColorStop(.48,'rgba(83,164,201,.12)');frost.addColorStop(1,'rgba(65,140,190,0)');
+    ctx.globalAlpha=alpha;ctx.fillStyle=frost;ctx.beginPath();ctx.arc(pt.x,pt.y,sz*1.8,0,Math.PI*2);ctx.fill();
+    for(let side=-1;side<=1;side+=2){
+     const height=sz*(.65+hash(seed+side+10)*.85),lean=(hash(seed+side+30)-.5)*sz*.9;
+     const bx=pt.x+nx*side*sz*.18,by=pt.y+ny*side*sz*.18;
+     const tx=bx+nx*side*height+lean+drift,ty=by+ny*side*height-height*.26;
+     const shard=ctx.createLinearGradient(bx,by,tx,ty);
+     shard.addColorStop(0,'rgba(188,239,255,.45)');shard.addColorStop(.45,'rgba(86,179,223,.32)');shard.addColorStop(1,'rgba(236,253,255,.75)');
+     ctx.globalAlpha=alpha*.8;ctx.fillStyle=shard;ctx.strokeStyle='rgba(221,249,255,.55)';ctx.lineWidth=.6;
+     ctx.beginPath();ctx.moveTo(bx-sz*.35,by+sz*.12);ctx.lineTo(tx,ty);ctx.lineTo(bx+sz*.32,by-sz*.1);ctx.lineTo(bx+nx*side*sz*.24,by+ny*side*sz*.24);ctx.closePath();ctx.fill();ctx.stroke();
+     ctx.strokeStyle='rgba(245,255,255,.43)';ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(bx+nx*side*sz*.24,by+ny*side*sz*.24);ctx.stroke();
+    }
+    // Fine fractures, not an uninterrupted neon line.
+    ctx.globalAlpha=alpha*.55;ctx.strokeStyle='rgba(213,246,255,.55)';ctx.lineWidth=.65;
+    ctx.beginPath();ctx.moveTo(pt.x-sz*.4,pt.y+sz*.25);ctx.lineTo(pt.x+sz*.12,pt.y-sz*.25);ctx.lineTo(pt.x+sz*.48,pt.y-sz*.42);ctx.stroke();
+   }
+  }
+  ctx.restore();
+ }
+ for(const f of traces){
+  if(!paused)f.left-=dt;f.age+=dt;
+  const alpha=Math.min(1,f.age*7,Math.max(0,f.left*1.5));if(f.left<=0)continue;
+  const visible={...f,segs:f.renderSegs||f.segs};if(f.type==='fire')renderFire(visible,alpha);else renderIce(visible,alpha);
+  if(Math.random()<.85){const v=f.renderSegs||f.segs,seg=v[Math.floor(Math.random()*v.length)],t=Math.random(),p=fxPoint(seg,t);spark(p.x,p.y,f.type,1)}
+ }
+ traces=traces.filter(f=>f.left>0);checkWords();renderCrossBursts(now);
+ for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy+=(p.type==='fire'?-24:18)*dt;if(p.type==='fire'){p.sway+=dt*12;p.vx+=Math.sin(p.sway)*dt*22;}const a=Math.min(1,p.life*2);ctx.save();ctx.globalAlpha=a;if(p.type==='fire'){const heat=p.heat??.5;const tint=heat>.76?'#fff0bd':heat>.4?'#ffba58':'#e95425';ctx.fillStyle=tint;ctx.shadowColor=heat>.4?'#ff9d36':'#b83819';ctx.shadowBlur=heat>.7?10:5;if(p.trail){ctx.strokeStyle=tint;ctx.globalAlpha=a*.42;ctx.lineWidth=Math.max(.5,p.r*.55);ctx.beginPath();ctx.moveTo(p.x-p.vx*.035,p.y-p.vy*.035);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.globalAlpha=a;}ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(.55,p.r*.58),Math.max(.8,p.r*(1.15+heat*.5)),Math.atan2(p.vy,p.vx)+Math.PI/2,0,Math.PI*2);ctx.fill();}else{ctx.fillStyle=Math.random()>.5?'#e3fbff':'#80d8ff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=9;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}if(p.type==='ice'){ctx.strokeStyle='#e6faff';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p.x-p.r*2,p.y);ctx.lineTo(p.x+p.r*2,p.y);ctx.moveTo(p.x,p.y-p.r*2);ctx.lineTo(p.x,p.y+p.r*2);ctx.stroke()}ctx.restore()}
+ requestAnimationFrame(draw)}requestAnimationFrame(draw);
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)clear()});
+})();
+</script>
+<style>
+/* Golden ring contracts into the first vacant item pip. */
+.ta-item-recharge-ring{position:fixed;pointer-events:none;z-index:9998;width:38px;height:38px;border:2.5px solid #ffe4a0;border-radius:50%;box-shadow:0 0 7px 2px rgba(255,247,197,.8),inset 0 0 9px rgba(255,207,95,.65),0 0 17px rgba(255,174,58,.4);background:radial-gradient(circle,rgba(255,237,170,.10),transparent 70%);will-change:transform,opacity;}
+/* Item reserve replenishes in synchrony with the combo score-box flash. */
+@keyframes taItemBonusFlash{0%,100%{filter:brightness(1);text-shadow:none}18%{filter:brightness(2.1);text-shadow:0 0 9px #fff9,0 0 20px #f9c55d}55%{filter:brightness(1.55);text-shadow:0 0 14px #f3c16d}85%{filter:brightness(1.15)}}
+@keyframes taItemPipRecharge{0%{transform:scale(.7);box-shadow:0 0 0 transparent}28%{transform:scale(1.6);box-shadow:0 0 11px 5px #ffdc8b}100%{transform:scale(1);box-shadow:0 0 3px #d5ad6280}}
+#viewMain>.ta-items .ta-item-counter.ta-item-bonus-flash{animation:taItemBonusFlash .92s ease-out both!important}
+#viewMain>.ta-items .ta-item-pip.ta-item-pip-recharged{animation:taItemPipRecharge .92s ease-out both!important}
+</style>
+<style>
+/* DEMO: the five indicators remain unlit; orb controls are muted. */
+#viewMain>.ta-items.ta-items-inactive .ta-item-pip{background:#343b47!important;box-shadow:none!important;opacity:.6!important;animation:none!important}
+#viewMain>.ta-items.ta-items-inactive .ta-item-counter{color:#969ba5!important}
+/* The orb controls appear gently as the new game becomes active. */
+@keyframes taItemOrbStartReveal{0%{opacity:.05;filter:brightness(.35)}100%{opacity:1;filter:brightness(1)}}
+#viewMain>.ta-items.ta-items-revealing .ta-orb:not(:disabled){animation:taItemOrbStartReveal .95s ease-out both!important}
+@media(prefers-reduced-motion:reduce){#viewMain>.ta-items.ta-items-revealing .ta-orb:not(:disabled){animation:none!important}}
+</style>
+</body>
 </html>
 
 <style>/* 連鎖レベルは未採用。倍率計算は維持し、レベル表記のみ非表示 */
 #combo #cbx{display:none!important}
+
+/* Orb selection: smooth breathing glow that hugs the spherical edge. */
+#viewMain>.ta-items .ta-orb{
+ isolation:isolate;
+ transition:filter .35s ease,box-shadow .35s ease,transform .35s ease!important;
+}
+#viewMain>.ta-items .ta-orb::after{
+ content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;
+ box-shadow:inset 0 0 0 2px rgba(255,231,184,.15),0 0 0 1px rgba(255,220,160,.10),0 0 8px 1px rgba(255,166,89,.14);
+ opacity:0;transition:opacity .38s ease;
+}
+#viewMain>.ta-items .ta-orb[aria-pressed="true"]{
+ outline:none!important;outline-offset:0!important;
+ filter:none!important;transform:none!important;
+}
+#viewMain>.ta-items .ta-orb[aria-pressed="true"]::after{
+ opacity:1;animation:taOrbBreathe 1.15s ease-in-out infinite;
+}
+#viewMain>.ta-items .ta-orb.ice::after{
+ box-shadow:inset 0 0 0 2px rgba(205,245,255,.36),0 0 0 1px rgba(151,223,255,.2),0 0 9px 2px rgba(94,197,255,.3);
+}
+#viewMain>.ta-items .ta-orb.fire::after{
+ box-shadow:inset 0 0 0 2px rgba(255,225,166,.45),0 0 0 1px rgba(255,178,105,.22),0 0 9px 2px rgba(255,112,54,.3);
+}
+@keyframes taOrbBreathe{0%,100%{opacity:.24}50%{opacity:1}}
+@keyframes taOrbSelectedPulse{0%,100%{filter:brightness(.84) saturate(.95);box-shadow:inset -6px -8px 14px #0009,inset 3px 4px 8px #fff4,0 0 2px 0 transparent}50%{filter:brightness(1.65) saturate(1.28);box-shadow:inset -6px -8px 14px #0006,inset 3px 4px 9px #fff9,0 0 13px 3px var(--orb-glow)}}
+#viewMain>.ta-items .ta-orb.fire{--orb-glow:rgba(255,115,48,.8)}
+#viewMain>.ta-items .ta-orb.ice{--orb-glow:rgba(94,207,255,.8)}
+#viewMain>.ta-items .ta-orb[aria-pressed="true"]{animation:taOrbSelectedPulse 1.15s ease-in-out infinite!important}
+#viewMain>.ta-items .ta-orb:disabled{animation:none!important}
+
+#viewMain>.ta-items .ta-orb:disabled::after{animation:none!important;opacity:0!important}
+@media(prefers-reduced-motion:reduce){#viewMain>.ta-items .ta-orb[aria-pressed="true"],#viewMain>.ta-items .ta-orb[aria-pressed="true"]::after{animation:none!important}}
+</style>
+
+<style>
+/* Selected item: conspicuous white/gold pulse confined to the spherical button. */
+@keyframes taOrbGoldWhiteFlash{
+  0%,100%{filter:brightness(.75) saturate(.9);box-shadow:inset -5px -7px 12px #0009,inset 0 0 3px #fff2,0 0 1px #fff2}
+  46%{filter:brightness(2.25) saturate(.72);box-shadow:inset 0 0 17px 4px #fff9,inset 0 0 5px 2px #fff,0 0 10px 2px #fff5}
+  65%{filter:brightness(1.75) saturate(1.12);box-shadow:inset 0 0 12px 3px #ffe5a8,inset 0 0 5px #fff,0 0 7px 1px #f5d17b88}
+}
+#viewMain>.ta-items .ta-orb[aria-pressed="true"]{animation:taOrbGoldWhiteFlash .95s ease-in-out infinite!important;outline:none!important}
+#viewMain>.ta-items .ta-orb[aria-pressed="true"]::after{animation:taOrbBreathe .95s ease-in-out infinite!important;box-shadow:inset 0 0 0 2px #fff8,inset 0 0 12px 3px #ffe2a9b0!important}
+#viewMain>.ta-items .ta-orb:disabled{animation:none!important}
 </style>
