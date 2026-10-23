@@ -7201,3 +7201,56 @@ html.ta-result-locked #taLaunch{pointer-events:auto!important}
 #viewMain>.ta-items[data-selected="ice"] .ta-orb.ice::before,
 #viewMain>.ta-items[data-selected="summon"] .ta-orb.summon::before{opacity:1!important}
 </style>
+
+
+<style id="ta-orb-glow-final-consistent">
+/* Unified selected-orb halo. Only the color varies among the three items. */
+#viewMain>.ta-items .ta-orb.fire{--ta-unified-light:255,137,78}
+#viewMain>.ta-items .ta-orb.ice{--ta-unified-light:105,204,255}
+#viewMain>.ta-items .ta-orb.summon{--ta-unified-light:101,244,175}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon){
+  position:relative!important;overflow:visible!important;isolation:isolate;
+  filter:none!important;
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon)::before{
+  content:"";position:absolute;pointer-events:none;z-index:-1;
+  inset:-20px;border-radius:50%;
+  background:radial-gradient(circle,
+    rgba(var(--ta-unified-light),.48) 0%,
+    rgba(var(--ta-unified-light),.32) 31%,
+    rgba(var(--ta-unified-light),.17) 49%,
+    rgba(var(--ta-unified-light),.06) 64%,
+    transparent 78%);
+  opacity:0;transform:scale(.96);transition:opacity .2s ease;
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon)[aria-pressed="true"],
+#viewMain>.ta-items[data-selected="fire"] .ta-orb.fire,
+#viewMain>.ta-items[data-selected="ice"] .ta-orb.ice,
+#viewMain>.ta-items[data-selected="summon"] .ta-orb.summon{
+  animation:none!important;filter:none!important;
+  outline:none!important;
+  box-shadow:inset -3px -5px 10px #07131c88,0 0 8px 2px rgba(var(--ta-unified-light),.34)!important;
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon)[aria-pressed="true"]::before,
+#viewMain>.ta-items[data-selected="fire"] .ta-orb.fire::before,
+#viewMain>.ta-items[data-selected="ice"] .ta-orb.ice::before,
+#viewMain>.ta-items[data-selected="summon"] .ta-orb.summon::before{
+  opacity:1!important;animation:taOrbUnifiedBreathe 1.12s ease-in-out infinite!important;
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon)::after{
+  animation:none!important;opacity:0!important;box-shadow:none!important;
+}
+@keyframes taOrbUnifiedBreathe{
+  0%,100%{opacity:.52;transform:scale(.96)}
+  50%{opacity:1;transform:scale(1.06)}
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled{
+  animation:none!important;filter:grayscale(1)!important;box-shadow:none!important;
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled::before{
+  animation:none!important;opacity:0!important;
+}
+@media(prefers-reduced-motion:reduce){
+ #viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon)::before{animation:none!important}
+}
+</style>
