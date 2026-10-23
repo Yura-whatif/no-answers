@@ -6030,14 +6030,14 @@ const sfx = (()=>{
       if(!player)return;
       const ticket=resultPlaybackTicket;
       const startVolume=player.volume;
-      if(immediate||player.paused){player.pause();player.currentTime=0;return;}
+      if(immediate||player.paused){player.pause();player.currentTime=0;if(typeof taReleaseMediaSession==='function')taReleaseMediaSession();return;}
       const start=performance.now();
       const fade=now=>{
         if(ticket!==resultPlaybackTicket)return;
         const k=Math.min(1,(now-start)/1600);
         player.volume=Math.max(0,startVolume*(1-k));
         if(k<1&&!player.paused)requestAnimationFrame(fade);
-        else{player.pause();player.currentTime=0;}
+        else{player.pause();player.currentTime=0;if(typeof taReleaseMediaSession==='function')taReleaseMediaSession();}
       };
       requestAnimationFrame(fade);
     },
@@ -6557,8 +6557,8 @@ function taBegin(){
   const token=taFinishToken;setTimeout(()=>{if(token!==taFinishToken||!taStarting)return;flash.hidden=true;taStarting=false;taRunning=true;document.dispatchEvent(new Event('ta-item-start-activate'));taUpdatePlay();taLast=performance.now();taRaf=requestAnimationFrame(taTick)},1800);
 }
 document.getElementById('taPlay').addEventListener('click',()=>{if(taRunning||taStarting)taFinish();else taBegin()});
-document.getElementById('taResultClose').addEventListener('click',()=>{document.getElementById('taLaunch').hidden=true;document.documentElement.classList.remove('ta-result-locked');document.getElementById('taTimeOverInputShield')?.remove();sfx.resultStop();taSyncDemo()});
-document.getElementById('taLaunch').addEventListener('click',e=>{if(e.target.id==='taLaunch'){e.currentTarget.hidden=true;document.documentElement.classList.remove('ta-result-locked');document.getElementById('taTimeOverInputShield')?.remove();sfx.resultStop();taSyncDemo()}});
+document.getElementById('taResultClose').addEventListener('click',()=>{document.getElementById('taLaunch').hidden=true;document.documentElement.classList.remove('ta-result-locked');document.getElementById('taTimeOverInputShield')?.remove();sfx.resultStop(true);taReleaseMediaSession();taSyncDemo()});
+document.getElementById('taLaunch').addEventListener('click',e=>{if(e.target.id==='taLaunch'){e.currentTarget.hidden=true;document.documentElement.classList.remove('ta-result-locked');document.getElementById('taTimeOverInputShield')?.remove();sfx.resultStop(true);taReleaseMediaSession();taSyncDemo()}});
 taSyncDemo();
 new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{attributes:true,attributeFilter:['hidden']});
 </script>
@@ -6579,11 +6579,36 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  let selected=null,gesture=null,traces=[],particles=[],summonBursts=[],summonTimers=[],crossBursts=[],last=performance.now(),wasActive=false;
  const taMobileFx=window.matchMedia('(pointer:coarse)').matches;
  const taFxScale=taMobileFx?.72:1;
+ // Warm up the same 2D gradient operations used by elemental effects during START.
+ let fxWarmupDone=false;
+ document.addEventListener('ta-item-reset',()=>{
+  if(fxWarmupDone)return;fxWarmupDone=true;
+  const warm=document.createElement('canvas');warm.width=128;warm.height=128;
+  const wctx=warm.getContext('2d');if(!wctx)return;
+  let n=0;const batch=()=>{
+   for(let i=0;i<4&&n<16;i++,n++){
+    const g=wctx.createRadialGradient(64,64,0,64,64,20+n*3);
+    g.addColorStop(0,n%2?'rgba(115,204,255,.7)':'rgba(255,124,65,.7)');g.addColorStop(1,'rgba(0,0,0,0)');
+    wctx.fillStyle=g;wctx.fillRect(0,0,128,128);
+   }
+   if(n<16)setTimeout(batch,80);
+  };setTimeout(batch,40);
+ });
+
  let lastFxPaint=0;
  let usesLeft=0; const MAX_USES=5; let previousPips=0; let pipFlashTimer=null; let startupTimers=[]; let startupGeneration=0;
  const GESTURE_MAX_MS=340, GESTURE_MAX_PX=390;
  const elementalSounds={fire:new Audio('audio/element-fire-cast.wav'),ice:new Audio('audio/element-ice-cast.wav'),cross:new Audio('audio/element-cross-burst.wav'),summon:new Audio('audio/element-summon-cast.wav')};
- Object.values(elementalSounds).forEach(a=>{a.preload='auto';a.volume=.48;});
+ Object.values(elementalSounds).forEach(a=>{a.preload='none';a.volume=.48;});
+ // Use the 1.8-second START transition to stage the first sound decode rather than
+ // letting four sound files compete for network/decode resources on page startup.
+ let soundsPrepared=false;
+ document.addEventListener('ta-item-reset',()=>{
+  if(soundsPrepared)return;soundsPrepared=true;
+  const queue=Object.values(elementalSounds);let index=0;
+  const stage=()=>{if(index>=queue.length)return;const a=queue[index++];a.preload='auto';a.load();setTimeout(stage,190);};
+  setTimeout(stage,80);
+ });
  function playElementSound(type){
   if(typeof sfx!=='undefined'&&!sfx.on)return;
   const a=elementalSounds[type];if(!a)return;
@@ -6621,7 +6646,21 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   });
   previousPips=usesLeft;ui.classList.toggle('ta-items-empty',displayUses===0);ui.classList.toggle('ta-items-inactive',!active());ui.dataset.selected=active()&&selected?selected:'none';
  };
- ui.addEventListener('click',e=>{const b=e.target.closest('[data-orb]');if(!b||!active()||usesLeft<=0)return;selected=selected===b.dataset.orb?null:b.dataset.orb;sync();});
+ // Select on pointerdown so a fast swipe-to-orb transition does not lose the first tap.
+ // Suppress the synthetic click following that pointerdown to avoid toggling selection off.
+ let lastOrbPointerAt=-Infinity;
+ function selectOrb(b){if(!b||!active()||usesLeft<=0)return;selected=selected===b.dataset.orb?null:b.dataset.orb;sync();}
+ ui.addEventListener('pointerdown',e=>{
+  const b=e.target.closest('[data-orb]');if(!b||e.button!==0)return;
+  if(!active()||usesLeft<=0)return;
+  lastOrbPointerAt=performance.now();selectOrb(b);
+  e.stopPropagation();e.preventDefault();
+ },{passive:false});
+ ui.addEventListener('click',e=>{
+  const b=e.target.closest('[data-orb]');if(!b)return;
+  if(performance.now()-lastOrbPointerAt<750){e.preventDefault();return;}
+  selectOrb(b); // keyboard / assistive technology activation
+ });
  function clear(){selected=null;sync();gesture=null;consumedPointer=null;traces=[];particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.clearRect(0,0,canvas.width,canvas.height)}
  const loc=e=>{const r=hero.getBoundingClientRect(),f=field.getBoundingClientRect();
   // Clip gesture centerline to the collection field, while keeping particles free to escape.
@@ -6641,7 +6680,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    startupTimers.push(setTimeout(()=>{
     if(generation!==startupGeneration||!active())return;
     usesLeft=i;sync();
-    const pip=pipNodes[i-1];pip.classList.remove('ta-item-pip-recharged');void pip.offsetWidth;pip.classList.add('ta-item-pip-recharged');
+    const pip=pipNodes[i-1];pip.classList.remove('ta-item-pip-recharged');requestAnimationFrame(()=>pip.classList.add('ta-item-pip-recharged'));
     pip.addEventListener('animationend',()=>pip.classList.remove('ta-item-pip-recharged'),{once:true});
    },220+(i-1)*155));
   }
