@@ -1576,6 +1576,44 @@ body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width
 #viewMain>.slip #taHud .ta-stats>div{display:flex;flex-direction:column;justify-content:center;min-height:0}
 #viewMain>.hero{min-height:0!important;flex-shrink:0!important}
 </style>
+
+<style id="ta-orb-soft-halo-unified">
+/* One soft, steady aura for all three elemental orbs; no competing glow animations. */
+#viewMain>.ta-items .ta-orb.fire{--ta-soft-rgb:255,125,69}
+#viewMain>.ta-items .ta-orb.ice{--ta-soft-rgb:116,213,255}
+#viewMain>.ta-items .ta-orb.summon{--ta-soft-rgb:105,241,180}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon){
+  position:relative!important;overflow:visible!important;isolation:isolate;
+  box-shadow:inset -3px -5px 10px #07131c88,0 0 9px 2px rgba(var(--ta-soft-rgb),.25)!important;
+  filter:none!important;
+}
+/* The halo belongs behind the sphere and uses identical geometry/opacity for each color. */
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon)::before{
+  content:"";position:absolute;z-index:-1;pointer-events:none;
+  inset:-12px;border-radius:50%;background:radial-gradient(circle,rgba(var(--ta-soft-rgb),.32) 0%,rgba(var(--ta-soft-rgb),.18) 39%,rgba(var(--ta-soft-rgb),0) 74%);
+  opacity:.6;transform:scale(1);transition:opacity .16s ease;
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon)[aria-pressed="true"],
+#viewMain>.ta-items[data-selected="fire"] .ta-orb.fire,
+#viewMain>.ta-items[data-selected="ice"] .ta-orb.ice,
+#viewMain>.ta-items[data-selected="summon"] .ta-orb.summon{
+  animation:taSoftOrbGlow 1.12s ease-in-out infinite!important;
+  outline:none!important;filter:none!important;
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon)[aria-pressed="true"]::before,
+#viewMain>.ta-items[data-selected="fire"] .ta-orb.fire::before,
+#viewMain>.ta-items[data-selected="ice"] .ta-orb.ice::before,
+#viewMain>.ta-items[data-selected="summon"] .ta-orb.summon::before{opacity:1}
+@keyframes taSoftOrbGlow{
+  0%,100%{box-shadow:inset 0 0 6px #ffffff3d,0 0 9px 2px rgba(var(--ta-soft-rgb),.40),0 0 19px 5px rgba(var(--ta-soft-rgb),.19)}
+  50%{box-shadow:inset 0 0 9px #ffffff70,0 0 13px 4px rgba(var(--ta-soft-rgb),.60),0 0 27px 8px rgba(var(--ta-soft-rgb),.28)}
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled{
+  animation:none!important;filter:grayscale(1)!important;box-shadow:none!important;
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled::before{opacity:0!important}
+@media(prefers-reduced-motion:reduce){#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon){animation:none!important}}
+</style>
 </head>
 <body>
 
@@ -6585,7 +6623,11 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  };
  ui.addEventListener('click',e=>{const b=e.target.closest('[data-orb]');if(!b||!active()||usesLeft<=0)return;selected=selected===b.dataset.orb?null:b.dataset.orb;sync();});
  function clear(){selected=null;sync();gesture=null;consumedPointer=null;traces=[];particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.clearRect(0,0,canvas.width,canvas.height)}
- const loc=e=>{const r=hero.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
+ const loc=e=>{const r=hero.getBoundingClientRect(),f=field.getBoundingClientRect();
+  // Clip gesture centerline to the collection field, while keeping particles free to escape.
+  const minX=Math.max(0,f.left-r.left),minY=Math.max(0,f.top-r.top);
+  const maxX=Math.max(minX,f.right-r.left),maxY=Math.max(minY,f.bottom-r.top);
+  return{x:Math.max(minX,Math.min(maxX,e.clientX-r.left)),y:Math.max(minY,Math.min(maxY,e.clientY-r.top))};};
  function cancelStartup(){startupGeneration++;startupTimers.forEach(clearTimeout);startupTimers=[];ui.classList.remove('ta-items-revealing');}
  document.addEventListener('ta-item-reset',()=>{cancelStartup();clearRechargeTimers();usesLeft=0;previousPips=0;clear();sync();});
  document.addEventListener('ta-item-start-activate',()=>{
@@ -6736,7 +6778,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   }
   // Burst geometry and fragments are generated once, rather than jittering randomly each frame.
   centers.forEach((c,i)=>{
-   const fragments=Array.from({length:18},(_,j)=>({angle:Math.random()*Math.PI*2,radius:27+Math.random()*68,phase:Math.random()*6.28,size:.6+Math.random()*1.7,kind:j%5===0?'glyph':'spark'}));
+   const fragments=Array.from({length:taMobileFx?8:18},(_,j)=>({angle:Math.random()*Math.PI*2,radius:27+Math.random()*68,phase:Math.random()*6.28,size:.6+Math.random()*1.7,kind:j%5===0?'glyph':'spark'}));
    summonBursts.push({x:c.x,y:c.y,start:performance.now()+i*57,fragments});
    summonTimers.push(setTimeout(()=>{
     if(!active()||typeof spawnWord!=='function')return;
@@ -6756,7 +6798,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    const t=Math.max(0,Math.min(1,age/.75)),fade=Math.min(1,age*9,Math.max(0,(.95-age)*4));
    if(b.wave){const r=16+135*t;ctx.globalAlpha=.3*fade;ctx.strokeStyle='#85f2b4';ctx.lineWidth=2.5*(1-t);ctx.beginPath();ctx.arc(b.x,b.y,r,0,Math.PI*2);ctx.stroke();continue;}
    const glow=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,38*(1-t*.3));glow.addColorStop(0,'rgba(240,255,193,.62)');glow.addColorStop(.28,'rgba(94,255,171,.32)');glow.addColorStop(1,'rgba(9,110,80,0)');ctx.globalAlpha=fade*.85;ctx.fillStyle=glow;ctx.beginPath();ctx.arc(b.x,b.y,42,0,Math.PI*2);ctx.fill();
-   for(const f of b.fragments){const q=Math.min(1,Math.max(0,age/.48));const spiral=f.angle+(1-q)*2.4+f.phase*.12;const r=f.radius*(1-q)*(1-q);const x=b.x+Math.cos(spiral)*r,y=b.y+Math.sin(spiral)*r*.75;ctx.globalAlpha=fade*(.35+.65*q);ctx.fillStyle=f.kind==='glyph'?'#e7d4a0':'#8afac9';ctx.shadowColor=f.kind==='glyph'?'#f4cf84':'#6afac0';ctx.shadowBlur=7;ctx.save();ctx.translate(x,y);ctx.rotate(spiral);if(f.kind==='glyph'){ctx.font='12px serif';ctx.fillText('✧',0,0);}else{ctx.fillRect(-f.size/2,-f.size/2,f.size*1.4,f.size*2.3);}ctx.restore();}
+   for(const f of b.fragments){const q=Math.min(1,Math.max(0,age/.48));const spiral=f.angle+(1-q)*2.4+f.phase*.12;const r=f.radius*(1-q)*(1-q);const x=b.x+Math.cos(spiral)*r,y=b.y+Math.sin(spiral)*r*.75;ctx.globalAlpha=fade*(.35+.65*q);ctx.fillStyle=f.kind==='glyph'?'#e7d4a0':'#8afac9';ctx.shadowColor=f.kind==='glyph'?'#f4cf84':'#6afac0';ctx.shadowBlur=taMobileFx?0:7;ctx.save();ctx.translate(x,y);ctx.rotate(spiral);if(f.kind==='glyph'){ctx.font='12px serif';ctx.fillText('✧',0,0);}else{ctx.fillRect(-f.size/2,-f.size/2,f.size*1.4,f.size*2.3);}ctx.restore();}
   }
   ctx.restore();summonBursts=summonBursts.filter(b=>now-b.start<1000);
  }
@@ -6782,84 +6824,125 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    }da+=lu;
   }return best;
  }
- function triggerCross(a,b){
-  const hit=crossCandidate(a,b);if(!hit||a.resonated||b.resonated)return;
-  a.resonated=true;b.resonated=true;
-  const now=performance.now();crossBursts.push({x:hit.x,y:hit.y,start:now,shards:Array.from({length:taMobileFx?58:116},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?58:116)+(Math.random()-.5)*.28,speed:160+Math.random()*360,size:1.3+Math.random()*5,kind:i%3}))});
-  spark(hit.x,hit.y,'fire',60);spark(hit.x,hit.y,'ice',60);
+ // Fire and ice fuse into a stationary three-beat resonance orb.
+ const CROSS_PULSE_RADII=[105,150,195]; // Each successive beat reaches farther.
+ function pulseCollect(b,radius){
+  if(!active())return;
   const hr=hero.getBoundingClientRect();let count=0;
-  for(const w of Array.from(field.querySelectorAll('.word'))){if(!valid(w))continue;const r=w.getBoundingClientRect(),x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;
-   if(Math.hypot(x-hit.x,y-hit.y)>165)continue;
+  for(const w of Array.from(field.querySelectorAll('.word'))){
+   if(!valid(w))continue;
+   const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;
+   const x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;
+   if(Math.hypot(x-b.x,y-b.y)>radius)continue;
    collect(w,'fire');count++;
   }
   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
    taSeconds+=count;taRender();
    const box=document.getElementById('taTimeBox');if(box){box.classList.remove('ta-frame-flash');void box.offsetWidth;box.classList.add('ta-frame-flash');}
   }
-  // Dedicated fire-ice resonance impact, synchronized with the first explosion frame.
+ }
+ function finalFlashCollect(b){
+  if(!active())return;
+  // The final white flash clears every remaining word in the collection field.
+  // Reuse the normal elemental collection path so scoring and special effects remain consistent.
+  const words=Array.from(field.querySelectorAll('.word'));
+  let count=0;
+  for(const w of words){
+   if(!valid(w)||w.dataset.taElementClaim)continue;
+   collect(w,'fire');count++;
+  }
+  if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
+   taSeconds+=count;taRender();
+   const box=document.getElementById('taTimeBox');
+   if(box){box.classList.remove('ta-frame-flash');void box.offsetWidth;box.classList.add('ta-frame-flash');}
+  }
+ }
+ function triggerCross(a,b){
+  const hit=crossCandidate(a,b);if(!hit||a.resonated||b.resonated)return;
+  a.resonated=true;b.resonated=true;
+  // The two elemental strokes turn white, contract and fade before vanishing.
+  traces=traces.filter(f=>f!==a&&f!==b);
+  const now=performance.now();
+  crossBursts.push({x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,whiteTraces:[a,b].map(f=>({path:f.path.map(p=>({x:p.x,y:p.y})),segs:f.segs})),rain:Array.from({length:taMobileFx?70:145},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taMobileFx?18:36},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?18:36)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
+  spark(hit.x,hit.y,'fire',taMobileFx?5:10);spark(hit.x,hit.y,'ice',taMobileFx?5:10);
   playElementSound('cross');
  }
  function renderCrossBursts(now){
-  crossBursts=crossBursts.filter(b=>now-b.start<1700);
+  crossBursts=crossBursts.filter(b=>now-b.start<7000);
   for(const b of crossBursts){
-   const t=(now-b.start)/1000,fade=Math.max(0,1-t/1.7),burst=Math.min(1,t/.39),r=12+285*burst;
+   const t=(now-b.start)/1000;
+   if(t>=3.22&&!b.flashCollected){b.flashCollected=true;finalFlashCollect(b);}
+   // Exactly three one-second pulses, including newly spawned words.
+   const due=Math.min(3,Math.floor(t));
+   while(b.pulses<due){b.pulses++;pulseCollect(b,CROSS_PULSE_RADII[b.pulses-1]);spark(b.x,b.y,b.pulses%2?'ice':'fire',taMobileFx?4:9);}
+   const phase=t-Math.floor(t),beat=t>=1&&t<3.18?Math.max(0,1-phase/.46):0;
+   const forming=Math.max(0,1-t/.27),ending=t>=3.22?Math.min(1,(t-3.22)/.36):0;
+   const orbAlpha=t<3.22?1:Math.max(0,1-ending);
    ctx.save();ctx.globalCompositeOperation='screen';
-   // Bright, tight ignition at the exact intersection; fast initial flash.
-   const flash=Math.max(0,1-t/.30),hot=Math.max(0,1-t/.72);
-   if(hot>0){
-    const halo=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,155+115*burst);
-    halo.addColorStop(0,`rgba(255,255,255,${.98*hot})`);
-    halo.addColorStop(.12,`rgba(255,253,222,${.86*hot})`);
-    halo.addColorStop(.34,`rgba(190,235,255,${.50*hot})`);
-    halo.addColorStop(.72,`rgba(105,190,250,${.19*hot})`);
-    halo.addColorStop(1,'rgba(100,175,250,0)');
-    ctx.fillStyle=halo;ctx.beginPath();ctx.arc(b.x,b.y,155+115*burst,0,Math.PI*2);ctx.fill();
-    ctx.shadowColor='#ffffff';ctx.shadowBlur=48*hot;
-    ctx.fillStyle=`rgba(255,255,255,${.98*flash})`;
-    ctx.beginPath();ctx.arc(b.x,b.y,12+43*burst,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-   }
-   // Cross-shaped lens flare: luminous core with rapidly stretching beams.
-   if(t<.44){
-    const strength=Math.pow(1-t/.44,1.4);
-    ctx.save();ctx.translate(b.x,b.y);ctx.globalAlpha=strength;
-    for(const axis of [0,Math.PI/2]){
-     ctx.save();ctx.rotate(axis);
-     const beam=ctx.createLinearGradient(-250,0,250,0);
-     beam.addColorStop(0,'rgba(140,212,255,0)');beam.addColorStop(.38,'rgba(188,231,255,.30)');
-     beam.addColorStop(.5,'rgba(255,255,255,.95)');beam.addColorStop(.62,'rgba(255,217,160,.30)');beam.addColorStop(1,'rgba(255,170,100,0)');
-     ctx.fillStyle=beam;ctx.shadowColor='#fff';ctx.shadowBlur=24;
-     ctx.beginPath();ctx.ellipse(0,0,115+160*burst,4+8*(1-burst),0,0,Math.PI*2);ctx.fill();ctx.restore();
+   // At the instant of intersection both strokes turn pure white, narrow toward
+   // their centerlines, and fade without changing the collection hitbox.
+   if(t<.78&&b.whiteTraces){
+    const u=Math.min(1,t/.78),thin=Math.pow(1-u,1.25);
+    // Tapered luminous blades: a broad center and sharp pointed tips.
+    // Rebuild the outline from the recorded stroke path, without blur filters.
+    for(const f of b.whiteTraces){
+     const path=f.path;if(!path||path.length<2)continue;
+     const lengths=[0];let total=0;
+     for(let j=1;j<path.length;j++){total+=Math.hypot(path[j].x-path[j-1].x,path[j].y-path[j-1].y);lengths.push(total)}
+     if(total<2)continue;
+     const points=[];
+     for(let j=0;j<path.length;j++){
+      const a=path[Math.max(0,j-1)],z=path[Math.min(path.length-1,j+1)];
+      const dx=z.x-a.x,dy=z.y-a.y,len=Math.hypot(dx,dy)||1;
+      const v=lengths[j]/total;
+      // sin(pi*v) creates truly pointed ends; power widens the luminous middle.
+      const profile=Math.pow(Math.max(0,Math.sin(Math.PI*v)),.8);
+      points.push({x:path[j].x,y:path[j].y,nx:-dy/len,ny:dx/len,profile});
+     }
+     const drawBlade=(width,alpha,color)=>{
+      ctx.globalAlpha=alpha*Math.pow(1-u,1.05);
+      ctx.fillStyle=color;ctx.beginPath();
+      for(let j=0;j<points.length;j++){const q=points[j],w=width*thin*q.profile;const x=q.x+q.nx*w,y=q.y+q.ny*w;if(j===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
+      for(let j=points.length-1;j>=0;j--){const q=points[j],w=width*thin*q.profile;ctx.lineTo(q.x-q.nx*w,q.y-q.ny*w)}
+      ctx.closePath();ctx.fill();
+     };
+     drawBlade(taMobileFx?15:22,.19,'#b5dcff');
+     drawBlade(taMobileFx?10:15,.52,'#d7f2ff');
+     drawBlade(taMobileFx?5.5:8,.96,'#ffffff');
     }
-    ctx.restore();
+    ctx.globalAlpha=Math.pow(1-u,1.4)*.92;
+    const center=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,(taMobileFx?32:44)*thin+1);
+    center.addColorStop(0,'rgba(255,255,255,1)');center.addColorStop(.3,'rgba(231,247,255,.75)');center.addColorStop(1,'rgba(156,208,255,0)');
+    ctx.fillStyle=center;ctx.beginPath();ctx.arc(b.x,b.y,(taMobileFx?32:44)*thin+1,0,Math.PI*2);ctx.fill();
    }
-   // Two distinct, fast expanding pressure fronts with luminous rims.
-   for(let ring=0;ring<3;ring++){
-    const phase=Math.max(0,Math.min(1,(t-ring*.085)/.48));
-    if(t<ring*.085||phase>=1)continue;
-    const rr=16+310*phase,alpha=(1-phase)*(.98-ring*.14);
-    ctx.strokeStyle=`rgba(246,253,255,${alpha})`;ctx.lineWidth=(12-ring*3)*(1-phase)+1.5;
-    ctx.shadowColor=ring===0?'#ffffff':'#7cd8ff';ctx.shadowBlur=36*(1-phase);
+   // A soft core that swells with each beat. No costly animated shadow blur.
+   if(orbAlpha>0){
+    const growth=1+Math.min(3,Math.floor(t))*.22;
+    const r=(taMobileFx?22:27)*growth*(1+beat*.65)+forming*18;
+    const halo=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,r*2.5);
+    halo.addColorStop(0,`rgba(255,255,249,${.87*orbAlpha})`);
+    halo.addColorStop(.18,`rgba(214,246,255,${.8*orbAlpha})`);
+    halo.addColorStop(.43,`rgba(132,224,234,${(.35+beat*.23)*orbAlpha})`);
+    halo.addColorStop(1,'rgba(109,195,255,0)');
+    ctx.fillStyle=halo;ctx.beginPath();ctx.arc(b.x,b.y,r*2.5,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=(.5+beat*.35)*orbAlpha;ctx.strokeStyle='#e5f9ff';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(b.x,b.y,r*.82,0,Math.PI*2);ctx.stroke();
+   }
+   // At each beat a broad, thin ring expands across the collection field.
+   for(let i=1;i<=3;i++){
+    const age=t-i;if(age<0||age>.62)continue;
+    const u=age/.62,rr=24+(CROSS_PULSE_RADII[i-1]-24)*(1-(1-u)*(1-u));
+    ctx.globalAlpha=Math.pow(1-u,1.6)*(.7+i*.08);ctx.strokeStyle=i%2?'#bcefff':'#f8dfba';ctx.lineWidth=(2.6+i*.55)*(1-u)+.6;
     ctx.beginPath();ctx.arc(b.x,b.y,rr,0,Math.PI*2);ctx.stroke();
-    ctx.strokeStyle=`rgba(118,211,255,${alpha*.62})`;ctx.lineWidth=20*(1-phase)+2;
-    ctx.beginPath();ctx.arc(b.x,b.y,rr+8,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;
    }
-   const steam=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,r);
-   steam.addColorStop(0,`rgba(255,255,251,${.45*fade})`);
-   steam.addColorStop(.22,`rgba(234,249,255,${.38*fade})`);
-   steam.addColorStop(.6,`rgba(178,218,233,${.20*fade})`);
-   steam.addColorStop(1,'rgba(140,195,220,0)');
-   ctx.fillStyle=steam;ctx.beginPath();ctx.arc(b.x,b.y,r,0,Math.PI*2);ctx.fill();
-   // Radial energy rays, strongest in the first fraction of a second.
-   if(t<.48){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(t*.6);const rayAlpha=Math.pow(1-t/.48,1.5);
-    for(let i=0;i<24;i++){const ang=i*Math.PI/12,inner=14+15*burst,outer=68+(i%3)*28+155*burst;
-     ctx.beginPath();ctx.moveTo(Math.cos(ang)*inner,Math.sin(ang)*inner);
-     ctx.lineTo(Math.cos(ang+.025)*outer,Math.sin(ang+.025)*outer);
-     ctx.strokeStyle=`rgba(255,250,228,${rayAlpha*.8})`;ctx.lineWidth=i%4===0?3.5:1.7;ctx.stroke();}
-    ctx.restore();}
-   for(const p of b.shards){const travel=p.speed*(t-.11*t*t),x=b.x+Math.cos(p.angle)*travel,y=b.y+Math.sin(p.angle)*travel*.83-18*t*t;
-    ctx.globalAlpha=fade*(p.kind===0?.85:.73);ctx.fillStyle=p.kind===0?'#ffb36d':p.kind===1?'#c5f3ff':'#ffffff';
-    ctx.shadowColor=p.kind===0?'#ff7c31':'#9ce8ff';ctx.shadowBlur=taMobileFx?3:11;
-    ctx.beginPath();ctx.ellipse(x,y,p.size*.65,p.size*2,p.angle,0,Math.PI*2);ctx.fill();}
+   // Final sharp shatter after the third pulse.
+   if(t>=3.22){const u=Math.min(1,(t-3.22)/.5),flash=Math.max(0,1-u*3);
+    const rr=18+250*u;
+    ctx.globalAlpha=Math.pow(1-u,1.4)*.9;ctx.strokeStyle='#ecfbff';ctx.lineWidth=5*(1-u)+.5;
+    ctx.beginPath();ctx.arc(b.x,b.y,rr,0,Math.PI*2);ctx.stroke();
+    if(flash>0){const glow=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,95+90*u);glow.addColorStop(0,`rgba(255,255,255,${flash*.85})`);glow.addColorStop(1,'rgba(120,225,255,0)');ctx.globalAlpha=1;ctx.fillStyle=glow;ctx.beginPath();ctx.arc(b.x,b.y,95+90*u,0,Math.PI*2);ctx.fill();}
+    for(const p of b.shards){const dist=p.speed*u,x=b.x+Math.cos(p.angle)*dist,y=b.y+Math.sin(p.angle)*dist;ctx.globalAlpha=(1-u)*.8;ctx.fillStyle=p.kind===0?'#ffc898':p.kind===1?'#bceeff':'#fff';ctx.beginPath();ctx.arc(x,y,p.size*(1-u*.6),0,Math.PI*2);ctx.fill();}
+   }
    ctx.restore();
   }
  }
@@ -6868,7 +6951,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const isTap=len<22;
  const segs=[];if(isTap){const c=pts[0];segs.push([c,{x:c.x+.01,y:c.y},94]);}
  else for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(Math.hypot(b.x-a.x,b.y-a.y)>1)segs.push([a,b,23]);}
- if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:4,total:4,age:0,resonated:false};traces.push(trace);if(traces.length>2)traces.shift();for(const other of traces){if(other!==trace&&other.type!==trace.type)triggerCross(trace,other);}for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
+ if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:3.1,total:3.1,age:0,resonated:false};traces.push(trace);if(traces.length>2)traces.shift();for(const other of traces){if(other!==trace&&other.type!==trace.type)triggerCross(trace,other);}for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
  checkWords();}
  // Capture the armed gesture before the normal word/tap collectors can consume it.
  field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<=0||gesture||consumedPointer!==null)return;playElementSound(selected);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
@@ -6877,7 +6960,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  field.addEventListener('pointerup',finish,true);field.addEventListener('lostpointercapture',e=>{if(e.pointerId===consumedPointer){consumedPointer=null;gesture=null;}},true);field.addEventListener('pointercancel',e=>{if(e.pointerId===consumedPointer)consumedPointer=null;if(gesture&&e.pointerId===gesture.id)gesture=null},true);
  field.addEventListener('pointermove',e=>{if(e.pointerId===consumedPointer){e.stopImmediatePropagation();e.preventDefault()}},false);
  function checkWords(){if(!traces.length)return;const hr=hero.getBoundingClientRect();for(const w of field.querySelectorAll('.word')){if(!valid(w))continue;const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;const x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;for(const f of traces){if(f.segs.some(([a,b,radius])=>near(x,y,a,b,radius+Math.min(20,r.width*.24)))){collect(w,f.type);break}}}}
- function draw(now){if(taMobileFx&&now-lastFxPaint<25){requestAnimationFrame(draw);return;}lastFxPaint=now;const dt=Math.min(.05,(now-last)/1000);last=now;if(!active()){if(wasActive)clear();wasActive=false;requestAnimationFrame(draw);return}wasActive=true;
+ function draw(now){if(taMobileFx&&now-lastFxPaint<33){requestAnimationFrame(draw);return;}lastFxPaint=now;const dt=Math.min(.05,(now-last)/1000);last=now;if(!active()){if(wasActive)clear();wasActive=false;requestAnimationFrame(draw);return}wasActive=true;
  const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,window.matchMedia('(pointer:coarse)').matches?1.25:2),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);renderSummons(now);
  if(gesture&&performance.now()-gesture.started>=GESTURE_MAX_MS){const g=gesture;gesture=null;makeTrace(g)}
  const paused=typeof flood!=='undefined'&&flood;
@@ -6951,11 +7034,46 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  for(const f of traces){
   if(!paused)f.left-=dt;f.age+=dt;
   const alpha=Math.min(1,f.age*7,Math.max(0,f.left*1.5));if(f.left<=0)continue;
-  const visible={...f,segs:f.renderSegs||f.segs};if(f.type==='fire')renderFire(visible,alpha);else renderIce(visible,alpha);
+  const visible={...f,segs:f.renderSegs||f.segs};
+  const fr=field.getBoundingClientRect();ctx.save();ctx.beginPath();ctx.rect(fr.left-rect.left,fr.top-rect.top,fr.width,fr.height);ctx.clip();
+  if(f.type==='fire')renderFire(visible,alpha);else renderIce(visible,alpha);ctx.restore();
   if(Math.random()<(taMobileFx?.36:.85)){const v=f.renderSegs||f.segs,seg=v[Math.floor(Math.random()*v.length)],t=Math.random(),p=fxPoint(seg,t);spark(p.x,p.y,f.type,1)}
  }
  traces=traces.filter(f=>f.left>0);checkWords();renderCrossBursts(now);
  for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy+=(p.type==='fire'?-24:18)*dt;if(p.type==='fire'){p.sway+=dt*12;p.vx+=Math.sin(p.sway)*dt*22;}const a=Math.min(1,p.life*2);ctx.save();ctx.globalAlpha=a;if(p.type==='fire'){const heat=p.heat??.5;const tint=heat>.76?'#fff0bd':heat>.4?'#ffba58':'#e95425';ctx.fillStyle=tint;ctx.shadowColor=heat>.4?'#ff9d36':'#b83819';ctx.shadowBlur=taMobileFx?2:(heat>.7?10:5);if(p.trail){ctx.strokeStyle=tint;ctx.globalAlpha=a*.42;ctx.lineWidth=Math.max(.5,p.r*.55);ctx.beginPath();ctx.moveTo(p.x-p.vx*.035,p.y-p.vy*.035);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.globalAlpha=a;}ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(.55,p.r*.58),Math.max(.8,p.r*(1.15+heat*.5)),Math.atan2(p.vy,p.vx)+Math.PI/2,0,Math.PI*2);ctx.fill();}else{ctx.fillStyle=Math.random()>.5?'#e3fbff':'#80d8ff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=taMobileFx?2:9;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}if(p.type==='ice'){ctx.strokeStyle='#e6faff';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p.x-p.r*2,p.y);ctx.lineTo(p.x+p.r*2,p.y);ctx.moveTo(p.x,p.y-p.r*2);ctx.lineTo(p.x,p.y+p.r*2);ctx.stroke()}ctx.restore()}
+ // Full-screen final white flash, followed by a gentle shower of white motes.
+ // Draw in viewport coordinates, not field coordinates, so nothing is clipped.
+ for(const b of crossBursts){
+  const t=(now-b.start)/1000,after=t-3.22;
+  if(after<0||after>3.7)continue;
+  ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);
+  if(after<.25){
+   const opacity=after<.065?Math.min(1,after/.065):Math.pow(1-(after-.065)/.185,1.15);
+   ctx.globalAlpha=Math.max(0,opacity)*.96;ctx.fillStyle='#fff';ctx.fillRect(0,0,vw,vh);
+  }
+  if(after>=.13){
+   const fall=after-.13,fade=Math.min(1,fall/.55)*Math.min(1,(3.7-after)/.85);
+   // Three parallax layers: distant fine motes descend slowly, nearby
+   // luminous flakes drift faster and appear larger, all in viewport space.
+   for(const p of b.rain){
+    const elapsed=fall-p.delay;if(elapsed<0)continue;
+    const y=((p.y*.82-.26)+elapsed*p.speed)*vh;
+    if(y< -12||y>vh+12)continue;
+    const x=(p.x+elapsed*p.drift+Math.sin(elapsed*.75+p.phase)*(.002+p.depth*.0018))*vw;
+    if(x< -12||x>vw+12)continue;
+    const shimmer=.72+.28*Math.sin(elapsed*(1.6+p.depth*.5)+p.twinkle);
+    ctx.globalAlpha=fade*shimmer*[.34,.57,.76][p.depth];
+    ctx.fillStyle=p.depth===0?'#dbeaff':p.depth===1?'#f0f8ff':'#ffffff';
+    ctx.beginPath();ctx.arc(x,y,p.r,0,Math.PI*2);ctx.fill();
+    if(p.depth===2&&p.r>2.3){
+     ctx.globalAlpha*=.28;ctx.strokeStyle='#fff';ctx.lineWidth=.7;
+     ctx.beginPath();ctx.moveTo(x-p.r*2.2,y);ctx.lineTo(x+p.r*2.2,y);
+     ctx.moveTo(x,y-p.r*2.2);ctx.lineTo(x,y+p.r*2.2);ctx.stroke();
+    }
+   }
+  }
+  ctx.restore();
+ }
  requestAnimationFrame(draw)}requestAnimationFrame(draw);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)clear()});
 })();
@@ -7064,4 +7182,22 @@ html.ta-result-locked #taLaunch{pointer-events:auto!important}
   .pull-core svg.b{opacity:.35!important}
   .pull-ring{box-shadow:none!important}
 }
+</style>
+
+<style id="ta-cross-final-orb-unification">
+/* One selected glow for every orb, including summon: same halo shape, opacity and timing. */
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon)[aria-pressed="true"],
+#viewMain>.ta-items[data-selected="fire"] .ta-orb.fire,
+#viewMain>.ta-items[data-selected="ice"] .ta-orb.ice,
+#viewMain>.ta-items[data-selected="summon"] .ta-orb.summon{
+ animation:taSoftOrbGlow 1.12s ease-in-out infinite!important;
+ outline:none!important;filter:none!important;
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon)[aria-pressed="true"]::after{
+ animation:none!important;box-shadow:none!important;opacity:0!important;
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon)[aria-pressed="true"]::before,
+#viewMain>.ta-items[data-selected="fire"] .ta-orb.fire::before,
+#viewMain>.ta-items[data-selected="ice"] .ta-orb.ice::before,
+#viewMain>.ta-items[data-selected="summon"] .ta-orb.summon::before{opacity:1!important}
 </style>
