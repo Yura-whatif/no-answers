@@ -5554,7 +5554,12 @@ function fitLayout(){
     const wrap = view.closest('.wrap');
     const bottomPad = wrap ? parseFloat(getComputedStyle(wrap).paddingBottom) || 0 : 0;
     const reserve = Math.max(8, bottomPad);
-    const available = Math.floor(vh - r.top - reserve);
+    // The orb bar is inserted after the first layout pass. Measure its actual position
+    // rather than assuming that the playfield is the last visible child.
+    const items = view.querySelector(':scope > .ta-items');
+    const itemBelow = items && getComputedStyle(items).order >= getComputedStyle(hero).order;
+    const trailing = itemBelow ? items.getBoundingClientRect().height + (parseFloat(getComputedStyle(view).rowGap) || 0) : 0;
+    const available = Math.floor(vh - r.top - reserve - trailing);
     // Do not enforce the old 210px minimum when the screen is short: it caused page scrolling.
     hero.style.height = Math.max(96, available) + 'px';
   }catch(_){ }
@@ -6523,6 +6528,12 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const field=document.getElementById('drift'),hero=field&&field.closest('.hero');if(!field||!hero)return;
  const ui=document.createElement('div');ui.className='ta-items';ui.innerHTML='<span class="ta-items-label">ITEM</span><button class="ta-orb fire" type="button" data-orb="fire" aria-label="赤玉・炎" aria-pressed="false">🔥</button><button class="ta-orb ice" type="button" data-orb="ice" aria-label="青玉・氷" aria-pressed="false">❄</button><button class="ta-orb summon" type="button" data-orb="summon" aria-label="緑玉・言霊召喚" aria-pressed="false">✧</button><span class="ta-item-counter" aria-live="polite"><b id="taItemRemaining">5</b><small>/5</small><span class="ta-item-pips" aria-hidden="true"></span></span>';
  hero.insertAdjacentElement('afterend',ui);
+ // The initial fit runs before the orb bar exists; fit again after insertion.
+ requestAnimationFrame(()=>{ if(typeof fitLayout==='function') fitLayout(); });
+ if(window.ResizeObserver){
+   const itemResizeObserver=new ResizeObserver(()=>requestAnimationFrame(()=>{ if(typeof fitLayout==='function') fitLayout(); }));
+   itemResizeObserver.observe(ui);
+ }
  const layer=document.createElement('div');layer.className='ta-element-layer';layer.setAttribute('aria-hidden','true');document.body.append(layer);
  const canvas=document.createElement('canvas');layer.append(canvas);const ctx=canvas.getContext('2d');
  let selected=null,gesture=null,traces=[],particles=[],summonBursts=[],summonTimers=[],crossBursts=[],last=performance.now(),wasActive=false;
