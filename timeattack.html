@@ -6539,6 +6539,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const layer=document.createElement('div');layer.className='ta-element-layer';layer.setAttribute('aria-hidden','true');document.body.append(layer);
  const canvas=document.createElement('canvas');layer.append(canvas);const ctx=canvas.getContext('2d');
  let selected=null,gesture=null,traces=[],particles=[],summonBursts=[],summonTimers=[],crossBursts=[],last=performance.now(),wasActive=false;
+ const taMobileFx=window.matchMedia('(pointer:coarse)').matches;
+ const taFxScale=taMobileFx?.72:1;
+ let lastFxPaint=0;
  let usesLeft=0; const MAX_USES=5; let previousPips=0; let pipFlashTimer=null; let startupTimers=[]; let startupGeneration=0;
  const GESTURE_MAX_MS=340, GESTURE_MAX_PX=390;
  const elementalSounds={fire:new Audio('audio/element-fire-cast.wav'),ice:new Audio('audio/element-ice-cast.wav'),cross:new Audio('audio/element-cross-burst.wav'),summon:new Audio('audio/element-summon-cast.wav')};
@@ -6651,7 +6654,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  document.addEventListener('ta-item-state-change',()=>{if(!active()){selected=null;cancelStartup();}sync();});
  document.addEventListener('visibilitychange',()=>{if(!active())selected=null;sync();});
  sync();
- function spark(x,y,type,n=12){for(let i=0;i<n;i++){const a=type==='fire'?(Math.PI*1.5+(Math.random()-.5)*1.28):Math.random()*Math.PI*2,v=25+Math.random()*85;particles.push({x,y,vx:Math.cos(a)*v*(type==='fire'?.62:1),vy:type==='fire'?-(60+Math.random()*115):Math.sin(a)*v,life:.4+Math.random()*.65,max:1,r:1+Math.random()*3,type,...(type==='fire'?{heat:Math.random(),sway:Math.random()*6.283,trail:Math.random()>.28}:{} )});}if(particles.length>380)particles.splice(0,particles.length-380)}
+ function spark(x,y,type,n=12){for(let i=0;i<n;i++){const a=type==='fire'?(Math.PI*1.5+(Math.random()-.5)*1.28):Math.random()*Math.PI*2,v=25+Math.random()*85;particles.push({x,y,vx:Math.cos(a)*v*(type==='fire'?.62:1),vy:type==='fire'?-(60+Math.random()*115):Math.sin(a)*v,life:.4+Math.random()*.65,max:1,r:1+Math.random()*3,type,...(type==='fire'?{heat:Math.random(),sway:Math.random()*6.283,trail:Math.random()>.28}:{} )});}if(particles.length>(taMobileFx?170:380))particles.splice(0,particles.length-(taMobileFx?170:380))}
  function wordFx(w,type){const r=w.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;const fx=document.createElement('span');fx.className='ta-element-word-fx';fx.textContent=w.textContent;fx.style.left=x+'px';fx.style.top=y+'px';fx.style.color=type==='fire'?'#ffba69':'#d9faff';fx.style.textShadow=type==='fire'?'0 0 10px #ff4b16,0 0 20px #f86a20':'0 0 10px #8ce6ff,0 0 20px #65b9ff';document.body.append(fx);
  const k=type==='fire'?[{opacity:1,transform:'translate(-50%,-50%) scale(1)',filter:'brightness(1)'},{opacity:.95,transform:'translate(-50%,-75%) scale(1.14)',filter:'brightness(2)',offset:.4},{opacity:0,transform:'translate(-50%,-145%) scale(.25) rotate(-9deg)',filter:'blur(8px)'}]:[{opacity:1,transform:'translate(-50%,-50%) scale(1)',filter:'brightness(1)'},{opacity:1,transform:'translate(-50%,-50%) scale(1.25)',filter:'brightness(2.5)',offset:.22},{opacity:0,transform:'translate(-50%,-50%) scale(1.7) rotate(8deg)',filter:'blur(9px)'}];
  const anim=fx.animate(k,{duration:type==='fire'?650:470,easing:'ease-out',fill:'forwards'});anim.onfinish=()=>fx.remove();
@@ -6782,7 +6785,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  function triggerCross(a,b){
   const hit=crossCandidate(a,b);if(!hit||a.resonated||b.resonated)return;
   a.resonated=true;b.resonated=true;
-  const now=performance.now();crossBursts.push({x:hit.x,y:hit.y,start:now,shards:Array.from({length:116},(_,i)=>({angle:i*Math.PI*2/116+(Math.random()-.5)*.28,speed:160+Math.random()*360,size:1.3+Math.random()*5,kind:i%3}))});
+  const now=performance.now();crossBursts.push({x:hit.x,y:hit.y,start:now,shards:Array.from({length:taMobileFx?58:116},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?58:116)+(Math.random()-.5)*.28,speed:160+Math.random()*360,size:1.3+Math.random()*5,kind:i%3}))});
   spark(hit.x,hit.y,'fire',60);spark(hit.x,hit.y,'ice',60);
   const hr=hero.getBoundingClientRect();let count=0;
   for(const w of Array.from(field.querySelectorAll('.word'))){if(!valid(w))continue;const r=w.getBoundingClientRect(),x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;
@@ -6855,7 +6858,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
     ctx.restore();}
    for(const p of b.shards){const travel=p.speed*(t-.11*t*t),x=b.x+Math.cos(p.angle)*travel,y=b.y+Math.sin(p.angle)*travel*.83-18*t*t;
     ctx.globalAlpha=fade*(p.kind===0?.85:.73);ctx.fillStyle=p.kind===0?'#ffb36d':p.kind===1?'#c5f3ff':'#ffffff';
-    ctx.shadowColor=p.kind===0?'#ff7c31':'#9ce8ff';ctx.shadowBlur=11;
+    ctx.shadowColor=p.kind===0?'#ff7c31':'#9ce8ff';ctx.shadowBlur=taMobileFx?3:11;
     ctx.beginPath();ctx.ellipse(x,y,p.size*.65,p.size*2,p.angle,0,Math.PI*2);ctx.fill();}
    ctx.restore();
   }
@@ -6874,7 +6877,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  field.addEventListener('pointerup',finish,true);field.addEventListener('lostpointercapture',e=>{if(e.pointerId===consumedPointer){consumedPointer=null;gesture=null;}},true);field.addEventListener('pointercancel',e=>{if(e.pointerId===consumedPointer)consumedPointer=null;if(gesture&&e.pointerId===gesture.id)gesture=null},true);
  field.addEventListener('pointermove',e=>{if(e.pointerId===consumedPointer){e.stopImmediatePropagation();e.preventDefault()}},false);
  function checkWords(){if(!traces.length)return;const hr=hero.getBoundingClientRect();for(const w of field.querySelectorAll('.word')){if(!valid(w))continue;const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;const x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;for(const f of traces){if(f.segs.some(([a,b,radius])=>near(x,y,a,b,radius+Math.min(20,r.width*.24)))){collect(w,f.type);break}}}}
- function draw(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(!active()){if(wasActive)clear();wasActive=false;requestAnimationFrame(draw);return}wasActive=true;
+ function draw(now){if(taMobileFx&&now-lastFxPaint<25){requestAnimationFrame(draw);return;}lastFxPaint=now;const dt=Math.min(.05,(now-last)/1000);last=now;if(!active()){if(wasActive)clear();wasActive=false;requestAnimationFrame(draw);return}wasActive=true;
  const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,window.matchMedia('(pointer:coarse)').matches?1.25:2),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);renderSummons(now);
  if(gesture&&performance.now()-gesture.started>=GESTURE_MAX_MS){const g=gesture;gesture=null;makeTrace(g)}
  const paused=typeof flood!=='undefined'&&flood;
@@ -6885,17 +6888,17 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   ctx.save();ctx.globalCompositeOperation='screen';
   for(let si=0;si<f.segs.length;si++){
    const seg=f.segs[si],a=seg[0],b=seg[1],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
-   const steps=Math.max(2,Math.ceil(L/9));
+   const steps=Math.max(2,Math.ceil(L/(taMobileFx?18:9)));
    for(let j=0;j<=steps;j++){
     const t=j/steps,pt=fxPoint(seg,t),seed=si*211+j*19;
     const flick=Math.sin(now*.013+seed)*.5+.5;
-    const radius=seg[2]*(.7+hash(seed)*.55),rise=(14+hash(seed+3)*31)*(0.65+flick*.7);
+    const radius=seg[2]*(.7+hash(seed)*.55)*taFxScale,rise=(14+hash(seed+3)*31)*(0.65+flick*.7)*taFxScale;
     // Smoky, low-opacity turbulent outer volume rather than a solid glowing stripe.
     const smokeX=pt.x+nx*(hash(seed+4)-.5)*radius*.7,smokeY=pt.y-rise*.65;
     const smoke=ctx.createRadialGradient(smokeX,smokeY,0,smokeX,smokeY,radius*1.6);
     smoke.addColorStop(0,'rgba(100,73,65,.18)');smoke.addColorStop(.5,'rgba(60,54,58,.10)');smoke.addColorStop(1,'rgba(30,29,34,0)');
     ctx.globalAlpha=alpha*.65;ctx.fillStyle=smoke;ctx.beginPath();ctx.arc(smokeX,smokeY,radius*1.6,0,Math.PI*2);ctx.fill();
-    for(let k=0;k<3;k++){
+    for(let k=0;k<(taMobileFx?2:3);k++){
      const wobble=Math.sin(now*.009+seed*1.7+k*2.8)*radius*.35;
      const baseX=pt.x+nx*(k-1)*radius*.35,baseY=pt.y+ny*(k-1)*radius*.35;
      const tipX=baseX+wobble+nx*(hash(seed+k+10)-.5)*radius;
@@ -6921,9 +6924,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   ctx.save();ctx.globalCompositeOperation='screen';
   for(let si=0;si<f.segs.length;si++){
    const seg=f.segs[si],a=seg[0],b=seg[1],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
-   const steps=Math.max(2,Math.ceil(L/13));
+   const steps=Math.max(2,Math.ceil(L/(taMobileFx?22:13)));
    for(let j=0;j<=steps;j++){
-    const t=j/steps,pt=fxPoint(seg,t),seed=si*307+j*41,sz=9+hash(seed+2)*23;
+    const t=j/steps,pt=fxPoint(seg,t),seed=si*307+j*41,sz=(9+hash(seed+2)*23)*taFxScale;
     const drift=Math.sin(now*.0018+seed)*1.8;
     const frost=ctx.createRadialGradient(pt.x,pt.y,0,pt.x,pt.y,sz*1.8);
     frost.addColorStop(0,'rgba(205,242,255,.24)');frost.addColorStop(.48,'rgba(83,164,201,.12)');frost.addColorStop(1,'rgba(65,140,190,0)');
@@ -6949,10 +6952,10 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(!paused)f.left-=dt;f.age+=dt;
   const alpha=Math.min(1,f.age*7,Math.max(0,f.left*1.5));if(f.left<=0)continue;
   const visible={...f,segs:f.renderSegs||f.segs};if(f.type==='fire')renderFire(visible,alpha);else renderIce(visible,alpha);
-  if(Math.random()<.85){const v=f.renderSegs||f.segs,seg=v[Math.floor(Math.random()*v.length)],t=Math.random(),p=fxPoint(seg,t);spark(p.x,p.y,f.type,1)}
+  if(Math.random()<(taMobileFx?.36:.85)){const v=f.renderSegs||f.segs,seg=v[Math.floor(Math.random()*v.length)],t=Math.random(),p=fxPoint(seg,t);spark(p.x,p.y,f.type,1)}
  }
  traces=traces.filter(f=>f.left>0);checkWords();renderCrossBursts(now);
- for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy+=(p.type==='fire'?-24:18)*dt;if(p.type==='fire'){p.sway+=dt*12;p.vx+=Math.sin(p.sway)*dt*22;}const a=Math.min(1,p.life*2);ctx.save();ctx.globalAlpha=a;if(p.type==='fire'){const heat=p.heat??.5;const tint=heat>.76?'#fff0bd':heat>.4?'#ffba58':'#e95425';ctx.fillStyle=tint;ctx.shadowColor=heat>.4?'#ff9d36':'#b83819';ctx.shadowBlur=heat>.7?10:5;if(p.trail){ctx.strokeStyle=tint;ctx.globalAlpha=a*.42;ctx.lineWidth=Math.max(.5,p.r*.55);ctx.beginPath();ctx.moveTo(p.x-p.vx*.035,p.y-p.vy*.035);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.globalAlpha=a;}ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(.55,p.r*.58),Math.max(.8,p.r*(1.15+heat*.5)),Math.atan2(p.vy,p.vx)+Math.PI/2,0,Math.PI*2);ctx.fill();}else{ctx.fillStyle=Math.random()>.5?'#e3fbff':'#80d8ff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=9;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}if(p.type==='ice'){ctx.strokeStyle='#e6faff';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p.x-p.r*2,p.y);ctx.lineTo(p.x+p.r*2,p.y);ctx.moveTo(p.x,p.y-p.r*2);ctx.lineTo(p.x,p.y+p.r*2);ctx.stroke()}ctx.restore()}
+ for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy+=(p.type==='fire'?-24:18)*dt;if(p.type==='fire'){p.sway+=dt*12;p.vx+=Math.sin(p.sway)*dt*22;}const a=Math.min(1,p.life*2);ctx.save();ctx.globalAlpha=a;if(p.type==='fire'){const heat=p.heat??.5;const tint=heat>.76?'#fff0bd':heat>.4?'#ffba58':'#e95425';ctx.fillStyle=tint;ctx.shadowColor=heat>.4?'#ff9d36':'#b83819';ctx.shadowBlur=taMobileFx?2:(heat>.7?10:5);if(p.trail){ctx.strokeStyle=tint;ctx.globalAlpha=a*.42;ctx.lineWidth=Math.max(.5,p.r*.55);ctx.beginPath();ctx.moveTo(p.x-p.vx*.035,p.y-p.vy*.035);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.globalAlpha=a;}ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(.55,p.r*.58),Math.max(.8,p.r*(1.15+heat*.5)),Math.atan2(p.vy,p.vx)+Math.PI/2,0,Math.PI*2);ctx.fill();}else{ctx.fillStyle=Math.random()>.5?'#e3fbff':'#80d8ff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=taMobileFx?2:9;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}if(p.type==='ice'){ctx.strokeStyle='#e6faff';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p.x-p.r*2,p.y);ctx.lineTo(p.x+p.r*2,p.y);ctx.moveTo(p.x,p.y-p.r*2);ctx.lineTo(p.x,p.y+p.r*2);ctx.stroke()}ctx.restore()}
  requestAnimationFrame(draw)}requestAnimationFrame(draw);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)clear()});
 })();
@@ -7038,4 +7041,27 @@ html.ta-result-locked #viewMain,html.ta-result-locked header,html.ta-result-lock
 html.ta-result-locked #taLaunch{pointer-events:auto!important}
 #taTimeOverInputShield{position:fixed;inset:0;z-index:9990;background:transparent;touch-action:none;pointer-events:auto}
 #taLaunch:not([hidden]){z-index:9995!important}
+</style>
+
+<style id="ta-mobile-performance-polish">
+/* Equal luminous selection halo for all three orbs; preserve spherical shape. */
+#viewMain>.ta-items .ta-orb{position:relative!important;overflow:visible!important;contain:none!important}
+#viewMain>.ta-items .ta-orb.fire{--orb-glow:rgba(255,112,56,.96)}
+#viewMain>.ta-items .ta-orb.ice{--orb-glow:rgba(92,211,255,.96)}
+#viewMain>.ta-items .ta-orb.summon{--orb-glow:rgba(98,255,183,.96)}
+@keyframes taUnifiedOrbHalo{
+  0%,100%{filter:brightness(1.2) saturate(1.1);box-shadow:inset 0 0 7px #ffffff80,0 0 10px 3px var(--orb-glow),0 0 17px 4px var(--orb-glow)}
+  50%{filter:brightness(1.75) saturate(1.24);box-shadow:inset 0 0 12px #fffbd6,0 0 17px 5px var(--orb-glow),0 0 28px 8px var(--orb-glow)}
+}
+#viewMain>.ta-items[data-selected="fire"] .ta-orb.fire,
+#viewMain>.ta-items[data-selected="ice"] .ta-orb.ice,
+#viewMain>.ta-items[data-selected="summon"] .ta-orb.summon{animation:taUnifiedOrbHalo .88s ease-in-out infinite!important;outline:2px solid #fff5d0!important;outline-offset:2px!important}
+#viewMain>.ta-items .ta-orb[aria-pressed="true"]::after{opacity:1!important;box-shadow:0 0 9px 2px var(--orb-glow),inset 0 0 7px #fff8!important}
+#viewMain>.ta-items .ta-orb:disabled{animation:none!important;box-shadow:none!important}
+@media(pointer:coarse){
+  /* Avoid repeated SVG glow/filter compositing during attraction on modest GPUs. */
+  .pull-core svg{filter:none!important}
+  .pull-core svg.b{opacity:.35!important}
+  .pull-ring{box-shadow:none!important}
+}
 </style>
