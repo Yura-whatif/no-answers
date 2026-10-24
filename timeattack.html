@@ -3449,30 +3449,23 @@ function comboBurst(n){
 // Purely decorative; no timers, hit detection or input are paused.
 function taCenturyResonance(cx,cy){
   if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  // One GPU-composited overlay rather than 26 separate animated DOM nodes.
   const veil=document.createElement('div');
-  veil.style.cssText='position:fixed;inset:0;z-index:10017;pointer-events:none;background:radial-gradient(circle at '+cx+'px '+cy+'px,rgba(255,219,137,.19),rgba(230,164,58,.07) 45%,rgba(5,4,10,.18) 100%);';
+  veil.style.cssText='position:fixed;inset:0;z-index:10017;pointer-events:none;background:radial-gradient(circle at '+cx+'px '+cy+'px,rgba(255,219,137,.16),rgba(230,164,58,.045) 45%,transparent 90%);will-change:opacity;';
   document.body.append(veil);
-  veil.animate([{opacity:0},{opacity:1,offset:.27},{opacity:.65,offset:.55},{opacity:0}],{duration:1800,easing:'ease-in-out'}).onfinish=()=>veil.remove();
-  // After the big rings, leave a shimmering golden afterglow that rises gently.
-  // No radial spray: motes appear around the combo area and drift upward.
-  for(let i=0;i<26;i++){
-    const dot=document.createElement('span');dot.className='ta-combo-spark ta-century-afterglow';
-    const dx=(Math.random()-.5)*115, dy=(Math.random()-.5)*54;
-    dot.style.left=(cx+dx)+'px';dot.style.top=(cy+dy)+'px';
-    const size=1.5+Math.random()*3.6;
-    dot.style.width=dot.style.height=size+'px';
-    dot.style.background=i%4===0?'#fffbe6':'#ffda8b';
-    document.body.append(dot);
-    const rise=45+Math.random()*105, drift=(Math.random()-.5)*28;
-    const delay=870+Math.random()*510;
-    dot.animate([
-      {transform:'translate(-50%,-50%) scale(.4)',opacity:0,offset:0},
-      {transform:'translate(-50%,-50%) scale(1.3)',opacity:.9,offset:.16},
-      {transform:`translate(calc(-50% + ${drift*.35}px),calc(-50% - ${rise*.4}px)) scale(.7)`,opacity:.32,offset:.47},
-      {transform:`translate(calc(-50% + ${drift*.7}px),calc(-50% - ${rise*.72}px)) scale(1.35)`,opacity:.9,offset:.68},
-      {transform:`translate(calc(-50% + ${drift}px),calc(-50% - ${rise}px)) scale(.05)`,opacity:0,offset:1}
-    ],{duration:1150+Math.random()*650,delay,easing:'ease-in-out',fill:'both'}).onfinish=()=>dot.remove();
-  }
+  veil.animate([{opacity:0},{opacity:1,offset:.3},{opacity:0}],{duration:1100,easing:'ease-out'}).onfinish=()=>veil.remove();
+}
+function taCenturyCenterPlus(){
+  const area=document.getElementById('drift');if(!area)return;
+  const r=area.getBoundingClientRect();
+  const p=document.createElement('span');p.className='ta-century-center-plus';p.textContent='+100';
+  p.style.left=(r.left+r.width/2)+'px';p.style.top=(r.top+r.height/2)+'px';p.style.scale='1 1';
+  document.body.append(p);
+  p.animate([
+    {transform:'translate(-50%,-50%) translateY(12px)',opacity:0,offset:0},
+    {transform:'translate(-50%,-50%) translateY(0)',opacity:1,offset:.17},
+    {transform:'translate(-50%,-50%) translateY(-92px)',opacity:0,offset:1}
+  ],{duration:1450,easing:'ease-out',fill:'forwards'}).onfinish=()=>p.remove();
 }
 // Two separate circular waves: expand from combo, then contract into score.
 // Bonus is awarded only after the score-side wave has arrived.
@@ -3487,7 +3480,7 @@ function comboStepBonus(n){
   const session=taFinishToken;
   const century=n%100===0;
   const bonus=century?100:10;
-  const land=()=>{if(session!==taFinishToken || !taRunning)return;taAward(false,bonus,true);};
+  const land=()=>{if(session!==taFinishToken || !taRunning)return;taAward(false,bonus,true,null,century);};
   // Item recharge animation starts just after the score bonus animation begins,
   // rather than waiting for the score-side ring to land.
   if(n%50===0){
@@ -3514,22 +3507,17 @@ function comboStepBonus(n){
   const tier=century?3:n>=50?2:1;
   if(century){
     taCenturyResonance(cx,cy);
-    makeWave(cx,cy,.15,10.5,1180,0,1);
-    makeWave(cx,cy,.25,9.3,1110,220,.88);
-    makeWave(cx,cy,.3,8.4,1040,450,.7);
+    taCenturyCenterPlus();
+    if(!matchMedia("(pointer:coarse)").matches)makeWave(cx,cy,.15,7,880,0,.65);
   }
   // More deliberate two-stage ripple: luminous expanding rings, then a contracting score halo.
   makeWave(cx,cy,.25,tier===3?7.6:tier===2?6.8:5.9,780,0,1);
   makeWave(cx,cy,.2,tier===3?6.8:tier===2?6.0:5.2,810,145,.66);
-  if(tier>=2)makeWave(cx,cy,.3,5.2,740,265,.38);
+  if(tier>=2 && !century)makeWave(cx,cy,.3,5.2,740,265,.38);
   // The second set of rings stays centered on the score area.
   makeWave(sx,sy,tier===3?7.8:tier===2?7.0:6.3,.12,810,690,1);
   makeWave(sx,sy,tier===3?7.0:6.0,.14,790,805,.65);
-  if(tier===3){
-    makeWave(sx,sy,5.6,.18,710,900,.65);
-    makeWave(sx,sy,8.5,.12,920,650,.75);
-    makeWave(sx,sy,7.3,.14,840,790,.6);
-  }
+
   // Score-side contraction begins at 690 ms; start a separate suction sound with it.
   setTimeout(()=>{
     if(session!==taFinishToken || !taRunning)return;
@@ -6469,7 +6457,7 @@ function taStyleRewardOrb(orb,isTime,boosted=false){
   if(boosted)orb.classList.add('ta-reward-boost');
   return orb;
 }
-function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null){if(!taRunning)return;const id=isTime?'taTime':'taScore';const taTimeGain=isTime&&((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect))?2:1;if(isTime)taSeconds+=taTimeGain;else taScore+=pts;taRender();const el=document.getElementById(id);el.classList.remove('ta-pop');void el.offsetWidth;el.classList.add('ta-pop');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+taTimeGain+'秒':'+'+pts;// Closely spaced arrivals fan out so each collected orb remains visible.
+function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';const taTimeGain=isTime&&((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect))?2:1;if(isTime)taSeconds+=taTimeGain;else taScore+=pts;taRender();const el=document.getElementById(id);el.classList.remove('ta-pop');void el.offsetWidth;el.classList.add('ta-pop');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}if(suppressPlus)return;const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+taTimeGain+'秒':'+'+pts;// Closely spaced arrivals fan out so each collected orb remains visible.
 const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
@@ -6942,7 +6930,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   }return best;
  }
  // Fire and ice fuse into a stationary three-beat resonance orb.
- const CROSS_PULSE_RADII=[105,150,195]; // Each successive beat reaches farther.
+ const CROSS_PULSE_RADII=[130,185,240]; // Each successive beat reaches farther.
  // Cross explosion awards are calculated by the existing collection code.
  // These two orbs are visual-only: one boosted gold score orb and one plain blue time orb.
  function crossRewardOrbs(w){
@@ -7003,7 +6991,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // The two elemental strokes turn white, contract and fade before vanishing.
   traces=traces.filter(f=>f!==a&&f!==b);
   const now=performance.now();
-  crossBursts.push({x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,whiteTraces:[a,b].map(f=>({path:f.path.map(p=>({x:p.x,y:p.y})),segs:f.segs})),rain:Array.from({length:taMobileFx?70:145},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taMobileFx?18:36},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?18:36)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
+  crossBursts.push({x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({path:f.path.map(p=>({x:p.x,y:p.y})),segs:f.segs})),rain:Array.from({length:taMobileFx?70:145},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taMobileFx?18:36},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?18:36)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
   spark(hit.x,hit.y,'fire',taMobileFx?5:10);spark(hit.x,hit.y,'ice',taMobileFx?5:10);
   playElementSound('cross');
  }
@@ -7011,7 +6999,12 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   crossBursts=crossBursts.filter(b=>now-b.start<7000);
   for(const b of crossBursts){
    const t=(now-b.start)/1000;
-   if(t>=3.22&&!b.flashCollected){b.flashCollected=true;finalFlashCollect(b);}
+   if(t>=3.22&&!b.flashCollected){b.flashCollected=true;finalFlashCollect(b);b.lastAfterCollect=now;}
+   // Keep the final explosion's collection field active for two more seconds.
+   // New words spawned after the flash are also collected, at most every 80ms.
+   if(b.flashCollected&&t<5.22&&now-b.lastAfterCollect>=80){
+    b.lastAfterCollect=now;finalFlashCollect(b);
+   }
    // Exactly three one-second pulses, including newly spawned words.
    const due=Math.min(3,Math.floor(t));
    while(b.pulses<due){b.pulses++;pulseCollect(b,CROSS_PULSE_RADII[b.pulses-1]);spark(b.x,b.y,b.pulses%2?'ice':'fire',taMobileFx?4:9);}
@@ -7474,3 +7467,5 @@ html.ta-result-locked #taLaunch{pointer-events:auto!important}
 .orb.ta-reward-boost,.ta-ice-time-orb.ta-reward-boost{filter:brightness(1.32) saturate(1.2)!important;box-shadow:0 0 8px 3px #fff7d0,0 0 19px 6px #ffe38e99!important;}
 .orb.ta-reward-time.ta-reward-boost{box-shadow:0 0 8px 3px #c9f5ff,0 0 20px 7px #5bbdff9c!important;}
 </style>
+
+<style>.ta-century-center-plus{position:fixed;z-index:10019;pointer-events:none;display:block;width:max-content;height:auto;line-height:1.2;letter-spacing:0;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-stretch:normal;font-size:clamp(3.6rem,11vw,7rem);font-variant-numeric:lining-nums tabular-nums;color:#ffdc8b;text-shadow:0 0 8px #fff4d2,0 0 28px #f3b44d,0 0 55px #e99327;white-space:nowrap;will-change:transform,opacity;}</style>
