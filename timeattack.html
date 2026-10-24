@@ -3724,7 +3724,7 @@ function endFlood(){
     }, 380 + i*55);
   });
   const cb = $("combo"); cb.classList.remove("hold");
-  if(combo >= 50){ cb.classList.remove("revive"); void cb.offsetWidth; cb.classList.add("revive"); setTimeout(()=>cb.classList.remove("revive"), 1500); sfx.line(0); }
+  if(combo >= 50){ cb.classList.remove("revive"); void cb.offsetWidth; cb.classList.add("revive"); setTimeout(()=>cb.classList.remove("revive"), 1500); if(!flood)sfx.line(0); }
 }
 // ---------- 割れる絵（ひびを3回叩くと、絵が砕けて崩れ落ち、違和感があふれ出す） ----------
 const SHATTER_PT = 20, SHATTER_HOLD = 5200, CRACK_TAPS = 8;
@@ -4852,7 +4852,7 @@ function vortexRelease(){
       plus.animate([{opacity:0,transform:'translate(-50%,5px) scale(.8)'},{opacity:1,transform:'translate(-50%,-7px) scale(1.12)',offset:.2},{opacity:1,transform:'translate(-50%,-15px)',offset:.55},{opacity:0,transform:'translate(-50%,-30px)'}],{duration:1350,easing:'ease-out'}).onfinish=()=>plus.remove();
     }
     // 短いステレオの輝き。既存の効果音のON/OFFに従う。
-    if(typeof sfx!=='undefined' && typeof sfx.line==='function') sfx.line(tier===2?1:0);
+    if(!flood && typeof sfx!=='undefined' && typeof sfx.line==='function') sfx.line(tier===2?1:0);
   }
   function assessPath(){
     if(!taRunning || flood || collected.size<3 || points.length<2 || flashedTier===2) return;
@@ -5765,7 +5765,14 @@ const sfx = (()=>{
       active=false;++serial;clearTimers();cancelFade();
       if(!player)return;
       const p=player;
-      const finish=()=>{if(player!==p||active)return;p.pause();try{p.currentTime=0;}catch(_){}p.volume=0;};
+      const finish=()=>{
+        if(player!==p||active)return;
+        p.pause();try{p.currentTime=0;}catch(_){}p.volume=0;
+        // Release the HTML media resource after fade-out; Android may otherwise retain a paused media card.
+        try{p.removeAttribute('src');p.load();}catch(_){}
+        player=null;
+        taReleaseMediaSession();
+      };
       if(immediate||p.paused){finish();return;}
       fadeTo(0,FADE_OUT_MS,finish);
     }
@@ -6000,7 +6007,25 @@ const sfx = (()=>{
       src.connect(hp); hp.connect(g); g.connect(bus); src.start(t); src.stop(t + .19);
     },
     // 触れた瞬間の「ジュワッ」：言葉が泡立ってほどける、帯域が下がっていくノイズ
-    touch(){ const a = ac(); if(!a) return; const t = a.currentTime, k = night() ? .6 : 1, dur = night() ? .32 : .24;
+    touch(){
+      if(flood){
+        // Time-stop variant 03: distant, filtered tap with a restrained short echo.
+        const a=ac();if(!a)return;
+        const t=a.currentTime,dur=.33;
+        const src=ctx.createBufferSource(),bp=ctx.createBiquadFilter(),lp=ctx.createBiquadFilter(),g=ctx.createGain();
+        src.buffer=noise;src.loop=true;src.playbackRate.value=.77;
+        bp.type='bandpass';bp.Q.value=1.1;
+        bp.frequency.setValueAtTime(1350,t);bp.frequency.exponentialRampToValueAtTime(480,t+dur);
+        lp.type='lowpass';lp.frequency.value=1550;lp.Q.value=.55;
+        g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.082,t+.016);
+        g.gain.exponentialRampToValueAtTime(.023,t+.14);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+        src.connect(bp);bp.connect(lp);lp.connect(g);g.connect(bus);
+        const echo=ctx.createDelay(.4),wet=ctx.createGain();echo.delayTime.value=.115;wet.gain.value=.13;
+        g.connect(echo);echo.connect(wet);wet.connect(bus);
+        src.start(t);src.stop(t+dur+.015);
+        return;
+      }
+      const a = ac(); if(!a) return; const t = a.currentTime, k = night() ? .6 : 1, dur = night() ? .32 : .24;
       const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), hs = ctx.createBiquadFilter(), g = ctx.createGain();
       src.buffer = noise; src.loop = true; src.playbackRate.value = .9;
       bp.type = "bandpass"; bp.Q.value = 2.2; bp.frequency.setValueAtTime(4200*k, t); bp.frequency.exponentialRampToValueAtTime(900*k, t + dur);
@@ -6024,7 +6049,7 @@ const sfx = (()=>{
     },
     // 10連：星屑の余韻（冒頭破裂音なし）／100連：黄金の大聖堂。
     // AudioContextのマスターを通し、既存のサウンド設定と音量調整を共有する。
-    comboMilestone(century=false){
+    comboMilestone(century=false){ if(flood)return;
       const a=ac(); if(!a) return;
       const key=century?'century':'ten';
       const src=comboAudioBuffers[key];
@@ -6096,7 +6121,7 @@ const sfx = (()=>{
       src.connect(bp); bp.connect(g); g.connect(bus); src.start(t, Math.random()*.1); src.stop(t + .06);
     },
     // 1・2行目を言葉にしたとき：控えめに開く二つの音
-    line(k){ const a = ac(); if(!a) return; const t = a.currentTime, n = notes();
+    line(k){ if(flood)return; const a = ac(); if(!a) return; const t = a.currentTime, n = notes();
       click(t, 5000, .06, .015);
       bell(t + .02, n[k*2], 3.01, 1.2, .05, .3);
       bell(t + .09, n[Math.min(4, k*2 + 2)], 3.01, 1.2, .045, .55);
