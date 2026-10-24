@@ -6799,7 +6799,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  if(flood&&w.classList.contains('still')){
   if(type==='fire'&&w.dataset.taTime!=='1')w.dataset.taFireScore='1';
   stopTap(w);
-  else if(type==='ice')taAward(true,0);
+  if(type==='ice')taAward(true,0);
   return;
  }
  // Elemental contact activates the original special effect before destruction.
