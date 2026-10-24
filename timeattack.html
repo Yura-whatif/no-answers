@@ -6943,6 +6943,29 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  }
  // Fire and ice fuse into a stationary three-beat resonance orb.
  const CROSS_PULSE_RADII=[105,150,195]; // Each successive beat reaches farther.
+ // Cross explosion awards are calculated by the existing collection code.
+ // These two orbs are visual-only: one boosted gold score orb and one plain blue time orb.
+ function crossRewardOrbs(w){
+  const wr=w.getBoundingClientRect(),sx=wr.left+wr.width/2,sy=wr.top+wr.height/2;
+  for(const isTime of [false,true]){
+   const orb=document.createElement('span');orb.className='orb';
+   taStyleRewardOrb(orb,isTime,!isTime);
+   orb.style.position='fixed';orb.style.left=sx+'px';orb.style.top=sy+'px';
+   orb.style.pointerEvents='none';orb.style.zIndex='120';
+   document.body.append(orb);
+   const target=document.getElementById(isTime?'taTime':'taScore');
+   if(!target){orb.remove();continue;}
+   const tr=target.getBoundingClientRect(),dx=tr.left+tr.width/2-sx,dy=tr.top+tr.height/2-sy;
+   const bend=isTime?-23:23;
+   const a=orb.animate([
+    {transform:'translate(-50%,-50%) scale(.5)',opacity:0},
+    {transform:'translate(-50%,-50%) scale(1.35)',opacity:1,offset:.17},
+    {transform:`translate(calc(-50% + ${dx*.48+bend}px),calc(-50% + ${dy*.48-35}px)) scale(1.05)`,opacity:1,offset:.55},
+    {transform:`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(.45)`,opacity:0}
+   ],{duration:850,easing:'ease-in-out',fill:'forwards'});
+   a.onfinish=()=>orb.remove();
+  }
+ }
  function pulseCollect(b,radius){
   if(!active())return;
   const hr=hero.getBoundingClientRect();let count=0;
@@ -6951,7 +6974,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;
    const x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;
    if(Math.hypot(x-b.x,y-b.y)>radius)continue;
-   collect(w,'fire');count++;
+   crossRewardOrbs(w);collect(w,'fire');count++;
   }
   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
    taSeconds+=count;taRender();
@@ -6966,7 +6989,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   let count=0;
   for(const w of words){
    if(!valid(w)||w.dataset.taElementClaim)continue;
-   collect(w,'fire');count++;
+   crossRewardOrbs(w);collect(w,'fire');count++;
   }
   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
    taSeconds+=count;taRender();
