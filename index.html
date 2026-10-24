@@ -531,6 +531,9 @@ html.timestop header::before{-webkit-backdrop-filter:none;backdrop-filter:none;b
 /* 止まっている時間のあいだ、上の作品（紙片）には触れられない */
 html.timestop .slip,html.timestop #stow,html.timestop #shareNow{pointer-events:none}
 .word.still{animation:stillIn .45s ease both}
+/* Time-stop tap: hide the word capsule immediately, leaving only the tearing text. */
+.word.still.got.stop-tearing{animation:none!important;background:transparent!important;border-color:transparent!important;border-width:1px;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;outline:none!important;}
+
 @keyframes stillIn{from{opacity:0;transform:scale(.85);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
 .word.special.frozen{pointer-events:none;filter:saturate(.7) brightness(1.2) drop-shadow(0 0 10px rgba(246,206,130,.8))}
 /* 触れた言葉は霧になり、そのまま宙に止まる */
@@ -3068,6 +3071,7 @@ function stopTap(w){
   const tearAngle = Math.round(Math.random()*50-25);
   const label = w.textContent;
   const originalColor = getComputedStyle(w).color;
+  w.classList.add("stop-tearing");
   w.style.position="absolute";
   w.style.color="transparent";
   w.style.webkitTextFillColor="transparent";
