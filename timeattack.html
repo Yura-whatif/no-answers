@@ -3607,8 +3607,8 @@ function placeStill(cell){
   const w = document.createElement("button");
   w.type = "button"; w.className = "word still"; w.textContent = taMixedWord();
   w.dataset.cell = cell;
-  // 時止め中の文字は約半数を時間延長文字にする。
-  if(Math.random() < .50){ w.dataset.taTime = "1"; w.classList.add("ta-blue"); }
+  // 時止め中の時間延長文字の出現率は20%（従来50%）。
+  if(Math.random() < .20){ w.dataset.taTime = "1"; w.classList.add("ta-blue"); }
   const [x, y] = STOP_CELLS[cell];
   w.style.setProperty("--x", (x + Math.random()*6).toFixed(1) + "%"); w.style.setProperty("--y", (y + Math.random()*4 - 2).toFixed(1) + "%");
   w.addEventListener("click", e => { e.stopPropagation(); if(flood && w.classList.contains("still")) stopTap(w); });
