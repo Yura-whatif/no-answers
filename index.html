@@ -534,6 +534,11 @@ html.timestop .slip,html.timestop #stow,html.timestop #shareNow{pointer-events:n
 /* Time-stop tap: hide the word capsule immediately, leaving only the tearing text. */
 .word.still.got.stop-tearing{animation:none!important;background:transparent!important;border-color:transparent!important;border-width:1px;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;outline:none!important;}
 
+
+/* Time-stop capsule evaporates first; text tearing follows after a short pause. */
+.word.still.got.stop-tearing{position:relative;}
+.word.still.got.stop-tearing::before{content:"";position:absolute;inset:-1px;border:var(--stop-frame-border,1px solid transparent);border-radius:inherit;background:var(--stop-frame-background,transparent);box-shadow:var(--stop-frame-shadow,none);pointer-events:none;z-index:0;animation:stopFrameVapor 155ms ease-out both!important;}
+@keyframes stopFrameVapor{0%{opacity:1;filter:blur(0);transform:scale(1)}45%{opacity:.75;filter:blur(2px);transform:scale(1.035,.96)}100%{opacity:0;filter:blur(9px);transform:scale(1.13,.88)}}
 @keyframes stillIn{from{opacity:0;transform:scale(.85);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
 .word.special.frozen{pointer-events:none;filter:saturate(.7) brightness(1.2) drop-shadow(0 0 10px rgba(246,206,130,.8))}
 /* 触れた言葉は霧になり、そのまま宙に止まる */
@@ -3071,6 +3076,10 @@ function stopTap(w){
   const tearAngle = Math.round(Math.random()*50-25);
   const label = w.textContent;
   const originalColor = getComputedStyle(w).color;
+  const frameStyle = getComputedStyle(w);
+  w.style.setProperty("--stop-frame-border", frameStyle.border);
+  w.style.setProperty("--stop-frame-background", frameStyle.background);
+  w.style.setProperty("--stop-frame-shadow", frameStyle.boxShadow);
   w.classList.add("stop-tearing");
   w.style.position="absolute";
   w.style.color="transparent";
@@ -3091,7 +3100,7 @@ function stopTap(w){
       {transform:`translate(${dx*sign*.18}px,${dy*sign*.18}px) skew(${tearAngle*.35*sign}deg) scale(1.12,.94)`,opacity:1,filter:"blur(.2px)",offset:.28},
       {transform:`translate(${dx*sign*.58}px,${dy*sign*.58}px) skew(${tearAngle*.8*sign}deg) scale(1.35,.83)`,opacity:.86,filter:"blur(.7px)",offset:.62},
       {transform:`translate(${dx*sign}px,${dy*sign}px) skew(${tearAngle*sign}deg) scale(1.58,.72)`,opacity:0,filter:"blur(2.6px)",offset:1}
-    ],{duration:510,easing:"ease-in",fill:"forwards"});
+    ],{duration:385,delay:125,easing:"ease-in",fill:"forwards"});
   });
   setTimeout(()=>w.remove(),520);
   stopPend.push({x:cx, y:cy, g, word});
