@@ -3528,6 +3528,13 @@ function taCenturyResonance(cx,cy){
   document.body.append(veil);
   veil.animate([{opacity:0},{opacity:1,offset:.3},{opacity:0}],{duration:1100,easing:'ease-out'}).onfinish=()=>veil.remove();
 }
+// Collection-area point labels: same font as score-area labels and
+// longer, gentler rise for larger rewards (internal score units).
+function taFieldPlusDuration(points){
+  const displayed=Math.max(500,Math.round(Number(points||0)*1000));
+  const level=Math.max(0,Math.min(1,Math.log10(displayed/500)/Math.log10(200)));
+  return Math.round(1700+level*2300);
+}
 function taCenturyCenterPlus(){
   const area=document.getElementById('drift');if(!area)return;
   const r=area.getBoundingClientRect();
@@ -3542,10 +3549,11 @@ function taCenturyCenterPlus(){
     p.style.fontSize=(current*maxWidth/measured)+'px';
   }
   p.animate([
-    {transform:'translate(-50%,-50%) translateY(12px)',opacity:0,offset:0},
-    {transform:'translate(-50%,-50%) translateY(0)',opacity:1,offset:.17},
-    {transform:'translate(-50%,-50%) translateY(-92px)',opacity:0,offset:1}
-  ],{duration:1450,easing:'ease-out',fill:'forwards'}).onfinish=()=>p.remove();
+    {transform:'translate(-50%,-50%) translateY(8px)',opacity:0,offset:0},
+    {transform:'translate(-50%,-50%) translateY(0)',opacity:1,offset:.12},
+    {transform:'translate(-50%,-50%) translateY(-17px)',opacity:1,offset:.58},
+    {transform:'translate(-50%,-50%) translateY(-40px)',opacity:0,offset:1}
+  ],{duration:taFieldPlusDuration(100),easing:'cubic-bezier(.18,.65,.35,1)',fill:'forwards'}).onfinish=()=>p.remove();
 }
 /* Combo score landing: one shared amount-to-size scale for label and score pulse.
    Base 10-point milestone = 10,000 displayed; century = 100,000 displayed. */
@@ -4085,7 +4093,7 @@ function makeVoidPoints(){
 function voidGain(n, x, y){
   const p = document.createElement("span"); p.className = "oddplus"; p.textContent = taPointPlus(n); p.style.fontSize = plusSize(n, 1.2);
   p.style.left = x + "px"; p.style.top = y + "px"; document.body.append(p);
-  p.animate([{opacity:0, transform:"translate(-50%,-30%) scale(.8)"},{opacity:1, transform:"translate(-50%,-110%) scale(1.15)", offset:.25},{opacity:1, transform:"translate(-50%,-150%) scale(1)", offset:.7},{opacity:0, transform:"translate(-50%,-200%) scale(1)"}], {duration:1600, easing:"ease-out", fill:"forwards"}).onfinish = () => p.remove();
+  p.animate([{opacity:0, transform:"translate(-50%,-30%) scale(.9)"},{opacity:1, transform:"translate(-50%,-80%) scale(1.05)", offset:.18},{opacity:1, transform:"translate(-50%,-110%) scale(1)", offset:.65},{opacity:0, transform:"translate(-50%,-145%) scale(1)"}], {duration:taFieldPlusDuration(n), easing:"cubic-bezier(.18,.65,.35,1)", fill:"forwards"}).onfinish = () => p.remove();
 }
 function enterVoid(abyss, vp, onDone){
   let live = true;
@@ -5091,7 +5099,7 @@ function vortexRelease(){
     if(bonus>0){
       const plus=document.createElement('div');plus.className='ta-issen-plus'+(tier===3?' perfect':'');plus.textContent=taPointPlus(bonus);
       plus.style.left=((x1+x2)/2)+'px';plus.style.top=((y1+y2)/2+5)+'px';field.append(plus);
-      plus.animate([{opacity:0,transform:'translate(-50%,5px) scale(.8)'},{opacity:1,transform:'translate(-50%,-7px) scale(1.12)',offset:.2},{opacity:1,transform:'translate(-50%,-15px)',offset:.55},{opacity:0,transform:'translate(-50%,-30px)'}],{duration:1350,easing:'ease-out'}).onfinish=()=>plus.remove();
+      plus.animate([{opacity:0,transform:'translate(-50%,4px) scale(.9)'},{opacity:1,transform:'translate(-50%,-5px) scale(1.05)',offset:.18},{opacity:1,transform:'translate(-50%,-11px)',offset:.65},{opacity:0,transform:'translate(-50%,-24px)'}],{duration:taFieldPlusDuration(bonus),easing:'cubic-bezier(.18,.65,.35,1)'}).onfinish=()=>plus.remove();
     }
     // 短いステレオの輝き。既存の効果音のON/OFFに従う。
     if(!flood && typeof sfx!=='undefined' && typeof sfx.line==='function') sfx.line(tier===3?1:0);
@@ -7652,7 +7660,9 @@ html.glow-sun .orb.ta-reward-time.ta-reward-boost{
   box-shadow:0 0 9px 3px #e0fbff,0 0 21px 8px rgba(54,169,255,.85)!important;
 }
 </style>
-</body>
+<style>/* Match collection-area point labels to score-area bonus font. */
+.ta-century-center-plus,.ta-issen-plus,.oddplus,.ta-center-hit-plus{font-family:var(--mincho),serif!important;}
+</style></body>
 <style>
 /* Readable thousand-point popup labels in the collection area. */
 .ta-issen-plus{font-size:clamp(.85rem,3.6vw,1.45rem)!important;max-width:calc(100% - 16px);white-space:nowrap;}
@@ -7873,7 +7883,7 @@ html.ta-result-locked #taLaunch{pointer-events:auto!important}
 .orb.ta-reward-time.ta-reward-boost{box-shadow:0 0 8px 3px #c9f5ff,0 0 20px 7px #5bbdff9c!important;}
 </style>
 
-<style>.ta-century-center-plus{position:fixed;z-index:10019;pointer-events:none;display:block;width:max-content;height:auto;line-height:1.2;letter-spacing:0;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-stretch:normal;font-size:clamp(3.2rem,11vw,7rem);font-variant-numeric:lining-nums tabular-nums;color:#ffdc8b;text-shadow:0 0 8px #fff4d2,0 0 28px #f3b44d,0 0 55px #e99327;white-space:nowrap;will-change:transform,opacity;}</style>
+<style>.ta-century-center-plus{position:fixed;z-index:10019;pointer-events:none;display:block;width:max-content;height:auto;line-height:1.2;letter-spacing:0;font-family:var(--mincho),serif;font-weight:700;font-stretch:normal;font-size:clamp(3.2rem,11vw,7rem);font-variant-numeric:lining-nums tabular-nums;color:#ffdc8b;text-shadow:0 0 8px #fff4d2,0 0 28px #f3b44d,0 0 55px #e99327;white-space:nowrap;will-change:transform,opacity;}</style>
 <style>
 /* Compact in-field point gains; leave time labels unchanged. */
 .ta-issen-plus{font-size:clamp(.85rem,3.6vw,1.45rem)!important;max-width:calc(100% - 16px);white-space:nowrap;}
