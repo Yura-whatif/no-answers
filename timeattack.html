@@ -3535,7 +3535,7 @@ function taCenturyCenterPlus(){
   p.style.left=(r.left+r.width/2)+'px';p.style.top=(r.top+r.height/2)+'px';p.style.scale='1 1';
   document.body.append(p);
   // Fit the full +100,000 label within the play field, including on narrow phones.
-  const maxWidth=Math.max(80,r.width-24);
+  const maxWidth=Math.max(80,r.width-12);
   const measured=p.getBoundingClientRect().width;
   if(measured>maxWidth){
     const current=parseFloat(getComputedStyle(p).fontSize);
@@ -7873,7 +7873,7 @@ html.ta-result-locked #taLaunch{pointer-events:auto!important}
 .orb.ta-reward-time.ta-reward-boost{box-shadow:0 0 8px 3px #c9f5ff,0 0 20px 7px #5bbdff9c!important;}
 </style>
 
-<style>.ta-century-center-plus{position:fixed;z-index:10019;pointer-events:none;display:block;width:max-content;height:auto;line-height:1.2;letter-spacing:0;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-stretch:normal;font-size:clamp(2.4rem,8vw,5.3rem);font-variant-numeric:lining-nums tabular-nums;color:#ffdc8b;text-shadow:0 0 8px #fff4d2,0 0 28px #f3b44d,0 0 55px #e99327;white-space:nowrap;will-change:transform,opacity;}</style>
+<style>.ta-century-center-plus{position:fixed;z-index:10019;pointer-events:none;display:block;width:max-content;height:auto;line-height:1.2;letter-spacing:0;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-stretch:normal;font-size:clamp(3.2rem,11vw,7rem);font-variant-numeric:lining-nums tabular-nums;color:#ffdc8b;text-shadow:0 0 8px #fff4d2,0 0 28px #f3b44d,0 0 55px #e99327;white-space:nowrap;will-change:transform,opacity;}</style>
 <style>
 /* Compact in-field point gains; leave time labels unchanged. */
 .ta-issen-plus{font-size:clamp(.85rem,3.6vw,1.45rem)!important;max-width:calc(100% - 16px);white-space:nowrap;}
