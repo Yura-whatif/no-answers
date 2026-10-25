@@ -333,6 +333,16 @@ html[data-view="lib"] #taPlay{display:none!important}
 .ta-gold-collapse .star .center{fill:#ffffff;opacity:.40}
 @keyframes taGoldStarContract{0%{opacity:.70;transform:translate(-50%,-50%) scale(1)}45%{opacity:.75;transform:translate(-50%,-50%) scale(.56)}77%{opacity:.55;transform:translate(-50%,-50%) scale(.18)}100%{opacity:0;transform:translate(-50%,-50%) scale(0)}}
 @media(prefers-reduced-motion:reduce){.ta-gold-collapse{display:none}}
+#taHud #taScore{font-variant-numeric:tabular-nums;letter-spacing:-.035em;font-size:clamp(1.12rem,3.8vw,1.8rem)!important;white-space:nowrap}
+
+/* Bonus and ice shatter additions */
+.ta-issen-layer.ta-issen-white{background:linear-gradient(90deg,transparent,#fff 18%,#fff 50%,#fff 82%,transparent)!important;box-shadow:0 0 9px 3px rgba(255,255,255,.65),0 0 20px 5px rgba(230,240,255,.23)!important}
+.ta-issen-label.ta-issen-white{color:#fff!important;text-shadow:0 0 9px rgba(255,255,255,.8)!important}
+.ta-center-hit-flash,.ta-center-hit-plus,.ta-ice-frozen-word{position:fixed;pointer-events:none;z-index:120;transform:translate(-50%,-50%);white-space:nowrap;font-family:var(--mincho,serif)}
+.ta-center-hit-flash{color:#fff;text-shadow:0 0 6px #fff,0 0 15px rgba(255,255,255,.9);font-weight:bold}
+.ta-center-hit-plus{color:#fff;font-size:13px;text-shadow:0 0 7px #fff,0 1px 5px #111}
+.ta-ice-shard{position:fixed;z-index:121;pointer-events:none;width:3px;height:7px;background:linear-gradient(#fff,#8cdcff);clip-path:polygon(50% 0,100% 60%,65% 100%,0 70%);box-shadow:0 0 5px #a9edff}
+.ta-ice-frozen-word{color:#d7f4ff;font-weight:bold;text-shadow:0 0 5px #fff,0 0 13px #6dd8ff,0 0 22px #278cce;filter:drop-shadow(0 0 3px #9cecff)}
 </style>
 <script>
 /* 最初の描画より前に、前回の世界（白/黒）を決めておく。万一起動処理が止まっても4秒で必ず見せる */
@@ -3416,7 +3426,7 @@ function mist(r, n = 7){
 const taCenturyDust=(()=>{
   let canvas=null,ctx=null,raf=0,particles=[],last=0;
   const mobile=window.matchMedia('(pointer:coarse)').matches;
-  const max=mobile?105:155;
+  const max=mobile?72:110;
   function frame(now){
     if(!canvas)return;
     const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
@@ -3439,7 +3449,7 @@ const taCenturyDust=(()=>{
     if(!canvas){canvas=document.createElement('canvas');canvas.width=innerWidth;canvas.height=innerHeight;
       canvas.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:10016;pointer-events:none;';
       document.body.append(canvas);ctx=canvas.getContext('2d');}
-    const n=mobile?8:12,cx=r.left+r.width/2,cy=r.top+r.height/2;
+    const n=mobile?6:9,cx=r.left+r.width/2,cy=r.top+r.height/2;
     for(let i=0;i<n;i++){
       const life=1.30+Math.random()*.65;
       particles.push({x:cx+(Math.random()-.5)*Math.min(44,r.width),
@@ -3520,9 +3530,16 @@ function taCenturyResonance(cx,cy){
 function taCenturyCenterPlus(){
   const area=document.getElementById('drift');if(!area)return;
   const r=area.getBoundingClientRect();
-  const p=document.createElement('span');p.className='ta-century-center-plus';p.textContent='+100';
+  const p=document.createElement('span');p.className='ta-century-center-plus';p.textContent='+100,000';
   p.style.left=(r.left+r.width/2)+'px';p.style.top=(r.top+r.height/2)+'px';p.style.scale='1 1';
   document.body.append(p);
+  // Fit the full +100,000 label within the play field, including on narrow phones.
+  const maxWidth=Math.max(80,r.width-24);
+  const measured=p.getBoundingClientRect().width;
+  if(measured>maxWidth){
+    const current=parseFloat(getComputedStyle(p).fontSize);
+    p.style.fontSize=(current*maxWidth/measured)+'px';
+  }
   p.animate([
     {transform:'translate(-50%,-50%) translateY(12px)',opacity:0,offset:0},
     {transform:'translate(-50%,-50%) translateY(0)',opacity:1,offset:.17},
@@ -4024,7 +4041,7 @@ function makeVoidPoints(){
 }
 // 「+N」は通常（oddplus・var(--mincho)・plusSize）と同じ表現で、収集した単語の位置に出す
 function voidGain(n, x, y){
-  const p = document.createElement("span"); p.className = "oddplus"; p.textContent = "+" + n; p.style.fontSize = plusSize(n, 1.2);
+  const p = document.createElement("span"); p.className = "oddplus"; p.textContent = taPointPlus(n); p.style.fontSize = plusSize(n, 1.2);
   p.style.left = x + "px"; p.style.top = y + "px"; document.body.append(p);
   p.animate([{opacity:0, transform:"translate(-50%,-30%) scale(.8)"},{opacity:1, transform:"translate(-50%,-110%) scale(1.15)", offset:.25},{opacity:1, transform:"translate(-50%,-150%) scale(1)", offset:.7},{opacity:0, transform:"translate(-50%,-200%) scale(1)"}], {duration:1600, easing:"ease-out", fill:"forwards"}).onfinish = () => p.remove();
 }
@@ -4343,7 +4360,7 @@ function spawnWord(opt = {}){
     if(isGem){ f.getAnimations().forEach(x=>x.cancel()); gemBurst(r, f); } else {
     // 言葉が霧になってほどける：文字は広がりながらぼやけ、周りに淡い靄が立ちのぼって消える
     // あふれる時間は、ぼかしと字間の変化（重い）を省き、拡大と透明化だけで軽くほどく
-    const lite = flood || sakuraOn;   // 時止め・桜のあいだは、ぼかしを使わず軽くほどく
+    const lite = flood || sakuraOn || combo>=100;   // 時止め・桜のあいだは、ぼかしを使わず軽くほどく
     f.animate(lite ? [
       {transform:"scale(1)", opacity:1},
       {transform:"scale(1.18) translateY(-6px)", opacity:.35, offset:.55},
@@ -4363,9 +4380,9 @@ function spawnWord(opt = {}){
       flash.innerHTML=`<svg class="star" viewBox="0 0 112 94" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="taGoldStarGradient" cx="50%" cy="50%" r="68%"><stop offset="0" stop-color="#ffffff"/><stop offset=".12" stop-color="#ffffff"/><stop offset=".40" stop-color="#f5faff"/><stop offset="1" stop-color="#e9f2ff" stop-opacity=".12"/></radialGradient></defs><path class="halo" d="M56 0 Q58 37 66 39 Q82 45 112 47 Q82 49 66 55 Q58 57 56 94 Q54 57 46 55 Q30 49 0 47 Q30 45 46 39 Q54 37 56 0Z"/><path class="ray" d="M56 1 C58 30 59 40 65 42 C76 45 95 46 111 47 C95 48 76 49 65 52 C59 54 58 64 56 93 C54 64 53 54 47 52 C36 49 17 48 1 47 C17 46 36 45 47 42 C53 40 54 30 56 1Z"/><circle class="center" cx="56" cy="47" r="3.3"/></svg>`;
       document.body.append(flash);
       setTimeout(()=>flash.remove(),550);
-      setTimeout(()=>taCenturyDust.emit(r),95);
+      if(!window.matchMedia("(pointer:coarse)").matches || Math.random()>.35)setTimeout(()=>taCenturyDust.emit(r),95);
     }else mist(r, lite ? 2 : 7);
-    if(isOdd){ const p = document.createElement("span"); p.className = "oddplus"; p.textContent = "+" + ODD_PT; p.style.fontSize = plusSize(ODD_PT, 1.2);
+    if(isOdd){ const p = document.createElement("span"); p.className = "oddplus"; p.textContent = taPointPlus(ODD_PT); p.style.fontSize = plusSize(ODD_PT, 1.2);
       p.style.left = (r.left + r.width/2) + "px"; p.style.top = r.top + "px"; document.body.append(p);
       p.animate([{opacity:0, transform:"translate(-50%,-30%) rotate(180deg) scale(.8)"},{opacity:1, transform:"translate(-50%,-110%) rotate(0deg) scale(1.1)", offset:.25},{opacity:1, transform:"translate(-50%,-150%) rotate(0deg) scale(1)", offset:.7},{opacity:0, transform:"translate(-50%,-200%) rotate(0deg) scale(1)"}],
         {duration:1700, easing:"ease-out", fill:"forwards"}).onfinish = () => p.remove(); }
@@ -4406,7 +4423,7 @@ function spawnWord(opt = {}){
         {strokeDashoffset:-len,opacity:0}
       ],{duration:flightDuration+170,easing:'cubic-bezier(.45,0,.6,1)',fill:'forwards'});
       const trails=window.taGoldLineTrails||(window.taGoldLineTrails=[]);
-      trails.push(svg);if(trails.length>12)trails.shift().remove();
+      trails.push(svg);if(trails.length>(matchMedia("(pointer:coarse)").matches?5:8))trails.shift().remove();
       anim.onfinish=()=>{svg.remove();const k=trails.indexOf(svg);if(k>=0)trails.splice(k,1);};
     }
     o.animate(flightFrames,{duration:flightDuration,easing:"cubic-bezier(.45,0,.6,1)",fill:"forwards"}).onfinish=()=>{o.remove();arrive();};
@@ -4500,7 +4517,7 @@ function pullAll(x, y, self){
     core.animate([{scale:"1", opacity:1},{scale:"1.5", opacity:1, offset:.3},{scale:"0", opacity:0}], {duration:420, easing:"ease-in", fill:"forwards"}).onfinish = () => core.remove();
     if(!n) return;
     vortexFlash({getBoundingClientRect:() => ({left:x, top:y, width:0, height:0})});
-    const p = document.createElement("span"); p.className = "oddplus"; p.textContent = "+" + sum; p.style.fontSize = plusSize(sum, 1.2);
+    const p = document.createElement("span"); p.className = "oddplus"; p.textContent = taPointPlus(sum); p.style.fontSize = plusSize(sum, 1.2);
     p.style.left = x + "px"; p.style.top = y + "px"; document.body.append(p);
     p.animate([{opacity:0, transform:"translate(-50%,-30%) scale(.8)"},{opacity:1, transform:"translate(-50%,-110%) scale(1.15)", offset:.25},{opacity:1, transform:"translate(-50%,-150%) scale(1)", offset:.7},{opacity:0, transform:"translate(-50%,-200%) scale(1)"}],
       {duration:1600, easing:"ease-out", fill:"forwards"}).onfinish = () => p.remove();
@@ -4862,7 +4879,7 @@ function startSakura(from, opt){
         while(prefillCount < shouldHave){
           const i = prefillCount++;
           if(field.querySelectorAll('.word:not(.got)').length >= 12) continue;
-          spawnWord({plain:true,force:true,summonX:12+(i%3)*26+Math.random()*6,summonY:65+Math.random()*12});
+          spawnWord({plain:true,force:true,summonX:12+(i%3)*26+Math.random()*6,summonY:24+(i%3)*19+Math.random()*7});
         }
       }
 
@@ -4964,7 +4981,7 @@ function vortexRelease(){
   const g = s.pend + yieldNow() * 2, c = el.getBoundingClientRect(), cx = c.left + c.width/2, cy = c.top + c.height/2;   // 渦自身の分 +2P
   el.classList.add("got");
   el.animate([{transform:"scale(1)", opacity:1},{transform:"scale(1.3) rotate(-90deg)", opacity:1, offset:.3},{transform:"scale(0) rotate(-360deg)", opacity:0}], {duration:520, easing:"ease-in", fill:"forwards"}).onfinish = () => el.remove();
-  const p = document.createElement("span"); p.className = "oddplus"; p.textContent = "+" + g; p.style.fontSize = plusSize(g, 1.2);
+  const p = document.createElement("span"); p.className = "oddplus"; p.textContent = taPointPlus(g); p.style.fontSize = plusSize(g, 1.2);
   p.style.left = cx + "px"; p.style.top = cy + "px"; document.body.append(p);
   p.animate([{opacity:0, transform:"translate(-50%,-30%) scale(.8)"},{opacity:1, transform:"translate(-50%,-110%) scale(1.15)", offset:.25},{opacity:1, transform:"translate(-50%,-150%) scale(1)", offset:.7},{opacity:0, transform:"translate(-50%,-200%) scale(1)"}],
     {duration:1600, easing:"ease-out", fill:"forwards"}).onfinish = () => p.remove();
@@ -5024,21 +5041,21 @@ function vortexRelease(){
     const x1=from.x-rect.left,y1=from.y-rect.top,x2=to.x-rect.left,y2=to.y-rect.top;
     const length=Math.hypot(x2-x1,y2-y1),angle=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
     layer.style.left=x1+'px';layer.style.top=y1+'px';layer.style.width=length+'px';layer.style.transform=`rotate(${angle}deg)`;
-    layer.classList.add(tier===2?'perfect':'clean'); field.append(layer);
+    layer.classList.add(tier===3?'perfect':'clean');if(count===2)layer.classList.add('ta-issen-white'); field.append(layer);
     layer.animate([{opacity:0,filter:'blur(2px)'},{opacity:1,filter:'blur(0px)',offset:.16},{opacity:.75,offset:.42},{opacity:0,filter:'blur(5px)'}],{duration:540,easing:'ease-out'}).onfinish=()=>layer.remove();
-    const label=document.createElement('div');label.className='ta-issen-label';label.textContent='一閃';label.classList.toggle('perfect',tier===2);
+    const label=document.createElement('div');label.className='ta-issen-label';label.textContent='一閃';label.classList.toggle('perfect',tier===3);if(count===2)label.classList.add('ta-issen-white');
     label.style.left=((x1+x2)/2)+'px';label.style.top=((y1+y2)/2-24)+'px';field.append(label);
     label.animate([{opacity:0,transform:'translate(-50%,4px) scale(.9)'},{opacity:1,transform:'translate(-50%,-9px) scale(1)',offset:.22},{opacity:0,transform:'translate(-50%,-26px) scale(1)'}],{duration:1350,easing:'ease-out'}).onfinish=()=>label.remove();
     if(bonus>0){
-      const plus=document.createElement('div');plus.className='ta-issen-plus'+(tier===2?' perfect':'');plus.textContent='+'+bonus;
+      const plus=document.createElement('div');plus.className='ta-issen-plus'+(tier===3?' perfect':'');plus.textContent=taPointPlus(bonus);
       plus.style.left=((x1+x2)/2)+'px';plus.style.top=((y1+y2)/2+5)+'px';field.append(plus);
       plus.animate([{opacity:0,transform:'translate(-50%,5px) scale(.8)'},{opacity:1,transform:'translate(-50%,-7px) scale(1.12)',offset:.2},{opacity:1,transform:'translate(-50%,-15px)',offset:.55},{opacity:0,transform:'translate(-50%,-30px)'}],{duration:1350,easing:'ease-out'}).onfinish=()=>plus.remove();
     }
     // 短いステレオの輝き。既存の効果音のON/OFFに従う。
-    if(!flood && typeof sfx!=='undefined' && typeof sfx.line==='function') sfx.line(tier===2?1:0);
+    if(!flood && typeof sfx!=='undefined' && typeof sfx.line==='function') sfx.line(tier===3?1:0);
   }
   function assessPath(){
-    if(!taRunning || flood || collected.size<3 || points.length<2 || flashedTier===2) return;
+    if(!taRunning || flood || collected.size<2 || points.length<2 || flashedTier===3) return;
     const first=points[0], last=points[points.length-1];
     const dx=last.x-first.x,dy=last.y-first.y,dist=Math.hypot(dx,dy);
     const elapsed=performance.now()-started;
@@ -5051,14 +5068,14 @@ function vortexRelease(){
     }
     if(travel>dist*1.4 || maxDeviation>Math.max(18,dist*.105))return;
     const perfect=collected.size>=4 && travel<=dist*1.2 && maxDeviation<=Math.max(10,dist*.06) && dist/(elapsed/1000)>=580;
-    const tier=perfect?2:1;
-    // 3語で青白く発光し、同じスワイプで4語に達したら金色に昇格する。
+    const tier=collected.size>=4?3:(collected.size>=3?2:1);
+    // 2語:+500(白)、3語:+1,000、4語:+3,000。到達ごとに差分のみ付与。
     if(tier<=flashedTier)return;
     const now=performance.now();
     const awardReady=flashedTier>0 || now-lastAward>=800;
-    const totalBonus=awardReady?(perfect?5:2):0;
+    const totalBonus=awardReady?(tier===3?3:tier===2?1:.5):0;
     const bonus=Math.max(0,totalBonus-awardedBonus);
-    if(awardReady){lastAward=now;if(bonus>0 && taRunning){taScore+=bonus;taRender();}awardedBonus+=bonus;}
+    if(awardReady){lastAward=now;if(bonus>0 && taRunning){taScore+=bonus;taScoreRefresh();taRender();}awardedBonus+=bonus;}
     flashed=true;flashedTier=tier;
     flash(first,last,tier,collected.size,bonus);
   }
@@ -5066,12 +5083,23 @@ function vortexRelease(){
     if(!active)return;
     active=false;points=[];collected.clear();pointer=null;flashed=false;flashedTier=0;awardedBonus=0;
   }
+  // Center-tap bonus is evaluated on pointerup, since the swipe engine
+  // programmatically collects the first word on pointerdown (click.detail=0).
+  let centerTapCandidate=null;
   field.addEventListener('pointerdown',e=>{
     const vx=e.target.closest&&e.target.closest('.word.vortex');
     if(vx){e.preventDefault();active=false;try{field.setPointerCapture(e.pointerId)}catch(_){}vortexHold(vx);return;}
     const cr=e.target.closest&&e.target.closest('.word.crack');
     if(cr){e.preventDefault();active=false;crackTap(cr);return;}
     if(active)return;
+    const cw=e.target.closest&&e.target.closest('.word');
+    centerTapCandidate=null;
+    if(cw && !cw.matches('.special,.petal,.pull,.glow,.reso,.multi,.vortex,.crack,.still') && taRunning){
+      const rr=cw.getBoundingClientRect(),cx=rr.left+rr.width/2,cy=rr.top+rr.height/2;
+      // Generous central area: 70% of word width, 80% of its height.
+      if(Math.abs(e.clientX-cx)<=rr.width*.35 && Math.abs(e.clientY-cy)<=rr.height*.40)
+        centerTapCandidate={id:e.pointerId,x:e.clientX,y:e.clientY,cx,cy,text:cw.textContent};
+    }
     active=true;pointer=e.pointerId;started=performance.now();lx=e.clientX;ly=e.clientY;
     points=[{x:lx,y:ly}];collected.clear();flashed=false;flashedTier=0;awardedBonus=0;
     try{field.setPointerCapture(e.pointerId)}catch(_){}hit(lx,ly);
@@ -5081,8 +5109,23 @@ function vortexRelease(){
     const evs=e.getCoalescedEvents?e.getCoalescedEvents():[];
     (evs.length?evs:[e]).forEach(v=>{sweep(v.clientX,v.clientY);points.push({x:v.clientX,y:v.clientY});assessPath();});
   });
-  field.addEventListener('pointerup',e=>{if(e.pointerId===pointer){sweep(e.clientX,e.clientY);points.push({x:e.clientX,y:e.clientY});assessPath();finish();}vortexRelease();});
-  field.addEventListener('pointercancel',()=>{finish();vortexRelease();});
+  field.addEventListener('pointerup',e=>{
+    if(e.pointerId===pointer){
+      sweep(e.clientX,e.clientY);points.push({x:e.clientX,y:e.clientY});assessPath();
+      const c=centerTapCandidate;
+      if(c && c.id===e.pointerId && Math.hypot(e.clientX-c.x,e.clientY-c.y)<13 && taRunning){
+        taScore+=.5;taScoreRefresh();taRender();
+        const blink=document.createElement('span');blink.className='ta-center-hit-flash';blink.textContent=c.text;
+        blink.style.left=c.cx+'px';blink.style.top=c.cy+'px';document.body.append(blink);
+        blink.animate([{opacity:0},{opacity:.8,offset:.2},{opacity:0}],{duration:260}).onfinish=()=>blink.remove();
+        const plus=document.createElement('span');plus.className='ta-center-hit-plus';plus.textContent='+500';
+        plus.style.left=c.cx+'px';plus.style.top=(c.cy-20)+'px';document.body.append(plus);
+        plus.animate([{opacity:0,transform:'translate(-50%,0)'},{opacity:1,transform:'translate(-50%,-10px)',offset:.2},{opacity:0,transform:'translate(-50%,-30px)'}],{duration:700}).onfinish=()=>plus.remove();
+      }
+      centerTapCandidate=null;finish();
+    }vortexRelease();
+  });
+  field.addEventListener('pointercancel',()=>{centerTapCandidate=null;finish();vortexRelease();});
   field.addEventListener('lostpointercapture',()=>{finish();vortexRelease();});
 })();
 // ---------- 断片を渡す（SNS共有） ----------
@@ -6679,12 +6722,36 @@ function taRenderRecords(){
   ranked.slice(0,20).forEach((r,i)=>{
     const row=document.createElement('div');row.className='ta-record-row';
     const pos=document.createElement('span');pos.className='ta-record-pos';pos.textContent=String(i+1).padStart(2,'0');
-    const score=document.createElement('strong');score.className='ta-record-score';score.textContent=r.score.toLocaleString('ja-JP')+' 点';
+    const score=document.createElement('strong');score.className='ta-record-score';score.textContent=taScoreFormat(r.score)+' 点';
     const chain=document.createElement('span');chain.className='ta-record-chain';chain.textContent=Number.isFinite(r.maxCombo)?'最大連鎖 '+r.maxCombo.toLocaleString('ja-JP'):'最大連鎖 —';
     const date=document.createElement('time');date.className='ta-record-date';date.dateTime=new Date(r.at).toISOString();date.textContent=taRecordDate(r.at);
     row.append(pos,score,chain,date);rankBox.append(row);
   });
 }
+// Visual-only score units: retain original score values for gameplay and stored records.
+const TA_SCORE_UNIT=1000;
+let taShownScore=0,taScoreAnim=0,taScoreLast=0;
+function taScoreFormat(n){return Math.round(n*TA_SCORE_UNIT).toLocaleString('ja-JP');}
+function taPointPlus(n){return '+'+taScoreFormat(n);}
+function taScoreDraw(now){
+  taScoreAnim=0;
+  if(!taRunning && !taStarting){taShownScore=taScore;}
+  else{
+    const dt=Math.min(0.08,Math.max(0,(now-taScoreLast)/1000));
+    // Fast catch-up under repeated taps; ease to the newest total without queuing animations.
+    const gap=taScore-taShownScore;
+    taShownScore+=gap*Math.min(1,1-Math.exp(-dt*17));
+    if(Math.abs(taScore-taShownScore)<.001)taShownScore=taScore;
+  }
+  taScoreLast=now;
+  const el=document.getElementById('taScore');if(el)el.textContent=taScoreFormat(taShownScore);
+  if(Math.abs(taScore-taShownScore)>.001)taScoreAnim=requestAnimationFrame(taScoreDraw);
+}
+function taScoreRefresh(){
+ if(taScoreAnim)return;
+ taScoreLast=performance.now();taScoreAnim=requestAnimationFrame(taScoreDraw);
+}
+function taScoreReset(){if(taScoreAnim)cancelAnimationFrame(taScoreAnim);taScoreAnim=0;taShownScore=taScore;const el=document.getElementById('taScore');if(el)el.textContent=taScoreFormat(taScore);}
 function taFlashScoreFrame(){const frame=document.getElementById('taScoreBox');if(!frame)return;frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}
 let taPlusLastArrival=0,taPlusArrivalCount=0;
 // Score orbs retain the original artwork. Time orbs are blue regardless of the active effect.
@@ -6695,7 +6762,7 @@ function taStyleRewardOrb(orb,isTime,boosted=false){
   if(boosted)orb.classList.add('ta-reward-boost');
   return orb;
 }
-function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';const taTimeGain=isTime&&((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect))?2:1;if(isTime)taSeconds+=taTimeGain;else taScore+=pts;taRender();const el=document.getElementById(id);el.classList.remove('ta-pop');void el.offsetWidth;el.classList.add('ta-pop');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}if(suppressPlus)return;const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+taTimeGain+'秒':'+'+pts;// Closely spaced arrivals fan out so each collected orb remains visible.
+function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';const taTimeGain=isTime&&((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect))?2:1;if(isTime)taSeconds+=taTimeGain;else {taScore+=pts;taScoreRefresh();}taRender();const el=document.getElementById(id);el.classList.remove('ta-pop');void el.offsetWidth;el.classList.add('ta-pop');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}if(suppressPlus)return;const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+taTimeGain+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
 const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
@@ -6745,7 +6812,7 @@ function taRender(){
     taLastCountdownNumber=count;
   }
   if(!countdown){timeEl.classList.remove('ta-countdown-beat');if(timeFrame)timeFrame.classList.remove('ta-countdown-frame-beat');}
-  document.getElementById('taScore').textContent=String(taScore);
+  if(!taScoreAnim){const el=document.getElementById('taScore');if(el)el.textContent=taScoreFormat(taShownScore);}
 }
 function taSyncDemo(){
   const hero=document.querySelector('#viewMain > .hero');
@@ -6805,7 +6872,7 @@ function taFinish(){
   setTimeout(()=>{
     if(token!==taFinishToken)return;
     flash.hidden=true;flash.classList.remove('ta-end-active');
-    document.getElementById('taEndDetail').textContent=taScore.toLocaleString('ja-JP');
+    document.getElementById('taEndDetail').textContent=taScoreFormat(taScore);
     document.getElementById('taEndCombo').textContent=taSessionMaxCombo.toLocaleString('ja-JP');
     document.getElementById('taEndRank').textContent=finishedPosition>=0?(finishedPosition+1)+'位':'—';
     const qualified=finishedQualified;
@@ -6857,7 +6924,7 @@ function taBegin(){
   setTimeout(()=>{if(revealToken===taFinishToken){manuscript.classList.remove('ta-soft-reveal');manuscript.classList.add('ta-game-frame');hud.classList.remove('ta-hud-reveal');}},1600);
   document.getElementById('taLaunch').hidden=true;
   if(!document.getElementById('viewLib').hidden)document.getElementById('libbtn').click();
-  taSeconds=60;taScore=0;taSessionMaxCombo=0;taSessionRecordAt=null;
+  taSeconds=60;taScore=0;taScoreReset();taSessionMaxCombo=0;taSessionRecordAt=null;
   document.dispatchEvent(new Event('ta-item-reset'));
   document.querySelectorAll('#drift .word').forEach(w=>w.remove());
   taRender();cancelAnimationFrame(taRaf);
@@ -7052,7 +7119,15 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const anim=fx.animate(k,{duration:type==='fire'?650:470,easing:'ease-out',fill:'forwards'});anim.onfinish=()=>fx.remove();
  const hr=hero.getBoundingClientRect();spark(x-hr.left,y-hr.top,type,type==='fire'?18:24);
  }
- function collect(w,type){if(!valid(w)||w.dataset.taElementClaim)return;w.dataset.taElementClaim='1';wordFx(w,type);
+ let lastIceContactSound=0;
+ function iceContactSound(){
+  if(typeof sfx==='undefined'||!sfx.on)return;
+  const now=performance.now();if(now-lastIceContactSound<55)return;lastIceContactSound=now;
+  // Play the same word-removal sound as an ordinary tap at ice contact.
+  // Throttle dense sweeps to avoid excessive simultaneous audio voices.
+  if(typeof sfx.touch==='function')sfx.touch();
+ }
+ function collect(w,type){if(!valid(w)||w.dataset.taElementClaim)return;w.dataset.taElementClaim='1';if(type==='ice')iceContactSound();if(type!=='ice')wordFx(w,type);
  // During time-stop, stationary words use the original deferred award mechanism.
  // Elemental effects can collect them without bypassing the time-stop scoring rules.
  if(flood&&w.classList.contains('still')){
@@ -7083,6 +7158,10 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  }
  if(type==='ice'){
   const wr=w.getBoundingClientRect(),sx=wr.left+wr.width/2,sy=wr.top+wr.height/2;
+  // 接触地点に凍結した文字を約1秒残し、崩壊後にオーブを飛ばす。
+  const frozen=document.createElement('span');frozen.className='ta-ice-frozen-word';frozen.textContent=w.textContent;
+  frozen.style.left=sx+'px';frozen.style.top=sy+'px';frozen.style.opacity='1';document.body.append(frozen);
+  frozen.animate([{opacity:1,transform:'translate(-50%,-50%) scale(1)',filter:'brightness(1.2)'},{opacity:1,transform:'translate(-50%,-50%) scale(1)',filter:'brightness(1.9)',offset:.12},{opacity:1,transform:'translate(-50%,-50%) scale(1)',filter:'brightness(1.4)',offset:.72},{opacity:0,transform:'translate(-50%,5%) scale(.65) rotate(8deg)',filter:'blur(4px)'}],{duration:1000,easing:'ease-in',fill:'forwards'}).onfinish=()=>frozen.remove();
   w.classList.add('got');w.remove();if(!isSpecial&&typeof bumpCombo==='function')bumpCombo();
   // Each frozen word releases one orb toward the countdown display.
   const target=document.getElementById('taTimeBox')||document.getElementById('taTime');
@@ -7091,10 +7170,10 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // Match the ordinary time-orb flight: 14px orb, 900-1150ms,
   // outward spread, quadratic Bezier arc, and ease-in-out timing.
   const orb=document.createElement('span');orb.className='ta-ice-time-orb';if(glowRemain>0)orb.classList.add('ta-reward-boost');
-  document.body.append(orb);
+  document.body.append(orb);orb.style.opacity='0';
   const ang=Math.random()*Math.PI*2,spread=26+Math.random()*18;
   const ox=sx+Math.cos(ang)*spread,oy=sy+Math.sin(ang)*spread;
-  const dur=900+Math.random()*250,t0=performance.now();
+  const dur=900+Math.random()*250,t0=performance.now()+1000;
   const step=now=>{
    const q=Math.min(1,(now-t0)/dur),e=q<.5?2*q*q:1-Math.pow(-2*q+2,2)/2;
    const r=document.getElementById('taTime')?.getBoundingClientRect();
@@ -7116,7 +7195,15 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    label.animate([{opacity:1,transform:'translate(-50%,-50%)'},{opacity:0,transform:'translate(-50%,-95%)'}],{duration:850}).onfinish=()=>label.remove();
    if(typeof sfx!=='undefined'&&sfx.arrive)sfx.arrive();
   };
-  requestAnimationFrame(step);
+  setTimeout(()=>{if(!taRunning){frozen.remove();orb.remove();return;}
+   // 凍った文字が細かな氷片に崩れ落ちてから時間オーブが飛び立つ。
+   for(let i=0;i<(taMobileFx?5:9);i++){
+    const shard=document.createElement('span');shard.className='ta-ice-shard';shard.style.left=(sx+(Math.random()-.5)*30)+'px';shard.style.top=(sy+(Math.random()-.5)*12)+'px';document.body.append(shard);
+    const dx=(Math.random()-.5)*70,dy=25+Math.random()*55;
+    shard.animate([{opacity:.95,transform:'translate(0,0) rotate(0deg)'},{opacity:0,transform:`translate(${dx}px,${dy}px) rotate(${Math.random()*220-110}deg)`}],{duration:320+Math.random()*220,easing:'ease-in'}).onfinish=()=>shard.remove();
+   }
+   spark(sx-hero.getBoundingClientRect().left,sy-hero.getBoundingClientRect().top,'ice',taMobileFx?6:10);requestAnimationFrame(step);
+  },1000);
  }
  else{if(type==='fire' && w.dataset.taTime!=='1')w.dataset.taFireScore='1';w.click();if(w.isConnected&&!w.classList.contains('got')){delete w.dataset.taElementClaim;delete w.dataset.taFireScore;}}
  }
@@ -7514,6 +7601,12 @@ html.glow-sun .orb.ta-reward-time.ta-reward-boost{
 }
 </style>
 </body>
+<style>
+/* Readable thousand-point popup labels in the collection area. */
+.ta-issen-plus{font-size:clamp(.85rem,3.6vw,1.45rem)!important;max-width:calc(100% - 16px);white-space:nowrap;}
+.oddplus{font-size:clamp(.78rem,3.4vw,1.45rem)!important;max-width:min(90vw,380px);white-space:nowrap;}
+</style>
+
 </html>
 
 <style>/* 連鎖レベルは未採用。倍率計算は維持し、レベル表記のみ非表示 */
@@ -7728,4 +7821,9 @@ html.ta-result-locked #taLaunch{pointer-events:auto!important}
 .orb.ta-reward-time.ta-reward-boost{box-shadow:0 0 8px 3px #c9f5ff,0 0 20px 7px #5bbdff9c!important;}
 </style>
 
-<style>.ta-century-center-plus{position:fixed;z-index:10019;pointer-events:none;display:block;width:max-content;height:auto;line-height:1.2;letter-spacing:0;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-stretch:normal;font-size:clamp(6rem,18vw,11.5rem);font-variant-numeric:lining-nums tabular-nums;color:#ffdc8b;text-shadow:0 0 8px #fff4d2,0 0 28px #f3b44d,0 0 55px #e99327;white-space:nowrap;will-change:transform,opacity;}</style>
+<style>.ta-century-center-plus{position:fixed;z-index:10019;pointer-events:none;display:block;width:max-content;height:auto;line-height:1.2;letter-spacing:0;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-stretch:normal;font-size:clamp(1.8rem,6vw,4rem);font-variant-numeric:lining-nums tabular-nums;color:#ffdc8b;text-shadow:0 0 8px #fff4d2,0 0 28px #f3b44d,0 0 55px #e99327;white-space:nowrap;will-change:transform,opacity;}</style>
+<style>
+/* Compact in-field point gains; leave time labels unchanged. */
+.ta-issen-plus{font-size:clamp(.85rem,3.6vw,1.45rem)!important;max-width:calc(100% - 16px);white-space:nowrap;}
+.oddplus{font-size:clamp(.78rem,3.4vw,1.45rem)!important;max-width:min(90vw,380px);white-space:nowrap;}
+</style>
