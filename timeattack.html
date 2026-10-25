@@ -114,6 +114,7 @@ html[data-view="lib"] #taPlay{display:none!important}
 @media(prefers-reduced-motion:reduce){#taDemoPlay{animation:none;opacity:.85}#taStartFlash.ta-start-active,#taStartFlash.ta-end-active{animation:none}}
 
 
+.ta-combo-score-plus{position:fixed;z-index:10030;pointer-events:none;white-space:nowrap;font-family:var(--mincho);font-weight:700;line-height:1;color:#ffe3a3;text-shadow:0 0 8px rgba(255,218,135,.85),0 0 18px rgba(244,174,75,.4);font-variant-numeric:tabular-nums;will-change:transform,opacity}
 /* Combo milestone: separate expanding and contracting golden circular waves. */
 .ta-combo-wave{position:fixed;z-index:10019;width:48px;height:48px;border:2px solid rgba(255,222,151,.94);border-radius:50%;pointer-events:none;box-sizing:border-box;box-shadow:0 0 26px 7px rgba(246,187,89,.64),0 0 52px 10px rgba(246,187,89,.24),inset 0 0 17px rgba(255,224,161,.38);will-change:transform,opacity}
 
@@ -339,8 +340,8 @@ html[data-view="lib"] #taPlay{display:none!important}
 .ta-issen-layer.ta-issen-white{background:linear-gradient(90deg,transparent,#fff 18%,#fff 50%,#fff 82%,transparent)!important;box-shadow:0 0 9px 3px rgba(255,255,255,.65),0 0 20px 5px rgba(230,240,255,.23)!important}
 .ta-issen-label.ta-issen-white{color:#fff!important;text-shadow:0 0 9px rgba(255,255,255,.8)!important}
 .ta-center-hit-flash,.ta-center-hit-plus,.ta-ice-frozen-word{position:fixed;pointer-events:none;z-index:120;transform:translate(-50%,-50%);white-space:nowrap;font-family:var(--mincho,serif)}
-.ta-center-hit-flash{color:#fff;text-shadow:0 0 6px #fff,0 0 15px rgba(255,255,255,.9);font-weight:bold}
-.ta-center-hit-plus{color:#fff;font-size:13px;text-shadow:0 0 7px #fff,0 1px 5px #111}
+.ta-center-hit-flash{box-sizing:border-box;border:1.5px solid rgba(255,255,255,.95);border-radius:999px;background:transparent;box-shadow:0 0 5px 1px rgba(255,255,255,.7),inset 0 0 7px rgba(255,255,255,.45);transform:translate(-50%,-50%);}
+.ta-center-hit-plus{color:#fff;font:700 15px var(--mincho,serif);font-size:clamp(.85rem,3.6vw,1.45rem)!important;text-shadow:0 0 7px #fff,0 1px 5px #111}
 .ta-ice-shard{position:fixed;z-index:121;pointer-events:none;width:3px;height:7px;background:linear-gradient(#fff,#8cdcff);clip-path:polygon(50% 0,100% 60%,65% 100%,0 70%);box-shadow:0 0 5px #a9edff}
 .ta-ice-frozen-word{color:#d7f4ff;font-weight:bold;text-shadow:0 0 5px #fff,0 0 13px #6dd8ff,0 0 22px #278cce;filter:drop-shadow(0 0 3px #9cecff)}
 </style>
@@ -3546,6 +3547,47 @@ function taCenturyCenterPlus(){
     {transform:'translate(-50%,-50%) translateY(-92px)',opacity:0,offset:1}
   ],{duration:1450,easing:'ease-out',fill:'forwards'}).onfinish=()=>p.remove();
 }
+/* Combo score landing: one shared amount-to-size scale for label and score pulse.
+   Base 10-point milestone = 10,000 displayed; century = 100,000 displayed. */
+// Shared impact scale: a larger awarded amount always has a larger label
+// and a slower upward fade. All amounts are internal points (displayed x1000).
+function taScoreGainVisual(amount){
+  const displayed=Math.max(0,Math.round(Number(amount||0)*1000));
+  const level=Math.max(0,Math.min(1,Math.log10(Math.max(1000,displayed)/1000)/2));
+  return {fontPx:21+level*17,durationMs:850+level*2150,pulse:1.08+level*.25};
+}
+function taComboScoreImpact(bonus){
+  const score=document.getElementById('taScore');
+  const frame=document.getElementById('taScoreBox');
+  if(!score||!frame)return;
+  const strength=Math.max(0,Math.min(1,Math.log10(Math.max(10,bonus)/10)));
+  const visual=taScoreGainVisual(bonus);
+  const pulseScale=visual.pulse;
+  const r=frame.getBoundingClientRect();
+  const label=document.createElement('span');
+  label.className='ta-combo-score-plus';
+  label.textContent='+'+taScoreFormat(bonus);
+  label.style.left=(r.left+r.width/2)+'px';
+  label.style.top=(r.top-9)+'px';
+  label.style.fontSize=visual.fontPx+'px';
+  label.style.maxWidth='calc(100vw - 16px)';
+  document.body.append(label);
+  label.animate([
+    {transform:'translate(-50%,-30%) scale(.75)',opacity:0,offset:0},
+    {transform:'translate(-50%,-55%) scale(1)',opacity:1,offset:.20},
+    {transform:'translate(-50%,-105%) scale(.97)',opacity:0,offset:1}
+  ],{duration:visual.durationMs,easing:'cubic-bezier(.2,.7,.3,1)',fill:'forwards'}).onfinish=()=>label.remove();
+  score.animate([
+    {transform:'scale(1)',offset:0},
+    {transform:'scale('+pulseScale+')',offset:.32},
+    {transform:'scale(1)',offset:1}
+  ],{duration:520,easing:'cubic-bezier(.18,.8,.24,1)'});
+  frame.animate([
+    {boxShadow:'0 0 0 rgba(255,218,142,0)',offset:0},
+    {boxShadow:'0 0 '+(14+strength*12)+'px '+(3+strength*3)+'px rgba(255,218,142,.56)',offset:.32},
+    {boxShadow:'0 0 0 rgba(255,218,142,0)',offset:1}
+  ],{duration:610,easing:'ease-out'});
+}
 // Two separate circular waves: expand from combo, then contract into score.
 // Bonus is awarded only after the score-side wave has arrived.
 function comboStepBonus(n){
@@ -3559,7 +3601,7 @@ function comboStepBonus(n){
   const session=taFinishToken;
   const century=n%100===0;
   const bonus=century?100:10;
-  const land=()=>{if(session!==taFinishToken || !taRunning)return;taAward(false,bonus,true,null,century);};
+  const land=()=>{if(session!==taFinishToken || !taRunning)return;taAward(false,bonus,true,null,true);taComboScoreImpact(bonus);};
   // Item recharge animation starts just after the score bonus animation begins,
   // rather than waiting for the score-side ring to land.
   if(n%30===0){
@@ -5098,7 +5140,7 @@ function vortexRelease(){
       const rr=cw.getBoundingClientRect(),cx=rr.left+rr.width/2,cy=rr.top+rr.height/2;
       // Generous central area: 70% of word width, 80% of its height.
       if(Math.abs(e.clientX-cx)<=rr.width*.35 && Math.abs(e.clientY-cy)<=rr.height*.40)
-        centerTapCandidate={id:e.pointerId,x:e.clientX,y:e.clientY,cx,cy,text:cw.textContent};
+        centerTapCandidate={id:e.pointerId,x:e.clientX,y:e.clientY,cx,cy,width:rr.width,height:rr.height,radius:getComputedStyle(cw).borderRadius};
     }
     active=true;pointer=e.pointerId;started=performance.now();lx=e.clientX;ly=e.clientY;
     points=[{x:lx,y:ly}];collected.clear();flashed=false;flashedTier=0;awardedBonus=0;
@@ -5115,9 +5157,10 @@ function vortexRelease(){
       const c=centerTapCandidate;
       if(c && c.id===e.pointerId && Math.hypot(e.clientX-c.x,e.clientY-c.y)<13 && taRunning){
         taScore+=.5;taScoreRefresh();taRender();
-        const blink=document.createElement('span');blink.className='ta-center-hit-flash';blink.textContent=c.text;
+        const blink=document.createElement('span');blink.className='ta-center-hit-flash';
+        blink.style.width=c.width+'px';blink.style.height=c.height+'px';blink.style.borderRadius=c.radius||'999px';
         blink.style.left=c.cx+'px';blink.style.top=c.cy+'px';document.body.append(blink);
-        blink.animate([{opacity:0},{opacity:.8,offset:.2},{opacity:0}],{duration:260}).onfinish=()=>blink.remove();
+        blink.animate([{opacity:0},{opacity:.95,offset:.15},{opacity:.12,offset:.45},{opacity:.9,offset:.63},{opacity:0,transform:'translate(-50%,-50%) scale(.84)'}],{duration:320,easing:'ease-out'}).onfinish=()=>blink.remove();
         const plus=document.createElement('span');plus.className='ta-center-hit-plus';plus.textContent='+500';
         plus.style.left=c.cx+'px';plus.style.top=(c.cy-20)+'px';document.body.append(plus);
         plus.animate([{opacity:0,transform:'translate(-50%,0)'},{opacity:1,transform:'translate(-50%,-10px)',offset:.2},{opacity:0,transform:'translate(-50%,-30px)'}],{duration:700}).onfinish=()=>plus.remove();
@@ -6772,7 +6815,16 @@ const spread=[0,-1,1,-2,2,0,1,-1];
 const dx=spread[n%spread.length];
 // All labels share the exact same vertical starting point and rise straight up.
 p.style.left=(r.left+r.width/2+dx)+'px';p.style.top=(r.top+r.height/2-24)+'px';
-document.body.append(p);setTimeout(()=>p.remove(),1200)}
+document.body.append(p);
+if(!isTime){
+  const visual=taScoreGainVisual(pts);
+  p.style.fontSize=visual.fontPx+'px';
+  p.style.animation='none';
+  p.animate([
+    {transform:'translate(-50%,-50%)',opacity:1},
+    {transform:'translate(-50%,-50%) translateY('+(-45+10*Math.max(0,Math.min(1,(visual.fontPx-21)/17)))+'px)',opacity:0}
+  ],{duration:visual.durationMs,easing:'ease-out',fill:'forwards'}).onfinish=()=>p.remove();
+}else setTimeout(()=>p.remove(),1200)}
 // Countdown heartbeat: one five-second sample, started when the 5-second warning begins.
 // Keep it separate from the music channels and respect the game's sound toggle.
 const taHeartbeatAudio = new Audio('audio/heartbeat-deep.wav');
@@ -7821,7 +7873,7 @@ html.ta-result-locked #taLaunch{pointer-events:auto!important}
 .orb.ta-reward-time.ta-reward-boost{box-shadow:0 0 8px 3px #c9f5ff,0 0 20px 7px #5bbdff9c!important;}
 </style>
 
-<style>.ta-century-center-plus{position:fixed;z-index:10019;pointer-events:none;display:block;width:max-content;height:auto;line-height:1.2;letter-spacing:0;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-stretch:normal;font-size:clamp(1.8rem,6vw,4rem);font-variant-numeric:lining-nums tabular-nums;color:#ffdc8b;text-shadow:0 0 8px #fff4d2,0 0 28px #f3b44d,0 0 55px #e99327;white-space:nowrap;will-change:transform,opacity;}</style>
+<style>.ta-century-center-plus{position:fixed;z-index:10019;pointer-events:none;display:block;width:max-content;height:auto;line-height:1.2;letter-spacing:0;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-stretch:normal;font-size:clamp(2.4rem,8vw,5.3rem);font-variant-numeric:lining-nums tabular-nums;color:#ffdc8b;text-shadow:0 0 8px #fff4d2,0 0 28px #f3b44d,0 0 55px #e99327;white-space:nowrap;will-change:transform,opacity;}</style>
 <style>
 /* Compact in-field point gains; leave time labels unchanged. */
 .ta-issen-plus{font-size:clamp(.85rem,3.6vw,1.45rem)!important;max-width:calc(100% - 16px);white-space:nowrap;}
