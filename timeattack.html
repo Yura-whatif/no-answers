@@ -3654,6 +3654,7 @@ function bumpCombo(){
   el.classList.toggle("on", combo >= 2); el.classList.toggle("x2", m === 2); el.classList.toggle("x3", m === 3); el.classList.toggle("hold", flood);
   comboRush(m === 3);
   document.documentElement.classList.toggle("ta-century-lit", combo>=100);
+  // Start the special BGM at 100 chains; stop it if the chain resets.
   if(combo===100)taCenturyMusic.start();
   else if(combo===1)taCenturyMusic.stop();
   el.classList.remove("hit","run"); void el.offsetWidth; el.classList.add("hit","run");
@@ -4318,7 +4319,7 @@ function spawnWord(opt = {}){
     if(isGem){ startFlood(w); sfx.special(); sfx.timeStop(); return; }
     if(w.classList.contains("petal")){ sakuraBloom(w); return; }   // ひとひらの花びらに触れると、桜吹雪／夜桜が始まる      // 懐中時計に触れると時間が止まる（時計はその場で静止）
     if(w.classList.contains("still")){ stopTap(w); return; }   // 止まった時間の中の言葉は、霧になってその場に止まる
-    if(combo>=100) sfx.goldTap(); else sfx.touch();
+    sfx.touch(); // 100連鎖以降も通常時と同じタップ音
     const isOdd = w.classList.contains("odd"); if(isOdd) track("odd", "逆さまの言葉");
     if(w.classList.contains("pull")){ const rr = w.getBoundingClientRect(); pullAll(rr.left + rr.width/2, rr.top + rr.height/2, w); }
     if(w.classList.contains("glow")) startGlow();
@@ -6487,6 +6488,7 @@ const sfx = (()=>{
     // ---------- 本棚のBGM「夜の和音（弦）」：本棚を開いているあいだ、弦の和音がゆっくりループする ----------
     get bgmState(){ return {playing: !!(bgm && bgm.src), buf: bgmBuf}; },
     bgmStart(){
+      if(taRunning||taStarting)return;
       const a=ac();if(!a)return;
       if(libOpen){
         rankingMusic.start();
@@ -6861,7 +6863,7 @@ function taBegin(){
   taRender();cancelAnimationFrame(taRaf);
   const flash=document.getElementById('taStartFlash');
   flash.textContent='START';flash.hidden=false;flash.classList.remove('ta-start-active','ta-end-active');void flash.offsetWidth;flash.classList.add('ta-start-active');
-   // スタート音は音量ボタンON時と同じ2音の鈴。
+   // START時は音声ボタンと同じ操作音を鳴らす。
    sfx.toggle();
   const token=taFinishToken;setTimeout(()=>{if(token!==taFinishToken||!taStarting)return;flash.hidden=true;taStarting=false;taRunning=true;document.dispatchEvent(new Event('ta-item-start-activate'));taUpdatePlay();taLast=performance.now();taRaf=requestAnimationFrame(taTick)},1800);
 }
