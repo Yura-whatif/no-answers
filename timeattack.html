@@ -3376,14 +3376,15 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 
 
 // ペンダントに触れたとき：速く回って光を放ち、砕けた光の粒と波紋が広がる特別な演出
-function gemBurst(r, f, lite){
-  const cx = r.left + r.width/2, cy = r.top + r.height*.62;
+function gemBurst(r, f, lite, isClock=false){
+  const cx = r.left + r.width/2, cy = r.top + r.height*(isClock?.5:.62);
   f.style.filter = "none";
   const pd = f.querySelector(".pd"); if(pd) pd.style.animationDuration = ".35s";
+  const origin = isClock ? "translate(-50%,-50%) " : "";
   f.animate([
-    {transform:"scale(1)", opacity:1, filter:"brightness(1)"},
-    {transform:"scale(1.5) translateY(-8px)", opacity:1, filter:"brightness(1.8) drop-shadow(0 0 14px #ffe7b0)", offset:.45},
-    {transform:"scale(2.1) translateY(-14px)", opacity:0, filter:"brightness(3) blur(6px)"}
+    {transform:origin+"scale(1)", opacity:1, filter:"brightness(1)"},
+    {transform:origin+"scale(1.5) translateY(-8px)", opacity:1, filter:"brightness(1.8) drop-shadow(0 0 14px #ffe7b0)", offset:.45},
+    {transform:origin+"scale(2.1) translateY(-14px)", opacity:0, filter:"brightness(3) blur(6px)"}
   ], {duration:900, easing:"cubic-bezier(.2,.6,.3,1)", fill:"forwards"}).onfinish = () => f.remove();
   const mk = (cls, css) => { const e = document.createElement("span"); e.className = cls; Object.assign(e.style, css); document.body.append(e); return e; };
   // 中心の閃光
@@ -3481,7 +3482,7 @@ const taCenturyDust=(()=>{
   return {emit};
 })();
 // あふれる時間：ときどき明滅する言葉が現れ、触れると短いあいだ言葉が大量にあふれ出す
-const FLOOD_MS = 5200;   // 時間が止まっている長さ
+const FLOOD_MS = 7200;   // 時間が止まっている長さ
 let flood = false, nextSpecialAt = Date.now() + 60000, forceSpecial = false;
 let nextOddAt = Date.now() + 30000, forceOdd = false;
 let nextMultiAt = Date.now() + 15000, forceMulti = false;
@@ -3500,6 +3501,7 @@ const COMBO_BONUS = 100;   // 100連鎖ごとのボーナス
 const COMBO_STEP_FROM = 10; // 10連鎖ごとに10点、100連鎖ごとに100点
 const COMBO_MS = 2000;
 let combo = 0, comboAt = 0, comboPaused = false;
+let taFloodComboRemaining = null;
 let maxCombo = store.get("ta-yura-maxcombo", 0);
 // 倍率（＝連鎖Lv）：1〜49はLv1（×1）、50でLv2（×2）、100でLv3（×3）
 const comboMult = n => n >= 100 ? 3 : n >= 50 ? 2 : 1;
@@ -3728,7 +3730,7 @@ function bumpCombo(){
   // DEMO / START演出中は連鎖を発生させない。
   if(!taRunning) return 1;
   const now = Date.now();
-  if(comboPaused && !open && !charging) resumeCombo();   // 念のため：読んでいないのに止まっていたら、触れた時点で戻す
+  if(comboPaused && !flood && !open && !charging) resumeCombo();   // 念のため：読んでいないのに止まっていたら、触れた時点で戻す
   combo = (comboPaused || now - comboAt <= COMBO_MS) ? combo + 1 : 1; comboAt = now;
   if(combo>taSessionMaxCombo) taSessionMaxCombo=combo;
   if(combo > maxCombo){ maxCombo = combo; store.set("ta-yura-maxcombo", maxCombo); }
@@ -3743,7 +3745,13 @@ function bumpCombo(){
   else if(combo===1)taCenturyMusic.stop();
   el.classList.remove("hit","run"); void el.offsetWidth; el.classList.add("hit","run");
   if(m > prevX && !flood){ el.classList.remove("up"); void el.offsetWidth; el.classList.add("up"); sfx.line(0); }
-  if(!comboPaused){ clearTimeout(bumpCombo.h); bumpCombo.h = setTimeout(()=>{ combo = 0; document.documentElement.classList.remove("ta-century-lit"); el.classList.remove("on","x2","x3","run","heat"); el.style.removeProperty("--heat"); comboRush(false);taCenturyMusic.stop(); }, COMBO_MS); }
+  // Any combo created during stopped time must have a frozen, full gauge.
+  if(flood){
+    taFloodComboRemaining=COMBO_MS;
+    clearTimeout(bumpCombo.h);
+    el.classList.add('paused');
+  }
+  if(!comboPaused && !flood){ clearTimeout(bumpCombo.h); bumpCombo.h = setTimeout(()=>{ combo = 0; document.documentElement.classList.remove("ta-century-lit"); el.classList.remove("on","x2","x3","run","heat"); el.style.removeProperty("--heat"); comboRush(false);taCenturyMusic.stop(); }, COMBO_MS); }
   // 90を超えたら、100に近づくほど光を強く速く
   const r = combo % 100;
   if(r > 90){ el.style.setProperty("--heat", ((r - 90) / 10).toFixed(2)); el.classList.add("heat"); }
@@ -3772,6 +3780,7 @@ const ODD_PT = 5;
 // ---------- 止まった時間（懐中時計に触れたとき） ----------
 const STOP_CELLS = (()=>{ const c = []; [3, 35, 64].forEach(x => [22, 44, 66].forEach(y => c.push([x, y]))); return c; })();   // 止まった時間の言葉は9か所（以前は12）
 let stopPend = [], stopWatch = null;
+let taCompletedClock = null, taClockVeilCenter = null;
 const STOP_WORDS = 8;   // 止まった時間の中に並ぶ言葉の数（全12か所のうち）
 // Time Attack: draw words from both Yura dictionaries, regardless of visual mode.
 function taMixedWord(){
@@ -3851,7 +3860,7 @@ function stopTap(w){
 function stopVeil(on, src){
   let v = document.querySelector(".stopveil");
   const c = src && src.isConnected ? src.getBoundingClientRect() : document.querySelector(".hero").getBoundingClientRect();
-  const x = c.left + c.width/2, y = c.top + c.height/2, R = Math.ceil(Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))) + 4;
+  const x = taClockVeilCenter ? taClockVeilCenter.x : c.left + c.width/2, y = taClockVeilCenter ? taClockVeilCenter.y : c.top + c.height/2, R = Math.ceil(Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))) + 4;
   const small = `circle(0px at ${x}px ${y}px)`, big = `circle(${R}px at ${x}px ${y}px)`;
   if(on){
     if(!v){ v = document.createElement("div"); v.className = "stopveil"; document.body.append(v); }
@@ -3862,9 +3871,39 @@ function stopVeil(on, src){
     v.animate([{clipPath:big},{clipPath:small}], {duration:520, easing:"cubic-bezier(.55,0,.35,1)", fill:"forwards"}).onfinish = () => v.remove();
   }
 }
+// During stopped time the finished clock sits inside the collection area,
+// behind the words (drift z-index:2). Restore it to the foreground on release.
+function placeCompletedClockBehindWords(){
+  const clock=taCompletedClock;
+  if(!clock||!clock.isConnected)return;
+  const area=document.querySelector('.hero');
+  if(!area)return;
+  const r=area.getBoundingClientRect();
+  const center=taClockVeilCenter || (()=>{const cr=clock.getBoundingClientRect();return {x:cr.left+cr.width/2,y:cr.top+cr.height/2}})();
+  clock.style.left=(center.x-r.left)+'px';
+  clock.style.top=(center.y-r.top)+'px';
+  area.append(clock);
+  clock.classList.add('clock-behind-words');
+}
+function placeCompletedClockInFront(){
+  const clock=taCompletedClock;
+  if(!clock||!clock.isConnected)return;
+  const center=taClockVeilCenter || (()=>{const r=clock.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})();
+  clock.style.left=center.x+'px';
+  clock.style.top=center.y+'px';
+  document.body.append(clock);
+  clock.classList.remove('clock-behind-words');
+}
 function startFlood(gem){
   if(flood || shattering) return;
   flood = true; stopPend = []; taCenturyMusic.timeStop(); track("timestop", "時止め");
+  // Freeze the actual combo-expiry timer and its visual countdown together.
+  taFloodComboRemaining = null;
+  if(combo>=2 && !comboPaused){
+    taFloodComboRemaining=Math.max(1,COMBO_MS-(Date.now()-comboAt));
+    clearTimeout(bumpCombo.h);
+    $("combo").classList.add("paused");
+  }
   const hero = document.querySelector(".hero"); hero.classList.add("flood");
   document.documentElement.classList.add("timestop");
   // 懐中時計は消えずに、その場で止まる
@@ -3874,6 +3913,10 @@ function startFlood(gem){
     if(r.top < fr.top || r.bottom > fr.bottom || op < .6){
       gem.getAnimations().forEach(a => { if(a.animationName === "gemFall") a.cancel(); });
       gem.style.top = Math.max(4, Math.min(fr.height - r.height - 4, r.top - fr.top)) + "px"; gem.style.opacity = "1"; } }
+  if(taCompletedClock){
+    placeCompletedClockBehindWords();
+    taCompletedClock.classList.add("clock-time-dark");
+  }
   stopVeil(true, gem);
   // 渦は時間の外に置かない：押していれば今の分で閉じ、漂っている渦は消える
   if(vxState) vortexRelease();
@@ -3903,18 +3946,50 @@ function startFlood(gem){
 function endFlood(){
   clearTimeout(startFlood.h);
   flood = false; taCenturyMusic.timeResume(); clearTimeout(startFlood.tickDelay); clearInterval(startFlood.tk);
+  // A combo that began while time was stopped must resume from a full bar.
+  if(taFloodComboRemaining===null && combo>=2 && !comboPaused)taFloodComboRemaining=COMBO_MS;
+  if(taFloodComboRemaining!==null){
+    const remaining=taFloodComboRemaining;taFloodComboRemaining=null;
+    $("combo").classList.remove("paused");
+    if(combo>=2 && !comboPaused){
+      const comboEl=$("combo");
+      comboEl.style.setProperty("--ct",remaining+"ms");
+      comboEl.classList.remove("run");
+      void comboEl.offsetWidth;
+      comboEl.classList.add("run");
+      comboAt=Date.now()-(COMBO_MS-remaining);
+      clearTimeout(bumpCombo.h);
+      bumpCombo.h=setTimeout(()=>{combo=0;document.documentElement.classList.remove("ta-century-lit");const el=$("combo");el.classList.remove("on","x2","x3","run","heat");el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();},remaining);
+    }
+  }
   // 位置は先にまとめて読む（クラスを外したあとに読むと、画面全体の再計算をその場で強いて重くなる）
   const hero = document.querySelector(".hero"), fr = $("drift").getBoundingClientRect();
   const sw = stopWatch; stopWatch = null; const swr = sw && sw.isConnected ? sw.getBoundingClientRect() : null;
   stopVeil(false, sw);
+  if(taCompletedClock){
+    placeCompletedClockInFront();
+    taCompletedClock.classList.remove("clock-time-dark");
+    taCompletedClock.classList.add("clock-forward-release");
+  }
+  // Apply the original pocket-watch disappearance effect to the actual completed
+  // dual-element clock, without creating a second foreground watch.
+  const completedClock=taCompletedClock;
+  taCompletedClock=null;
+  if(completedClock && completedClock.isConnected){
+    setTimeout(()=>{
+      if(!completedClock.isConnected)return;
+      const clockRect=completedClock.getBoundingClientRect();
+      gemBurst(clockRect,completedClock,true,true);
+    },540);
+  }
+  setTimeout(()=>{if(!flood)taClockVeilCenter=null;},1150);
   $("floodbar").hidden = true; layoutBars(); nextSpecialAt = Date.now() + 180000;   // 時が動き出してから2分半は、次の懐中時計を出さない
   // 画面全体に効くクラスは、円が縮みきって演出が落ち着いてから外す
   setTimeout(()=>{ if(flood) return; hero.classList.remove("flood"); document.documentElement.classList.remove("timestop"); }, 1500);
   // 懐中時計は光となって消える
   // 色の戻り・時計の消滅・音を同じ瞬間に重ねると重くなるので、少しずつずらす
-  if(swr){ const r = swr; sw.style.visibility = "hidden";
-    setTimeout(()=>{ const f = sw.cloneNode(true); f.style.visibility = ""; f.classList.add("flying"); f.classList.remove("frozen"); f.style.left = r.left + "px"; f.style.top = r.top + "px";
-      sw.remove(); document.body.append(f); f.getAnimations().forEach(x=>x.cancel()); gemBurst(r, f, true); }, 140); }
+  // No legacy pocket-watch clone: the completed clock receives gemBurst above.
+  if(sw && sw.isConnected)sw.remove();
   // 並んでいた言葉は、時間が動き出すと溶けて消える
   $("drift").querySelectorAll(".word.still:not(.got)").forEach(w => { w.classList.add("got"); w.animate([{opacity:1},{opacity:0, transform:"translateY(-8px)"}], {duration:500, fill:"forwards"}).onfinish = () => w.remove(); });
   // 解除後の光の玉は、回収時に記録した種類に従って得点／時間へ向かう。
@@ -4350,7 +4425,7 @@ function spawnWord(opt = {}){
   const w = document.createElement("button");
   w.type = "button"; w.className = "word" + (flood ? " fast" : ""); w.textContent = taMixedWord();
   if(Math.random()<(flood ? .50 : .10)){w.dataset.taTime="1";w.classList.add("ta-blue");}
-  const special = !opt.plain && !flood && !sakuraOn && (forceSpecial || (Date.now() > nextSpecialAt && Math.random() < .04));
+  const special = false; // Pocket watch retired: time stop is now the fire/ice clock technique.
   if(special){ w.dataset.word = w.textContent; w.innerHTML = '<span class="sw"><i class="ch"></i><span class="pd"><i class="k"></i>' + [-2.4,-2,-1.6,-1.2,-.8,-.4,0,.4,.8,1.2,1.6,2,2.4].map(z=>'<i class="r" style="--z:'+z+'px"></i>').join("") + '<i class="f"></i></span></span>'; w.classList.add("special"); forceSpecial = false; nextSpecialAt = Date.now() + 180000; w.setAttribute("aria-label", "古びたペンダント（触れると言葉があふれる）"); w.title = "触れると言葉があふれる";
     setTimeout(()=>{sfx.prepStop();sfx.prepClockTick();}, 400); }   // 時が止まる音は、時計が現れたときに先に作っておく
   const odd = false && !opt.plain && !special && !flood && (forceOdd || (Date.now() > nextOddAt && Math.random() < .02));
@@ -6394,19 +6469,9 @@ const sfx = (()=>{
     },
     // 触れた瞬間の「ジュワッ」：言葉が泡立ってほどける、帯域が下がっていくノイズ
     touch(){
-      if(flood){
-        const a=ac();if(!a)return;
-        if(!stopDropBuffer){prepareStopDrop(); /* Fallback to normal tap until decoded. */ } else {
-        const src=ctx.createBufferSource(),g=ctx.createGain(),t=a.currentTime;
-        src.buffer=stopDropBuffer;
-        // Slight variation keeps repeated taps from sounding machine-gunned.
-        src.playbackRate.value=.97+Math.random()*.06;
-        g.gain.value=.72;
-        src.connect(g);g.connect(bus);src.start(t);
-        src.onended=()=>{try{src.disconnect();g.disconnect();}catch(_){}};
-        return;
-        }
-      }
+      // All time-stop word removals are silent. In particular, never play
+      // STOP_DROP_WAV via elemental ice contact or the normal tap fallback.
+      if(flood)return;
       const a = ac(); if(!a) return; const t = a.currentTime, k = night() ? .6 : 1, dur = night() ? .32 : .24;
       const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), hs = ctx.createBiquadFilter(), g = ctx.createGain();
       src.buffer = noise; src.loop = true; src.playbackRate.value = .9;
@@ -7029,7 +7094,7 @@ function taBegin(){
   sfx.resultStop(true);
   taCenturyMusic.stop(true);
   // DEMOでの操作履歴をゲーム本番へ持ち越さない。
-  clearTimeout(bumpCombo.h);combo=0;comboAt=0;comboPaused=false;document.documentElement.classList.remove("ta-century-lit");
+  clearTimeout(bumpCombo.h);combo=0;comboAt=0;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit");
   const comboEl=document.getElementById("combo");
   if(comboEl){comboEl.classList.remove("on","x2","x3","run","heat","paused","hold");comboEl.style.removeProperty("--heat");}
   document.getElementById("cbn").textContent="0";document.getElementById("cbx").textContent="";comboRush(false);
@@ -7081,6 +7146,89 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const layer=document.createElement('div');layer.className='ta-element-layer';layer.setAttribute('aria-hidden','true');document.body.append(layer);
  const canvas=document.createElement('canvas');layer.append(canvas);const ctx=canvas.getContext('2d');
  let selected=null,gesture=null,traces=[],particles=[],summonBursts=[],summonTimers=[],crossBursts=[],last=performance.now(),wasActive=false;
+ // Fire/ice clock: one elemental tap draws the dial; the other color draws two hands.
+ let clockDial=null,clockFx=null,clockTimer=null;
+ const CLOCK_VISIBLE_MS=4200;
+ const CLOCK_FADE_MS=400;
+ const CLOCK_GRACE_MS=1000;
+ const CLOCK_WINDOW=CLOCK_VISIBLE_MS+CLOCK_FADE_MS+CLOCK_GRACE_MS;
+ function clearClock(){clearTimeout(clockTimer);clockTimer=null;clockDial=null;if(clockFx){const old=clockFx;clockFx=null;old.classList.add('clock-expiring');setTimeout(()=>old.remove(),460);}}
+ function clockDialFx(pt,type){
+  clearClock();const r=72;const el=document.createElement('div');el.className='ta-dual-clock';
+  el.style.left=pt.x+'px';el.style.top=pt.y+'px';el.style.setProperty('--clock-hue',type==='fire'?'#ff986d':'#8bdfff');
+  el.innerHTML='<svg viewBox="0 0 180 180" aria-hidden="true"><circle cx="90" cy="90" r="74" class="clock-ring-shadow"/><circle cx="90" cy="90" r="70" class="clock-ring"/>'+Array.from({length:12},(_,i)=>{const a=i*Math.PI/6-Math.PI/2;return `<line x1="${90+60*Math.cos(a)}" y1="${90+60*Math.sin(a)}" x2="${90+66*Math.cos(a)}" y2="${90+66*Math.sin(a)}" class="clock-tick"/>`}).join('')+'<g class="clock-hand-rotor"><path class="clock-hands"/><circle cx="90" cy="90" r="3" class="clock-center"/></g></svg>';
+  hero.append(el);clockFx=el;clockDial={x:pt.x,y:pt.y,type,expires:performance.now()+CLOCK_WINDOW};
+  // Keep the dial visible through the lingering fire/ice particles, then fade over 0.4s.
+  // The shape-recognition grace period remains independent of visibility.
+  const createdDial=el;
+  setTimeout(()=>{if(clockFx===createdDial&&clockDial)createdDial.classList.add('clock-grace')},CLOCK_VISIBLE_MS);
+  clockTimer=setTimeout(()=>{if(clockFx===createdDial&&clockDial)clearClock()},CLOCK_WINDOW);
+ }
+ function clockHands(g,pts){
+  const dial=clockDial;
+  if(!dial||dial.type===g.type||performance.now()>dial.expires||pts.length<3)return false;
+  const cx=dial.x,cy=dial.y,rad=70;
+  const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const origin={x:cx,y:cy},first=pts[0],last=pts[pts.length-1];
+  const traveled=pts.reduce((n,p,i)=>i?n+dist(p,pts[i-1]):0,0);
+  if(traveled<rad*.68)return false;
+  // Mobile-friendly L/V hand detection. The elbow may be noticeably off the
+  // dial center (including the lower edge); straight strokes must still fail.
+  // Inspect the full stroke, not just the point closest to the dial center.
+  let best=null;
+  for(let i=1;i<pts.length-1;i++){
+   const elbow=pts[i],a=dist(first,elbow),b=dist(last,elbow);
+   if(a<rad*.32||b<rad*.32)continue;
+   if(a>rad*2.4||b>rad*2.4)continue;
+   const ux=(first.x-elbow.x)/a,uy=(first.y-elbow.y)/a;
+   const vx=(last.x-elbow.x)/b,vy=(last.y-elbow.y)/b;
+   const angle=Math.acos(Math.max(-1,Math.min(1,ux*vx+uy*vy)));
+   if(angle<Math.PI/6||angle>Math.PI*165/180)continue;
+   const d=dist(elbow,origin);
+   // Permit an elbow as far as 1.4 dial radii away from the nominal center.
+   if(d>rad*1.4)continue;
+   const score=Math.min(a,b)*Math.sin(angle/2)-d*.14;
+   if(!best||score>best.score)best={elbow,score,a,b};
+  }
+  if(!best)return false;
+  if(clockFx){const h=clockFx.querySelector('.clock-hands');if(h){
+   // Normalize the hand geometry to the dial: use the recognized elbow as
+   // the clock center, preserve both directions, and clamp both hand lengths.
+   // This keeps even oversized elemental L-shapes neatly inside the dial.
+   const unit=(p)=>{const dx=p.x-best.elbow.x,dy=p.y-best.elbow.y,n=Math.hypot(dx,dy)||1;return {x:dx/n,y:dy/n};};
+   const u1=unit(first),u2=unit(last);
+   const len1=Math.min(52,Math.max(29,best.a*.65));
+   const len2=Math.min(43,Math.max(23,best.b*.65));
+   h.setAttribute('d',`M ${90+u1.x*len1} ${90+u1.y*len1} L 90 90 L ${90+u2.x*len2} ${90+u2.y*len2}`);
+   const rotor=clockFx.querySelector('.clock-hand-rotor');
+   if(rotor)rotor.style.transformOrigin='90px 90px';
+  }}
+  // Once the two hands are recognized, dissolve both elemental strokes smoothly.
+  // Preserve the scoring/contact behavior until the short fade finishes.
+  for(const trace of traces){trace.left=Math.min(trace.left,.30);trace.clockDissolve=true;}
+  for(const p of particles){p.life=Math.min(p.life,.24);}
+  clearTimeout(clockTimer);clockDial=null;
+  const fx=clockFx;clockFx=null;
+  if(fx){
+    fx.classList.remove('clock-expiring','clock-grace');
+    const heroRect=hero.getBoundingClientRect();
+    taClockVeilCenter={x:heroRect.left+dial.x,y:heroRect.top+dial.y};
+    fx.style.left=taClockVeilCenter.x+'px';fx.style.top=taClockVeilCenter.y+'px';
+    document.body.append(fx);
+    fx.classList.add('clock-complete','clock-persistent');
+    if(taCompletedClock && taCompletedClock!==fx)taCompletedClock.remove();
+    taCompletedClock=fx;
+  }
+  // Each element has already consumed exactly one orb on pointerdown.
+  setTimeout(()=>{
+   // The hands freeze on precisely the same frame as the existing time-stop effect.
+   if(fx)fx.classList.add('clock-frozen');
+   if(!active()||flood){if(fx)fx.remove();if(taCompletedClock===fx)taCompletedClock=null;taClockVeilCenter=null;return;}
+   startFlood(null);sfx.special();sfx.timeStop();
+  },850);
+  return true;
+ }
+
  const taMobileFx=window.matchMedia('(pointer:coarse)').matches;
  const taFxScale=taMobileFx?.72:1;
  // Warm up the same 2D gradient operations used by elemental effects during START.
@@ -7101,7 +7249,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
 
  let lastFxPaint=0;
  let usesLeft=0; const MAX_USES=5; let previousPips=0; let pipFlashTimer=null; let startupTimers=[]; let startupGeneration=0;
- const GESTURE_MAX_MS=340, GESTURE_MAX_PX=390;
+ const GESTURE_MAX_MS=750, GESTURE_MAX_PX=560;
  const elementalSounds={fire:new Audio('audio/element-fire-cast.wav'),ice:new Audio('audio/element-ice-cast.wav'),cross:new Audio('audio/element-cross-burst.wav'),summon:new Audio('audio/element-summon-cast.wav')};
  Object.values(elementalSounds).forEach(a=>{a.preload='none';a.volume=.48;});
  // Use the 1.8-second START transition to stage the first sound decode rather than
@@ -7165,7 +7313,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(performance.now()-lastOrbPointerAt<750){e.preventDefault();return;}
   selectOrb(b); // keyboard / assistive technology activation
  });
- function clear(){selected=null;sync();gesture=null;consumedPointer=null;traces=[];particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.clearRect(0,0,canvas.width,canvas.height)}
+ function clear(){clearClock();if(taCompletedClock){taCompletedClock.remove();taCompletedClock=null;}taClockVeilCenter=null;selected=null;sync();gesture=null;consumedPointer=null;traces=[];particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.clearRect(0,0,canvas.width,canvas.height)}
  const loc=e=>{const r=hero.getBoundingClientRect(),f=field.getBoundingClientRect();
   // Clip gesture centerline to the collection field, while keeping particles free to escape.
   const minX=Math.max(0,f.left-r.left),minY=Math.max(0,f.top-r.top);
@@ -7555,9 +7703,13 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  function makeTrace(g){if(g.type==='summon'){summon(g);return;}const pts=g.points;let len=0;for(let i=1;i<pts.length;i++)len+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
  // A stationary tap places a round 68px-radius elemental field (not a short stroke).
  const isTap=len<22;
+ // Clock creation is tied to a normal elemental tap. The opposite-color stroke
+ // completes it only if it passes through the dial center and forms two hands.
+ const completed=!isTap&&clockHands(g,pts);
+ if(isTap&&(!clockDial||clockDial.type!==g.type)){clockDialFx(pts[0],g.type)}
  const segs=[];if(isTap){const c=pts[0];segs.push([c,{x:c.x+.01,y:c.y},94]);}
  else for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(Math.hypot(b.x-a.x,b.y-a.y)>1)segs.push([a,b,23]);}
- if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:3.1,total:3.1,age:0,resonated:false};traces.push(trace);if(traces.length>2)traces.shift();for(const other of traces){if(other!==trace&&other.type!==trace.type)triggerCross(trace,other);}for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
+ if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:completed?.30:3.1,total:3.1,age:0,resonated:false,clockDissolve:completed};traces.push(trace);if(traces.length>2)traces.shift();for(const other of traces){if(!completed&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
  checkWords();}
  // Capture the armed gesture before the normal word/tap collectors can consume it.
  field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<=0||gesture||consumedPointer!==null)return;playElementSound(selected);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
@@ -7639,11 +7791,11 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  }
  for(const f of traces){
   if(!paused)f.left-=dt;f.age+=dt;
-  const alpha=Math.min(1,f.age*7,Math.max(0,f.left*1.5));if(f.left<=0)continue;
+  const alpha=f.clockDissolve?Math.min(1,Math.max(0,f.left/.30)):Math.min(1,f.age*7,Math.max(0,f.left/.45));if(f.left<=0)continue;
   const visible={...f,segs:f.renderSegs||f.segs};
   const fr=field.getBoundingClientRect();ctx.save();ctx.beginPath();ctx.rect(fr.left-rect.left,fr.top-rect.top,fr.width,fr.height);ctx.clip();
   if(f.type==='fire')renderFire(visible,alpha);else renderIce(visible,alpha);ctx.restore();
-  if(Math.random()<(taMobileFx?.36:.85)){const v=f.renderSegs||f.segs,seg=v[Math.floor(Math.random()*v.length)],t=Math.random(),p=fxPoint(seg,t);spark(p.x,p.y,f.type,1)}
+  if(!f.clockDissolve&&Math.random()<(taMobileFx?.36:.85)){const v=f.renderSegs||f.segs,seg=v[Math.floor(Math.random()*v.length)],t=Math.random(),p=fxPoint(seg,t);spark(p.x,p.y,f.type,1)}
  }
  traces=traces.filter(f=>f.left>0);checkWords();renderCrossBursts(now);
  for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy+=(p.type==='fire'?-24:18)*dt;if(p.type==='fire'){p.sway+=dt*12;p.vx+=Math.sin(p.sway)*dt*22;}const a=Math.min(1,p.life*2);ctx.save();ctx.globalAlpha=a;if(p.type==='fire'){const heat=p.heat??.5;const tint=heat>.76?'#fff0bd':heat>.4?'#ffba58':'#e95425';ctx.fillStyle=tint;ctx.shadowColor=heat>.4?'#ff9d36':'#b83819';ctx.shadowBlur=taMobileFx?2:(heat>.7?10:5);if(p.trail){ctx.strokeStyle=tint;ctx.globalAlpha=a*.42;ctx.lineWidth=Math.max(.5,p.r*.55);ctx.beginPath();ctx.moveTo(p.x-p.vx*.035,p.y-p.vy*.035);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.globalAlpha=a;}ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(.55,p.r*.58),Math.max(.8,p.r*(1.15+heat*.5)),Math.atan2(p.vy,p.vx)+Math.PI/2,0,Math.PI*2);ctx.fill();}else{ctx.fillStyle=Math.random()>.5?'#e3fbff':'#80d8ff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=taMobileFx?2:9;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}if(p.type==='ice'){ctx.strokeStyle='#e6faff';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p.x-p.r*2,p.y);ctx.lineTo(p.x+p.r*2,p.y);ctx.moveTo(p.x,p.y-p.r*2);ctx.lineTo(p.x,p.y+p.r*2);ctx.stroke()}ctx.restore()}
@@ -7728,7 +7880,45 @@ html.glow-sun .orb.ta-reward-time.ta-reward-boost{
 </style>
 <style>/* Match collection-area point labels to score-area bonus font. */
 .ta-century-center-plus,.ta-issen-plus,.oddplus,.ta-center-hit-plus{font-family:var(--mincho),serif!important;}
-</style></body>
+</style><style id="ta-dual-clock-style">
+.hero .ta-dual-clock{position:absolute;width:160px;height:160px;transform:translate(-50%,-50%);z-index:12;pointer-events:none;filter:drop-shadow(0 0 9px var(--clock-hue));animation:taClockIn .3s ease-out both}
+.ta-dual-clock svg{width:100%;height:100%;overflow:visible}
+.ta-dual-clock.clock-grace{animation:taClockFadeOut .4s ease-in forwards!important;pointer-events:none}
+.ta-dual-clock.clock-expiring{animation:taClockFadeOut .45s ease-in forwards!important;pointer-events:none}
+@keyframes taClockFadeOut{from{opacity:1}to{opacity:0}}
+.ta-dual-clock .clock-ring-shadow{fill:rgba(5,7,20,.24);stroke:var(--clock-hue);stroke-width:9;opacity:.2}
+.ta-dual-clock .clock-ring{fill:none;stroke:var(--clock-hue);stroke-width:3.4;stroke-dasharray:3 2;filter:drop-shadow(0 0 3px var(--clock-hue))}
+.ta-dual-clock .clock-tick{stroke:#fff0d6;stroke-width:2;opacity:.9}
+.ta-dual-clock .clock-hands{fill:none;stroke:#f6f7ff;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 6px #fff)}
+.ta-dual-clock .clock-center{fill:#fff}
+/* Completed clock: elemental hands transmute into metallic gold, then wind backwards. */
+/* Clock remains fully visible for the entire stopped-time phase. */
+.ta-dual-clock.clock-complete{animation:taClockHold .85s ease-out both}
+.ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!important;pointer-events:none;transition:filter .55s ease}
+.hero .ta-dual-clock.clock-persistent.clock-behind-words{position:absolute!important;z-index:1!important}
+.ta-dual-clock.clock-persistent.clock-time-dark{filter:brightness(.32) saturate(.48) drop-shadow(0 0 4px rgba(128,112,70,.24))!important}
+@keyframes taClockHold{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.ta-dual-clock.clock-complete .clock-hands{stroke:#f6d47d;stroke-width:5.4;filter:drop-shadow(0 0 3px #fff4c4) drop-shadow(0 0 8px #dba841);animation:taClockGoldAppear .27s ease-out both}
+/* The fire/ice dial and its ticks fade away, leaving only the golden hands. */
+/* Keep the completed clock face visible, but transmute the elemental rim into gold. */
+.ta-dual-clock.clock-complete .clock-ring-shadow{stroke:#e9bb65;opacity:.18;transition:stroke .28s ease}
+.ta-dual-clock.clock-complete .clock-ring{stroke:#f4d48b;stroke-dasharray:none;filter:drop-shadow(0 0 4px #d7a24e);animation:taClockDialGold .3s ease-out both}
+.ta-dual-clock.clock-complete .clock-tick{stroke:#ffe6a6;opacity:.95}
+@keyframes taClockDialGold{from{opacity:.55}to{opacity:1}}
+@keyframes taClockElementVanish{from{opacity:1}to{opacity:0}}
+@keyframes taClockGoldAppear{from{opacity:0;stroke-width:4}to{opacity:1;stroke-width:5.4}}
+.ta-dual-clock.clock-complete .clock-center{fill:#fff0b2;filter:drop-shadow(0 0 5px #f5c760)}
+.ta-dual-clock.clock-complete .clock-hand-rotor{animation:taClockRewind .85s cubic-bezier(.35,.04,.18,.95) both}
+.ta-dual-clock.clock-complete.clock-frozen .clock-hand-rotor{animation-play-state:paused}
+/* When time resumes, the golden hands wind forward until the original burst. */
+.ta-dual-clock.clock-complete.clock-forward-release .clock-hand-rotor{animation:taClockForwardRelease .54s cubic-bezier(.22,.55,.34,1) both!important}
+@keyframes taClockForwardRelease{from{transform:rotate(-360deg)}to{transform:rotate(0deg)}}
+@keyframes taClockRewind{0%{transform:rotate(0deg)}100%{transform:rotate(-360deg)}}
+@keyframes taClockIn{from{opacity:0;transform:translate(-50%,-50%) scale(.7)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes taClockComplete{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.07);filter:drop-shadow(0 0 16px #f3cf80)}59%{opacity:1;transform:translate(-50%,-50%) scale(1)}60%,82%{opacity:.92;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(.92)}}
+@media(max-width:650px){.hero .ta-dual-clock{width:145px;height:145px}}
+</style>
+</body>
 <style>
 /* Readable thousand-point popup labels in the collection area. */
 .ta-issen-plus{font-size:clamp(.85rem,3.6vw,1.45rem)!important;max-width:calc(100% - 16px);white-space:nowrap;}
