@@ -3482,7 +3482,7 @@ const taCenturyDust=(()=>{
   return {emit};
 })();
 // あふれる時間：ときどき明滅する言葉が現れ、触れると短いあいだ言葉が大量にあふれ出す
-const FLOOD_MS = 7200;   // 時間が止まっている長さ
+const FLOOD_MS = 8000;   // 時間が止まっている長さ
 let flood = false, nextSpecialAt = Date.now() + 60000, forceSpecial = false;
 let nextOddAt = Date.now() + 30000, forceOdd = false;
 let nextMultiAt = Date.now() + 15000, forceMulti = false;
@@ -7155,9 +7155,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  function clearClock(){clearTimeout(clockTimer);clockTimer=null;clockDial=null;if(clockFx){const old=clockFx;clockFx=null;old.classList.add('clock-expiring');setTimeout(()=>old.remove(),460);}}
  function clockDialFx(pt,type){
   clearClock();const r=72;const el=document.createElement('div');el.className='ta-dual-clock';
-  // Canvas traces use viewport coordinates after the hero offset; place the dial in the same viewport space.
-  const dialHeroRect=hero.getBoundingClientRect();
-  el.style.left=(dialHeroRect.left+pt.x)+'px';el.style.top=(dialHeroRect.top+pt.y)+'px';el.style.setProperty('--clock-hue',type==='fire'?'#ff986d':'#8bdfff');
+  // Use the same hero-local point as the canvas, projected to viewport CSS pixels.
+  const heroRect=hero.getBoundingClientRect();
+  el.style.left=(heroRect.left+pt.x)+'px';el.style.top=(heroRect.top+pt.y)+'px';el.style.setProperty('--clock-hue',type==='fire'?'#ff986d':'#8bdfff');
   el.innerHTML='<svg viewBox="0 0 180 180" aria-hidden="true"><circle cx="90" cy="90" r="74" class="clock-ring-shadow"/><circle cx="90" cy="90" r="70" class="clock-ring"/>'+Array.from({length:12},(_,i)=>{const a=i*Math.PI/6-Math.PI/2;return `<line x1="${90+60*Math.cos(a)}" y1="${90+60*Math.sin(a)}" x2="${90+66*Math.cos(a)}" y2="${90+66*Math.sin(a)}" class="clock-tick"/>`}).join('')+'<g class="clock-hand-rotor"><path class="clock-hands"/><circle cx="90" cy="90" r="3" class="clock-center"/></g></svg>';
   document.body.append(el);clockFx=el;clockDial={x:pt.x,y:pt.y,type,expires:performance.now()+CLOCK_WINDOW};
   // Keep the dial visible through the lingering fire/ice particles, then fade over 0.4s.
