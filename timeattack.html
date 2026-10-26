@@ -7155,9 +7155,11 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  function clearClock(){clearTimeout(clockTimer);clockTimer=null;clockDial=null;if(clockFx){const old=clockFx;clockFx=null;old.classList.add('clock-expiring');setTimeout(()=>old.remove(),460);}}
  function clockDialFx(pt,type){
   clearClock();const r=72;const el=document.createElement('div');el.className='ta-dual-clock';
-  el.style.left=pt.x+'px';el.style.top=pt.y+'px';el.style.setProperty('--clock-hue',type==='fire'?'#ff986d':'#8bdfff');
+  // Canvas traces use viewport coordinates after the hero offset; place the dial in the same viewport space.
+  const dialHeroRect=hero.getBoundingClientRect();
+  el.style.left=(dialHeroRect.left+pt.x)+'px';el.style.top=(dialHeroRect.top+pt.y)+'px';el.style.setProperty('--clock-hue',type==='fire'?'#ff986d':'#8bdfff');
   el.innerHTML='<svg viewBox="0 0 180 180" aria-hidden="true"><circle cx="90" cy="90" r="74" class="clock-ring-shadow"/><circle cx="90" cy="90" r="70" class="clock-ring"/>'+Array.from({length:12},(_,i)=>{const a=i*Math.PI/6-Math.PI/2;return `<line x1="${90+60*Math.cos(a)}" y1="${90+60*Math.sin(a)}" x2="${90+66*Math.cos(a)}" y2="${90+66*Math.sin(a)}" class="clock-tick"/>`}).join('')+'<g class="clock-hand-rotor"><path class="clock-hands"/><circle cx="90" cy="90" r="3" class="clock-center"/></g></svg>';
-  hero.append(el);clockFx=el;clockDial={x:pt.x,y:pt.y,type,expires:performance.now()+CLOCK_WINDOW};
+  document.body.append(el);clockFx=el;clockDial={x:pt.x,y:pt.y,type,expires:performance.now()+CLOCK_WINDOW};
   // Keep the dial visible through the lingering fire/ice particles, then fade over 0.4s.
   // The shape-recognition grace period remains independent of visibility.
   const createdDial=el;
@@ -7881,7 +7883,7 @@ html.glow-sun .orb.ta-reward-time.ta-reward-boost{
 <style>/* Match collection-area point labels to score-area bonus font. */
 .ta-century-center-plus,.ta-issen-plus,.oddplus,.ta-center-hit-plus{font-family:var(--mincho),serif!important;}
 </style><style id="ta-dual-clock-style">
-.hero .ta-dual-clock{position:absolute;width:160px;height:160px;transform:translate(-50%,-50%);z-index:12;pointer-events:none;filter:drop-shadow(0 0 9px var(--clock-hue));animation:taClockIn .3s ease-out both}
+.ta-dual-clock{position:fixed;width:180px;height:180px;transform:translate(-50%,-50%);z-index:12;pointer-events:none;filter:drop-shadow(0 0 9px var(--clock-hue));animation:taClockIn .3s ease-out both}
 .ta-dual-clock svg{width:100%;height:100%;overflow:visible}
 .ta-dual-clock.clock-grace{animation:taClockFadeOut .4s ease-in forwards!important;pointer-events:none}
 .ta-dual-clock.clock-expiring{animation:taClockFadeOut .45s ease-in forwards!important;pointer-events:none}
@@ -7916,7 +7918,7 @@ html.glow-sun .orb.ta-reward-time.ta-reward-boost{
 @keyframes taClockRewind{0%{transform:rotate(0deg)}100%{transform:rotate(-360deg)}}
 @keyframes taClockIn{from{opacity:0;transform:translate(-50%,-50%) scale(.7)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @keyframes taClockComplete{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.07);filter:drop-shadow(0 0 16px #f3cf80)}59%{opacity:1;transform:translate(-50%,-50%) scale(1)}60%,82%{opacity:.92;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(.92)}}
-@media(max-width:650px){.hero .ta-dual-clock{width:145px;height:145px}}
+@media(max-width:650px){.ta-dual-clock{width:180px;height:180px}}
 </style>
 </body>
 <style>
