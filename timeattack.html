@@ -3731,7 +3731,7 @@ function bumpCombo(){
   if(!taRunning) return 1;
   const now = Date.now();
   if(comboPaused && !flood && !open && !charging) resumeCombo();   // 念のため：読んでいないのに止まっていたら、触れた時点で戻す
-  combo = (comboPaused || now - comboAt <= COMBO_MS) ? combo + 1 : 1; comboAt = now;
+  combo = (flood || comboPaused || now - comboAt <= COMBO_MS) ? combo + 1 : 1; comboAt = now;
   if(combo>taSessionMaxCombo) taSessionMaxCombo=combo;
   if(combo > maxCombo){ maxCombo = combo; store.set("ta-yura-maxcombo", maxCombo); }
   const m = comboMult(combo), el = $("combo"), prevX = el.classList.contains("x3") ? 3 : el.classList.contains("x2") ? 2 : 1;
@@ -3905,7 +3905,7 @@ function startFlood(gem){
     $("combo").classList.add("paused");
   }
   const hero = document.querySelector(".hero"); hero.classList.add("flood");
-  document.documentElement.classList.add("timestop");
+  document.documentElement.classList.add("timestop", "ta-sakura-time-frozen");
   // 懐中時計は消えずに、その場で止まる
   if(gem){ stopWatch = gem; gem.dataset.frozen = "1"; gem.classList.add("frozen"); gem.getAnimations({subtree:true}).forEach(a => a.pause());
     // 落ちはじめ・落ちきる寸前（半透明や枠の外）で止まったときは、見える位置に置き直す
@@ -3922,7 +3922,7 @@ function startFlood(gem){
   if(vxState) vortexRelease();
   $("drift").querySelectorAll(".word.vortex:not(.got)").forEach(v => { v.classList.add("got"); v.animate([{opacity:1},{opacity:0}], {duration:300, fill:"forwards"}).onfinish = () => v.remove(); });
   // 漂っていた言葉は消え、止まった時間の中に言葉が並ぶ
-  $("drift").querySelectorAll(".word:not(.special):not(.vortex)").forEach(w => { w.classList.add("got"); w.animate([{opacity:1},{opacity:0}], {duration:300, fill:"forwards"}).onfinish = () => w.remove(); });
+  $("drift").querySelectorAll(".word:not(.special):not(.vortex):not(.sk-fall)").forEach(w => { w.classList.add("got"); w.animate([{opacity:1},{opacity:0}], {duration:300, fill:"forwards"}).onfinish = () => w.remove(); });
   const cells = STOP_CELLS.map((_, i) => i).sort(() => Math.random() - .5).slice(0, STOP_WORDS);
   cells.forEach((c, i) => setTimeout(()=>{ if(flood) placeStill(c); }, 200 + i * 45));
   const bar = $("floodbar"); bar.hidden = false; bar.classList.remove("run"); void bar.offsetWidth; bar.classList.add("run"); layoutBars();
@@ -3945,7 +3945,7 @@ function startFlood(gem){
 }
 function endFlood(){
   clearTimeout(startFlood.h);
-  flood = false; taCenturyMusic.timeResume(); clearTimeout(startFlood.tickDelay); clearInterval(startFlood.tk);
+  flood = false; document.documentElement.classList.remove("ta-sakura-time-frozen"); taCenturyMusic.timeResume(); clearTimeout(startFlood.tickDelay); clearInterval(startFlood.tk);
   // A combo that began while time was stopped must resume from a full bar.
   if(taFloodComboRemaining===null && combo>=2 && !comboPaused)taFloodComboRemaining=COMBO_MS;
   if(taFloodComboRemaining!==null){
@@ -5003,7 +5003,7 @@ function startSakura(from, opt){
   startSakura.stop = finish;
   const tick = now => {
     const dt = Math.min(.05, (now - last) / 1000); last = now;
-    const paused = libOpen || document.hidden;
+    const paused = flood || libOpen || document.hidden;
     ema += ((dt * 1000) - ema) * .08;
     if(t > 700){ if(ema > 21 && cap > 50) cap -= 1.2; else if(ema < 17.5 && cap < (reduce ? 45 : skMobile ? 82 : 140)) cap += .3; }
     if(!paused){
@@ -7216,8 +7216,10 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
     fx.classList.remove('clock-expiring','clock-grace');
     const heroRect=hero.getBoundingClientRect();
     taClockVeilCenter={x:heroRect.left+dial.x,y:heroRect.top+dial.y};
-    fx.style.left=taClockVeilCenter.x+'px';fx.style.top=taClockVeilCenter.y+'px';
-    document.body.append(fx);
+    // Match the elemental Canvas coordinate space, including mobile layout containment.
+    const layerRect=layer.getBoundingClientRect();
+    fx.style.left=(taClockVeilCenter.x-layerRect.left)+'px';fx.style.top=(taClockVeilCenter.y-layerRect.top)+'px';
+    layer.append(fx);
     fx.classList.add('clock-complete','clock-persistent');
     if(taCompletedClock && taCompletedClock!==fx)taCompletedClock.remove();
     taCompletedClock=fx;
@@ -7912,6 +7914,10 @@ html.glow-sun .orb.ta-reward-time.ta-reward-boost{
 .ta-dual-clock .clock-tick{stroke:#fff0d6;stroke-width:2;opacity:.9}
 .ta-dual-clock .clock-hands{fill:none;stroke:#f6f7ff;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 6px #fff)}
 .ta-dual-clock .clock-center{fill:#fff}
+/* Clock and elemental trace share the same containing block until the time-stop transition. */
+.ta-element-layer .ta-dual-clock.clock-persistent{position:absolute!important;z-index:2!important}
+/* Pause sakura/moonlight falling words in place; resume at the same animation progress. */
+html.ta-sakura-time-frozen .word.sk-fall:not(.flying){animation-play-state:paused!important}
 /* Completed clock: elemental hands transmute into metallic gold, then wind backwards. */
 /* Clock remains fully visible for the entire stopped-time phase. */
 .ta-dual-clock.clock-complete{animation:taClockHold .85s ease-out both}
