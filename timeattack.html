@@ -1645,6 +1645,23 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
 #viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled::before{opacity:0!important}
 @media(prefers-reduced-motion:reduce){#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon){animation:none!important}}
 </style>
+<style id="ta-technique-names">
+.ta-shingan-label,.ta-shinsoku-label,.ta-shinsoku-plus{position:fixed;z-index:135;pointer-events:none;white-space:nowrap;font-family:var(--mincho,serif);font-weight:700;transform:translate(-50%,0);text-shadow:0 1px 5px #10111a,0 0 10px rgba(255,255,255,.6)}
+/* 一閃と同じ名称サイズ・太さ・字間に統一 */
+.ta-shingan-label,.ta-shinsoku-label{font-size:12px;font-weight:600;letter-spacing:.12em}
+.ta-shingan-label{color:#fff}
+.ta-shinsoku-label{color:#bdeaff;text-shadow:0 0 10px rgba(117,221,255,.9),0 1px 5px #10111a}
+.ta-shinsoku-plus{font-size:clamp(.85rem,3.6vw,1.45rem);color:#c8efff;text-shadow:0 0 9px rgba(117,221,255,.8),0 1px 5px #10111a}
+
+/* 神速: 青白い細い光が文字中心を一瞬横切る。DOMを残さない軽量演出 */
+.ta-shinsoku-streak{position:fixed;z-index:134;pointer-events:none;width:104px;height:28px;transform:translate(-50%,-50%);opacity:0;contain:layout style paint;}
+.ta-shinsoku-streak::before{content:"";position:absolute;top:50%;left:0;width:100%;height:2px;transform:translateY(-50%);border-radius:100%;background:linear-gradient(90deg,transparent 0%,rgba(110,218,255,.1) 15%,rgba(205,246,255,.8) 42%,#fff 50%,rgba(205,246,255,.8) 58%,rgba(110,218,255,.1) 85%,transparent 100%);box-shadow:0 0 6px rgba(117,221,255,.5);}
+.ta-shinsoku-streak::after{content:"";position:absolute;left:50%;top:50%;width:12px;height:12px;transform:translate(-50%,-50%) rotate(45deg);background:radial-gradient(circle,#fff 0%,rgba(200,244,255,.8) 24%,rgba(120,211,255,.25) 55%,transparent 75%);}
+@keyframes taShinsokuStreak{0%{opacity:0;transform:translate(-50%,-50%) scaleX(.25)}20%{opacity:.95;transform:translate(-50%,-50%) scaleX(1)}65%{opacity:.5;transform:translate(-50%,-50%) scaleX(.65)}100%{opacity:0;transform:translate(-50%,-50%) scaleX(.12)}}
+.ta-shinsoku-streak{animation:taShinsokuStreak 320ms ease-out both;}
+@media(prefers-reduced-motion:reduce){.ta-shinsoku-streak{animation:none;opacity:0}}
+
+</style>
 </head>
 <body>
 
@@ -3612,7 +3629,7 @@ function comboStepBonus(n){
   const land=()=>{if(session!==taFinishToken || !taRunning)return;taAward(false,bonus,true,null,true);taComboScoreImpact(bonus);};
   // Item recharge animation starts just after the score bonus animation begins,
   // rather than waiting for the score-side ring to land.
-  if(n%30===0){
+  if(n%40===0){
     setTimeout(()=>{
       if(session!==taFinishToken || !taRunning)return;
       document.dispatchEvent(new CustomEvent('ta-item-combo-recharge',{detail:{chain:n}}));
@@ -4478,6 +4495,7 @@ function spawnWord(opt = {}){
     }
     o.animate(flightFrames,{duration:flightDuration,easing:"cubic-bezier(.45,0,.6,1)",fill:"forwards"}).onfinish=()=>{o.remove();arrive();};
   });
+  w.dataset.taVisibleAt = String(performance.now() + (w.classList.contains("late") ? (parseFloat(w.style.animationDelay) || 0) * 1000 : 0));
   field.append(w);
   return w;
 }
@@ -5065,6 +5083,24 @@ function vortexRelease(){
   const field = $("drift");
   let active = false, pointer = null, points = [], collected = new Set(), started = 0, lastAward = 0;
   let lx = 0, ly = 0, flashed = false, flashedTier = 0, awardedBonus = 0;
+  let swipeFastCandidate=null; // 1操作につき最初の神速対象だけを記録
+  let shinsokuAwarded=false;
+  function awardShinsoku(fast){
+    if(!fast || shinsokuAwarded || !taRunning)return;
+    shinsokuAwarded=true;
+    taScore+=.3;taScoreRefresh();taRender();
+    const streak=document.createElement('span');streak.className='ta-shinsoku-streak';
+    streak.style.left=fast.cx+'px';streak.style.top=fast.cy+'px';
+    document.body.append(streak);
+    streak.addEventListener('animationend',()=>streak.remove(),{once:true});
+    setTimeout(()=>streak.remove(),480);
+    const name=document.createElement('span');name.className='ta-shinsoku-label';name.textContent='神速';
+    name.style.left=fast.cx+'px';name.style.top=(fast.cy-27)+'px';document.body.append(name);
+    name.animate([{opacity:0,transform:'translate(-50%,3px) scale(.85)'},{opacity:1,transform:'translate(-50%,-9px) scale(1)',offset:.23},{opacity:0,transform:'translate(-50%,-25px) scale(1)'}],{duration:900,easing:'ease-out'}).onfinish=()=>name.remove();
+    const plus=document.createElement('span');plus.className='ta-shinsoku-plus';plus.textContent='+300';
+    plus.style.left=fast.cx+'px';plus.style.top=(fast.cy+2)+'px';document.body.append(plus);
+    plus.animate([{opacity:0,transform:'translate(-50%,3px)'},{opacity:1,transform:'translate(-50%,-8px)',offset:.2},{opacity:0,transform:'translate(-50%,-28px)'}],{duration:950,easing:'ease-out'}).onfinish=()=>plus.remove();
+  }
   const MIN_SPEED = 360; // px/s: ゆっくりなぞった場合は発光しない
   // 通常文字と特殊効果文字を一閃採集の対象にする。長押し・専用タップ型は誤作動防止のため除外。
   const isSwipeable = w => !w.matches('.vortex,.crack') && !w.classList.contains('got') && (!w.classList.contains('still') || flood);
@@ -5075,6 +5111,13 @@ function vortexRelease(){
       if(w.classList.contains('got') || w.dataset.swiped || !isSwipeable(w) || w.classList.contains('late')) continue;
       const r=w.getBoundingClientRect();
       if(x<r.left-5 || x>r.right+5 || y<r.top-8 || y>r.bottom+8) continue;
+      // スワイプ中も、出現から850ms以内に触れた最初の通常文字を神速候補にする。
+      // pointerdown時の文字も含めて1操作につき1回だけ判定する。
+      if(!swipeFastCandidate && taRunning && !w.matches('.special,.petal,.pull,.glow,.reso,.multi,.vortex,.crack,.still')){
+        const born=Number(w.dataset.taVisibleAt), age=performance.now()-born;
+        if(Number.isFinite(born) && age>=0 && age<=850)
+          swipeFastCandidate={cx:r.left+r.width/2,cy:r.top+r.height/2};
+      }
       w.dataset.swiped='1';w.click();
       // 青い時間延長文字も通常得点文字と同様に一閃の採集数へ算入する。
       if(!w.isConnected || w.classList.contains('got') || w.classList.contains('still'))collected.add(w);
@@ -5084,6 +5127,9 @@ function vortexRelease(){
     const d=Math.hypot(x-lx,y-ly), n=Math.max(1,Math.ceil(d/9));
     for(let i=1;i<=n;i++) hit(lx+(x-lx)*i/n,ly+(y-ly)*i/n);
     lx=x;ly=y;
+    // スワイプと判定できた時点で、最初に触れた対象文字の神速を即時発動。
+    if(!shinsokuAwarded && Math.hypot(x-points[0].x,y-points[0].y)>=13)
+      awardShinsoku(swipeFastCandidate || shinsokuCandidate);
   }
   function flash(from,to,tier,count,bonus){
     const layer=document.createElement('div'); layer.className='ta-issen-layer'; layer.setAttribute('aria-hidden','true');
@@ -5131,11 +5177,12 @@ function vortexRelease(){
   }
   function finish(){
     if(!active)return;
-    active=false;points=[];collected.clear();pointer=null;flashed=false;flashedTier=0;awardedBonus=0;
+    active=false;points=[];collected.clear();pointer=null;flashed=false;flashedTier=0;awardedBonus=0;shinsokuAwarded=false;
   }
   // Center-tap bonus is evaluated on pointerup, since the swipe engine
   // programmatically collects the first word on pointerdown (click.detail=0).
   let centerTapCandidate=null;
+  let shinsokuCandidate=null;
   field.addEventListener('pointerdown',e=>{
     const vx=e.target.closest&&e.target.closest('.word.vortex');
     if(vx){e.preventDefault();active=false;try{field.setPointerCapture(e.pointerId)}catch(_){}vortexHold(vx);return;}
@@ -5144,12 +5191,22 @@ function vortexRelease(){
     if(active)return;
     const cw=e.target.closest&&e.target.closest('.word');
     centerTapCandidate=null;
+    shinsokuCandidate=null;
+    if(cw && !cw.matches('.special,.petal,.pull,.glow,.reso,.multi,.vortex,.crack,.still') && !cw.classList.contains('late') && taRunning){
+      const visibleAt=Number(cw.dataset.taVisibleAt);
+      const age=performance.now()-visibleAt;
+      if(Number.isFinite(visibleAt) && age>=0 && age<=850){
+        const sr=cw.getBoundingClientRect();
+        shinsokuCandidate={id:e.pointerId,x:e.clientX,y:e.clientY,cx:sr.left+sr.width/2,cy:sr.top+sr.height/2};
+      }
+    }
     if(cw && !cw.matches('.special,.petal,.pull,.glow,.reso,.multi,.vortex,.crack,.still') && taRunning){
       const rr=cw.getBoundingClientRect(),cx=rr.left+rr.width/2,cy=rr.top+rr.height/2;
-      // Generous central area: 70% of word width, 80% of its height.
-      if(Math.abs(e.clientX-cx)<=rr.width*.35 && Math.abs(e.clientY-cy)<=rr.height*.40)
+      // Generous central area: 50% of word width, 60% of its height.
+      if(Math.abs(e.clientX-cx)<=rr.width*.25 && Math.abs(e.clientY-cy)<=rr.height*.30)
         centerTapCandidate={id:e.pointerId,x:e.clientX,y:e.clientY,cx,cy,width:rr.width,height:rr.height,radius:getComputedStyle(cw).borderRadius};
     }
+    swipeFastCandidate=null;shinsokuAwarded=false;
     active=true;pointer=e.pointerId;started=performance.now();lx=e.clientX;ly=e.clientY;
     points=[{x:lx,y:ly}];collected.clear();flashed=false;flashedTier=0;awardedBonus=0;
     try{field.setPointerCapture(e.pointerId)}catch(_){}hit(lx,ly);
@@ -5163,21 +5220,30 @@ function vortexRelease(){
     if(e.pointerId===pointer){
       sweep(e.clientX,e.clientY);points.push({x:e.clientX,y:e.clientY});assessPath();
       const c=centerTapCandidate;
-      if(c && c.id===e.pointerId && Math.hypot(e.clientX-c.x,e.clientY-c.y)<13 && taRunning){
+      if(c && c.id===e.pointerId && Math.hypot(e.clientX-c.x,e.clientY-c.y)<10 && taRunning){
         taScore+=.5;taScoreRefresh();taRender();
         const blink=document.createElement('span');blink.className='ta-center-hit-flash';
         blink.style.width=c.width+'px';blink.style.height=c.height+'px';blink.style.borderRadius=c.radius||'999px';
         blink.style.left=c.cx+'px';blink.style.top=c.cy+'px';document.body.append(blink);
         blink.animate([{opacity:0},{opacity:.95,offset:.15},{opacity:.12,offset:.45},{opacity:.9,offset:.63},{opacity:0,transform:'translate(-50%,-50%) scale(.84)'}],{duration:320,easing:'ease-out'}).onfinish=()=>blink.remove();
+        const heart=document.createElement('span');heart.className='ta-shingan-label';heart.textContent='心眼';
+        heart.style.left=c.cx+'px';heart.style.top=(c.cy-36)+'px';document.body.append(heart);
+        heart.animate([{opacity:0,transform:'translate(-50%,0)'},{opacity:1,transform:'translate(-50%,-8px)',offset:.2},{opacity:0,transform:'translate(-50%,-26px)'}],{duration:900,easing:'ease-out'}).onfinish=()=>heart.remove();
         const plus=document.createElement('span');plus.className='ta-center-hit-plus';plus.textContent='+500';
         plus.style.left=c.cx+'px';plus.style.top=(c.cy-20)+'px';document.body.append(plus);
         plus.animate([{opacity:0,transform:'translate(-50%,0)'},{opacity:1,transform:'translate(-50%,-10px)',offset:.2},{opacity:0,transform:'translate(-50%,-30px)'}],{duration:700}).onfinish=()=>plus.remove();
       }
+      // 神速: タップ・スワイプ両対応。スワイプ時は1操作につき最初の対象1文字のみ。
+      const isTap= Math.hypot(e.clientX-points[0].x,e.clientY-points[0].y)<13
+        && points.every(p=>Math.hypot(p.x-points[0].x,p.y-points[0].y)<13);
+      const fast=isTap ? shinsokuCandidate : swipeFastCandidate;
+      if(fast && (!isTap || fast.id===e.pointerId))awardShinsoku(fast);
+      shinsokuCandidate=null;swipeFastCandidate=null;
       centerTapCandidate=null;finish();
     }vortexRelease();
   });
-  field.addEventListener('pointercancel',()=>{centerTapCandidate=null;finish();vortexRelease();});
-  field.addEventListener('lostpointercapture',()=>{finish();vortexRelease();});
+  field.addEventListener('pointercancel',()=>{centerTapCandidate=null;shinsokuCandidate=null;swipeFastCandidate=null;finish();vortexRelease();});
+  field.addEventListener('lostpointercapture',()=>{shinsokuCandidate=null;swipeFastCandidate=null;finish();vortexRelease();});
 })();
 // ---------- 断片を渡す（SNS共有） ----------
 const SITE = "https://yura-whatif.github.io/no-answers/";
