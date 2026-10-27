@@ -7216,10 +7216,13 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
     fx.classList.remove('clock-expiring','clock-grace');
     const heroRect=hero.getBoundingClientRect();
     taClockVeilCenter={x:heroRect.left+dial.x,y:heroRect.top+dial.y};
-    // Match the elemental Canvas coordinate space, including mobile layout containment.
-    const layerRect=layer.getBoundingClientRect();
-    fx.style.left=(taClockVeilCenter.x-layerRect.left)+'px';fx.style.top=(taClockVeilCenter.y-layerRect.top)+'px';
-    layer.append(fx);
+    // The completed clock is position:fixed. Keep it in the document viewport
+    // coordinate space, not inside the contained elemental canvas layer.
+    // The latter establishes a new containing block for fixed descendants and
+    // caused the finished clock to jump when switching from the dial preview.
+    fx.style.left=taClockVeilCenter.x+'px';
+    fx.style.top=taClockVeilCenter.y+'px';
+    document.body.append(fx);
     fx.classList.add('clock-complete','clock-persistent');
     if(taCompletedClock && taCompletedClock!==fx)taCompletedClock.remove();
     taCompletedClock=fx;
