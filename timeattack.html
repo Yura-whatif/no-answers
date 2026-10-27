@@ -3877,24 +3877,25 @@ function stopVeil(on, src){
 // behind the words (drift z-index:2). Restore it to the foreground on release.
 function placeCompletedClockBehindWords(){
   const clock=taCompletedClock;
-  if(!clock||!clock.isConnected||!taCompletedClockAnchor)return;
-  const drift=$('drift');
-  const r=drift.getBoundingClientRect();
-  // Set positioning mode before insertion; do not sample an animated rect.
+  if(!clock||!clock.isConnected)return;
+  // The dial is already a child of #drift, anchored to its original tap.
+  // Never reparent or recompute coordinates at the time-stop transition.
   clock.classList.add('clock-behind-words');
-  drift.append(clock);
-  const sx=r.width/(drift.clientWidth||r.width);
-  const sy=r.height/(drift.clientHeight||r.height);
-  clock.style.left=((taCompletedClockAnchor.x-r.left)/sx)+'px';
-  clock.style.top=((taCompletedClockAnchor.y-r.top)/sy)+'px';
 }
 function placeCompletedClockInFront(){
   const clock=taCompletedClock;
-  if(!clock||!clock.isConnected||!taCompletedClockAnchor)return;
+  if(!clock||!clock.isConnected)return;
+  // Convert once to viewport coordinates before moving to the foreground.
+  // Use the original dial center, not its animated bounding rectangle.
+  const drift=$('drift');
+  const r=drift.getBoundingClientRect();
+  const x=Number(clock.dataset.dialX),y=Number(clock.dataset.dialY);
+  const sx=r.width/(drift.clientWidth||r.width);
+  const sy=r.height/(drift.clientHeight||r.height);
   clock.classList.remove('clock-behind-words');
+  clock.style.left=(r.left+x*sx)+'px';
+  clock.style.top=(r.top+y*sy)+'px';
   document.body.append(clock);
-  clock.style.left=taCompletedClockAnchor.x+'px';
-  clock.style.top=taCompletedClockAnchor.y+'px';
 }
 function startFlood(gem){
   if(flood || shattering) return;
@@ -7161,7 +7162,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const heroRect=hero.getBoundingClientRect();
   el.style.left=(heroRect.left+pt.x)+'px';el.style.top=(heroRect.top+pt.y)+'px';el.style.setProperty('--clock-hue',type==='fire'?'#ff986d':'#8bdfff');
   el.innerHTML='<svg viewBox="0 0 180 180" aria-hidden="true"><circle cx="90" cy="90" r="74" class="clock-ring-shadow"/><circle cx="90" cy="90" r="70" class="clock-ring"/>'+Array.from({length:12},(_,i)=>{const a=i*Math.PI/6-Math.PI/2;return `<line x1="${90+60*Math.cos(a)}" y1="${90+60*Math.sin(a)}" x2="${90+66*Math.cos(a)}" y2="${90+66*Math.sin(a)}" class="clock-tick"/>`}).join('')+'<g class="clock-hand-rotor"><path class="clock-hands"/><circle cx="90" cy="90" r="3" class="clock-center"/></g></svg>';
-  document.body.append(el);el.style.visibility='hidden';clockFx=el;clockDial={x:pt.x,y:pt.y,type,started:performance.now(),expires:performance.now()+CLOCK_WINDOW};
+  $('drift').append(el);el.style.left=pt.x+'px';el.style.top=pt.y+'px';el.dataset.dialX=String(pt.x);el.dataset.dialY=String(pt.y);el.style.visibility='hidden';clockFx=el;clockDial={x:pt.x,y:pt.y,type,started:performance.now(),expires:performance.now()+CLOCK_WINDOW};
   // Keep the dial visible through the lingering fire/ice particles, then fade over 0.4s.
   // The shape-recognition grace period remains independent of visibility.
   const createdDial=el;
@@ -7216,14 +7217,15 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(fx){
     fx.style.visibility='visible';
     fx.classList.remove('clock-expiring','clock-grace');
-    // The preview is canvas-drawn, so use its original gesture anchor rather
-    // than a CSS-animated/hidden DOM rectangle (which shifts during scaling).
-    const anchorRect=hero.getBoundingClientRect();
-    taCompletedClockAnchor={x:anchorRect.left+dial.x,y:anchorRect.top+dial.y};
+    // Keep the very same clock element in the very same coordinate system.
+    // Reparenting here was causing the clock to jump on mobile devices.
+    const anchorRect=$('drift').getBoundingClientRect();
+    const sx=anchorRect.width/($('drift').clientWidth||anchorRect.width);
+    const sy=anchorRect.height/($('drift').clientHeight||anchorRect.height);
+    taCompletedClockAnchor={x:anchorRect.left+dial.x*sx,y:anchorRect.top+dial.y*sy};
     taClockVeilCenter={...taCompletedClockAnchor};
-    fx.style.left=taCompletedClockAnchor.x+'px';
-    fx.style.top=taCompletedClockAnchor.y+'px';
-    document.body.append(fx);
+    fx.style.left=dial.x+'px';
+    fx.style.top=dial.y+'px';
     fx.classList.add('clock-complete','clock-persistent');
     if(taCompletedClock && taCompletedClock!==fx)taCompletedClock.remove();
     taCompletedClock=fx;
@@ -7925,8 +7927,10 @@ html.ta-sakura-time-frozen .word.sk-fall:not(.flying){animation-play-state:pause
 /* Completed clock: elemental hands transmute into metallic gold, then wind backwards. */
 /* Clock remains fully visible for the entire stopped-time phase. */
 .ta-dual-clock.clock-complete{animation:taClockHold .85s ease-out both}
-.ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!important;pointer-events:none;transition:filter .55s ease}
-.hero .drift .ta-dual-clock.clock-persistent.clock-behind-words{position:absolute!important;z-index:0!important}
+.ta-dual-clock.clock-persistent{pointer-events:none;transition:filter .55s ease}
+.hero .drift>.ta-dual-clock.clock-persistent{position:absolute!important;z-index:3!important}
+body>.ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!important}
+.hero .drift>.ta-dual-clock.clock-persistent.clock-behind-words{position:absolute!important;z-index:0!important}
 .hero.flood .drift>.word{z-index:1}
 .ta-dual-clock.clock-persistent.clock-time-dark{filter:brightness(.32) saturate(.48) drop-shadow(0 0 4px rgba(128,112,70,.24))!important}
 @keyframes taClockHold{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
