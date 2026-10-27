@@ -7495,7 +7495,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  document.addEventListener('ta-item-state-change',()=>{if(!active()){selected=null;cancelStartup();}sync();});
  document.addEventListener('visibilitychange',()=>{if(!active())selected=null;sync();});
  sync();
- function spark(x,y,type,n=12){for(let i=0;i<n;i++){const a=type==='fire'?(Math.PI*1.5+(Math.random()-.5)*1.28):Math.random()*Math.PI*2,v=25+Math.random()*85;particles.push({x,y,vx:Math.cos(a)*v*(type==='fire'?.62:1),vy:type==='fire'?-(60+Math.random()*115):Math.sin(a)*v,life:.4+Math.random()*.65,max:1,r:1+Math.random()*3,type,...(type==='fire'?{heat:Math.random(),sway:Math.random()*6.283,trail:Math.random()>.28}:{} )});}if(particles.length>(taMobileFx?170:380))particles.splice(0,particles.length-(taMobileFx?170:380))}
+ function spark(x,y,type,n=12){for(let i=0;i<n;i++){const a=type==='fire'?(Math.PI*1.5+(Math.random()-.5)*1.28):Math.random()*Math.PI*2,v=25+Math.random()*85;particles.push({x,y,vx:Math.cos(a)*v*(type==='fire'?.62:1),vy:type==='fire'?-(60+Math.random()*115):Math.sin(a)*v,life:.4+Math.random()*.65,max:1,r:1+Math.random()*3,type,...(type==='fire'?{heat:Math.random(),sway:Math.random()*6.283,trail:Math.random()>.28}:{} )});}if(particles.length>(taMobileFx?110:380))particles.splice(0,particles.length-(taMobileFx?110:380))}
  function wordFx(w,type){const r=w.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;const fx=document.createElement('span');fx.className='ta-element-word-fx';fx.textContent=w.textContent;fx.style.left=x+'px';fx.style.top=y+'px';fx.style.color=type==='fire'?'#ffba69':'#d9faff';fx.style.textShadow=type==='fire'?'0 0 10px #ff4b16,0 0 20px #f86a20':'0 0 10px #8ce6ff,0 0 20px #65b9ff';document.body.append(fx);
  const k=type==='fire'?[{opacity:1,transform:'translate(-50%,-50%) scale(1)',filter:'brightness(1)'},{opacity:.95,transform:'translate(-50%,-75%) scale(1.14)',filter:'brightness(2)',offset:.4},{opacity:0,transform:'translate(-50%,-145%) scale(.25) rotate(-9deg)',filter:'blur(8px)'}]:[{opacity:1,transform:'translate(-50%,-50%) scale(1)',filter:'brightness(1)'},{opacity:1,transform:'translate(-50%,-50%) scale(1.25)',filter:'brightness(2.5)',offset:.22},{opacity:0,transform:'translate(-50%,-50%) scale(1.7) rotate(8deg)',filter:'blur(9px)'}];
  const anim=fx.animate(k,{duration:type==='fire'?650:470,easing:'ease-out',fill:'forwards'});anim.onfinish=()=>fx.remove();
@@ -7720,7 +7720,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // The two elemental strokes turn white, contract and fade before vanishing.
   traces=traces.filter(f=>f!==a&&f!==b);
   const now=performance.now();
-  crossBursts.push({x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({path:f.path.map(p=>({x:p.x,y:p.y})),segs:f.segs})),rain:Array.from({length:taMobileFx?70:145},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taMobileFx?18:36},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?18:36)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
+  crossBursts.push({x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({path:f.path.map(p=>({x:p.x,y:p.y})),segs:f.segs})),rain:Array.from({length:taMobileFx?48:145},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taMobileFx?18:36},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?18:36)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
   spark(hit.x,hit.y,'fire',taMobileFx?5:10);spark(hit.x,hit.y,'ice',taMobileFx?5:10);
   playElementSound('cross');
  }
@@ -7845,8 +7845,23 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  field.addEventListener('pointerup',finish,true);field.addEventListener('lostpointercapture',e=>{if(e.pointerId===consumedPointer){consumedPointer=null;gesture=null;}},true);field.addEventListener('pointercancel',e=>{if(e.pointerId===consumedPointer)consumedPointer=null;if(gesture&&e.pointerId===gesture.id)gesture=null},true);
  field.addEventListener('pointermove',e=>{if(e.pointerId===consumedPointer){e.stopImmediatePropagation();e.preventDefault()}},false);
  function checkWords(){if(!traces.length)return;const hr=hero.getBoundingClientRect();for(const w of field.querySelectorAll('.word')){if(!valid(w))continue;const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;const x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;for(const f of traces){if(f.segs.some(([a,b,radius])=>near(x,y,a,b,radius+Math.min(20,r.width*.24)))){collect(w,f.type);break}}}}
- function draw(now){if(taMobileFx&&now-lastFxPaint<33){requestAnimationFrame(draw);return;}lastFxPaint=now;const dt=Math.min(.05,(now-last)/1000);last=now;if(!active()){if(wasActive)clear();wasActive=false;requestAnimationFrame(draw);return}wasActive=true;
- const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,window.matchMedia('(pointer:coarse)').matches?1.25:2),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);drawCompletedClock(now);renderSummons(now);
+ let fxWasDrawing=false;
+ function draw(now){
+  // Keep the scheduler alive, but do not repaint two full-screen canvases
+  // when there is no visible effect. This also reduces idle GPU heat buildup.
+  const running=active();
+  const hasFx=!!(gesture||traces.length||particles.length||summonBursts.length||crossBursts.length||paintedClock);
+  if(!running){if(wasActive)clear();wasActive=false;fxWasDrawing=false;last=now;requestAnimationFrame(draw);return;}
+  wasActive=true;
+  if(!hasFx){
+   if(fxWasDrawing){ctx.clearRect(0,0,canvas.width,canvas.height);clockCtx.clearRect(0,0,clockCanvas.width,clockCanvas.height);fxWasDrawing=false;}
+   last=now;requestAnimationFrame(draw);return;
+  }
+  const targetMs=taMobileFx?40:16;
+  if(now-lastFxPaint<targetMs){requestAnimationFrame(draw);return;}
+  lastFxPaint=now;fxWasDrawing=true;
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+ const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,taMobileFx?1:2),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);drawCompletedClock(now);renderSummons(now);
  if(gesture&&performance.now()-gesture.started>=GESTURE_MAX_MS){const g=gesture;gesture=null;makeTrace(g)}
  const paused=false; // Elemental traces remain active during time-stop.
  const fract=v=>v-Math.floor(v);
