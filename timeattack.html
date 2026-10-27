@@ -4618,16 +4618,18 @@ function multiply(x, y, opt){
 // 引き寄せの渦：触れた場所に渦が1.5秒とどまり、範囲（半径＝絵の幅の約42%）に少しでもかかった言葉を順に吸い込む。範囲は触れた言葉の中心から0.9秒かけて広がる。
 // あとから湧いた言葉や、漂って範囲に入ってきた言葉も吸い込む。特殊語・見えていない言葉・止まった時間の言葉は吸わない
 const PULL_MS = 1500;
-function pullAll(x, y, self){
-  track("pull", "引き寄せ");
-  const field = $("drift"), fw = field.clientWidth || 300, R = Math.max(115, Math.min(185, fw * .42));
-  const core = document.createElement("span"); core.className = "pull-core"; core.innerHTML = vortexSVG(); core.style.left = x + "px"; core.style.top = y + "px"; document.body.append(core);
+function pullAll(x, y, self, eclipse=false){
+  track(eclipse ? "eclipse" : "pull", eclipse ? "蝕" : "引き寄せ");
+  const field = $("drift"), fw = field.clientWidth || 300;
+  const duration = eclipse ? 3000 : PULL_MS;
+  const R = Math.max(115, Math.min(185, fw * .42)) * (eclipse ? 1.7 : 1);
+  const core = document.createElement("span"); core.className = "pull-core" + (eclipse ? " ta-eclipse-core" : ""); core.innerHTML = vortexSVG(); core.style.left = x + "px"; core.style.top = y + "px"; document.body.append(core);
   core.animate([{scale:"0", opacity:0},{scale:"1.25", opacity:1, offset:.6},{scale:"1", opacity:1}], {duration:380, easing:"cubic-bezier(.3,1.3,.5,1)", fill:"forwards"});
   // 届く範囲を薄い輪で見せる（内側へ流れ込む気配）
-  const ring = document.createElement("span"); ring.className = "pull-ring"; ring.style.left = x + "px"; ring.style.top = y + "px"; ring.style.width = ring.style.height = (R * 2) + "px"; document.body.append(ring);
-  const GROW = 900, t0 = performance.now(), ease = q => 1 - Math.pow(1 - q, 2);   // 輪と吸い込む範囲は同じ速さで広がる
+  const ring = document.createElement("span"); ring.className = "pull-ring" + (eclipse ? " ta-eclipse-ring" : ""); ring.style.left = x + "px"; ring.style.top = y + "px"; ring.style.width = ring.style.height = (R * 2) + "px"; document.body.append(ring);
+  const GROW = eclipse ? 1150 : 900, t0 = performance.now(), ease = q => 1 - Math.pow(1 - q, 2);   // 輪と吸い込む範囲は同じ速さで広がる
   ring.animate([{transform:"translate(-50%,-50%) scale(0)", opacity:.3},{transform:"translate(-50%,-50%) scale(1)", opacity:1}], {duration:GROW, easing:"cubic-bezier(.5,1,.89,1)", fill:"forwards"});
-  const snd = sfx.inhale(PULL_MS / 1000 + .3);
+  const snd = sfx.inhale(duration / 1000 + .3);
   let sum = 0, n = 0, pending = 0, open = true, done = false; const collected = [];
   const skip = ".got,.special,.crack,.vortex,.pull,.glow,.multi,.odd,.petal,.reso,.still,.late,.flying";
   const suck = w => {
@@ -4639,7 +4641,7 @@ function pullAll(x, y, self){
     const sx = r.left + r.width/2, sy = r.top + r.height/2, r0 = Math.hypot(sx - x, sy - y), a0 = Math.atan2(sy - y, sx - x), K = [], o0 = +f.style.opacity || 1;
     for(let k=0;k<=6;k++){ const t = k/6, rr = r0*(1-t), a = a0 - t*Math.PI*1.6;
       K.push({transform:`translate(${(x + rr*Math.cos(a) - sx).toFixed(1)}px,${(y + rr*Math.sin(a) - sy).toFixed(1)}px) rotate(${(-t*240).toFixed(0)}deg) scale(${(1 - t*.92).toFixed(2)},${(1 - t*.97).toFixed(2)})`, opacity: t < .7 ? Math.max(o0, .6) : (1 - t) / .3}); }
-    f.animate(K, {duration:420 + r0 * .9, easing:"cubic-bezier(.5,0,.8,.6)", fill:"forwards"}).onfinish = () => {
+    f.animate(K, {duration:(420 + r0 * .9) / (eclipse ? 1.3 : 1), easing:"cubic-bezier(.5,0,.8,.6)", fill:"forwards"}).onfinish = () => {
       f.remove(); const m = bumpCombo(); const isTime = w.dataset.taTime === "1"; const pts = Math.max(1,m) * (glowRemain>0?2:1); collected.push({isTime, pts}); sum += isTime ? 1 : pts; n++; addToDict(word);
       if(n % 2) sfx.gulp();
       pending--; if(!open && !pending) finish();
@@ -4684,7 +4686,7 @@ function pullAll(x, y, self){
     open = false; clearInterval(tk);
     ring.animate([{transform:"translate(-50%,-50%) scale(1)", opacity:1},{transform:"translate(-50%,-50%) scale(.2)", opacity:0}], {duration:360, easing:"ease-in", fill:"forwards"}).onfinish = () => ring.remove();
     if(!pending) finish();
-  }, PULL_MS);
+  }, duration);
 }
 // タイムアタック専用：引き寄せの吸引演出は元のまま、回収した文字ごとに着地点を振り分ける。
 function orbsFromCollected(items, cx, cy){
@@ -7139,7 +7141,14 @@ function taBegin(){
    sfx.toggle();
   const token=taFinishToken;setTimeout(()=>{if(token!==taFinishToken||!taStarting)return;flash.hidden=true;taStarting=false;taRunning=true;document.dispatchEvent(new Event('ta-item-start-activate'));taUpdatePlay();taLast=performance.now();taRaf=requestAnimationFrame(taTick)},1800);
 }
-document.getElementById('taPlay').addEventListener('click',()=>{if(taRunning||taStarting)taFinish();else taBegin()});
+document.getElementById('taPlay').addEventListener('click',()=>{
+  if(taRunning||taStarting){
+    // The X button must end an active time stop immediately, not leave
+    // its countdown, ticking sound, frozen animations or veil running.
+    if(typeof flood!=='undefined' && flood && typeof endFlood==='function')endFlood();
+    taFinish();
+  }else taBegin();
+});
 document.getElementById('taResultClose').addEventListener('click',()=>{document.getElementById('taLaunch').hidden=true;document.documentElement.classList.remove('ta-result-locked');document.getElementById('taTimeOverInputShield')?.remove();sfx.resultStop(true);taReleaseMediaSession();taSyncDemo()});
 document.getElementById('taLaunch').addEventListener('click',e=>{if(e.target.id==='taLaunch'){e.currentTarget.hidden=true;document.documentElement.classList.remove('ta-result-locked');document.getElementById('taTimeOverInputShield')?.remove();sfx.resultStop(true);taReleaseMediaSession();taSyncDemo()}});
 taSyncDemo();
@@ -7804,11 +7813,24 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const isTap=len<22;
  // Clock creation is tied to a normal elemental tap. The opposite-color stroke
  // completes it only if it passes through the dial center and forms two hands.
+ // Opposite-colored, overlapping elemental circles invoke the Eclipse.
+ // Clock hands remain swipe-only; a second tap never attempts clock recognition.
+ const eclipseDial=clockDial;
+ const eclipseTap=isTap && eclipseDial && eclipseDial.type!==g.type &&
+   performance.now()<=eclipseDial.expires &&
+   Math.hypot(pts[0].x-eclipseDial.x,pts[0].y-eclipseDial.y)<=28;
  const completed=!isTap&&clockHands(g,pts);
- if(isTap&&(!clockDial||clockDial.type!==g.type)){clockDialFx(pts[0],g.type)}
+ if(eclipseTap){
+   const center={x:eclipseDial.x,y:eclipseDial.y};
+   clearClock();
+   // Remove both elemental rings gently; the black eclipse replaces them.
+   for(const trace of traces){trace.left=Math.min(trace.left,.35);trace.clockDissolve=true;}
+   const hr=hero.getBoundingClientRect();
+   pullAll(hr.left+center.x,hr.top+center.y,null,true);
+ }else if(isTap&&(!clockDial||clockDial.type!==g.type)){clockDialFx(pts[0],g.type)}
  const segs=[];if(isTap){const c=pts[0];segs.push([c,{x:c.x+.01,y:c.y},94]);}
  else for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(Math.hypot(b.x-a.x,b.y-a.y)>1)segs.push([a,b,23]);}
- if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:completed?.30:3.1,total:3.1,age:0,resonated:false,clockDissolve:completed};traces.push(trace);if(traces.length>2)traces.shift();for(const other of traces){if(!completed&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
+ if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:completed?.30:3.1,total:3.1,age:0,resonated:false,clockDissolve:completed};traces.push(trace);if(traces.length>2)traces.shift();for(const other of traces){if(!completed&&!eclipseTap&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed&&!eclipseTap)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
  checkWords();}
  // Capture the armed gesture before the normal word/tap collectors can consume it.
  field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<=0||gesture||consumedPointer!==null)return;playElementSound(selected);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
@@ -8047,6 +8069,18 @@ body>.ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!importa
 @keyframes taClockComplete{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.07);filter:drop-shadow(0 0 16px #f3cf80)}59%{opacity:1;transform:translate(-50%,-50%) scale(1)}60%,82%{opacity:.92;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(.92)}}
 @media(max-width:650px){.ta-dual-clock{width:180px;height:180px}}
 </style>
+<style id="ta-eclipse-style">
+.ta-eclipse-core{z-index:150!important;isolation:isolate;filter:drop-shadow(0 0 14px rgba(108,67,184,.75))!important}
+/* Enlarge only the central eclipse orb, retaining its exact center and suction range. */
+.ta-eclipse-core{width:112px!important;height:112px!important;margin:-56px 0 0 -56px!important}
+.ta-eclipse-core::before{content:"";position:absolute;inset:-30px;border-radius:50%;background:radial-gradient(circle,rgba(0,0,0,.98) 0 18%,rgba(8,3,23,.95) 20%,rgba(30,7,53,.85) 30%,rgba(112,50,155,.55) 38%,rgba(226,74,69,.22) 45%,transparent 65%);box-shadow:0 0 18px rgba(70,28,123,.75),inset 0 0 14px rgba(185,100,226,.55);pointer-events:none;animation:taEclipsePulse 1.8s ease-in-out infinite alternate}
+.ta-eclipse-ring{border-color:rgba(148,90,208,.45)!important;box-shadow:0 0 12px rgba(121,62,196,.45),inset 0 0 13px rgba(52,13,88,.25)!important}
+.ta-eclipse-title{position:fixed;z-index:170;pointer-events:none;transform:translate(-50%,-50%);font-family:serif;font-size:32px;letter-spacing:.3em;color:#e5d0ff;text-shadow:0 0 12px #7d3fbd,0 0 22px #3b1a69;animation:taEclipseTitle 1.5s ease-out both}
+@keyframes taEclipsePulse{from{transform:scale(.92) rotate(-9deg);opacity:.84}to{transform:scale(1.13) rotate(9deg);opacity:1}}
+@keyframes taEclipseTitle{0%{opacity:0;transform:translate(-50%,-35%) scale(1.5)}25%{opacity:1}75%{opacity:.85}100%{opacity:0;transform:translate(-50%,-115%) scale(.9)}}
+@media(prefers-reduced-motion:reduce){.ta-eclipse-core::before{animation:none}}
+</style>
+
 </body>
 <style>
 /* Readable thousand-point popup labels in the collection area. */
@@ -8274,3 +8308,4 @@ html.ta-result-locked #taLaunch{pointer-events:auto!important}
 .ta-issen-plus{font-size:clamp(.85rem,3.6vw,1.45rem)!important;max-width:calc(100% - 16px);white-space:nowrap;}
 .oddplus{font-size:clamp(.78rem,3.4vw,1.45rem)!important;max-width:min(90vw,380px);white-space:nowrap;}
 </style>
+
