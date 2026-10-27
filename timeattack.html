@@ -3862,7 +3862,12 @@ function stopTap(w){
 function stopVeil(on, src){
   let v = document.querySelector(".stopveil");
   const c = src && src.isConnected ? src.getBoundingClientRect() : document.querySelector(".hero").getBoundingClientRect();
-  const x = taClockVeilCenter ? taClockVeilCenter.x : c.left + c.width/2, y = taClockVeilCenter ? taClockVeilCenter.y : c.top + c.height/2, R = Math.ceil(Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))) + 4;
+  // Freeze the actual painted center for both the opening and closing veil.
+  // The painted canvas may already be cleared when the closing animation runs.
+  const visualClock = window.taGetClockVisualCenter?.();
+  if(on && visualClock)taClockVeilCenter={...visualClock};
+  const center = taClockVeilCenter || visualClock;
+  const x = center ? center.x : c.left + c.width/2, y = center ? center.y : c.top + c.height/2, R = Math.ceil(Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))) + 4;
   const small = `circle(0px at ${x}px ${y}px)`, big = `circle(${R}px at ${x}px ${y}px)`;
   if(on){
     if(!v){ v = document.createElement("div"); v.className = "stopveil"; document.body.append(v); }
@@ -3969,6 +3974,10 @@ function endFlood(){
   // 位置は先にまとめて読む（クラスを外したあとに読むと、画面全体の再計算をその場で強いて重くなる）
   const hero = document.querySelector(".hero"), fr = $("drift").getBoundingClientRect();
   const sw = stopWatch; stopWatch = null; const swr = sw && sw.isConnected ? sw.getBoundingClientRect() : null;
+  // Snapshot once before changing layers, then use this exact point for
+  // closing veil and the delayed pocket-watch burst.
+  const releaseClockCenter=window.taGetClockVisualCenter?.() || taClockVeilCenter;
+  if(releaseClockCenter)taClockVeilCenter={...releaseClockCenter};
   stopVeil(false, sw);
   if(taCompletedClock){
     placeCompletedClockInFront();
@@ -3982,7 +3991,8 @@ function endFlood(){
   if(completedClock && completedClock.isConnected){
     setTimeout(()=>{
       if(!completedClock.isConnected)return;
-      const clockRect=completedClock.getBoundingClientRect();
+      const visualCenter=releaseClockCenter;
+      const clockRect=visualCenter ? {left:visualCenter.x-70,top:visualCenter.y-70,width:140,height:140} : completedClock.getBoundingClientRect();
       gemBurst(clockRect,completedClock,true,true);
     },540);
   }
@@ -7157,6 +7167,22 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  field.append(clockCanvas);
  const clockCtx=clockCanvas.getContext('2d');
  let paintedClock=null,paintedClockAt=0,paintedClockRelease=0;
+ // Single viewport-space origin for the visible Canvas clock, stop veil and burst.
+ // Project through the same elemental canvas rect as drawCompletedClock().
+ // Return the exact center used by the visible clock painter, in viewport CSS pixels.
+ // Do not use the old hidden SVG's bounding box or its animation transform.
+ window.taGetClockVisualCenter=()=>{
+  if(!paintedClock)return null;
+  const fr=field.getBoundingClientRect(),hr=hero.getBoundingClientRect();
+  const er=canvas.getBoundingClientRect();
+  const fxX=er.left+(hr.left+paintedClock.x)*er.width/(window.innerWidth||1);
+  const fxY=er.top+(hr.top+paintedClock.y)*er.height/(window.innerHeight||1);
+  const cr=clockCanvas.getBoundingClientRect();
+  // drawCompletedClock paints at (fx - field origin), then the clock canvas
+  // maps that local coordinate to its own screen rectangle.
+  return {x:cr.left+(fxX-fr.left)*cr.width/(fr.width||1),
+          y:cr.top+(fxY-fr.top)*cr.height/(fr.height||1)};
+ };
  // TEMPORARY POSITION DIAGNOSTIC: no gameplay behavior is changed.
  const clockDiagLayer=document.createElement('div');
  clockDiagLayer.id='taClockDiagnostic';
@@ -7318,7 +7344,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
     const sx=anchorRect.width/($('drift').clientWidth||anchorRect.width);
     const sy=anchorRect.height/($('drift').clientHeight||anchorRect.height);
     taCompletedClockAnchor={x:anchorRect.left+Number(fx.dataset.dialX)*sx,y:anchorRect.top+Number(fx.dataset.dialY)*sy};
-    taClockVeilCenter={...taCompletedClockAnchor};
+    taClockVeilCenter=window.taGetClockVisualCenter?.() || {...taCompletedClockAnchor};
     // Never overwrite the original dial position with the hand gesture's coordinates.
     fx.style.left=fx.dataset.dialX+'px';
     fx.style.top=fx.dataset.dialY+'px';
