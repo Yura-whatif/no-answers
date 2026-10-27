@@ -7180,8 +7180,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const scaleX=fr.width/(field.clientWidth||fr.width),scaleY=fr.height/(field.clientHeight||fr.height);
   const pts=[];
   if(clockDiagTap)pts.push({name:'A TAP / unfinished',x:hr.left+clockDiagTap.x,y:hr.top+clockDiagTap.y,color:'#44ff87'});
+  if(clockDiagTap){const er=canvas.getBoundingClientRect();pts.push({name:'D ELEMENTAL actual',x:er.left+(hr.left+clockDiagTap.x)*er.width/(window.innerWidth||1),y:er.top+(hr.top+clockDiagTap.y)*er.height/(window.innerHeight||1),color:'#6dfaff'});}
   if(clockDiagComplete)pts.push({name:'B COMPLETE data',x:hr.left+clockDiagComplete.x,y:hr.top+clockDiagComplete.y,color:'#ffcf49'});
-  if(paintedClock)pts.push({name:'C PAINTED center',x:fr.left+(paintedClock.x+hr.left-fr.left)*scaleX,y:fr.top+(paintedClock.y+hr.top-fr.top)*scaleY,color:'#ff66ee'});
+  if(paintedClock)pts.push({name:'C PAINTED center',x:canvas.getBoundingClientRect().left+(hr.left+paintedClock.x)*(canvas.getBoundingClientRect().width/(window.innerWidth||1)),y:canvas.getBoundingClientRect().top+(hr.top+paintedClock.y)*(canvas.getBoundingClientRect().height/(window.innerHeight||1)),color:'#ff66ee'});
   for(const pt of pts){dc.strokeStyle=pt.color;dc.lineWidth=2;dc.beginPath();dc.moveTo(pt.x-18,pt.y);dc.lineTo(pt.x+18,pt.y);dc.moveTo(pt.x,pt.y-18);dc.lineTo(pt.x,pt.y+18);dc.stroke();dc.fillStyle=pt.color;dc.font='bold 12px monospace';dc.fillText(pt.name,Math.min(vw-160,pt.x+12),Math.max(18,pt.y-12));}
   const f=paintedClock;
   clockDiagText.textContent='CLOCK DIAGNOSTIC (screenshot after completing)\n'+
@@ -7208,7 +7209,16 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   clockDiagMark(now);
   if(!paintedClock)return;
   const d=paintedClock;
-  const x=d.x+hr.left-fr.left,y=d.y+hr.top-fr.top;
+  // Both canvases must refer to the actual on-screen position of the elemental
+  // canvas, not an assumed viewport origin. On mobile the fixed FX layer can
+  // have a different visual offset from the viewport coordinate system.
+  const elementalRect=canvas.getBoundingClientRect();
+  const scaleFXx=elementalRect.width/(window.innerWidth||elementalRect.width||1);
+  const scaleFXy=elementalRect.height/(window.innerHeight||elementalRect.height||1);
+  const scaleClockX=fr.width/(cw||1),scaleClockY=fr.height/(ch||1);
+  const actualX=elementalRect.left+(hr.left+d.x)*scaleFXx;
+  const actualY=elementalRect.top+(hr.top+d.y)*scaleFXy;
+  const x=(actualX-fr.left)/scaleClockX,y=(actualY-fr.top)/scaleClockY;
   const elapsed=(now-paintedClockAt)/1000;
   const frozen=typeof flood!=='undefined'&&flood;
   const dark=frozen?.34:1;
