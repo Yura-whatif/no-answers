@@ -7209,9 +7209,14 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const elapsed=(now-paintedClockAt)/1000;
   const frozen=typeof flood!=='undefined'&&flood;
   const dark=frozen?.34:1;
-  const rot=paintedClockRelease?(-Math.PI*2+Math.PI*2*Math.min(1,(now-paintedClockRelease)/540)):-Math.PI*2*Math.min(1,elapsed/.85);
+  const releaseProgress=paintedClockRelease?Math.max(0,Math.min(1,(now-paintedClockRelease)/540)):0;
+  // The entire visible clock contracts around its own fixed center as its hands
+  // turn forward. Keep the canvas and its origin stationary so no jump occurs.
+  const releaseEase=releaseProgress*releaseProgress*(3-2*releaseProgress);
+  const releaseScale=paintedClockRelease?Math.max(.10,1-.90*releaseEase):1;
+  const rot=paintedClockRelease?(-Math.PI*2+Math.PI*2*releaseProgress):-Math.PI*2*Math.min(1,elapsed/.85);
   clockCanvas.classList.toggle('ta-clock-behind',frozen);
-  clockCtx.save();clockCtx.translate(x,y);
+  clockCtx.save();clockCtx.translate(x,y);clockCtx.scale(releaseScale,releaseScale);
   clockCtx.globalAlpha=dark;
   clockCtx.shadowColor='#d7a24e';clockCtx.shadowBlur=frozen?3:8;
   clockCtx.lineWidth=8;clockCtx.strokeStyle='rgba(233,187,101,.24)';clockCtx.beginPath();clockCtx.arc(0,0,74,0,Math.PI*2);clockCtx.stroke();
