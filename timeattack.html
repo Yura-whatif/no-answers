@@ -7162,7 +7162,13 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const heroRect=hero.getBoundingClientRect();
   el.style.left=(heroRect.left+pt.x)+'px';el.style.top=(heroRect.top+pt.y)+'px';el.style.setProperty('--clock-hue',type==='fire'?'#ff986d':'#8bdfff');
   el.innerHTML='<svg viewBox="0 0 180 180" aria-hidden="true"><circle cx="90" cy="90" r="74" class="clock-ring-shadow"/><circle cx="90" cy="90" r="70" class="clock-ring"/>'+Array.from({length:12},(_,i)=>{const a=i*Math.PI/6-Math.PI/2;return `<line x1="${90+60*Math.cos(a)}" y1="${90+60*Math.sin(a)}" x2="${90+66*Math.cos(a)}" y2="${90+66*Math.sin(a)}" class="clock-tick"/>`}).join('')+'<g class="clock-hand-rotor"><path class="clock-hands"/><circle cx="90" cy="90" r="3" class="clock-center"/></g></svg>';
-  $('drift').append(el);el.style.left=pt.x+'px';el.style.top=pt.y+'px';el.dataset.dialX=String(pt.x);el.dataset.dialY=String(pt.y);el.style.visibility='hidden';clockFx=el;clockDial={x:pt.x,y:pt.y,type,started:performance.now(),expires:performance.now()+CLOCK_WINDOW};
+  // Convert the canvas's hero-local tap into the drift's actual CSS coordinate space.
+  // The completed SVG never changes this anchor, regardless of the hand stroke.
+  const drift=$('drift'),dr=drift.getBoundingClientRect();
+  const scaleX=dr.width/(dr.clientWidth||dr.width),scaleY=dr.height/(dr.clientHeight||dr.height);
+  const localX=(heroRect.left+pt.x-dr.left)/scaleX;
+  const localY=(heroRect.top+pt.y-dr.top)/scaleY;
+  drift.append(el);el.style.left=localX+'px';el.style.top=localY+'px';el.dataset.dialX=String(localX);el.dataset.dialY=String(localY);el.style.visibility='hidden';clockFx=el;clockDial={x:pt.x,y:pt.y,type,started:performance.now(),expires:performance.now()+CLOCK_WINDOW};
   // Keep the dial visible through the lingering fire/ice particles, then fade over 0.4s.
   // The shape-recognition grace period remains independent of visibility.
   const createdDial=el;
@@ -7222,10 +7228,11 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
     const anchorRect=$('drift').getBoundingClientRect();
     const sx=anchorRect.width/($('drift').clientWidth||anchorRect.width);
     const sy=anchorRect.height/($('drift').clientHeight||anchorRect.height);
-    taCompletedClockAnchor={x:anchorRect.left+dial.x*sx,y:anchorRect.top+dial.y*sy};
+    taCompletedClockAnchor={x:anchorRect.left+Number(fx.dataset.dialX)*sx,y:anchorRect.top+Number(fx.dataset.dialY)*sy};
     taClockVeilCenter={...taCompletedClockAnchor};
-    fx.style.left=dial.x+'px';
-    fx.style.top=dial.y+'px';
+    // Never overwrite the original dial position with the hand gesture's coordinates.
+    fx.style.left=fx.dataset.dialX+'px';
+    fx.style.top=fx.dataset.dialY+'px';
     fx.classList.add('clock-complete','clock-persistent');
     if(taCompletedClock && taCompletedClock!==fx)taCompletedClock.remove();
     taCompletedClock=fx;
@@ -7910,7 +7917,7 @@ html.glow-sun .orb.ta-reward-time.ta-reward-boost{
 <style>/* Match collection-area point labels to score-area bonus font. */
 .ta-century-center-plus,.ta-issen-plus,.oddplus,.ta-center-hit-plus{font-family:var(--mincho),serif!important;}
 </style><style id="ta-dual-clock-style">
-.ta-dual-clock{position:fixed;width:180px;height:180px;transform:translate(-50%,-50%);z-index:12;pointer-events:none;filter:drop-shadow(0 0 9px var(--clock-hue));animation:taClockIn .3s ease-out both}
+.ta-dual-clock{position:absolute;width:180px;height:180px;transform:translate(-50%,-50%);z-index:12;pointer-events:none;filter:drop-shadow(0 0 9px var(--clock-hue));animation:taClockIn .3s ease-out both}
 .ta-dual-clock svg{width:100%;height:100%;overflow:visible}
 .ta-dual-clock.clock-grace{animation:taClockFadeOut .4s ease-in forwards!important;pointer-events:none}
 .ta-dual-clock.clock-expiring{animation:taClockFadeOut .45s ease-in forwards!important;pointer-events:none}
