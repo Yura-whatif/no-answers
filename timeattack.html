@@ -7825,8 +7825,14 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    clearClock();
    // Remove both elemental rings gently; the black eclipse replaces them.
    for(const trace of traces){trace.left=Math.min(trace.left,.35);trace.clockDissolve=true;}
+   // The second tap's elemental circle is rendered on the viewport FX canvas.
+   // Map that *painted* center to CSS viewport coordinates, rather than using
+   // hero.left/top directly (which can differ after responsive scaling).
    const hr=hero.getBoundingClientRect();
-   pullAll(hr.left+center.x,hr.top+center.y,null,true);
+   const er=canvas.getBoundingClientRect();
+   const eclipseX=er.left+(hr.left+center.x)*er.width/(window.innerWidth||1);
+   const eclipseY=er.top+(hr.top+center.y)*er.height/(window.innerHeight||1);
+   pullAll(eclipseX,eclipseY,null,true);
  }else if(isTap&&(!clockDial||clockDial.type!==g.type)){clockDialFx(pts[0],g.type)}
  const segs=[];if(isTap){const c=pts[0];segs.push([c,{x:c.x+.01,y:c.y},94]);}
  else for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(Math.hypot(b.x-a.x,b.y-a.y)>1)segs.push([a,b,23]);}
