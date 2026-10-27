@@ -744,7 +744,7 @@ html.glow-moon .up-fly{color:#bcd0ff;text-shadow:0 0 8px rgba(160,190,255,.85);s
   background:color-mix(in srgb,var(--paper) 82%,transparent);border:1px solid var(--accent);font-family:var(--mincho);font-size:.78rem;font-weight:600;letter-spacing:.14em;color:var(--ink);
   -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);animation:fbIn .4s ease both}
 .floodbar i{display:block;height:2px;border-radius:2px;background:var(--accent);transform-origin:left}
-.floodbar.run i{animation:fbDrain 5.2s linear forwards}
+.floodbar.run i{animation:fbDrain var(--ta-stop-duration, 8s) linear forwards}
 .glowbar i{animation:none !important}
 @keyframes fbDrain{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @keyframes fbIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
@@ -3878,21 +3878,29 @@ function placeCompletedClockBehindWords(){
   if(!clock||!clock.isConnected)return;
   const area=document.querySelector('.hero');
   if(!area)return;
-  const r=area.getBoundingClientRect();
-  const center=taClockVeilCenter || (()=>{const cr=clock.getBoundingClientRect();return {x:cr.left+cr.width/2,y:cr.top+cr.height/2}})();
-  clock.style.left=(center.x-r.left)+'px';
-  clock.style.top=(center.y-r.top)+'px';
-  area.append(clock);
+  // Measure the clock's actual rendered center before changing its containing block.
+  const cr=clock.getBoundingClientRect();
+  const center={x:cr.left+cr.width/2,y:cr.top+cr.height/2};
+  const drift=$('drift');
+  const r=drift.getBoundingClientRect();
+  // Use the drift's layout coordinates, not the hero border-box or the
+  // original gesture coordinates. This avoids the mobile reparenting jump.
+  const scaleX=r.width/(drift.clientWidth||r.width);
+  const scaleY=r.height/(drift.clientHeight||r.height);
+  drift.append(clock);
   clock.classList.add('clock-behind-words');
+  clock.style.left=((center.x-r.left)/scaleX)+'px';
+  clock.style.top=((center.y-r.top)/scaleY)+'px';
 }
 function placeCompletedClockInFront(){
   const clock=taCompletedClock;
   if(!clock||!clock.isConnected)return;
-  const center=taClockVeilCenter || (()=>{const r=clock.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})();
-  clock.style.left=center.x+'px';
-  clock.style.top=center.y+'px';
+  const cr=clock.getBoundingClientRect();
+  const center={x:cr.left+cr.width/2,y:cr.top+cr.height/2};
   document.body.append(clock);
   clock.classList.remove('clock-behind-words');
+  clock.style.left=center.x+'px';
+  clock.style.top=center.y+'px';
 }
 function startFlood(gem){
   if(flood || shattering) return;
@@ -3925,7 +3933,7 @@ function startFlood(gem){
   $("drift").querySelectorAll(".word:not(.special):not(.vortex):not(.sk-fall)").forEach(w => { w.classList.add("got"); w.animate([{opacity:1},{opacity:0}], {duration:300, fill:"forwards"}).onfinish = () => w.remove(); });
   const cells = STOP_CELLS.map((_, i) => i).sort(() => Math.random() - .5).slice(0, STOP_WORDS);
   cells.forEach((c, i) => setTimeout(()=>{ if(flood) placeStill(c); }, 200 + i * 45));
-  const bar = $("floodbar"); bar.hidden = false; bar.classList.remove("run"); void bar.offsetWidth; bar.classList.add("run"); layoutBars();
+  const bar = $("floodbar"); bar.style.setProperty('--ta-stop-duration',FLOOD_MS+'ms'); bar.hidden = false; bar.classList.remove("run"); void bar.offsetWidth; bar.classList.add("run"); layoutBars();
   clearTimeout(startFlood.h);
   // 止まった時間の中で、懐中時計の秒針だけが「チク、チク」と刻む
   // 逆再生の時止め導入音（約0.65秒）が終わってから秒針を鳴らす。
@@ -7214,8 +7222,8 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(fx){
     fx.style.visibility='visible';
     fx.classList.remove('clock-expiring','clock-grace');
-    const heroRect=hero.getBoundingClientRect();
-    taClockVeilCenter={x:heroRect.left+dial.x,y:heroRect.top+dial.y};
+    const previewRect=fx.getBoundingClientRect();
+    taClockVeilCenter={x:previewRect.left+previewRect.width/2,y:previewRect.top+previewRect.height/2};
     // The completed clock is position:fixed. Keep it in the document viewport
     // coordinate space, not inside the contained elemental canvas layer.
     // The latter establishes a new containing block for fixed descendants and
@@ -7925,7 +7933,8 @@ html.ta-sakura-time-frozen .word.sk-fall:not(.flying){animation-play-state:pause
 /* Clock remains fully visible for the entire stopped-time phase. */
 .ta-dual-clock.clock-complete{animation:taClockHold .85s ease-out both}
 .ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!important;pointer-events:none;transition:filter .55s ease}
-.hero .ta-dual-clock.clock-persistent.clock-behind-words{position:absolute!important;z-index:1!important}
+.hero .drift .ta-dual-clock.clock-persistent.clock-behind-words{position:absolute!important;z-index:0!important}
+.hero.flood .drift>.word{z-index:1}
 .ta-dual-clock.clock-persistent.clock-time-dark{filter:brightness(.32) saturate(.48) drop-shadow(0 0 4px rgba(128,112,70,.24))!important}
 @keyframes taClockHold{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 .ta-dual-clock.clock-complete .clock-hands{stroke:#f6d47d;stroke-width:5.4;filter:drop-shadow(0 0 3px #fff4c4) drop-shadow(0 0 8px #dba841);animation:taClockGoldAppear .27s ease-out both}
