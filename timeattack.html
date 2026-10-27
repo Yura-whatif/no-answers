@@ -1710,7 +1710,7 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
     <div class="drift" id="drift" aria-label="漂う言葉"></div>
     <div id="taDemoPlay" hidden aria-hidden="true">DEMO PLAY</div>
     <div class="combo" id="combo" aria-hidden="true">連鎖 <b id="cbn">0</b><em id="cbx"></em><i></i><span class="cpause">一時停止</span></div>
-    <div class="floodbar" id="floodbar" hidden><span>時が止まっている</span><i></i></div>
+    <div class="floodbar" id="floodbar" hidden><span>静寂</span><i></i></div>
     <div class="floodbar glowbar" id="glowbar" hidden><span>陽だまり</span><i></i></div>
     <div class="floodbar glowbar sakurabar" id="sakurabar" hidden><span>桜吹雪</span><i></i></div>
     <div class="ikan" id="ikan" aria-live="polite">違和感 <b id="iv">0</b><span class="tm" id="tm"></span><span class="pour" id="pour">ペンに注いでいます</span></div>
@@ -7222,7 +7222,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // The entire visible clock contracts around its own fixed center as its hands
   // turn forward. Keep the canvas and its origin stationary so no jump occurs.
   const releaseEase=releaseProgress*releaseProgress*(3-2*releaseProgress);
-  const releaseScale=paintedClockRelease?Math.max(.10,1-.90*releaseEase):1;
+  const releaseScale=paintedClockRelease?Math.max(0,1-releaseEase):1;
   const rot=paintedClockRelease?(-Math.PI*2+Math.PI*2*releaseProgress):-Math.PI*2*Math.min(1,elapsed/.85);
   clockCanvas.classList.toggle('ta-clock-behind',frozen);
   clockCtx.save();clockCtx.translate(x,y);clockCtx.scale(releaseScale,releaseScale);
@@ -7821,7 +7821,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    Math.hypot(pts[0].x-eclipseDial.x,pts[0].y-eclipseDial.y)<=28;
  const completed=!isTap&&clockHands(g,pts);
  if(eclipseTap){
-   const center={x:eclipseDial.x,y:eclipseDial.y};
+   const center={x:pts[0].x,y:pts[0].y};
    clearClock();
    // Remove both elemental rings gently; the black eclipse replaces them.
    for(const trace of traces){trace.left=Math.min(trace.left,.35);trace.clockDissolve=true;}
