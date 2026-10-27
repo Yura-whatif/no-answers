@@ -732,6 +732,7 @@ html.glow-moon .up-fly{color:#bcd0ff;text-shadow:0 0 8px rgba(160,190,255,.85);s
 /* 時間停止中もLv表記はLv2以上のときだけ（Lv1は出さない） */
 .combo.up{animation:comboUp .6s ease}
 .combo i{position:absolute;left:10px;right:10px;bottom:2px;height:1.5px;border-radius:2px;background:var(--accent);transform-origin:left;transform:scaleX(0);opacity:.7}
+.combo.ta-skill-grace i{height:3px;opacity:1;background:#e5c17b;box-shadow:0 0 7px 2px rgba(245,201,112,.72),0 0 14px rgba(245,201,112,.28)}
 .combo.run i{animation:comboTimer var(--ct,2400ms) linear forwards}
 .combo .cpause{display:none;position:absolute;inset:0;z-index:2;align-items:center;justify-content:center;border-radius:inherit;background:color-mix(in srgb,var(--ground) 82%,transparent);color:var(--accent);font-family:var(--mincho);font-weight:600;font-size:.76rem;letter-spacing:.16em}
 .combo.paused .cpause{display:flex;animation:cpauseFade 1.6s ease-in-out infinite}
@@ -748,6 +749,11 @@ html.glow-moon .up-fly{color:#bcd0ff;text-shadow:0 0 8px rgba(160,190,255,.85);s
 .glowbar i{animation:none !important}
 @keyframes fbDrain{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @keyframes fbIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+/* Quiet, text-only labels for the two dual-orb effects. */
+.ta-ultimate-labels{position:absolute;left:12px;top:10px;z-index:4;display:flex;flex-direction:column;align-items:flex-start;gap:6px;pointer-events:none;max-width:calc(100% - 24px)}
+.ta-ultimate-label{box-sizing:border-box;max-width:100%;padding:6px 12px 7px;border-radius:10px;background:color-mix(in srgb,var(--paper) 82%,transparent);border:1px solid var(--accent);font-family:var(--mincho);font-size:.78rem;font-weight:600;letter-spacing:.10em;color:var(--ink);white-space:nowrap;opacity:0;transform:translateY(-4px);transition:opacity .38s ease,transform .38s ease}
+.ta-ultimate-label.visible{opacity:1;transform:translateY(0)}
+.ta-ultimate-label.leaving{opacity:0;transform:translateY(-3px)}
 /* 渦：まれに降ってくる。長押しすると、画面の言葉を螺旋を描いて吸い込む（1つにつき通常の2倍） */
 .word.vortex{z-index:3;width:64px;height:64px;padding:0;border:0;border-radius:50%;background:none;-webkit-backdrop-filter:none;backdrop-filter:none;font-size:0;color:transparent;
   animation:vxLife 10s ease-in-out forwards;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;cursor:grab}
@@ -1710,7 +1716,8 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
     <div class="drift" id="drift" aria-label="漂う言葉"></div>
     <div id="taDemoPlay" hidden aria-hidden="true">DEMO PLAY</div>
     <div class="combo" id="combo" aria-hidden="true">連鎖 <b id="cbn">0</b><em id="cbx"></em><i></i><span class="cpause">一時停止</span></div>
-    <div class="floodbar" id="floodbar" hidden><span>静寂</span><i></i></div>
+    <div class="floodbar" id="floodbar" hidden><span>あの日のままで</span><i></i></div>
+    <div class="ta-ultimate-labels" id="taUltimateLabels" aria-live="off"></div>
     <div class="floodbar glowbar" id="glowbar" hidden><span>陽だまり</span><i></i></div>
     <div class="floodbar glowbar sakurabar" id="sakurabar" hidden><span>桜吹雪</span><i></i></div>
     <div class="ikan" id="ikan" aria-live="polite">違和感 <b id="iv">0</b><span class="tm" id="tm"></span><span class="pour" id="pour">ペンに注いでいます</span></div>
@@ -3500,6 +3507,8 @@ function plusSize(n, base){ const step = n < 10 ? 0 : Math.floor(n / 10); return
 const COMBO_BONUS = 100;   // 100連鎖ごとのボーナス
 const COMBO_STEP_FROM = 10; // 10連鎖ごとに10点、100連鎖ごとに100点
 const COMBO_MS = 2200;
+const COMBO_SKILL_MS = {issen:2400, shingan:2500, shinsoku:2600};
+let comboWindowMs = COMBO_MS;
 let combo = 0, comboAt = 0, comboPaused = false;
 let taFloodComboRemaining = null;
 let maxCombo = store.get("ta-yura-maxcombo", 0);
@@ -3726,12 +3735,42 @@ const taCenturyMusic=(()=>{
 // 連鎖100以降（Lv3）は採集エリアの枠を脈打たせ、連鎖が切れたら止める
 function comboRush(on){ const hero = document.querySelector(".hero"); if(hero) hero.classList.toggle("rush", !!on); }
 function comboBonus(n){comboStepBonus(n);}
+// Skill grace applies only to the current successful collection. The next ordinary
+// collection returns to 2.2s; repeated skills replace, never accumulate, the window.
+function setComboSkillGrace(skill){
+  if(!taRunning || combo<1)return;
+  const duration=COMBO_SKILL_MS[skill];
+  if(!duration)return;
+  comboWindowMs=duration;
+  const el=$("combo");
+  el.classList.add("ta-skill-grace");
+  el.style.setProperty("--ct",duration+"ms");
+  if(flood || comboPaused){
+    if(flood)taFloodComboRemaining=duration;
+    clearTimeout(bumpCombo.h);
+    el.classList.add("paused");
+    return;
+  }
+  // Restart both the real expiry and the visible bar from the same instant.
+  comboAt=Date.now();
+  el.classList.remove("run");void el.offsetWidth;el.classList.add("run");
+  clearTimeout(bumpCombo.h);
+  bumpCombo.h=setTimeout(expireCombo,duration);
+}
+function expireCombo(){
+  combo=0;comboWindowMs=COMBO_MS;
+  document.documentElement.classList.remove("ta-century-lit");
+  const el=$("combo");el.classList.remove("on","x2","x3","run","heat","ta-skill-grace");
+  el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();
+}
 function bumpCombo(){
   // DEMO / START演出中は連鎖を発生させない。
   if(!taRunning) return 1;
   const now = Date.now();
   if(comboPaused && !flood && !open && !charging) resumeCombo();   // 念のため：読んでいないのに止まっていたら、触れた時点で戻す
-  combo = (flood || comboPaused || now - comboAt <= COMBO_MS) ? combo + 1 : 1; comboAt = now;
+  combo = (flood || comboPaused || now - comboAt <= comboWindowMs) ? combo + 1 : 1; comboAt = now;
+  comboWindowMs=COMBO_MS; // Ordinary collection does not inherit skill grace.
+  $("combo").classList.remove("ta-skill-grace");
   if(combo>taSessionMaxCombo) taSessionMaxCombo=combo;
   if(combo > maxCombo){ maxCombo = combo; store.set("ta-yura-maxcombo", maxCombo); }
   const m = comboMult(combo), el = $("combo"), prevX = el.classList.contains("x3") ? 3 : el.classList.contains("x2") ? 2 : 1;
@@ -3751,7 +3790,7 @@ function bumpCombo(){
     clearTimeout(bumpCombo.h);
     el.classList.add('paused');
   }
-  if(!comboPaused && !flood){ clearTimeout(bumpCombo.h); bumpCombo.h = setTimeout(()=>{ combo = 0; document.documentElement.classList.remove("ta-century-lit"); el.classList.remove("on","x2","x3","run","heat"); el.style.removeProperty("--heat"); comboRush(false);taCenturyMusic.stop(); }, COMBO_MS); }
+  if(!comboPaused && !flood){ clearTimeout(bumpCombo.h); bumpCombo.h = setTimeout(expireCombo, COMBO_MS); }
   // 90を超えたら、100に近づくほど光を強く速く
   const r = combo % 100;
   if(r > 90){ el.style.setProperty("--heat", ((r - 90) / 10).toFixed(2)); el.classList.add("heat"); }
@@ -3772,7 +3811,7 @@ function resumeCombo(){
     comboPaused = false; el.classList.remove("paused");
     if(combo >= 2){ comboAt = Date.now();
       el.classList.remove("run"); void el.offsetWidth; el.classList.add("run");
-      clearTimeout(bumpCombo.h); bumpCombo.h = setTimeout(()=>{ combo = 0; document.documentElement.classList.remove("ta-century-lit"); el.classList.remove("on","x2","x3","run","heat"); el.style.removeProperty("--heat"); comboRush(false);taCenturyMusic.stop(); }, COMBO_MS);
+      clearTimeout(bumpCombo.h); bumpCombo.h = setTimeout(expireCombo, COMBO_MS);
     }
   }
 }   // 逆さまの言葉は稀に（出たあとは2分あける）
@@ -3903,13 +3942,40 @@ function placeCompletedClockInFront(){
   document.body.append(clock);
   if(window.taClockCanvasRelease)window.taClockCanvasRelease();
 }
+// Dual-orb names share the upper-left corner with the time-stop gauge.
+// Keep separate instances so overlapping cross/eclipses do not hide one another.
+const taUltimateLabels = new Map();
+let taUltimateSequence = 0;
+function taUltimateLayout(){
+  const wrap=document.getElementById('taUltimateLabels'), fb=document.getElementById('floodbar'), gb=document.getElementById('glowbar');
+  if(!wrap)return;
+  const floodBottom=fb&&!fb.hidden ? 10+fb.offsetHeight+6 : 10;
+  wrap.style.top=floodBottom+'px';
+  if(gb&&!gb.hidden)wrap.style.top=Math.max(floodBottom,parseFloat(gb.style.top||10)+gb.offsetHeight+6)+'px';
+}
+function taUltimateShow(kind, text){
+  const wrap=document.getElementById('taUltimateLabels');if(!wrap)return null;
+  const id=++taUltimateSequence, el=document.createElement('div');
+  el.className='ta-ultimate-label';el.textContent=text;el.dataset.kind=kind;
+  wrap.append(el);taUltimateLabels.set(id,el);taUltimateLayout();
+  requestAnimationFrame(()=>{if(el.isConnected)el.classList.add('visible');});
+  return id;
+}
+function taUltimateHide(id){
+  const el=taUltimateLabels.get(id);if(!el)return;
+  taUltimateLabels.delete(id);el.classList.add('leaving');el.classList.remove('visible');
+  setTimeout(()=>{el.remove();taUltimateLayout();},420);
+}
+function taUltimateClear(){
+  taUltimateLabels.clear();document.getElementById('taUltimateLabels')?.replaceChildren();
+}
 function startFlood(gem){
   if(flood || shattering) return;
   flood = true; stopPend = []; taCenturyMusic.timeStop(); track("timestop", "時止め");
   // Freeze the actual combo-expiry timer and its visual countdown together.
   taFloodComboRemaining = null;
   if(combo>=2 && !comboPaused){
-    taFloodComboRemaining=Math.max(1,COMBO_MS-(Date.now()-comboAt));
+    taFloodComboRemaining=Math.max(1,comboWindowMs-(Date.now()-comboAt));
     clearTimeout(bumpCombo.h);
     $("combo").classList.add("paused");
   }
@@ -3934,7 +4000,7 @@ function startFlood(gem){
   $("drift").querySelectorAll(".word:not(.special):not(.vortex):not(.sk-fall)").forEach(w => { w.classList.add("got"); w.animate([{opacity:1},{opacity:0}], {duration:300, fill:"forwards"}).onfinish = () => w.remove(); });
   const cells = STOP_CELLS.map((_, i) => i).sort(() => Math.random() - .5).slice(0, STOP_WORDS);
   cells.forEach((c, i) => setTimeout(()=>{ if(flood) placeStill(c); }, 200 + i * 45));
-  const bar = $("floodbar"); bar.style.setProperty('--ta-stop-duration',FLOOD_MS+'ms'); bar.hidden = false; bar.classList.remove("run"); void bar.offsetWidth; bar.classList.add("run"); layoutBars();
+  const bar = $("floodbar"); bar.style.setProperty('--ta-stop-duration',FLOOD_MS+'ms'); bar.hidden = false; bar.classList.remove("run"); void bar.offsetWidth; bar.classList.add("run"); layoutBars(); taUltimateLayout();
   clearTimeout(startFlood.h);
   // 止まった時間の中で、懐中時計の秒針だけが「チク、チク」と刻む
   // 逆再生の時止め導入音（約0.65秒）が終わってから秒針を鳴らす。
@@ -3956,7 +4022,7 @@ function endFlood(){
   clearTimeout(startFlood.h);
   flood = false; document.documentElement.classList.remove("ta-sakura-time-frozen"); taCenturyMusic.timeResume(); clearTimeout(startFlood.tickDelay); clearInterval(startFlood.tk);
   // A combo that began while time was stopped must resume from a full bar.
-  if(taFloodComboRemaining===null && combo>=2 && !comboPaused)taFloodComboRemaining=COMBO_MS;
+  if(taFloodComboRemaining===null && combo>=2 && !comboPaused)taFloodComboRemaining=comboWindowMs;
   if(taFloodComboRemaining!==null){
     const remaining=taFloodComboRemaining;taFloodComboRemaining=null;
     $("combo").classList.remove("paused");
@@ -3966,7 +4032,7 @@ function endFlood(){
       comboEl.classList.remove("run");
       void comboEl.offsetWidth;
       comboEl.classList.add("run");
-      comboAt=Date.now()-(COMBO_MS-remaining);
+      comboAt=Date.now()-(comboWindowMs-remaining);
       clearTimeout(bumpCombo.h);
       bumpCombo.h=setTimeout(()=>{combo=0;document.documentElement.classList.remove("ta-century-lit");const el=$("combo");el.classList.remove("on","x2","x3","run","heat");el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();},remaining);
     }
@@ -3997,7 +4063,7 @@ function endFlood(){
     },540);
   }
   setTimeout(()=>{if(!flood){taClockVeilCenter=null;taCompletedClockAnchor=null;}},1150);
-  $("floodbar").hidden = true; layoutBars(); nextSpecialAt = Date.now() + 180000;   // 時が動き出してから2分半は、次の懐中時計を出さない
+  $("floodbar").hidden = true; layoutBars(); taUltimateLayout(); nextSpecialAt = Date.now() + 180000;   // 時が動き出してから2分半は、次の懐中時計を出さない
   // 画面全体に効くクラスは、円が縮みきって演出が落ち着いてから外す
   setTimeout(()=>{ if(flood) return; hero.classList.remove("flood"); document.documentElement.classList.remove("timestop"); }, 1500);
   // 懐中時計は光となって消える
@@ -4443,13 +4509,15 @@ function spawnLoop(){
     const count = field.querySelectorAll(".word:not(.got):not(.late)").length;
     const target = taRunning ? (matchMedia("(pointer:coarse)").matches ? 5 : 6) : 4;
     const now = performance.now();
+    // At <=1 remaining word, bring forward the next single spawn without clustering.
+    if(taRunning && count<=1 && nextNaturalSpawnAt>now+380)nextNaturalSpawnAt=now+180;
     // One word per cycle; even a sparse screen never produces a sudden cluster.
     if(now >= nextNaturalSpawnAt && count < target){
       const firstPos = naturalSpawnPosition();
       spawnWord(firstPos);
       // Occasional 2-4 word groups, weighted toward smaller groups.
       // Spawn in short staggered steps, near the first word, while respecting the field target.
-      const makeCluster = taRunning && count <= target-2 &&
+      const makeCluster = taRunning && count > 1 && count <= target-2 &&
         now-lastNaturalClusterAt > 5000 && Math.random() < .20;
       if(makeCluster){
         lastNaturalClusterAt = now;
@@ -4672,6 +4740,7 @@ function pullAll(x, y, self, eclipse=false){
   track(eclipse ? "eclipse" : "pull", eclipse ? "蝕" : "引き寄せ");
   const field = $("drift"), fw = field.clientWidth || 300;
   const duration = eclipse ? 3000 : PULL_MS;
+  const ultimateId=eclipse?taUltimateShow("eclipse","置き忘れたもの"):null;
   const R = Math.max(115, Math.min(185, fw * .42)) * (eclipse ? 1.7 : 1);
   const core = document.createElement("span"); core.className = "pull-core" + (eclipse ? " ta-eclipse-core" : ""); core.innerHTML = vortexSVG(); core.style.left = x + "px"; core.style.top = y + "px"; document.body.append(core);
   core.animate([{scale:"0", opacity:0},{scale:"1.25", opacity:1, offset:.6},{scale:"1", opacity:1}], {duration:380, easing:"cubic-bezier(.3,1.3,.5,1)", fill:"forwards"});
@@ -4733,7 +4802,7 @@ function pullAll(x, y, self, eclipse=false){
     orbsFromCollected(collected, x, y);
   };
   setTimeout(()=>{
-    open = false; clearInterval(tk);
+    open = false; clearInterval(tk); if(ultimateId!==null)taUltimateHide(ultimateId);
     ring.animate([{transform:"translate(-50%,-50%) scale(1)", opacity:1},{transform:"translate(-50%,-50%) scale(.2)", opacity:0}], {duration:360, easing:"ease-in", fill:"forwards"}).onfinish = () => ring.remove();
     if(!pending) finish();
   }, duration);
@@ -4885,6 +4954,7 @@ function endGlow(){
 function layoutBars(){
   const fb = $("floodbar"), gb = $("glowbar"); if(!gb) return;
   gb.style.top = (!fb.hidden ? 10 + fb.offsetHeight + 6 : 10) + "px";
+  taUltimateLayout();
 }
 // ---------- 桜吹雪（白）／夜桜（黒） ----------
 // 漂うひとひらの花びらに触れると、絵いっぱいに花びらが舞い、花びらと一緒に違和感の文字が降る（なぞって集める）。
@@ -5241,6 +5311,7 @@ function vortexRelease(){
   function awardShinsoku(fast){
     if(!fast || shinsokuAwarded || !taRunning)return;
     shinsokuAwarded=true;
+    setComboSkillGrace("shinsoku");
     taScore+=.3;taScoreRefresh();taRender();
     const streak=document.createElement('span');streak.className='ta-shinsoku-streak';
     streak.style.left=fast.cx+'px';streak.style.top=fast.cy+'px';
@@ -5326,6 +5397,7 @@ function vortexRelease(){
     const bonus=Math.max(0,totalBonus-awardedBonus);
     if(awardReady){lastAward=now;if(bonus>0 && taRunning){taScore+=bonus;taScoreRefresh();taRender();}awardedBonus+=bonus;}
     flashed=true;flashedTier=tier;
+    setComboSkillGrace("issen");
     flash(first,last,tier,collected.size,bonus);
   }
   function finish(){
@@ -5375,6 +5447,7 @@ function vortexRelease(){
       const c=centerTapCandidate;
       if(c && c.id===e.pointerId && Math.hypot(e.clientX-c.x,e.clientY-c.y)<10 && taRunning){
         taScore+=.5;taScoreRefresh();taRender();
+        setComboSkillGrace("shingan");
         const blink=document.createElement('span');blink.className='ta-center-hit-flash';
         blink.style.width=c.width+'px';blink.style.height=c.height+'px';blink.style.borderRadius=c.radius||'999px';
         blink.style.left=c.cx+'px';blink.style.top=c.cy+'px';document.body.append(blink);
@@ -7172,9 +7245,9 @@ function taBegin(){
   sfx.resultStop(true);
   taCenturyMusic.stop(true);
   // DEMOでの操作履歴をゲーム本番へ持ち越さない。
-  clearTimeout(bumpCombo.h);combo=0;comboAt=0;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit");
+  clearTimeout(bumpCombo.h);combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit");
   const comboEl=document.getElementById("combo");
-  if(comboEl){comboEl.classList.remove("on","x2","x3","run","heat","paused","hold");comboEl.style.removeProperty("--heat");}
+  if(comboEl){comboEl.classList.remove("on","x2","x3","run","heat","paused","hold","ta-skill-grace");comboEl.style.removeProperty("--heat");}
   document.getElementById("cbn").textContent="0";document.getElementById("cbx").textContent="";comboRush(false);
   taStarting=true;++taFinishToken;
   // Keep DEMO styling until reveal classes are ready, avoiding a one-frame flash.
@@ -7483,7 +7556,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(performance.now()-lastOrbPointerAt<750){e.preventDefault();return;}
   selectOrb(b); // keyboard / assistive technology activation
  });
- function clear(){clearPaintedClock();clockCanvas.classList.remove('ta-clock-front');clearClock();if(taCompletedClock){taCompletedClock.remove();taCompletedClock=null;}taClockVeilCenter=null;taCompletedClockAnchor=null;selected=null;sync();gesture=null;consumedPointer=null;traces=[];particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.clearRect(0,0,canvas.width,canvas.height)}
+ function clear(){taUltimateClear();clearPaintedClock();clockCanvas.classList.remove('ta-clock-front');clearClock();if(taCompletedClock){taCompletedClock.remove();taCompletedClock=null;}taClockVeilCenter=null;taCompletedClockAnchor=null;selected=null;sync();gesture=null;consumedPointer=null;traces=[];particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.clearRect(0,0,canvas.width,canvas.height)}
  const loc=e=>{const r=hero.getBoundingClientRect(),f=field.getBoundingClientRect();
   // Clip gesture centerline to the collection field, while keeping particles free to escape.
   const minX=Math.max(0,f.left-r.left),minY=Math.max(0,f.top-r.top);
@@ -7782,12 +7855,13 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // The two elemental strokes turn white, contract and fade before vanishing.
   traces=traces.filter(f=>f!==a&&f!==b);
   const now=performance.now();
-  crossBursts.push({x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({path:f.path.map(p=>({x:p.x,y:p.y})),segs:f.segs})),rain:Array.from({length:taMobileFx?48:145},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taMobileFx?18:36},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?18:36)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
+  const ultimateId=taUltimateShow("cross","全部なかったことに");
+  crossBursts.push({ultimateId,x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({path:f.path.map(p=>({x:p.x,y:p.y})),segs:f.segs})),rain:Array.from({length:taMobileFx?48:145},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taMobileFx?18:36},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?18:36)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
   spark(hit.x,hit.y,'fire',taMobileFx?5:10);spark(hit.x,hit.y,'ice',taMobileFx?5:10);
   playElementSound('cross');
  }
  function renderCrossBursts(now){
-  crossBursts=crossBursts.filter(b=>now-b.start<7000);
+  crossBursts=crossBursts.filter(b=>{if(now-b.start<7000)return true;taUltimateHide(b.ultimateId);return false;});
   for(const b of crossBursts){
    const t=(now-b.start)/1000;
    if(t>=3.22&&!b.flashCollected){b.flashCollected=true;finalFlashCollect(b);b.lastAfterCollect=now;}
