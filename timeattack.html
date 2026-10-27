@@ -4422,19 +4422,29 @@ function shatter(src){
   }, 200);
 }
 function spawnLoop(){
-  if(!flood && !sakuraOn){   // 桜のあいだは、ふだんの言葉は湧かず、降る文字だけになる
-    spawnWord();
-    // たまに通常の違和感を2〜3個まとめて湧かせる（手持ち無沙汰を減らす）
-    if(Math.random() < .3){ const extra = Math.random() < .35 ? 2 : 1; for(let i=0;i<extra;i++) setTimeout(()=>{ if(!flood && !sakuraOn) spawnWord({plain:true}); }, 140 + i*150 + Math.random()*170); }
+  if(!flood && !sakuraOn){
+    // 連鎖が途切れないよう、通常時は一定数の言葉を維持する。
+    // 描画負荷を抑えるため補充は1回につき最大3語、上限はspawnWord側で管理。
+    const field = $("drift");
+    const count = field.querySelectorAll(".word:not(.got):not(.late)").length;
+    const target = taRunning ? (matchMedia("(pointer:coarse)").matches ? 7 : 8) : 5;
+    const needed = taRunning ? Math.min(3, Math.max(1, target - count)) : 1;
+    for(let i=0;i<needed;i++){
+      // 遠い場所にも新しい文字が届くよう、右側・下側の出現を増やす。
+      const far = taRunning && (i>0 || Math.random()<.58);
+      spawnWord(far ? {summonX: 56+Math.random()*23, summonY: 23+Math.random()*48} : {});
+    }
+    if(taRunning && count >= target && Math.random()<.22){
+      spawnWord({plain:true, summonX: 58+Math.random()*19, summonY: 16+Math.random()*55});
+    }
   }
-  // 湧く間隔をばらつかせる（一定間隔で1つ、の単調さをなくす）
-  setTimeout(spawnLoop, flood ? 400 : (taRunning ? 350 + Math.random()*620 : 425 + Math.random()*765)); // ~15% more frequent normal words
+  setTimeout(spawnLoop, flood ? 400 : (taRunning ? 300 + Math.random()*340 : 425 + Math.random()*765));
 }
 
 function spawnWord(opt = {}){
   if(!taRunning && !taStarting) opt = {...opt, plain:true}; // DEMO: ordinary / time-extension words only
   const field = $("drift");
-  const max = flood ? 14 : (taRunning ? Math.min(10, 5 + Math.ceil(booksNow() * 1.25)) : Math.min(8, 4 + booksNow()));
+  const max = flood ? 14 : (taRunning ? Math.min(13, 9 + Math.ceil(booksNow() * .8)) : Math.min(8, 4 + booksNow()));
   if(shattering || (!opt.force && field.querySelectorAll(".word:not(.got)").length >= max) || document.hidden || libOpen) return;
   const w = document.createElement("button");
   w.type = "button"; w.className = "word" + (flood ? " fast" : ""); w.textContent = taMixedWord();
@@ -4958,10 +4968,12 @@ function startSakura(from, opt){
     return p; };
   // 最初の一陣：触れた瞬間に、絵の上半分へすでに花びらが舞っている
   for(let i = 0; i < (reduce ? 12 : skMobile ? 20 : 32); i++){ const p = newPetal(false); p.x = Math.random() * W; p.y = Math.pow(Math.random(), 1.4) * H * .85; p.a = Math.random() * .6; P.push(p); }
-  let t = 0, last = performance.now(), pAcc = 0, fAcc = 0, wAcc = .6, raf = 0, done = false, recent = [], prefillCount = 0;
+  let t = 0, last = performance.now(), pAcc = 0, fAcc = 0, wAcc = 0, raf = 0, done = false, recent = [], prefillCount = 0, earlyDrops = 0;
   // 端末が追いつかないときは、奥の花びらの数を自動で減らす（1フレームの間隔をならして見る）
   let ema = 16.7, cap = reduce ? 45 : skMobile ? 82 : 140;
   const dropWord = () => {
+    // 夜桜・桜吹雪中のDOM蓄積を抑える（強制生成にも上限を適用）。
+    if(field.querySelectorAll(".word.sk-fall:not(.got)").length >= (skMobile ? 13 : 17)) return;
     const w = spawnWord({force:true, plain:true}); if(!w) return;
     w.classList.add("sk-fall");
     const fw = field.clientWidth, fh = field.clientHeight;
@@ -5031,7 +5043,17 @@ function startSakura(from, opt){
       while(pAcc >= 1){ pAcc--; if(P.length < cap) P.push(newPetal(false, gust > .35 && Math.random() < .4)); }
       if(!reduce && t > 900){ fAcc += (skMobile ? 1.8 : 3) * e * dt; while(fAcc >= 1){ fAcc--; if(F.length < (skMobile ? 6 : 12)) F.push(newPetal(true)); } }
       // 違和感の文字を降らせる（増える→ピーク→減る）
-      if(t < SK_WORD_END){ wAcc += SK_WORD_RATE * e * dt; while(wAcc >= 1){ wAcc--; dropWord(); } }
+      if(t < SK_WORD_END){
+        // 開始直後から数語を落とし、約3秒で本降りへ。ピークは従来より多い。
+        const early = t < 1500 && earlyDrops < 3;
+        if(early){
+          const expected = Math.min(3, 1 + Math.floor(t / 500));
+          while(earlyDrops < expected){ earlyDrops++; dropWord(); }
+        }
+        const ramp = Math.min(1, .32 + t / 2800);
+        wAcc += SK_WORD_RATE * Math.max(.18, e) * ramp * dt;
+        while(wAcc >= 1){ wAcc--; dropWord(); }
+      }
       // 残り約1.7秒から下側に5語を順次補充。効果が切れる前に次の採集先を確保する。
       if(t >= 10800 && t < SAKURA_MS && taRunning && !flood && !shattering && !libOpen){
         const shouldHave = Math.min(5, 1 + Math.floor((t - 10800) / 260));
@@ -7839,23 +7861,35 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:completed?.30:3.1,total:3.1,age:0,resonated:false,clockDissolve:completed};traces.push(trace);if(traces.length>2)traces.shift();for(const other of traces){if(!completed&&!eclipseTap&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed&&!eclipseTap)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
  checkWords();}
  // Capture the armed gesture before the normal word/tap collectors can consume it.
- field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<=0||gesture||consumedPointer!==null)return;playElementSound(selected);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
+ field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<=0||gesture||consumedPointer!==null)return;playElementSound(selected);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
  field.addEventListener('pointermove',e=>{if(!gesture||e.pointerId!==gesture.id)return;const pt=loc(e),prev=gesture.points.at(-1);const d=Math.hypot(pt.x-prev.x,pt.y-prev.y),n=Math.max(1,Math.ceil(d/10));for(let i=1;i<=n;i++)gesture.points.push({x:prev.x+(pt.x-prev.x)*i/n,y:prev.y+(pt.y-prev.y)*i/n});gesture.distance+=d;if(performance.now()-gesture.started>=GESTURE_MAX_MS||gesture.distance>=GESTURE_MAX_PX){const g=gesture;gesture=null;makeTrace(g);/* Keep capture until pointerup so the next gesture is never locked out. */}e.stopImmediatePropagation();e.preventDefault();},true);
  function finish(e){if(e.pointerId!==consumedPointer)return;consumedPointer=null;if(gesture&&e.pointerId===gesture.id){const g=gesture;gesture=null;if(active()){g.points.push(loc(e));makeTrace(g)}}e.stopImmediatePropagation();e.preventDefault();}
  field.addEventListener('pointerup',finish,true);field.addEventListener('lostpointercapture',e=>{if(e.pointerId===consumedPointer){consumedPointer=null;gesture=null;}},true);field.addEventListener('pointercancel',e=>{if(e.pointerId===consumedPointer)consumedPointer=null;if(gesture&&e.pointerId===gesture.id)gesture=null},true);
  field.addEventListener('pointermove',e=>{if(e.pointerId===consumedPointer){e.stopImmediatePropagation();e.preventDefault()}},false);
  function checkWords(){if(!traces.length)return;const hr=hero.getBoundingClientRect();for(const w of field.querySelectorAll('.word')){if(!valid(w))continue;const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;const x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;for(const f of traces){if(f.segs.some(([a,b,radius])=>near(x,y,a,b,radius+Math.min(20,r.width*.24)))){collect(w,f.type);break}}}}
  let fxWasDrawing=false;
+ // Sleep between idle polls instead of running a 60 Hz RAF loop for the
+ // entire lifetime of the page. A new item gesture wakes the painter at once.
+ let fxIdleTimer=0;
+ function scheduleFxIdle(delay){
+  if(fxIdleTimer)clearTimeout(fxIdleTimer);
+  fxIdleTimer=setTimeout(()=>{fxIdleTimer=0;requestAnimationFrame(draw);},delay);
+ }
+ function wakeFx(){
+  if(!fxIdleTimer)return; // An active RAF is already scheduled.
+  clearTimeout(fxIdleTimer);fxIdleTimer=0;
+  requestAnimationFrame(draw);
+ }
  function draw(now){
   // Keep the scheduler alive, but do not repaint two full-screen canvases
   // when there is no visible effect. This also reduces idle GPU heat buildup.
   const running=active();
   const hasFx=!!(gesture||traces.length||particles.length||summonBursts.length||crossBursts.length||paintedClock);
-  if(!running){if(wasActive)clear();wasActive=false;fxWasDrawing=false;last=now;requestAnimationFrame(draw);return;}
+  if(!running){if(wasActive)clear();wasActive=false;fxWasDrawing=false;last=now;scheduleFxIdle(250);return;}
   wasActive=true;
   if(!hasFx){
    if(fxWasDrawing){ctx.clearRect(0,0,canvas.width,canvas.height);clockCtx.clearRect(0,0,clockCanvas.width,clockCanvas.height);fxWasDrawing=false;}
-   last=now;requestAnimationFrame(draw);return;
+   last=now;scheduleFxIdle(110);return;
   }
   const targetMs=taMobileFx?40:16;
   if(now-lastFxPaint<targetMs){requestAnimationFrame(draw);return;}
