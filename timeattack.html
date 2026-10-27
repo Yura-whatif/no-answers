@@ -3896,6 +3896,7 @@ function placeCompletedClockInFront(){
   clock.style.left=(r.left+x*sx)+'px';
   clock.style.top=(r.top+y*sy)+'px';
   document.body.append(clock);
+  if(window.taClockCanvasRelease)window.taClockCanvasRelease();
 }
 function startFlood(gem){
   if(flood || shattering) return;
@@ -7148,6 +7149,44 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  }
  const layer=document.createElement('div');layer.className='ta-element-layer';layer.setAttribute('aria-hidden','true');document.body.append(layer);
  const canvas=document.createElement('canvas');layer.append(canvas);const ctx=canvas.getContext('2d');
+ // The completed clock is painted on a dedicated canvas in the same local
+ // coordinates as the unfinished dial. The hidden SVG is kept only as the
+ // original disappearance-effect target, never as the visible clock.
+ const clockCanvas=document.createElement('canvas');
+ clockCanvas.className='ta-clock-face-canvas';
+ field.append(clockCanvas);
+ const clockCtx=clockCanvas.getContext('2d');
+ let paintedClock=null,paintedClockAt=0,paintedClockRelease=0;
+ function clearPaintedClock(){paintedClock=null;paintedClockRelease=0;clockCtx.clearRect(0,0,clockCanvas.width,clockCanvas.height);}
+ window.taClockCanvasRelease=()=>{if(paintedClock){paintedClockRelease=performance.now();clockCanvas.classList.add('ta-clock-front');setTimeout(()=>{if(paintedClockRelease&&performance.now()-paintedClockRelease>=520){clearPaintedClock();clockCanvas.classList.remove('ta-clock-front');}},550);}};
+ function drawCompletedClock(now){
+  const fr=field.getBoundingClientRect(),hr=hero.getBoundingClientRect();
+  const cw=Math.max(1,Math.round(fr.width)),ch=Math.max(1,Math.round(fr.height));
+  const ratio=Math.min(window.devicePixelRatio||1,2);
+  if(clockCanvas.width!==Math.round(cw*ratio)||clockCanvas.height!==Math.round(ch*ratio)){
+   clockCanvas.width=Math.round(cw*ratio);clockCanvas.height=Math.round(ch*ratio);
+  }
+  clockCtx.setTransform(ratio,0,0,ratio,0,0);clockCtx.clearRect(0,0,cw,ch);
+  if(!paintedClock)return;
+  const d=paintedClock;
+  const x=d.x+hr.left-fr.left,y=d.y+hr.top-fr.top;
+  const elapsed=(now-paintedClockAt)/1000;
+  const frozen=typeof flood!=='undefined'&&flood;
+  const dark=frozen?.34:1;
+  const rot=paintedClockRelease?(-Math.PI*2+Math.PI*2*Math.min(1,(now-paintedClockRelease)/540)):-Math.PI*2*Math.min(1,elapsed/.85);
+  clockCanvas.classList.toggle('ta-clock-behind',frozen);
+  clockCtx.save();clockCtx.translate(x,y);
+  clockCtx.globalAlpha=dark;
+  clockCtx.shadowColor='#d7a24e';clockCtx.shadowBlur=frozen?3:8;
+  clockCtx.lineWidth=8;clockCtx.strokeStyle='rgba(233,187,101,.24)';clockCtx.beginPath();clockCtx.arc(0,0,74,0,Math.PI*2);clockCtx.stroke();
+  clockCtx.shadowBlur=frozen?2:5;clockCtx.lineWidth=3.4;clockCtx.strokeStyle='#f4d48b';clockCtx.beginPath();clockCtx.arc(0,0,70,0,Math.PI*2);clockCtx.stroke();
+  clockCtx.shadowBlur=0;clockCtx.lineWidth=2;clockCtx.strokeStyle='#ffe6a6';
+  for(let i=0;i<12;i++){const a=i*Math.PI/6-Math.PI/2;clockCtx.beginPath();clockCtx.moveTo(Math.cos(a)*60,Math.sin(a)*60);clockCtx.lineTo(Math.cos(a)*66,Math.sin(a)*66);clockCtx.stroke();}
+  clockCtx.rotate(rot);clockCtx.strokeStyle='#f6d47d';clockCtx.lineWidth=5.4;clockCtx.lineCap='round';clockCtx.lineJoin='round';clockCtx.shadowColor='#f6d47d';clockCtx.shadowBlur=frozen?2:8;
+  clockCtx.beginPath();clockCtx.moveTo(d.u1.x*d.len1,d.u1.y*d.len1);clockCtx.lineTo(0,0);clockCtx.lineTo(d.u2.x*d.len2,d.u2.y*d.len2);clockCtx.stroke();
+  clockCtx.fillStyle='#fff0b2';clockCtx.beginPath();clockCtx.arc(0,0,3,0,Math.PI*2);clockCtx.fill();clockCtx.restore();
+ }
+
  let selected=null,gesture=null,traces=[],particles=[],summonBursts=[],summonTimers=[],crossBursts=[],last=performance.now(),wasActive=false;
  // Fire/ice clock: one elemental tap draws the dial; the other color draws two hands.
  let clockDial=null,clockFx=null,clockTimer=null;
@@ -7210,6 +7249,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    const u1=unit(first),u2=unit(last);
    const len1=Math.min(52,Math.max(29,best.a*.65));
    const len2=Math.min(43,Math.max(23,best.b*.65));
+   paintedClock={x:dial.x,y:dial.y,u1,u2,len1,len2};paintedClockAt=performance.now();paintedClockRelease=0;clockCanvas.classList.remove('ta-clock-front');
    h.setAttribute('d',`M ${90+u1.x*len1} ${90+u1.y*len1} L 90 90 L ${90+u2.x*len2} ${90+u2.y*len2}`);
    const rotor=clockFx.querySelector('.clock-hand-rotor');
    if(rotor)rotor.style.transformOrigin='90px 90px';
@@ -7221,7 +7261,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   clearTimeout(clockTimer);clockDial=null;
   const fx=clockFx;clockFx=null;
   if(fx){
-    fx.style.visibility='visible';
+    fx.style.visibility='hidden';
     fx.classList.remove('clock-expiring','clock-grace');
     // Keep the very same clock element in the very same coordinate system.
     // Reparenting here was causing the clock to jump on mobile devices.
@@ -7331,7 +7371,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(performance.now()-lastOrbPointerAt<750){e.preventDefault();return;}
   selectOrb(b); // keyboard / assistive technology activation
  });
- function clear(){clearClock();if(taCompletedClock){taCompletedClock.remove();taCompletedClock=null;}taClockVeilCenter=null;taCompletedClockAnchor=null;selected=null;sync();gesture=null;consumedPointer=null;traces=[];particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.clearRect(0,0,canvas.width,canvas.height)}
+ function clear(){clearPaintedClock();clockCanvas.classList.remove('ta-clock-front');clearClock();if(taCompletedClock){taCompletedClock.remove();taCompletedClock=null;}taClockVeilCenter=null;taCompletedClockAnchor=null;selected=null;sync();gesture=null;consumedPointer=null;traces=[];particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.clearRect(0,0,canvas.width,canvas.height)}
  const loc=e=>{const r=hero.getBoundingClientRect(),f=field.getBoundingClientRect();
   // Clip gesture centerline to the collection field, while keeping particles free to escape.
   const minX=Math.max(0,f.left-r.left),minY=Math.max(0,f.top-r.top);
@@ -7737,7 +7777,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  field.addEventListener('pointermove',e=>{if(e.pointerId===consumedPointer){e.stopImmediatePropagation();e.preventDefault()}},false);
  function checkWords(){if(!traces.length)return;const hr=hero.getBoundingClientRect();for(const w of field.querySelectorAll('.word')){if(!valid(w))continue;const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;const x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;for(const f of traces){if(f.segs.some(([a,b,radius])=>near(x,y,a,b,radius+Math.min(20,r.width*.24)))){collect(w,f.type);break}}}}
  function draw(now){if(taMobileFx&&now-lastFxPaint<33){requestAnimationFrame(draw);return;}lastFxPaint=now;const dt=Math.min(.05,(now-last)/1000);last=now;if(!active()){if(wasActive)clear();wasActive=false;requestAnimationFrame(draw);return}wasActive=true;
- const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,window.matchMedia('(pointer:coarse)').matches?1.25:2),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);renderSummons(now);
+ const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,window.matchMedia('(pointer:coarse)').matches?1.25:2),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);drawCompletedClock(now);renderSummons(now);
  if(gesture&&performance.now()-gesture.started>=GESTURE_MAX_MS){const g=gesture;gesture=null;makeTrace(g)}
  const paused=false; // Elemental traces remain active during time-stop.
  const fract=v=>v-Math.floor(v);
@@ -7916,7 +7956,12 @@ html.glow-sun .orb.ta-reward-time.ta-reward-boost{
 </style>
 <style>/* Match collection-area point labels to score-area bonus font. */
 .ta-century-center-plus,.ta-issen-plus,.oddplus,.ta-center-hit-plus{font-family:var(--mincho),serif!important;}
-</style><style id="ta-dual-clock-style">
+</style><style id="ta-clock-canvas-fix">
+#drift>.ta-clock-face-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;display:block;}
+#drift>.ta-clock-face-canvas.ta-clock-behind{z-index:0;}
+#drift>.ta-clock-face-canvas.ta-clock-front{z-index:5;}
+</style>
+<style id="ta-dual-clock-style">
 .ta-dual-clock{position:absolute;width:180px;height:180px;transform:translate(-50%,-50%);z-index:12;pointer-events:none;filter:drop-shadow(0 0 9px var(--clock-hue));animation:taClockIn .3s ease-out both}
 .ta-dual-clock svg{width:100%;height:100%;overflow:visible}
 .ta-dual-clock.clock-grace{animation:taClockFadeOut .4s ease-in forwards!important;pointer-events:none}
