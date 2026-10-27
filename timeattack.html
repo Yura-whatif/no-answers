@@ -7157,6 +7157,44 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  field.append(clockCanvas);
  const clockCtx=clockCanvas.getContext('2d');
  let paintedClock=null,paintedClockAt=0,paintedClockRelease=0;
+ // TEMPORARY POSITION DIAGNOSTIC: no gameplay behavior is changed.
+ const clockDiagLayer=document.createElement('div');
+ clockDiagLayer.id='taClockDiagnostic';
+ clockDiagLayer.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:2147483000;display:none;font:12px/1.45 monospace;color:white;';
+ const clockDiagCanvas=document.createElement('canvas');
+ clockDiagCanvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;';
+ const clockDiagText=document.createElement('pre');
+ clockDiagText.style.cssText='position:absolute;left:5px;top:55px;max-width:95vw;white-space:pre-wrap;background:rgba(0,0,0,.82);padding:7px;border:1px solid #ffd86b;border-radius:5px;font:11px/1.45 monospace;';
+ clockDiagLayer.append(clockDiagCanvas,clockDiagText);document.body.append(clockDiagLayer);
+ const clockDiagButton=document.createElement('button');clockDiagButton.type='button';clockDiagButton.textContent='時計診断 OFF';
+ clockDiagButton.style.cssText='position:fixed;right:8px;top:165px;z-index:2147483001;background:#161c29;color:#ffdf8c;border:1px solid #d6b56e;border-radius:7px;padding:5px 8px;font-size:12px;';
+ document.body.append(clockDiagButton);
+ let clockDiagEnabled=false,clockDiagTap=null,clockDiagComplete=null;
+ clockDiagButton.addEventListener('click',()=>{clockDiagEnabled=!clockDiagEnabled;clockDiagButton.textContent=clockDiagEnabled?'時計診断 ON':'時計診断 OFF';clockDiagLayer.style.display=clockDiagEnabled?'block':'none';});
+ function clockDiagMark(now){
+  if(!clockDiagEnabled)return;
+  const vw=innerWidth,vh=innerHeight,dp=Math.min(devicePixelRatio||1,2);
+  if(clockDiagCanvas.width!==Math.round(vw*dp)||clockDiagCanvas.height!==Math.round(vh*dp)){clockDiagCanvas.width=Math.round(vw*dp);clockDiagCanvas.height=Math.round(vh*dp);}
+  const dc=clockDiagCanvas.getContext('2d');dc.setTransform(dp,0,0,dp,0,0);dc.clearRect(0,0,vw,vh);
+  const fr=field.getBoundingClientRect(),hr=hero.getBoundingClientRect();
+  const scaleX=fr.width/(field.clientWidth||fr.width),scaleY=fr.height/(field.clientHeight||fr.height);
+  const pts=[];
+  if(clockDiagTap)pts.push({name:'A TAP / unfinished',x:hr.left+clockDiagTap.x,y:hr.top+clockDiagTap.y,color:'#44ff87'});
+  if(clockDiagComplete)pts.push({name:'B COMPLETE data',x:hr.left+clockDiagComplete.x,y:hr.top+clockDiagComplete.y,color:'#ffcf49'});
+  if(paintedClock)pts.push({name:'C PAINTED center',x:fr.left+(paintedClock.x+hr.left-fr.left)*scaleX,y:fr.top+(paintedClock.y+hr.top-fr.top)*scaleY,color:'#ff66ee'});
+  for(const pt of pts){dc.strokeStyle=pt.color;dc.lineWidth=2;dc.beginPath();dc.moveTo(pt.x-18,pt.y);dc.lineTo(pt.x+18,pt.y);dc.moveTo(pt.x,pt.y-18);dc.lineTo(pt.x,pt.y+18);dc.stroke();dc.fillStyle=pt.color;dc.font='bold 12px monospace';dc.fillText(pt.name,Math.min(vw-160,pt.x+12),Math.max(18,pt.y-12));}
+  const f=paintedClock;
+  clockDiagText.textContent='CLOCK DIAGNOSTIC (screenshot after completing)\n'+
+   pts.map(pt=>pt.name+': '+pt.x.toFixed(1)+','+pt.y.toFixed(1)).join('\n')+
+   '\nfield rect: '+[fr.left,fr.top,fr.width,fr.height].map(n=>n.toFixed(1)).join(',')+
+   '\nhero rect: '+[hr.left,hr.top,hr.width,hr.height].map(n=>n.toFixed(1)).join(',')+
+   '\nfield client: '+field.clientWidth+'x'+field.clientHeight+
+   '\nfield transform: '+getComputedStyle(field).transform+
+   '\ncanvas rect: '+[clockCanvas.getBoundingClientRect().left,clockCanvas.getBoundingClientRect().top].map(n=>n.toFixed(1)).join(',')+
+   '\nclock active: '+!!f+' / freeze: '+!!(typeof flood!=='undefined'&&flood)+
+   '\nviewport: '+vw+'x'+vh+' DPR '+devicePixelRatio;
+ }
+
  function clearPaintedClock(){paintedClock=null;paintedClockRelease=0;clockCtx.clearRect(0,0,clockCanvas.width,clockCanvas.height);}
  window.taClockCanvasRelease=()=>{if(paintedClock){paintedClockRelease=performance.now();clockCanvas.classList.add('ta-clock-front');setTimeout(()=>{if(paintedClockRelease&&performance.now()-paintedClockRelease>=520){clearPaintedClock();clockCanvas.classList.remove('ta-clock-front');}},550);}};
  function drawCompletedClock(now){
@@ -7167,6 +7205,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    clockCanvas.width=Math.round(cw*ratio);clockCanvas.height=Math.round(ch*ratio);
   }
   clockCtx.setTransform(ratio,0,0,ratio,0,0);clockCtx.clearRect(0,0,cw,ch);
+  clockDiagMark(now);
   if(!paintedClock)return;
   const d=paintedClock;
   const x=d.x+hr.left-fr.left,y=d.y+hr.top-fr.top;
@@ -7196,7 +7235,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const CLOCK_WINDOW=CLOCK_VISIBLE_MS+CLOCK_FADE_MS+CLOCK_GRACE_MS;
  function clearClock(){clearTimeout(clockTimer);clockTimer=null;clockDial=null;if(clockFx){const old=clockFx;clockFx=null;old.classList.add('clock-expiring');setTimeout(()=>old.remove(),460);}}
  function clockDialFx(pt,type){
-  clearClock();const r=72;const el=document.createElement('div');el.className='ta-dual-clock';
+  clearClock();clockDiagTap={x:pt.x,y:pt.y};clockDiagComplete=null;const r=72;const el=document.createElement('div');el.className='ta-dual-clock';
   // Use the same hero-local point as the canvas, projected to viewport CSS pixels.
   const heroRect=hero.getBoundingClientRect();
   el.style.left=(heroRect.left+pt.x)+'px';el.style.top=(heroRect.top+pt.y)+'px';el.style.setProperty('--clock-hue',type==='fire'?'#ff986d':'#8bdfff');
@@ -7249,7 +7288,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    const u1=unit(first),u2=unit(last);
    const len1=Math.min(52,Math.max(29,best.a*.65));
    const len2=Math.min(43,Math.max(23,best.b*.65));
-   paintedClock={x:dial.x,y:dial.y,u1,u2,len1,len2};paintedClockAt=performance.now();paintedClockRelease=0;clockCanvas.classList.remove('ta-clock-front');
+   clockDiagComplete={x:dial.x,y:dial.y};paintedClock={x:dial.x,y:dial.y,u1,u2,len1,len2};paintedClockAt=performance.now();paintedClockRelease=0;clockCanvas.classList.remove('ta-clock-front');
    h.setAttribute('d',`M ${90+u1.x*len1} ${90+u1.y*len1} L 90 90 L ${90+u2.x*len2} ${90+u2.y*len2}`);
    const rotor=clockFx.querySelector('.clock-hand-rotor');
    if(rotor)rotor.style.transformOrigin='90px 90px';
