@@ -3830,8 +3830,8 @@ function placeStill(cell){
   const w = document.createElement("button");
   w.type = "button"; w.className = "word still"; w.textContent = taMixedWord();
   w.dataset.cell = cell;
-  // 時止め中の時間延長文字の出現率は20%（従来50%）。
-  if(Math.random() < .20){ w.dataset.taTime = "1"; w.classList.add("ta-blue"); }
+  // 時止め中の時間延長文字の出現率は従来どおり50%。
+  if(Math.random() < .50){ w.dataset.taTime = "1"; w.classList.add("ta-blue"); }
   const [x, y] = STOP_CELLS[cell];
   w.style.setProperty("--x", (x + Math.random()*6).toFixed(1) + "%"); w.style.setProperty("--y", (y + Math.random()*4 - 2).toFixed(1) + "%");
   w.addEventListener("click", e => { e.stopPropagation(); if(flood && w.classList.contains("still")) stopTap(w); });
@@ -4499,9 +4499,11 @@ function naturalSpawnPosition(){
   return {summonX:x,summonY:y};
 }
 function spawnLoop(){
-  if(!flood && !sakuraOn){
+  if(!flood){
     const field = $("drift");
-    const count = field.querySelectorAll(".word:not(.got):not(.late)").length;
+    const count = field.querySelectorAll(".word:not(.got):not(.late):not(.sk-fall)").length;
+    // Keep natural arrivals at 75% cadence during Sakura, independent of falling words.
+    const sakuraNatural = sakuraOn && taRunning;
     const target = taRunning ? (matchMedia("(pointer:coarse)").matches ? 5 : 6) : 4;
     const now = performance.now();
     // At <=1 remaining word, bring forward the next single spawn without clustering.
@@ -4509,10 +4511,10 @@ function spawnLoop(){
     // One word per cycle; even a sparse screen never produces a sudden cluster.
     if(now >= nextNaturalSpawnAt && count < target){
       const firstPos = naturalSpawnPosition();
-      spawnWord(firstPos);
+      spawnWord(sakuraNatural ? {...firstPos, plain:true} : firstPos);
       // Occasional 2-4 word groups, weighted toward smaller groups.
       // Spawn in short staggered steps, near the first word, while respecting the field target.
-      const makeCluster = taRunning && count > 1 && count <= target-2 &&
+      const makeCluster = taRunning && !sakuraNatural && count > 1 && count <= target-2 &&
         now-lastNaturalClusterAt > 5000 && Math.random() < .20;
       if(makeCluster){
         lastNaturalClusterAt = now;
@@ -4538,7 +4540,7 @@ function spawnLoop(){
           }, staggerMs);
         }
       }
-      nextNaturalSpawnAt = now + (taRunning ? 470+Math.random()*530 : 720+Math.random()*700);
+      nextNaturalSpawnAt = now + (taRunning ? (470+Math.random()*530)*(sakuraNatural ? 4/3 : 1) : 720+Math.random()*700);
     }
   }
   setTimeout(spawnLoop, flood ? 430 : (taRunning ? 240+Math.random()*210 : 520+Math.random()*340));
@@ -4731,16 +4733,23 @@ function multiply(x, y, opt){
 // 引き寄せの渦：触れた場所に渦が1.5秒とどまり、範囲（半径＝絵の幅の約42%）に少しでもかかった言葉を順に吸い込む。範囲は触れた言葉の中心から0.9秒かけて広がる。
 // あとから湧いた言葉や、漂って範囲に入ってきた言葉も吸い込む。特殊語・見えていない言葉・止まった時間の言葉は吸わない
 const PULL_MS = 1500;
-function pullAll(x, y, self, eclipse=false){
+function pullAll(x, y, self, eclipse=false, eclipseElement=null){
   track(eclipse ? "eclipse" : "pull", eclipse ? "蝕" : "引き寄せ");
   const field = $("drift"), fw = field.clientWidth || 300;
   const duration = eclipse ? 3000 : PULL_MS;
+  const eclipseIce=eclipse && eclipseElement==='ice';
+  const eclipseFire=eclipse && eclipseElement==='fire';
   const ultimateId=eclipse?taUltimateShow("eclipse","置き忘れたもの"):null;
   const R = Math.max(115, Math.min(185, fw * .42)) * (eclipse ? 1.7 : 1);
-  const core = document.createElement("span"); core.className = "pull-core" + (eclipse ? " ta-eclipse-core" : ""); core.innerHTML = vortexSVG(); core.style.left = x + "px"; core.style.top = y + "px"; document.body.append(core);
+  const core = document.createElement("span"); core.className = "pull-core" + (eclipse ? " ta-eclipse-core ta-eclipse-"+eclipseElement : ""); core.innerHTML = vortexSVG(); core.style.left = x + "px"; core.style.top = y + "px"; document.body.append(core);
   core.animate([{scale:"0", opacity:0},{scale:"1.25", opacity:1, offset:.6},{scale:"1", opacity:1}], {duration:380, easing:"cubic-bezier(.3,1.3,.5,1)", fill:"forwards"});
   // 届く範囲を薄い輪で見せる（内側へ流れ込む気配）
-  const ring = document.createElement("span"); ring.className = "pull-ring" + (eclipse ? " ta-eclipse-ring" : ""); ring.style.left = x + "px"; ring.style.top = y + "px"; ring.style.width = ring.style.height = (R * 2) + "px"; document.body.append(ring);
+  const ring = document.createElement("span"); ring.className = "pull-ring" + (eclipse ? " ta-eclipse-ring ta-eclipse-"+eclipseElement : ""); ring.style.left = x + "px"; ring.style.top = y + "px"; ring.style.width = ring.style.height = (R * 2) + "px"; document.body.append(ring);
+  // Reuse the actual fire/ice tap-circle canvas painter for the Eclipse rim.
+  // The CSS ring remains only as the suction-range guide; no separate SVG artwork.
+  if(eclipse && typeof window.taEclipseRimStart === 'function'){
+    window.taEclipseRimStart(x,y,R,eclipseElement,duration);
+  }
   const GROW = eclipse ? 1150 : 900, t0 = performance.now(), ease = q => 1 - Math.pow(1 - q, 2);   // 輪と吸い込む範囲は同じ速さで広がる
   ring.animate([{transform:"translate(-50%,-50%) scale(0)", opacity:.3},{transform:"translate(-50%,-50%) scale(1)", opacity:1}], {duration:GROW, easing:"cubic-bezier(.5,1,.89,1)", fill:"forwards"});
   const snd = sfx.inhale(duration / 1000 + .3);
@@ -4756,7 +4765,11 @@ function pullAll(x, y, self, eclipse=false){
     for(let k=0;k<=6;k++){ const t = k/6, rr = r0*(1-t), a = a0 - t*Math.PI*1.6;
       K.push({transform:`translate(${(x + rr*Math.cos(a) - sx).toFixed(1)}px,${(y + rr*Math.sin(a) - sy).toFixed(1)}px) rotate(${(-t*240).toFixed(0)}deg) scale(${(1 - t*.92).toFixed(2)},${(1 - t*.97).toFixed(2)})`, opacity: t < .7 ? Math.max(o0, .6) : (1 - t) / .3}); }
     f.animate(K, {duration:(420 + r0 * .9) / (eclipse ? 1.3 : 1), easing:"cubic-bezier(.5,0,.8,.6)", fill:"forwards"}).onfinish = () => {
-      f.remove(); const m = bumpCombo(); const isTime = w.dataset.taTime === "1"; const pts = Math.max(1,m) * (glowRemain>0?2:1); collected.push({isTime, pts}); sum += isTime ? 1 : pts; n++; addToDict(word);
+      f.remove(); const m = bumpCombo(); const isTime = eclipseIce || (!eclipseFire && w.dataset.taTime === "1");
+      const pts = Math.max(1,m) * (glowRemain>0?2:1);
+      // The last elemental tap determines the Eclipse's reward. Each word is collected only once.
+      const timeGain=eclipseIce ? .5 : null;
+      collected.push({isTime,pts,timeGain}); sum += isTime ? (timeGain ?? 1) : pts; n++; addToDict(word);
       if(n % 2) sfx.gulp();
       pending--; if(!open && !pending) finish();
     };
@@ -4806,7 +4819,7 @@ function pullAll(x, y, self, eclipse=false){
 function orbsFromCollected(items, cx, cy){
   if(!items.length) return;
   sfx.fly(.9);
-  items.forEach(({isTime,pts},i)=>{
+  items.forEach(({isTime,pts,timeGain},i)=>{
     setTimeout(()=>{
       const o=document.createElement("span"); o.className="orb"; taStyleRewardOrb(o,isTime,glowRemain>0); document.body.append(o);
       const k=items.length, ang=(i/Math.max(k,1))*Math.PI*2+Math.random()*.6;
@@ -4824,7 +4837,7 @@ function orbsFromCollected(items, cx, cy){
         o.style.transform=`scale(${q<.2?.4+q*6:Math.max(.45,1.6-q)})`;
         o.style.opacity=q>.9?(1-q)*10:1;
         if(q<1)requestAnimationFrame(step);
-        else{o.remove();taAward(isTime,isTime?1:pts,false,o.classList.contains('ta-reward-boost')&&mode==='black');sfx.arrive();}
+        else{o.remove();taAward(isTime,isTime?1:pts,false,o.classList.contains('ta-reward-boost')&&mode==='black',false,timeGain);sfx.arrive();}
       };
       requestAnimationFrame(step);
     },120+i*90);
@@ -7102,7 +7115,7 @@ function taStyleRewardOrb(orb,isTime,boosted=false){
   if(boosted)orb.classList.add('ta-reward-boost');
   return orb;
 }
-function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';const taTimeGain=isTime&&((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect))?2:1;if(isTime)taSeconds+=taTimeGain;else {taScore+=pts;taScoreRefresh();}taRender();const el=document.getElementById(id);el.classList.remove('ta-pop');void el.offsetWidth;el.classList.add('ta-pop');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}if(suppressPlus)return;const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+taTimeGain+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
+function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null){if(!taRunning)return;const id=isTime?'taTime':'taScore';const taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect)?2:1)):0;if(isTime)taSeconds+=taTimeGain;else {taScore+=pts;taScoreRefresh();}taRender();const el=document.getElementById(id);el.classList.remove('ta-pop');void el.offsetWidth;el.classList.add('ta-pop');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}if(suppressPlus)return;const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+taTimeGain+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
 const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
@@ -7309,7 +7322,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    itemResizeObserver.observe(ui);
  }
  const layer=document.createElement('div');layer.className='ta-element-layer';layer.setAttribute('aria-hidden','true');document.body.append(layer);
- const canvas=document.createElement('canvas');layer.append(canvas);const ctx=canvas.getContext('2d');
+ const canvas=document.createElement('canvas');layer.append(canvas);let ctx=canvas.getContext('2d');
  // The completed clock is painted on a dedicated canvas in the same local
  // coordinates as the unfinished dial. The hidden SVG is kept only as the
  // original disappearance-effect target, never as the visible clock.
@@ -7379,7 +7392,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   clockCtx.fillStyle='#fff0b2';clockCtx.beginPath();clockCtx.arc(0,0,3,0,Math.PI*2);clockCtx.fill();clockCtx.restore();
  }
 
- let selected=null,gesture=null,traces=[],particles=[],summonBursts=[],summonTimers=[],crossBursts=[],last=performance.now(),wasActive=false;
+ let selected=null,gesture=null,traces=[],eclipseRims=[],particles=[],summonBursts=[],summonTimers=[],crossBursts=[],last=performance.now(),wasActive=false;
  // Fire/ice clock: one elemental tap draws the dial; the other color draws two hands.
  let clockDial=null,clockFx=null,clockTimer=null;
  const CLOCK_VISIBLE_MS=2800;
@@ -7563,7 +7576,14 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(performance.now()-lastOrbPointerAt<750){e.preventDefault();return;}
   selectOrb(b); // keyboard / assistive technology activation
  });
- function clear(){taUltimateClear();clearPaintedClock();clockCanvas.classList.remove('ta-clock-front');clearClock();if(taCompletedClock){taCompletedClock.remove();taCompletedClock=null;}taClockVeilCenter=null;taCompletedClockAnchor=null;selected=null;sync();gesture=null;consumedPointer=null;traces=[];particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.clearRect(0,0,canvas.width,canvas.height)}
+ function clear(){taUltimateClear();clearPaintedClock();clockCanvas.classList.remove('ta-clock-front');clearClock();if(taCompletedClock){taCompletedClock.remove();taCompletedClock=null;}taClockVeilCenter=null;taCompletedClockAnchor=null;selected=null;sync();gesture=null;consumedPointer=null;traces=[];eclipseRims=[];layer.classList.remove("ta-eclipse-rim-front");particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.clearRect(0,0,canvas.width,canvas.height)}
+ // Eclipse perimeter uses exactly the same renderFire/renderIce as a normal tap circle.
+ window.taEclipseRimStart=(x,y,radius,type,duration)=>{
+   const hr=hero.getBoundingClientRect();
+   eclipseRims.push({x:x-hr.left,y:y-hr.top,radius,type,started:performance.now(),duration});
+   if(eclipseRims.length>2)eclipseRims.shift();
+   wakeFx();
+ };
  const loc=e=>{const r=hero.getBoundingClientRect(),f=field.getBoundingClientRect();
   // Clip gesture centerline to the collection field, while keeping particles free to escape.
   const minX=Math.max(0,f.left-r.left),minY=Math.max(0,f.top-r.top);
@@ -7971,7 +7991,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    crossRewardOrbs(w);collect(w,'fire');count++;
   }
   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
-   taSeconds+=count;taRender();
+   taSeconds+=count*0.5;taRender();
    const box=document.getElementById('taTimeBox');if(box){box.classList.remove('ta-frame-flash');void box.offsetWidth;box.classList.add('ta-frame-flash');}
   }
  }
@@ -7986,7 +8006,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    crossRewardOrbs(w);collect(w,'fire');count++;
   }
   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
-   taSeconds+=count;taRender();
+   taSeconds+=count*0.5;taRender();
    const box=document.getElementById('taTimeBox');
    if(box){box.classList.remove('ta-frame-flash');void box.offsetWidth;box.classList.add('ta-frame-flash');}
   }
@@ -8007,9 +8027,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   for(const b of crossBursts){
    const t=(now-b.start)/1000;
    if(t>=3.22&&!b.flashCollected){b.flashCollected=true;finalFlashCollect(b);b.lastAfterCollect=now;}
-   // Keep the final explosion's collection field active for two more seconds.
+   // Keep the final explosion's collection field active for one more second.
    // New words spawned after the flash are also collected, at most every 80ms.
-   if(b.flashCollected&&t<5.22&&now-b.lastAfterCollect>=80){
+   if(b.flashCollected&&t<4.22&&now-b.lastAfterCollect>=80){
     b.lastAfterCollect=now;finalFlashCollect(b);
    }
    // Exactly three one-second pulses, including newly spawned words.
@@ -8110,11 +8130,11 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    const er=canvas.getBoundingClientRect();
    const eclipseX=er.left+(hr.left+center.x)*er.width/(window.innerWidth||1);
    const eclipseY=er.top+(hr.top+center.y)*er.height/(window.innerHeight||1);
-   pullAll(eclipseX,eclipseY,null,true);
+   pullAll(eclipseX,eclipseY,null,true,g.type);
  }else if(isTap&&(!clockDial||clockDial.type!==g.type)){clockDialFx(pts[0],g.type)}
  const segs=[];if(isTap){const c=pts[0];segs.push([c,{x:c.x+.01,y:c.y},94]);}
  else for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(Math.hypot(b.x-a.x,b.y-a.y)>1)segs.push([a,b,23]);}
- if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:completed?.30:3.1,total:3.1,age:0,resonated:false,clockDissolve:completed};traces.push(trace);if(traces.length>2){for(const older of traces.slice(0,-2)){if(!older.clockDissolve){older.left=Math.min(older.left,1.85);older.total=3.1;older.retiring=true;}}}if(traces.length>6)traces.splice(0,traces.length-6);for(const other of traces){if(!completed&&!eclipseTap&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed&&!eclipseTap)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
+ if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:(completed||eclipseTap)?.30:3.1,total:3.1,age:0,resonated:false,clockDissolve:completed||eclipseTap};traces.push(trace);if(traces.length>2){for(const older of traces.slice(0,-2)){if(!older.clockDissolve){older.left=Math.min(older.left,1.85);older.total=3.1;older.retiring=true;}}}if(traces.length>6)traces.splice(0,traces.length-6);for(const other of traces){if(!completed&&!eclipseTap&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed&&!eclipseTap)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
  checkWords();}
  // Capture the armed gesture before the normal word/tap collectors can consume it.
  field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<=0||gesture||consumedPointer!==null)return;playElementSound(selected);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
@@ -8140,7 +8160,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // Keep the scheduler alive, but do not repaint two full-screen canvases
   // when there is no visible effect. This also reduces idle GPU heat buildup.
   const running=active();
-  const hasFx=!!(gesture||traces.length||particles.length||summonBursts.length||crossBursts.length||paintedClock||clockDial);
+  const hasFx=!!(gesture||traces.length||eclipseRims.length||particles.length||summonBursts.length||crossBursts.length||paintedClock||clockDial);
   if(!running){if(wasActive)clear();wasActive=false;fxWasDrawing=false;last=now;scheduleFxIdle(250);return;}
   wasActive=true;
   if(!hasFx){
@@ -8228,6 +8248,42 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const fr=field.getBoundingClientRect();ctx.save();ctx.beginPath();ctx.rect(fr.left-rect.left,fr.top-rect.top,fr.width,fr.height);ctx.clip();
   if(f.type==='fire')renderFire(visible,alpha);else renderIce(visible,alpha);ctx.restore();
   if(!f.clockDissolve&&Math.random()<(taMobileFx?.36:.85)){const v=f.renderSegs||f.segs,seg=v[Math.floor(Math.random()*v.length)],t=Math.random(),p=fxPoint(seg,t);spark(p.x,p.y,f.type,1)}
+ }
+ // Keep the Eclipse elemental rim in front of the suction vortex while it is visible.
+ layer.classList.toggle("ta-eclipse-rim-front",eclipseRims.length>0);
+ // Cached original fire/ice tap paint: render once at moderate resolution,
+ // then animate only the bitmap's transform and alpha. No per-frame gradients.
+ for(let ei=eclipseRims.length-1;ei>=0;ei--){
+   const rim=eclipseRims[ei],age=now-rim.started;
+   if(age>=rim.duration){eclipseRims.splice(ei,1);continue;}
+   if(!rim.texture){
+     const size=600,mid=size/2,baseR=208,segments=32;
+     const bitmap=document.createElement('canvas');bitmap.width=size;bitmap.height=size;
+     const off=bitmap.getContext('2d',{alpha:true});
+     const segs=[];
+     for(let j=0;j<segments;j++){
+       const a=j*2*Math.PI/segments,b=(j+1)*2*Math.PI/segments;
+       segs.push([{x:mid+Math.cos(a)*baseR,y:mid+Math.sin(a)*baseR},
+                  {x:mid+Math.cos(b)*baseR,y:mid+Math.sin(b)*baseR},11]);
+     }
+     const originalCtx=ctx;
+     try{
+       ctx=off;
+       if(rim.type==='fire')renderFire({segs},1);else renderIce({segs},1);
+     }finally{ctx=originalCtx;}
+     rim.texture=bitmap;
+   }
+   const grow=Math.min(1,age/1150),scale=1-Math.pow(1-grow,3);
+   const r=Math.max(1,rim.radius*scale);
+   const fade=Math.max(0,Math.min(1,age/230,(rim.duration-age)/420));
+   const imageRadius=208,textureHalf=300,ratio=r/imageRadius;
+   ctx.save();ctx.globalAlpha=fade;
+   // Texture includes the naturally irregular glow and crystal edges.
+   // The surrounding transparent padding is included in the scaling.
+   ctx.translate(rim.x,rim.y);
+   ctx.rotate((age/1000)*(rim.type==='fire'?.035:-.014));
+   ctx.drawImage(rim.texture,-textureHalf*ratio,-textureHalf*ratio,600*ratio,600*ratio);
+   ctx.restore();
  }
  // Draw the unfinished dial on the EXACT same canvas and in the same
  // hero-local coordinate system as the fire/ice trace. No CSS positioning,
@@ -8390,8 +8446,19 @@ body>.ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!importa
 @keyframes taEclipsePulse{from{transform:scale(.92) rotate(-9deg);opacity:.84}to{transform:scale(1.13) rotate(9deg);opacity:1}}
 @keyframes taEclipseTitle{0%{opacity:0;transform:translate(-50%,-35%) scale(1.5)}25%{opacity:1}75%{opacity:.85}100%{opacity:0;transform:translate(-50%,-115%) scale(.9)}}
 @media(prefers-reduced-motion:reduce){.ta-eclipse-core::before{animation:none}}
+
+/* Eclipse uses the exact same fire/ice circle painter as the regular tap skill. */
+.ta-eclipse-ring{background:transparent!important;border:1px solid rgba(148,90,208,.18)!important;box-shadow:none!important;pointer-events:none!important;}
+.ta-eclipse-ring::after{display:none!important;}
+.ta-eclipse-core.ta-eclipse-ice{filter:drop-shadow(0 0 12px rgba(77,186,255,.60))!important;}
+.ta-eclipse-core.ta-eclipse-fire{filter:drop-shadow(0 0 12px rgba(255,100,42,.60))!important;}
 </style>
 
+
+<style id="ta-eclipse-thin-front-rim">
+/* The original tap fire/ice paint is slimmer on Eclipse; show it over the dark suction core. */
+.ta-element-layer.ta-eclipse-rim-front{z-index:160!important;}
+</style>
 </body>
 <style>
 /* Readable thousand-point popup labels in the collection area. */
