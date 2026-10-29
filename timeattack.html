@@ -1708,8 +1708,8 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
 
   <figure class="hero">
     <img class="w" src="img/key-white.webp" alt="白ユラ：祈るように手を組む人物。The world is less in order than I expected.">
-    <img class="b" src="img/timeattack-normal.webp?v=20261025-4" alt="夜桜の城都と、光る古書。The world is more in order than I expected.">
-    <img class="b castle-dim" src="img/timeattack-century.webp?v=20261025-4" alt="" aria-hidden="true">
+    <img class="b" src="img/night.png" alt="夜の書斎と城下町">
+    <img class="b castle-dim" src="img/day.png" alt="" aria-hidden="true">
     <!-- 髪だけを、ゆるやかな揺らぎで重ねてなびかせる -->
     <img class="w hair hair-w" src="img/key-white.webp" alt="" aria-hidden="true">
     <svg class="fx" width="0" height="0" aria-hidden="true" focusable="false">
@@ -1729,7 +1729,7 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
     <div class="floodbar" id="floodbar" hidden><span>あの日のままで</span><i></i></div>
     <div class="ta-ultimate-labels" id="taUltimateLabels" aria-live="off"></div>
     <div class="floodbar glowbar" id="glowbar" hidden><span>陽だまり</span><i></i></div>
-    <div class="floodbar glowbar sakurabar" id="sakurabar" hidden><span>桜吹雪</span><i></i></div>
+    <div class="floodbar glowbar sakurabar" id="sakurabar" hidden><span>花の記憶</span><i></i></div>
     <div class="ikan" id="ikan" aria-live="polite">違和感 <b id="iv">0</b><span class="tm" id="tm"></span><span class="pour" id="pour">ペンに注いでいます</span></div>
     <div class="rtray" id="rtray" hidden aria-label="読了特典のストック"></div>
   </figure>
@@ -3761,8 +3761,22 @@ function setComboSkillGrace(skill){
   clearTimeout(bumpCombo.h);
   bumpCombo.h=setTimeout(expireCombo,duration);
 }
+// Keep only uncollected, drifting glow words synchronized with the chain's day/night state.
+// Already activated glow effects retain their original element and duration.
+function taSyncDriftingGlowWords(){
+  const label = (mode === "black" && combo < 100) ? "月明かり" : "陽だまり";
+  const field = document.getElementById("drift");
+  if(!field) return;
+  field.querySelectorAll(".word.glow:not(.got)").forEach(w=>{
+    if(w.dataset.word === label && w.textContent === label) return;
+    w.textContent = label;
+    w.dataset.word = label;
+    w.setAttribute("aria-label",label + "（触れると、しばらく違和感が2倍）");
+  });
+}
 function expireCombo(){
   combo=0;comboWindowMs=COMBO_MS;
+  taSyncDriftingGlowWords();
   document.documentElement.classList.remove("ta-century-lit");
   const el=$("combo");el.classList.remove("on","x2","x3","run","heat","ta-skill-grace");
   el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();
@@ -3790,6 +3804,7 @@ function bumpCombo(){
   el.classList.toggle("on", combo >= 2); el.classList.toggle("x2", m === 2); el.classList.toggle("x3", m === 3); el.classList.toggle("hold", flood);
   comboRush(m === 3);
   document.documentElement.classList.toggle("ta-century-lit", combo>=100);
+  if(combo===100 || combo===1) taSyncDriftingGlowWords();
   // Start the special BGM at 100 chains; stop it if the chain resets.
   if(combo===100)taCenturyMusic.start();
   else if(combo===1)taCenturyMusic.stop();
@@ -4045,7 +4060,7 @@ function endFlood(){
       comboEl.classList.add("run");
       comboAt=Date.now()-(comboWindowMs-remaining);
       clearTimeout(bumpCombo.h);
-      bumpCombo.h=setTimeout(()=>{combo=0;document.documentElement.classList.remove("ta-century-lit");const el=$("combo");el.classList.remove("on","x2","x3","run","heat");el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();},remaining);
+      bumpCombo.h=setTimeout(()=>{combo=0;taSyncDriftingGlowWords();document.documentElement.classList.remove("ta-century-lit");const el=$("combo");el.classList.remove("on","x2","x3","run","heat");el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();},remaining);
     }
   }
   // 位置は先にまとめて読む（クラスを外したあとに読むと、画面全体の再計算をその場で強いて重くなる）
@@ -4586,11 +4601,11 @@ function spawnWord(opt = {}){
   // 懐中時計が近いとき（現れる20秒前から、漂っているあいだ）は、陽だまり・月明かりが来やすい（待ち時間も短く）
   const preStop = Date.now() > nextSpecialAt - 20000 || !!field.querySelector(".word.special:not(.got)");
   const glowW = !opt.plain && !special && !odd && !multi && !pull && !flood && !glowRemain && !sakuraOn && !field.querySelector(".word.petal:not(.got)") && (forceGlow || (Date.now() > nextGlowAt - (preStop ? 45000 : 0) && Math.random() < (preStop ? .08 : .03)));
-  if(glowW){ const nm = mode === "black" ? "月明かり" : "陽だまり"; w.textContent = nm; w.dataset.word = nm; w.classList.add("glow"); forceGlow = false; nextGlowAt = Date.now() + 120000; w.setAttribute("aria-label", nm + "（触れると、しばらく違和感が2倍）"); }
+  if(glowW){ const nm = mode === "black" && combo < 100 ? "月明かり" : "陽だまり"; w.textContent = nm; w.dataset.word = nm; w.classList.add("glow"); forceGlow = false; nextGlowAt = Date.now() + 120000; w.setAttribute("aria-label", nm + "（触れると、しばらく違和感が2倍）"); }
   // ひとひらの花びら：触れると桜吹雪（白）／夜桜（黒）。陽だまり・月明かりとは同時に出さない
   const petalW = !opt.plain && !special && !odd && !multi && !pull && !glowW && !flood && !glowRemain && !sakuraOn && !field.querySelector(".word.glow:not(.got),.word.petal:not(.got)") && (forceSakura || (Date.now() > nextSakuraAt && Math.random() < SAKURA_P));
   if(petalW){ w.textContent = ""; w.dataset.word = "花びら"; w.innerHTML = '<span class="pt"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="skpg" x1="32" y1="60" x2="32" y2="6" gradientUnits="userSpaceOnUse"><stop offset="0" style="stop-color:var(--pb)"/><stop offset=".6" style="stop-color:var(--pt)"/></linearGradient></defs><path d="' + SK_PETAL_D + '" fill="url(#skpg)" stroke="rgba(255,255,255,.7)" stroke-width="1.2"/></svg></span>';
-    w.classList.add("petal"); setTimeout(()=>sfx.prepSakura(), 300); forceSakura = false; nextSakuraAt = Date.now() + SAKURA_CD; w.setAttribute("aria-label", mode === "black" ? "花びら（触れると夜桜）" : "花びら（触れると桜吹雪）"); }
+    w.classList.add("petal"); setTimeout(()=>sfx.prepSakura(), 300); forceSakura = false; nextSakuraAt = Date.now() + SAKURA_CD; w.setAttribute("aria-label", mode === "black" ? "花びら（触れると花の忘却）" : "花びら（触れると花の記憶）"); }
   // 共鳴：触れると、近くの言葉へ光が次々に伝わり、つながった言葉がまとめて違和感になる
   // 共鳴はいったん外している（活かせる場面が少ないため）。戻すときは先頭の false && を消す
   const reso = false && !opt.plain && !special && !odd && !multi && !pull && !glowW && !flood && (forceReso || (Date.now() > nextResoAt && Math.random() < .04));
@@ -4626,7 +4641,7 @@ function spawnWord(opt = {}){
     sfx.touch(); // 100連鎖以降も通常時と同じタップ音
     const isOdd = w.classList.contains("odd"); if(isOdd) track("odd", "逆さまの言葉");
     if(w.classList.contains("pull")){ const rr = w.getBoundingClientRect(); pullAll(rr.left + rr.width/2, rr.top + rr.height/2, w); }
-    if(w.classList.contains("glow")) startGlow();
+    if(w.classList.contains("glow")) startGlow(false, w.dataset.word || w.textContent);
     if(w.classList.contains("reso")){ const rr = w.getBoundingClientRect(); resonate(rr.left + rr.width/2, rr.top + rr.height/2, w); }
     if(w.classList.contains("multi")){ const fr = $("drift").getBoundingClientRect(), rr = w.getBoundingClientRect(); multiply(rr.left + rr.width/2 - fr.left, rr.top + rr.height/2 - fr.top, {boon: w.classList.contains("boon")}); }
     const cm = bumpCombo();
@@ -4726,7 +4741,7 @@ function multiply(x, y, opt){
   const field = $("drift"), W = field.clientWidth || 1, H = field.clientHeight || 1, n = boon ? 3 : 4 + Math.floor(Math.random() * 2);
   track("multiply", boon ? "読了特典" : "芽生え");
   sfx.multiply(n);
-  const ring = document.createElement("span"); ring.className = "multi-ring"; if(eclipse)ring.classList.add("ta-eclipse-session-fx"); ring.style.left = x + "px"; ring.style.top = y + "px"; field.append(ring);
+  const ring = document.createElement("span"); ring.className = "multi-ring"; ring.style.left = x + "px"; ring.style.top = y + "px"; field.append(ring);
   ring.animate([{transform:"translate(-50%,-50%) scale(.2)", opacity:.9},{transform:"translate(-50%,-50%) scale(1)", opacity:0}], {duration:700, easing:"cubic-bezier(.2,.7,.3,1)", fill:"forwards"}).onfinish = () => ring.remove();
   for(let i=0;i<n;i++) setTimeout(()=>{
     let w;
@@ -4932,9 +4947,10 @@ function orbsFrom(g, cnt, cx, cy){
 }
 // ---------- 陽だまり（白）・月明かり（黒）：絵がほのかに光り、10秒のあいだ違和感が2倍 ----------
 const GLOW_MS = 10000;
-function startGlow(silent){
+function startGlow(silent, collectedName){
   const hero = document.querySelector(".hero"); if(!hero) return;
-  const moon = mode === "black";
+  // An already spawned moonlight word stays moonlight after reaching 100 chains.
+  const moon = collectedName ? collectedName.trim() === "月明かり" : (mode === "black" && combo < 100);
   track("glow/" + mode, moon ? "月明かり" : "陽だまり");
   glowRemain = GLOW_MS; glowUntil = 1;
   // 絵の空気を変える：陽だまりは斜めに差し込む光の筋、月明かりは青く沈んだ空気に舞い降りる光の粒
@@ -5081,7 +5097,7 @@ function startSakura(from, opt){
   if(glowRemain) endGlow();
   const moon = mode === "black", reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   sakuraOn = true; nextSakuraAt = Math.max(nextSakuraAt, Date.now() + SAKURA_CD);
-  track("sakura/" + mode, moon ? "夜桜" : "桜吹雪");
+  track("sakura/" + mode, moon ? "花の忘却" : "花の記憶");
   if(from){ from.classList.add("got"); setTimeout(()=>from.remove(), 480); }
   // 絵の空気（言葉より奥）と、奥の花びら・手前のぼけ花びらの2枚の画布
   const fx = document.createElement("div"); fx.className = "sakura-fx " + (moon ? "moon" : "sun");
@@ -5095,7 +5111,7 @@ function startSakura(from, opt){
   document.documentElement.classList.add("sakura-on");   // 桜のあいだは、髪のなびき（重い揺らぎフィルタ）を止める
   const spr = skSprites(moon);
   // 残り時間のバー
-  const bar = $("sakurabar"); bar.className = "floodbar glowbar sakurabar " + (moon ? "moon" : "sun"); bar.querySelector("span").textContent = moon ? "夜桜" : "桜吹雪"; bar.hidden = false; bar.style.top = "10px";
+  const bar = $("sakurabar"); bar.className = "floodbar glowbar sakurabar " + (moon ? "moon" : "sun"); bar.querySelector("span").textContent = moon ? "花の忘却" : "花の記憶"; bar.hidden = false; bar.style.top = "10px";
   if(!opt.silent) sfx.sakura(moon);
   const P = [], F = [];
   const newPetal = (isFront, side) => {
