@@ -383,6 +383,44 @@ html[data-yura="black"].ta-century-lit #viewMain>.hero.ta-active-visual>picture.
 @media(prefers-reduced-motion:reduce){.ta-ultimate-label.visible:not(.leaving){animation:none}}
 /* A single compositor-only overlay for arena edge flashes. */
 .ta-arena-edge-flash{position:absolute;inset:0;z-index:210;pointer-events:none;border:3px solid rgba(255,236,192,.95);box-shadow:inset 0 0 15px rgba(255,224,166,.55),0 0 13px rgba(255,233,194,.35);border-radius:inherit;opacity:0;will-change:opacity}
+
+/* Guide: same single-page book treatment as the score ranking */
+#paneRank .ta-guide-tabs{display:flex;justify-content:center;gap:8px;margin:5px auto 14px;flex-wrap:wrap}
+#paneRank .ta-guide-tabs button{border:1px solid rgba(181,148,105,.42);background:rgba(32,28,26,.45);color:var(--mute);font:inherit;font-size:.8rem;letter-spacing:.09em;padding:9px 16px;border-radius:22px;cursor:pointer}
+#paneRank .ta-guide-tabs button.is-current{border-color:rgba(216,176,117,.85);background:rgba(178,139,81,.16);color:var(--ink,#f0e3cb)}
+#paneRank #taGuideHelpPanel[hidden],#paneRank #taGuideRankingPanel[hidden]{display:none!important}
+#paneRank .ta-guide-page{width:100%;max-width:none;min-height:440px;box-sizing:border-box;padding-bottom:30px}
+#paneRank .ta-guide-page .ta-ranking-heading{margin-bottom:20px}
+#paneRank .ta-guide-page p{line-height:1.95}
+#paneRank .ta-guide-intro{font-size:.88rem;line-height:2.05;text-align:center;margin:10px auto 23px;max-width:700px}
+#paneRank .ta-guide-index{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 0 28px}
+#paneRank .ta-guide-index a{font-size:.76rem;padding:6px 12px;border:1px solid rgba(139,114,79,.38);border-radius:15px;text-decoration:none;color:inherit}
+#paneRank .ta-guide-section{padding:22px 0 24px;border-top:1px solid rgba(139,114,79,.35);scroll-margin-top:18px}
+#paneRank .ta-guide-section h4{font-size:1.03rem;font-weight:600;letter-spacing:.12em;margin:0 0 16px}
+#paneRank .ta-guide-section h4 span{font-size:.72rem;opacity:.65;margin-right:10px}
+#paneRank .ta-guide-section>p{font-size:.86rem;margin:0 0 14px}
+#paneRank .ta-guide-tip{background:rgba(157,126,86,.075);border-left:2px solid rgba(180,139,84,.55);padding:11px 15px;margin:12px 0}
+#paneRank .ta-guide-tip b{font-size:.82rem;letter-spacing:.04em}
+#paneRank .ta-guide-tip p{font-size:.82rem;margin:5px 0 0;line-height:1.85}
+#paneRank .ta-guide-skill{display:flex;align-items:flex-start;gap:13px;margin:14px 0}
+#paneRank .ta-guide-skill b{font-size:.87rem}
+#paneRank .ta-guide-skill p{font-size:.82rem;margin:4px 0 0}
+#paneRank .ta-guide-dot{flex:none;width:21px;height:21px;border-radius:50%;margin-top:2px;box-shadow:inset -3px -4px 6px #0006,0 0 8px currentColor}
+#paneRank .ta-guide-dot.red{background:#e16b79;color:#e16b79}
+#paneRank .ta-guide-dot.blue{background:#7dbce8;color:#7dbce8}
+#paneRank .ta-guide-dot.green{background:#6dbe9b;color:#6dbe9b}
+#paneRank .ta-guide-dot.whitegold{background:#f6ebce;color:#f6ebce}
+#paneRank .ta-guide-section details{border:1px solid rgba(139,114,79,.32);border-radius:6px;margin:9px 0;padding:0 13px}
+#paneRank .ta-guide-section summary{cursor:pointer;padding:13px 0;font-size:.87rem;font-weight:600}
+#paneRank .ta-guide-section summary span{font-size:.72rem;font-weight:400;opacity:.67;margin-left:10px}
+#paneRank .ta-guide-section details p{font-size:.82rem;margin:0 0 13px}
+#paneRank .ta-guide-phases{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0 16px}
+#paneRank .ta-guide-phases>div{border:1px solid rgba(139,114,79,.35);border-radius:5px;padding:15px 12px}
+#paneRank .ta-guide-phases span{font-size:.72rem;opacity:.75;display:block;margin-bottom:8px}
+#paneRank .ta-guide-phases strong{font-size:.86rem;display:block}
+#paneRank .ta-guide-phases p{font-size:.78rem;margin:7px 0 0}
+#paneRank .ta-guide-ending{text-align:center;margin-top:30px!important;letter-spacing:.06em}
+@media(max-width:600px){#paneRank .ta-guide-page{padding-left:16px!important;padding-right:16px!important}#paneRank .ta-guide-phases{grid-template-columns:1fr}#paneRank .ta-guide-intro{font-size:.82rem}#paneRank .ta-guide-tabs button{padding:9px 13px}}
 </style>
 <script>
 /* 最初の描画より前に、前回の世界（白/黒）を決めておく。万一起動処理が止まっても4秒で必ず見せる */
@@ -1850,15 +1888,60 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
       </div>
     </div>
     <div class="pane" id="paneRank" hidden>
-      <div class="bookhead ta-rank-head"><span class="count" id="taRankCount"></span></div>
-      <div class="bookcover ta-record-cover"><div class="spread one ta-record-spread">
-        <section class="page solo ta-record-page">
-          <div class="pg-head"><span>NO ANSWERS</span><span>TIME ATTACK</span></div>
-          <div class="ta-ranking-heading"><h3>得点ランキング</h3><p>高得点順に、挑戦の記録を綴ります。</p></div>
-          <div id="taRanking" class="ta-record-list" aria-label="得点ランキング"></div>
-        </section>
-      </div></div>
-      <p class="ta-record-note">記録はこのブラウザに保存されます。別の端末やブラウザとは共有されません。</p>
+      <nav class="ta-guide-tabs" aria-label="タイムアタックの記録と手引き">
+        <button type="button" class="is-current" id="taGuideTabRank" aria-pressed="true">得点ランキング</button>
+        <button type="button" id="taGuideTabGuide" aria-pressed="false">言葉の手引き</button>
+      </nav>
+      <div id="taGuideRankingPanel">
+        <div class="bookhead ta-rank-head"><span class="count" id="taRankCount"></span></div>
+        <div class="bookcover ta-record-cover"><div class="spread one ta-record-spread">
+          <section class="page solo ta-record-page">
+            <div class="pg-head"><span>NO ANSWERS</span><span>TIME ATTACK</span></div>
+            <div class="ta-ranking-heading"><h3>得点ランキング</h3><p>高得点順に、挑戦の記録を綴ります。</p></div>
+            <div id="taRanking" class="ta-record-list" aria-label="得点ランキング"></div>
+          </section>
+        </div></div>
+        <p class="ta-record-note">記録はこのブラウザに保存されます。別の端末やブラウザとは共有されません。</p>
+      </div>
+      <div id="taGuideHelpPanel" hidden>
+        <div class="bookcover ta-record-cover"><div class="spread one ta-record-spread">
+          <section class="page solo ta-record-page ta-guide-page">
+            <div class="pg-head"><span>NO ANSWERS</span><span>FIELD GUIDE</span></div>
+            <div class="ta-ranking-heading"><h3>言葉の手引き</h3><p>夜を越えるための、小さな攻略書。</p></div>
+            <p class="ta-guide-intro">夜、ユラは本を開く。浮かぶ言葉に触れ、忘れたいことや置き忘れたものと向き合いながら、朝を迎える。<br>言葉をつなぎ、できるだけ長く時を紡いでください。</p>
+            <nav class="ta-guide-index" aria-label="手引きの目次"><a href="#taGuideBasics">基本</a><a href="#taGuideOrbs">玉と補充</a><a href="#taGuideSkills">奥義</a><a href="#taGuideDaybreak">夜明け</a><a href="#taGuideTips">攻略</a></nav>
+            <section class="ta-guide-section" id="taGuideBasics"><h4><span>01</span> 遊び方と連鎖</h4>
+              <p>ゲームは<strong>残り時間60秒</strong>から始まります。採集エリアに漂う言葉をタップ、またはスワイプして回収しましょう。回収を続けると「連鎖」が伸び、得点も積み重なります。</p>
+              <div class="ta-guide-tip"><b>攻略の鍵</b><p>次の言葉が見当たらないときは、画面全体を見渡して連鎖を維持。特殊技による連鎖猶予も活用できます。</p></div>
+              <p>10連鎖ごとに波紋が広がり、100連鎖では世界が夜から朝へ移り変わります。連鎖が途切れると、景色はゆっくり夜に戻ります。</p>
+            </section>
+            <section class="ta-guide-section" id="taGuideOrbs"><h4><span>02</span> 3色の玉と白銀玉</h4>
+              <div class="ta-guide-skill"><i class="ta-guide-dot red"></i><div><b>赤玉 ― 炎</b><p>言葉に炎の効果を与える玉。広範囲の技や奥義の組み合わせにも使います。</p></div></div>
+              <div class="ta-guide-skill"><i class="ta-guide-dot blue"></i><div><b>青玉 ― 氷</b><p>言葉を凍らせる効果を持ち、時間回復を狙う場面で重要です。</p></div></div>
+              <div class="ta-guide-skill"><i class="ta-guide-dot green"></i><div><b>緑玉 ― 連鎖を広げる</b><p>複数の言葉をまとめて扱う特殊効果。文字が多いときに威力を発揮します。</p></div></div>
+              <div class="ta-guide-skill"><i class="ta-guide-dot whitegold"></i><div><b>白銀玉 ― アイテム補充</b><p>採集エリアに時折現れる特別な玉。回収すると、右下の玉在庫を補充できます。</p></div></div>
+              <p>玉の在庫は<strong>最大5個</strong>。得点の節目でも補充の機会があります。在庫がいっぱいのときは補充の余地がないため、使いどころを考えましょう。</p>
+            </section>
+            <section class="ta-guide-section" id="taGuideSkills"><h4><span>03</span> 奥義の書</h4>
+              <p>赤・青・緑の玉は、使い方や組み合わせによって特別な技へつながります。奥義名が現れたら、効果の広がりを見届けましょう。</p>
+              <details><summary>あの日のままで</summary><p>時間の流れを一時的に止め、言葉を回収するための余裕を生みます。連鎖を守りたいときの切り札です。</p></details>
+              <details><summary>全部なかったことに</summary><p>爆発が連続して広がる大技。多数の言葉をまとめて回収するチャンスになります。</p></details>
+              <details><summary>置き忘れたもの</summary><p>漂う言葉を中心へ引き寄せ、最後に解き放つ奥義。炎・氷の効果との組み合わせが攻略の鍵になります。</p></details>
+              <div class="ta-guide-tip"><b>ひと工夫</b><p>奥義は「使える瞬間にすぐ使う」だけが正解ではありません。言葉が多い場面や、時間が厳しい場面まで温存する戦い方もあります。</p></div>
+            </section>
+            <section class="ta-guide-section" id="taGuideDaybreak"><h4><span>04</span> 夜から朝へ</h4>
+              <div class="ta-guide-phases"><div><span>夜 ／ 0〜99連鎖</span><strong>花の忘却 ・ 月明かり</strong><p>夜の記憶が漂う時間。</p></div><div><span>朝 ／ 100連鎖以降</span><strong>花の記憶 ・ 陽だまり</strong><p>朝の光とともに、新たな効果が現れます。</p></div></div>
+              <p>100連鎖に到達すると背景が徐々に朝へ変わります。連鎖が途切れると、景色はゆっくり夜に戻ります。</p>
+            </section>
+            <section class="ta-guide-section" id="taGuideTips"><h4><span>05</span> 連鎖をつなぐ技術</h4>
+              <div class="ta-guide-tip"><b>初級｜連鎖を最優先</b><p>一つの言葉を回収したら、次に触れる言葉をすぐ探しましょう。タップとスワイプを使い分けるのが基本です。</p></div>
+              <div class="ta-guide-tip"><b>中級｜残り時間と玉在庫を管理</b><p>高得点だけでなく、青玉による時間回復や、白銀玉・得点による補充の機会も意識しましょう。</p></div>
+              <div class="ta-guide-tip"><b>上級｜奥義の順番を研究</b><p>炎と氷を重ねる順序、「置き忘れたもの」で言葉を引き寄せるタイミングや、「全部なかったことに」を使う場面によって、同じ盤面でも回収の結果が変わります。</p></div>
+              <p class="ta-guide-ending">忘れたかった言葉も、朝になれば少し違って見える。<br>あなたは、どこまで夜を越えられるでしょうか。</p>
+            </section>
+          </section>
+        </div></div>
+      </div>
     </div>
     <div class="pane" id="paneBook">
       <div class="bookhead"><h2>思考の断片</h2><span class="count" id="count"></span><button type="button" class="idxbtn" id="idxbtn" aria-expanded="false">目次</button></div>
@@ -8620,6 +8703,23 @@ body>.ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!importa
 /* The lightweight fluorescent portal boundary is drawn above the suction core. */
 .ta-element-layer.ta-eclipse-rim-front{z-index:160!important;}
 </style>
+<script>
+/* Guide switch is independent from the game's ranking/storage code. */
+(function(){
+  const rank=document.getElementById('taGuideTabRank');
+  const guide=document.getElementById('taGuideTabGuide');
+  const rankingPanel=document.getElementById('taGuideRankingPanel');
+  const helpPanel=document.getElementById('taGuideHelpPanel');
+  if(!rank||!guide||!rankingPanel||!helpPanel)return;
+  function showGuide(on){
+    rankingPanel.hidden=on;helpPanel.hidden=!on;
+    rank.classList.toggle('is-current',!on);guide.classList.toggle('is-current',on);
+    rank.setAttribute('aria-pressed',String(!on));guide.setAttribute('aria-pressed',String(on));
+  }
+  rank.addEventListener('click',()=>showGuide(false));
+  guide.addEventListener('click',()=>showGuide(true));
+})();
+</script>
 </body>
 <style>
 /* Readable thousand-point popup labels in the collection area. */
