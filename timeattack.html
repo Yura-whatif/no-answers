@@ -8411,8 +8411,8 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const get=id=>{const el=document.getElementById(id);if(!el)return null;const r=el.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};};
   return [get('taScore'),get('taTime')];
  }
- function crossRewardOrbs(w){
-  const wr=w.getBoundingClientRect(),sx=wr.left+wr.width/2,sy=wr.top+wr.height/2;
+ function crossRewardOrbs(w,position){
+  const wr=position?null:w.getBoundingClientRect(),sx=position?position.x:wr.left+wr.width/2,sy=position?position.y:wr.top+wr.height/2;
   const targets=taCrossTargets();
   for(let i=0;i<2;i++){
    const isTime=i===1,target=targets[i];if(!target)continue;
@@ -8435,13 +8435,21 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  function pulseCollect(b,radius){
   if(!active())return;
   const hr=hero.getBoundingClientRect();let count=0;
-  taCrossRewardTargets=taCrossTargets();
-  for(const w of Array.from(field.querySelectorAll('.word'))){
+  // Stage 6-D: finish all hit-testing reads before collect() mutates the DOM.
+  // Interleaving getBoundingClientRect with removal/creation forces layout repeatedly.
+  const hits=[];
+  const radiusSq=radius*radius;
+  for(const w of field.querySelectorAll('.word')){
    if(!valid(w))continue;
    const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;
-   const x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;
-   if(Math.hypot(x-b.x,y-b.y)>radius)continue;
-   crossRewardOrbs(w);collect(w,'fire');count++;
+   const dx=r.left+r.width/2-hr.left,dy=r.top+r.height/2-hr.top;
+   if(dx*dx+dy*dy<=radiusSq)hits.push({w,x:r.left+r.width/2,y:r.top+r.height/2});
+  }
+  taCrossRewardTargets=taCrossTargets();
+  for(const hit of hits){
+   const w=hit.w;
+   if(!valid(w)||w.dataset.taElementClaim)continue;
+   crossRewardOrbs(w,hit);collect(w,'fire');count++;
   }
   taCrossRewardTargets=null;
   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
@@ -8453,12 +8461,19 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(!active())return;
   // The final white flash clears every remaining word in the collection field.
   // Reuse the normal elemental collection path so scoring and special effects remain consistent.
-  const words=Array.from(field.querySelectorAll('.word'));
+  // Stage 6-D: read positions in one pass, before any collection writes.
+  const hits=[];
+  for(const w of field.querySelectorAll('.word')){
+   if(!valid(w)||w.dataset.taElementClaim)continue;
+   const r=w.getBoundingClientRect();
+   hits.push({w,x:r.left+r.width/2,y:r.top+r.height/2});
+  }
   taCrossRewardTargets=taCrossTargets();
   let count=0;
-  for(const w of words){
+  for(const hit of hits){
+   const w=hit.w;
    if(!valid(w)||w.dataset.taElementClaim)continue;
-   crossRewardOrbs(w);collect(w,'fire');count++;
+   crossRewardOrbs(w,hit);collect(w,'fire');count++;
   }
   taCrossRewardTargets=null;
   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
