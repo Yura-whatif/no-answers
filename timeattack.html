@@ -8750,16 +8750,22 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   }
   ctx.restore();
  }
+ // Stage 6-F2: read the clip rectangle once per paint, not once per trace.
+ const traceClipRect=traces.length?field.getBoundingClientRect():null;
  for(const f of traces){
   if(!paused)f.left-=dt;f.age+=dt;
   const fadeWindow=f.clockDissolve?.30:(f.retiring?1.85:2.35);const fadeProgress=Math.max(0,Math.min(1,f.left/fadeWindow));const fadeAlpha=fadeProgress*fadeProgress*(3-2*fadeProgress);const alpha=Math.min(1,f.age*7,fadeAlpha);if(f.left<=0)continue;
-  const visible={...f,segs:f.renderSegs||f.segs};
-  const fr=field.getBoundingClientRect();ctx.save();ctx.beginPath();ctx.rect(fr.left-rect.left,fr.top-rect.top,fr.width,fr.height);ctx.clip();
-  if(f.type==='fire')renderFire(visible,alpha);else renderIce(visible,alpha);ctx.restore();
+  // Keep a stable lightweight view instead of allocating {...f} each frame.
+  const renderSegs=f.renderSegs||f.segs;
+  if(!f._stage6f2RenderView)f._stage6f2RenderView={segs:renderSegs};
+  else f._stage6f2RenderView.segs=renderSegs;
+  ctx.save();ctx.beginPath();ctx.rect(traceClipRect.left-rect.left,traceClipRect.top-rect.top,traceClipRect.width,traceClipRect.height);ctx.clip();
+  if(f.type==='fire')renderFire(f._stage6f2RenderView,alpha);else renderIce(f._stage6f2RenderView,alpha);ctx.restore();
   if(!f.clockDissolve&&Math.random()<(taMobileFx?.36:.85)){const v=f.renderSegs||f.segs,seg=v[Math.floor(Math.random()*v.length)],t=Math.random(),p=fxPoint(seg,t);spark(p.x,p.y,f.type,1)}
  }
  // Keep the Eclipse elemental rim in front of the suction vortex while it is visible.
- layer.classList.toggle("ta-eclipse-rim-front",eclipseRims.length>0);
+ const rimFront=eclipseRims.length>0;
+ if(layer.classList.contains("ta-eclipse-rim-front")!==rimFront)layer.classList.toggle("ta-eclipse-rim-front",rimFront);
  // A clean neon portal boundary: one cached gradient texture per Eclipse.
  // Bright narrow outer line; its glow fades smoothly inward into the void.
  // The texture is generated only once, then scaled by the GPU-friendly drawImage path.
