@@ -8652,7 +8652,16 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  // Stage 5: share stable math helpers across frames rather than allocating
  // three new function objects for every effect redraw.
  const fract=v=>v-Math.floor(v);
- const hash=v=>fract(Math.sin(v*127.1+17.23)*43758.5453);
+ // Stage 6-G: memoize deterministic noise used by the fire/ice strokes.
+ // The same integer seeds recur every frame; caching avoids repeated trig.
+ // Limit cache growth in case traces have unusually many segments.
+ const taHashCache=new Map();
+ const hash=v=>{
+  if(taHashCache.has(v))return taHashCache.get(v);
+  const result=fract(Math.sin(v*127.1+17.23)*43758.5453);
+  if(taHashCache.size>=4096)taHashCache.clear();
+  taHashCache.set(v,result);return result;
+ };
  function fxPoint(seg,t){return{x:seg[0].x+(seg[1].x-seg[0].x)*t,y:seg[0].y+(seg[1].y-seg[0].y)*t}}
  let fxWasDrawing=false;
  // Sleep between idle polls instead of running a 60 Hz RAF loop for the
@@ -8692,17 +8701,17 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    const seg=f.segs[si],a=seg[0],b=seg[1],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
    const steps=Math.max(2,Math.ceil(L/(taMobileFx?18:9)));
    for(let j=0;j<=steps;j++){
-    const t=j/steps,pt=fxPoint(seg,t),seed=si*211+j*19;
+    const t=j/steps,ptX=a.x+dx*t,ptY=a.y+dy*t,seed=si*211+j*19;
     const flick=Math.sin(now*.013+seed)*.5+.5;
     const radius=seg[2]*(.7+hash(seed)*.55)*taFxScale,rise=(14+hash(seed+3)*31)*(0.65+flick*.7)*taFxScale;
     // Smoky, low-opacity turbulent outer volume rather than a solid glowing stripe.
-    const smokeX=pt.x+nx*(hash(seed+4)-.5)*radius*.7,smokeY=pt.y-rise*.65;
+    const smokeX=ptX+nx*(hash(seed+4)-.5)*radius*.7,smokeY=ptY-rise*.65;
     const smoke=ctx.createRadialGradient(smokeX,smokeY,0,smokeX,smokeY,radius*1.6);
     smoke.addColorStop(0,'rgba(100,73,65,.18)');smoke.addColorStop(.5,'rgba(60,54,58,.10)');smoke.addColorStop(1,'rgba(30,29,34,0)');
     ctx.globalAlpha=alpha*.65;ctx.fillStyle=smoke;ctx.beginPath();ctx.arc(smokeX,smokeY,radius*1.6,0,Math.PI*2);ctx.fill();
     for(let k=0;k<(taMobileFx?2:3);k++){
      const wobble=Math.sin(now*.009+seed*1.7+k*2.8)*radius*.35;
-     const baseX=pt.x+nx*(k-1)*radius*.35,baseY=pt.y+ny*(k-1)*radius*.35;
+     const baseX=ptX+nx*(k-1)*radius*.35,baseY=ptY+ny*(k-1)*radius*.35;
      const tipX=baseX+wobble+nx*(hash(seed+k+10)-.5)*radius;
      const tipY=baseY-rise*(.45+k*.23);
      const flame=ctx.createLinearGradient(baseX,baseY,tipX,tipY);
@@ -8715,9 +8724,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
      ctx.bezierCurveTo(tipX+radius*.25,tipY+rise*.2,baseX+radius*.8,baseY-rise*.22,baseX+radius*.45,baseY+radius*.2);
      ctx.closePath();ctx.fill();
     }
-    const hot=ctx.createRadialGradient(pt.x,pt.y,0,pt.x,pt.y,radius*.8);
+    const hot=ctx.createRadialGradient(ptX,ptY,0,ptX,ptY,radius*.8);
     hot.addColorStop(0,'rgba(255,239,176,.68)');hot.addColorStop(.28,'rgba(255,139,40,.35)');hot.addColorStop(1,'rgba(244,51,12,0)');
-    ctx.globalAlpha=alpha*.78;ctx.fillStyle=hot;ctx.beginPath();ctx.arc(pt.x,pt.y,radius*.8,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=alpha*.78;ctx.fillStyle=hot;ctx.beginPath();ctx.arc(ptX,ptY,radius*.8,0,Math.PI*2);ctx.fill();
    }
   }
   ctx.restore();
