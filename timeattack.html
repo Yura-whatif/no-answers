@@ -7543,6 +7543,25 @@ function taBeginReady(){
 // Prepare the actual viewport assets before the timer starts. No gameplay FX are removed.
 let taLoadingBusy=false;
 let taPreparedViewport='';
+// Stage 5.5: retain reusable effect sprites across play sessions.
+const taFxSpriteCache=new Map();
+function taGetFxSprite(key,paint){
+  if(taFxSpriteCache.has(key))return taFxSpriteCache.get(key);
+  const c=document.createElement('canvas');c.width=c.height=128;
+  const x=c.getContext('2d');if(!x)return null;
+  paint(x);taFxSpriteCache.set(key,c);return c;
+}
+function taWarmReusableFx(){
+  // This exact radial gradient is reused by the summon-burst renderer.
+  taGetFxSprite('summon-glow',x=>{
+    const g=x.createRadialGradient(64,64,0,64,64,58);
+    g.addColorStop(0,'rgba(240,255,193,.62)');
+    g.addColorStop(.28,'rgba(94,255,171,.32)');
+    g.addColorStop(1,'rgba(9,110,80,0)');
+    x.fillStyle=g;x.fillRect(0,0,128,128);
+  });
+}
+
 const taReadyImages=new Map();
 function taPreloadImage(src){
   if(taReadyImages.has(src))return taReadyImages.get(src);
@@ -7591,7 +7610,8 @@ async function taBegin(){
     await Promise.allSettled([
       taPreloadImage('assets/timeattack/orb-fire.png'),
       taPreloadImage('assets/timeattack/orb-ice.png'),
-      taPreloadImage('assets/timeattack/orb-summon.png')
+      taPreloadImage('assets/timeattack/orb-summon.png'),
+      taPreloadImage('img/ta_loading_logo.webp')
     ]);
     if(document.fonts&&document.fonts.load){
       await Promise.allSettled([document.fonts.load('400 24px "Shippori Mincho"'),document.fonts.load('600 36px "Shippori Mincho"')]);
@@ -7618,9 +7638,15 @@ async function taBegin(){
     // Stage 3: warm the elemental gradient painter before START instead of
     // scheduling its first batch while the game is already running.
     progress(72,'光の軌跡を準備しています');
+    taWarmReusableFx();
     document.dispatchEvent(new Event('ta-prewarm-elemental-fx'));
     await new Promise(resolve=>requestAnimationFrame(resolve));
     progress(75,'音の記憶を準備しています');
+    // Wait briefly for the actual elemental playback elements (not duplicate Audio objects).
+    await Promise.race([
+      new Promise(resolve=>document.dispatchEvent(new CustomEvent('ta-wait-elemental-audio',{detail:{resolve}}))),
+      new Promise(resolve=>setTimeout(resolve,1200))
+    ]);
     // Media elements retain their own loading logic. This warms the browser cache.
     if(!taBegin.audioWarm){
       taBegin.audioWarm=true;
@@ -7631,9 +7657,9 @@ async function taBegin(){
     progress(100,'準備が整いました');
   }catch(error){console.warn('Time Attack loading fallback',error);}
   finally{
-    // Keep the loading screen visible for at least one second, including on cache hits.
+    // Keep the loading screen visible for at least two seconds, including on cache hits.
     // Wait after preparation so the existing start animation and 60s timer stay unchanged.
-    const remaining=Math.max(0,1000-(performance.now()-taLoadingStartedAt));
+    const remaining=Math.max(0,2000-(performance.now()-taLoadingStartedAt));
     if(remaining>0)await new Promise(resolve=>setTimeout(resolve,remaining));
     overlay.hidden=true;taLoadingBusy=false;
   }
@@ -7857,6 +7883,17 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const GESTURE_MAX_MS=750, GESTURE_MAX_PX=560;
  const elementalSounds={fire:new Audio('audio/element-fire-cast.wav'),ice:new Audio('audio/element-ice-cast.wav'),cross:new Audio('audio/element-cross-burst.wav'),summon:new Audio('audio/element-summon-cast.wav')};
  Object.values(elementalSounds).forEach(a=>{a.preload='none';a.volume=.48;});
+ // Stage 5.5: report readiness of the same audio elements used during play.
+ document.addEventListener('ta-wait-elemental-audio',event=>{
+  const resolve=event.detail&&event.detail.resolve;if(!resolve)return;
+  let pending=0,finished=false;
+  const done=()=>{if(!finished&&--pending<=0){finished=true;resolve();}};
+  for(const a of Object.values(elementalSounds)){
+   if(a.readyState>=2||a.error)continue;
+   pending++;a.addEventListener('canplay',done,{once:true});a.addEventListener('error',done,{once:true});
+  }
+  if(!pending){finished=true;resolve();}
+ });
  // Prepare the actual playback elements while Loading is visible.
  // Reusing these elements avoids duplicate audio fetches and delayed START loads.
  let soundsPrepared=false;
@@ -8274,7 +8311,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    const t=Math.max(0,Math.min(1,age/.75)),fade=Math.min(1,age*9,Math.max(0,(.95-age)*4));
    if(b.wave){const r=16+135*t;ctx.globalAlpha=.3*fade;ctx.strokeStyle='#85f2b4';ctx.lineWidth=2.5*(1-t);ctx.beginPath();ctx.arc(b.x,b.y,r,0,Math.PI*2);ctx.stroke();continue;}
    if(taMobileFx&&crossBursts.length)continue; // Cross explosion takes priority over decorative emerald particles.
-   const glow=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,38*(1-t*.3));glow.addColorStop(0,'rgba(240,255,193,.62)');glow.addColorStop(.28,'rgba(94,255,171,.32)');glow.addColorStop(1,'rgba(9,110,80,0)');ctx.globalAlpha=fade*.85;ctx.fillStyle=glow;ctx.beginPath();ctx.arc(b.x,b.y,42,0,Math.PI*2);ctx.fill();
+   const sprite=taFxSpriteCache.get('summon-glow');ctx.globalAlpha=fade*.85;if(sprite){const radius=38*(1-t*.3);ctx.drawImage(sprite,b.x-radius,b.y-radius,radius*2,radius*2);}else{const glow=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,38*(1-t*.3));glow.addColorStop(0,'rgba(240,255,193,.62)');glow.addColorStop(.28,'rgba(94,255,171,.32)');glow.addColorStop(1,'rgba(9,110,80,0)');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(b.x,b.y,42,0,Math.PI*2);ctx.fill();}
    for(const f of b.fragments){const q=Math.min(1,Math.max(0,age/.48));const spiral=f.angle+(1-q)*2.4+f.phase*.12;const r=f.radius*(1-q)*(1-q);const x=b.x+Math.cos(spiral)*r,y=b.y+Math.sin(spiral)*r*.75;ctx.globalAlpha=fade*(.35+.65*q);ctx.fillStyle=f.kind==='glyph'?'#e7d4a0':'#8afac9';ctx.shadowColor=f.kind==='glyph'?'#f4cf84':'#6afac0';ctx.shadowBlur=taMobileFx?0:7;ctx.save();ctx.translate(x,y);ctx.rotate(spiral);if(f.kind==='glyph'){ctx.font='12px serif';ctx.fillText('✧',0,0);}else{ctx.fillRect(-f.size/2,-f.size/2,f.size*1.4,f.size*2.3);}ctx.restore();}
   }
   ctx.restore();summonBursts=summonBursts.filter(b=>now-b.start<1000);
