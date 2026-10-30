@@ -425,7 +425,8 @@ html[data-yura="black"].ta-century-lit #viewMain>.hero.ta-active-visual>picture.
 /* Time Attack: preparation overlay (stage 1) */
 #taLoading{position:fixed;inset:0;z-index:100100;display:grid;place-items:center;background:rgba(9,12,22,.97);color:#eadfc9;overscroll-behavior:contain}
 #taLoading[hidden]{display:none!important}
-#taLoading .ta-loading-panel{width:min(85vw,360px);text-align:center;font-family:var(--mincho),serif}
+#taLoading .ta-loading-panel{width:min(90vw,620px);text-align:center;font-family:var(--mincho),serif}
+#taLoading .ta-loading-logo{display:block;width:100%;height:auto;max-height:38vh;object-fit:contain;margin:0 auto 18px;filter:drop-shadow(0 0 14px rgba(160,105,230,.25))}
 #taLoading .ta-loading-title{font-size:clamp(22px,5vw,32px);letter-spacing:.13em;margin:0 0 12px}
 #taLoading .ta-loading-book{font-size:42px;color:#d8bf91;line-height:1.5;animation:taLoadingBreathe 2.4s ease-in-out infinite}
 #taLoading .ta-loading-caption{font-size:13px;letter-spacing:.13em;min-height:2em;color:#c6bda9}
@@ -7255,7 +7256,7 @@ setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
     </div>
 
   </div>
-</div><div id="taLoading" hidden role="status" aria-live="polite" aria-label="プレイの準備中"><div class="ta-loading-panel"><div class="ta-loading-book" aria-hidden="true">✧</div><h2 class="ta-loading-title">言葉の残響</h2><p class="ta-loading-caption" id="taLoadingCaption">夜の頁をひらいています</p><div class="ta-loading-track"><div class="ta-loading-fill" id="taLoadingFill"></div></div><div class="ta-loading-percent" id="taLoadingPercent">0%</div></div></div><div id="taStartFlash" hidden aria-live="polite">START</div>
+</div><div id="taLoading" hidden role="status" aria-live="polite" aria-label="プレイの準備中"><div class="ta-loading-panel"><img class="ta-loading-logo" src="img/ta_loading_logo.webp" alt="No Answers ―言葉の残響―" decoding="async"><p class="ta-loading-caption" id="taLoadingCaption">夜の頁をひらいています</p><div class="ta-loading-track"><div class="ta-loading-fill" id="taLoadingFill"></div></div><div class="ta-loading-percent" id="taLoadingPercent">0%</div></div></div><div id="taStartFlash" hidden aria-live="polite">START</div>
 <script>
 /* Low-priority background decode: avoid a first-use hitch on the night/day crossfade.
    Preload only the viewport's image pair and leave the image DOM and visuals unchanged. */
