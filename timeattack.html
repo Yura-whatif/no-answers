@@ -8361,8 +8361,8 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  let taPerfPanel=null;
  const taPerfStats={rafCount:0,rafSlow:0,rafMax:0,rafLast:0,paintCount:0,paintSum:0,paintMax:0,
   crossCount:0,crossMs:0,crossMax:0,greenCount:0,greenMs:0,greenMax:0,
-  collectCount:0,collectMs:0,collectMax:0,spawnCount:0,spawnMs:0,spawnMax:0,longCount:0,longMax:0};
- let taPerfWindow=performance.now(),taPerfWorst5={raf:0,paint:0,cross:0,green:0,collect:0,spawn:0,long:0},taPerfHistory=[];
+  collectCount:0,collectMs:0,collectMax:0,readCount:0,readMs:0,readMax:0,orbsCount:0,orbsMs:0,orbsMax:0,logicCount:0,logicMs:0,logicMax:0,hudCount:0,hudMs:0,hudMax:0,spawnCount:0,spawnMs:0,spawnMax:0,longCount:0,longMax:0};
+ let taPerfWindow=performance.now(),taPerfWorst5={raf:0,paint:0,cross:0,green:0,collect:0,read:0,orbs:0,logic:0,hud:0,spawn:0,long:0},taPerfHistory=[];
  function taPerfCost(kind,ms){if(!taPerfEnabled)return;const t=taPerfStats;t[kind+'Count']++;t[kind+'Ms']+=ms;t[kind+'Max']=Math.max(t[kind+'Max'],ms);}
  function taPerfFrame(now){
   if(!taPerfEnabled)return;
@@ -8386,9 +8386,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const t=taPerfStats;t.paintCount++;t.paintSum+=paintMs;t.paintMax=Math.max(t.paintMax,paintMs);
   if(now-taPerfWindow<1500)return;
   const elapsed=now-taPerfWindow;
-  const sample={time:now,raf:t.rafMax,paint:t.paintMax,cross:t.crossMax,green:t.greenMax,collect:t.collectMax,spawn:t.spawnMax,long:t.longMax};
+  const sample={time:now,raf:t.rafMax,paint:t.paintMax,cross:t.crossMax,green:t.greenMax,collect:t.collectMax,read:t.readMax,orbs:t.orbsMax,logic:t.logicMax,hud:t.hudMax,spawn:t.spawnMax,long:t.longMax};
   taPerfHistory.push(sample);taPerfHistory=taPerfHistory.filter(x=>now-x.time<=5000);
-  for(const k of ['raf','paint','cross','green','collect','spawn','long'])taPerfWorst5[k]=Math.max(...taPerfHistory.map(x=>x[k]));
+  for(const k of ['raf','paint','cross','green','collect','read','orbs','logic','hud','spawn','long'])taPerfWorst5[k]=Math.max(...taPerfHistory.map(x=>x[k]));
   const fmt=n=>n.toFixed(1),avg=(sum,n)=>fmt(sum/Math.max(1,n));
   taPerfPanel.textContent='Screen RAF '+fmt(t.rafCount*1000/elapsed)+' gap '+fmt(t.rafMax)+'ms'+
    '\nFX Paint '+avg(t.paintSum,t.paintCount)+' / '+fmt(t.paintMax)+'ms'+
@@ -8401,9 +8401,11 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    '\nLast 5s gap '+fmt(taPerfWorst5.raf)+' paint '+fmt(taPerfWorst5.paint)+
    '\nLast 5s cross '+fmt(taPerfWorst5.cross)+' green '+fmt(taPerfWorst5.green)+
    '\nLast 5s collect '+fmt(taPerfWorst5.collect)+' spawn '+fmt(taPerfWorst5.spawn)+
+   '\nPhase read '+fmt(taPerfWorst5.read)+' orb '+fmt(taPerfWorst5.orbs)+
+   '\nPhase logic '+fmt(taPerfWorst5.logic)+' HUD '+fmt(taPerfWorst5.hud)+
    '\nOrbs pooled '+taCrossOrbPool.length;
   taPerfWindow=now;
-  for(const k of ['rafCount','rafSlow','rafMax','paintCount','paintSum','paintMax','crossCount','crossMs','crossMax','greenCount','greenMs','greenMax','collectCount','collectMs','collectMax','spawnCount','spawnMs','spawnMax','longCount','longMax'])t[k]=0;
+  for(const k of ['rafCount','rafSlow','rafMax','paintCount','paintSum','paintMax','crossCount','crossMs','crossMax','greenCount','greenMs','greenMax','collectCount','collectMs','collectMax','readCount','readMs','readMax','orbsCount','orbsMs','orbsMax','logicCount','logicMs','logicMax','hudCount','hudMs','hudMax','spawnCount','spawnMs','spawnMax','longCount','longMax'])t[k]=0;
  }
  let taCrossRewardTargets=null;
  function taCrossTargets(){
@@ -8437,6 +8439,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const hr=hero.getBoundingClientRect();let count=0;
   // Stage 6-D: finish all hit-testing reads before collect() mutates the DOM.
   // Interleaving getBoundingClientRect with removal/creation forces layout repeatedly.
+  const phaseReadStart=taPerfEnabled?performance.now():0;
   const hits=[];
   const radiusSq=radius*radius;
   for(const w of field.querySelectorAll('.word')){
@@ -8445,42 +8448,61 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    const dx=r.left+r.width/2-hr.left,dy=r.top+r.height/2-hr.top;
    if(dx*dx+dy*dy<=radiusSq)hits.push({w,x:r.left+r.width/2,y:r.top+r.height/2});
   }
+  if(taPerfEnabled)taPerfCost('read',performance.now()-phaseReadStart);
   taCrossRewardTargets=taCrossTargets();
   for(const hit of hits){
    const w=hit.w;
    if(!valid(w)||w.dataset.taElementClaim)continue;
-   crossRewardOrbs(w,hit);collect(w,'fire');count++;
+   const phaseOrbStart=taPerfEnabled?performance.now():0;
+   crossRewardOrbs(w,hit);
+   if(taPerfEnabled)taPerfCost('orbs',performance.now()-phaseOrbStart);
+   const phaseLogicStart=taPerfEnabled?performance.now():0;
+   collect(w,'fire');
+   if(taPerfEnabled)taPerfCost('logic',performance.now()-phaseLogicStart);
+   count++;
   }
   taCrossRewardTargets=null;
+  const phaseHudStart=taPerfEnabled?performance.now():0;
   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
    taSeconds+=count*0.5;taRender();
    const box=document.getElementById('taTimeBox');if(box){box.classList.remove('ta-frame-flash');void box.offsetWidth;box.classList.add('ta-frame-flash');}
   }
+  if(taPerfEnabled)taPerfCost('hud',performance.now()-phaseHudStart);
  }
  function finalFlashCollect(b){
   if(!active())return;
   // The final white flash clears every remaining word in the collection field.
   // Reuse the normal elemental collection path so scoring and special effects remain consistent.
   // Stage 6-D: read positions in one pass, before any collection writes.
+  const phaseReadStart=taPerfEnabled?performance.now():0;
   const hits=[];
   for(const w of field.querySelectorAll('.word')){
    if(!valid(w)||w.dataset.taElementClaim)continue;
    const r=w.getBoundingClientRect();
    hits.push({w,x:r.left+r.width/2,y:r.top+r.height/2});
   }
+  if(taPerfEnabled)taPerfCost('read',performance.now()-phaseReadStart);
   taCrossRewardTargets=taCrossTargets();
   let count=0;
   for(const hit of hits){
    const w=hit.w;
    if(!valid(w)||w.dataset.taElementClaim)continue;
-   crossRewardOrbs(w,hit);collect(w,'fire');count++;
+   const phaseOrbStart=taPerfEnabled?performance.now():0;
+   crossRewardOrbs(w,hit);
+   if(taPerfEnabled)taPerfCost('orbs',performance.now()-phaseOrbStart);
+   const phaseLogicStart=taPerfEnabled?performance.now():0;
+   collect(w,'fire');
+   if(taPerfEnabled)taPerfCost('logic',performance.now()-phaseLogicStart);
+   count++;
   }
   taCrossRewardTargets=null;
+  const phaseHudStart=taPerfEnabled?performance.now():0;
   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
    taSeconds+=count*0.5;taRender();
    const box=document.getElementById('taTimeBox');
    if(box){box.classList.remove('ta-frame-flash');void box.offsetWidth;box.classList.add('ta-frame-flash');}
   }
+  if(taPerfEnabled)taPerfCost('hud',performance.now()-phaseHudStart);
  }
  // Static blade normals and taper profile: calculate once at the cross trigger.
  function taCrossBladePoints(path){
