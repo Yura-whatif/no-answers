@@ -8488,6 +8488,11 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  field.addEventListener('pointerup',finish,true);field.addEventListener('lostpointercapture',e=>{if(e.pointerId===consumedPointer){consumedPointer=null;gesture=null;}},true);field.addEventListener('pointercancel',e=>{if(e.pointerId===consumedPointer)consumedPointer=null;if(gesture&&e.pointerId===gesture.id)gesture=null},true);
  field.addEventListener('pointermove',e=>{if(e.pointerId===consumedPointer){e.stopImmediatePropagation();e.preventDefault()}},false);
  function checkWords(){if(!traces.length)return;const hr=hero.getBoundingClientRect();for(const w of field.querySelectorAll('.word')){if(!valid(w))continue;const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;const x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;for(const f of traces){if(f.segs.some(([a,b,radius])=>near(x,y,a,b,radius+Math.min(20,r.width*.24)))){collect(w,f.type);break}}}}
+ // Stage 5: share stable math helpers across frames rather than allocating
+ // three new function objects for every effect redraw.
+ const fract=v=>v-Math.floor(v);
+ const hash=v=>fract(Math.sin(v*127.1+17.23)*43758.5453);
+ function fxPoint(seg,t){return{x:seg[0].x+(seg[1].x-seg[0].x)*t,y:seg[0].y+(seg[1].y-seg[0].y)*t}}
  let fxWasDrawing=false;
  // Sleep between idle polls instead of running a 60 Hz RAF loop for the
  // entire lifetime of the page. A new item gesture wakes the painter at once.
@@ -8519,9 +8524,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,taMobileFx?1:2),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);drawCompletedClock(now);renderSummons(now);
  if(gesture&&performance.now()-gesture.started>=GESTURE_MAX_MS){const g=gesture;gesture=null;makeTrace(g)}
  const paused=false; // Elemental traces remain active during time-stop.
- const fract=v=>v-Math.floor(v);
- const hash=v=>fract(Math.sin(v*127.1+17.23)*43758.5453);
- function fxPoint(seg,t){return{x:seg[0].x+(seg[1].x-seg[0].x)*t,y:seg[0].y+(seg[1].y-seg[0].y)*t}}
+
  function renderFire(f,alpha){
   ctx.save();ctx.globalCompositeOperation='screen';
   for(let si=0;si<f.segs.length;si++){
