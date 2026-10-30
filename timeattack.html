@@ -7549,7 +7549,7 @@ function taPreloadImage(src){
       if(image.decode)image.decode().catch(()=>{}).then(()=>resolve(true));
       else resolve(true);
     };
-    image.onerror=()=>resolve(false);image.src=src;
+    image.onerror=()=>{taReadyImages.delete(src);resolve(false);};image.src=src;
   });
   taReadyImages.set(src,job);return job;
 }
@@ -7612,15 +7612,16 @@ async function taBegin(){
         }}
       }catch(e){console.warn('Sakura sprite prewarm fallback',e);}
     }
+    // Stage 3: warm the elemental gradient painter before START instead of
+    // scheduling its first batch while the game is already running.
+    progress(72,'光の軌跡を準備しています');
+    document.dispatchEvent(new Event('ta-prewarm-elemental-fx'));
+    await new Promise(resolve=>requestAnimationFrame(resolve));
     progress(75,'音の記憶を準備しています');
     // Media elements retain their own loading logic. This warms the browser cache.
     if(!taBegin.audioWarm){
       taBegin.audioWarm=true;
       await Promise.allSettled([
-        taPrepareAudio('audio/element-fire-cast.wav'),
-        taPrepareAudio('audio/element-ice-cast.wav'),
-        taPrepareAudio('audio/element-cross-burst.wav'),
-        taPrepareAudio('audio/element-summon-cast.wav'),
         taPrepareAudio('audio/chain100-weight-of-the-pendulum.mp3?v=20261024')
       ]);
     }
@@ -7834,20 +7835,18 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
 
  const taMobileFx=window.matchMedia('(pointer:coarse)').matches;
  const taFxScale=taMobileFx?.72:1;
- // Warm up the same 2D gradient operations used by elemental effects during START.
+ // Warm the elemental gradient painter during Loading (once per page).
  let fxWarmupDone=false;
- document.addEventListener('ta-item-reset',()=>{
-  if(fxWarmupDone)return;fxWarmupDone=true;
+ document.addEventListener('ta-prewarm-elemental-fx',()=>{
+  if(fxWarmupDone)return;
   const warm=document.createElement('canvas');warm.width=128;warm.height=128;
   const wctx=warm.getContext('2d');if(!wctx)return;
-  let n=0;const batch=()=>{
-   for(let i=0;i<4&&n<16;i++,n++){
-    const g=wctx.createRadialGradient(64,64,0,64,64,20+n*3);
-    g.addColorStop(0,n%2?'rgba(115,204,255,.7)':'rgba(255,124,65,.7)');g.addColorStop(1,'rgba(0,0,0,0)');
-    wctx.fillStyle=g;wctx.fillRect(0,0,128,128);
-   }
-   if(n<16)setTimeout(batch,80);
-  };setTimeout(batch,40);
+  fxWarmupDone=true;
+  for(let n=0;n<16;n++){
+   const g=wctx.createRadialGradient(64,64,0,64,64,20+n*3);
+   g.addColorStop(0,n%2?'rgba(115,204,255,.7)':'rgba(255,124,65,.7)');g.addColorStop(1,'rgba(0,0,0,0)');
+   wctx.fillStyle=g;wctx.fillRect(0,0,128,128);
+  }
  });
 
  let lastFxPaint=0;
@@ -7855,14 +7854,12 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const GESTURE_MAX_MS=750, GESTURE_MAX_PX=560;
  const elementalSounds={fire:new Audio('audio/element-fire-cast.wav'),ice:new Audio('audio/element-ice-cast.wav'),cross:new Audio('audio/element-cross-burst.wav'),summon:new Audio('audio/element-summon-cast.wav')};
  Object.values(elementalSounds).forEach(a=>{a.preload='none';a.volume=.48;});
- // Use the 1.8-second START transition to stage the first sound decode rather than
- // letting four sound files compete for network/decode resources on page startup.
+ // Prepare the actual playback elements while Loading is visible.
+ // Reusing these elements avoids duplicate audio fetches and delayed START loads.
  let soundsPrepared=false;
- document.addEventListener('ta-item-reset',()=>{
+ document.addEventListener('ta-prewarm-elemental-fx',()=>{
   if(soundsPrepared)return;soundsPrepared=true;
-  const queue=Object.values(elementalSounds);let index=0;
-  const stage=()=>{if(index>=queue.length)return;const a=queue[index++];a.preload='auto';a.load();setTimeout(stage,190);};
-  setTimeout(stage,80);
+  Object.values(elementalSounds).forEach(a=>{a.preload='auto';a.load();});
  });
  function playElementSound(type){
   if(typeof sfx!=='undefined'&&!sfx.on)return;
