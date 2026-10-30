@@ -8342,18 +8342,24 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const CROSS_PULSE_RADII=[130,185,240]; // Each successive beat reaches farther.
  // Cross explosion awards are calculated by the existing collection code.
  // These two orbs are visual-only: one boosted gold score orb and one plain blue time orb.
+ // Stage 6-A: cache HUD destinations for a collection batch; avoid repeated layout reads.
+ let taCrossRewardTargets=null;
+ function taCrossTargets(){
+  if(taCrossRewardTargets)return taCrossRewardTargets;
+  const get=id=>{const el=document.getElementById(id);if(!el)return null;const r=el.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};};
+  return [get('taScore'),get('taTime')];
+ }
  function crossRewardOrbs(w){
   const wr=w.getBoundingClientRect(),sx=wr.left+wr.width/2,sy=wr.top+wr.height/2;
-  for(const isTime of [false,true]){
+  const targets=taCrossTargets();
+  for(let i=0;i<2;i++){
+   const isTime=i===1,target=targets[i];if(!target)continue;
    const orb=document.createElement('span');orb.className='orb';
    taStyleRewardOrb(orb,isTime,!isTime);
    orb.style.position='fixed';orb.style.left=sx+'px';orb.style.top=sy+'px';
    orb.style.pointerEvents='none';orb.style.zIndex='120';
    document.body.append(orb);
-   const target=document.getElementById(isTime?'taTime':'taScore');
-   if(!target){orb.remove();continue;}
-   const tr=target.getBoundingClientRect(),dx=tr.left+tr.width/2-sx,dy=tr.top+tr.height/2-sy;
-   const bend=isTime?-23:23;
+   const dx=target.x-sx,dy=target.y-sy,bend=isTime?-23:23;
    const a=orb.animate([
     {transform:'translate(-50%,-50%) scale(.5)',opacity:0},
     {transform:'translate(-50%,-50%) scale(1.35)',opacity:1,offset:.17},
@@ -8366,6 +8372,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  function pulseCollect(b,radius){
   if(!active())return;
   const hr=hero.getBoundingClientRect();let count=0;
+  taCrossRewardTargets=taCrossTargets();
   for(const w of Array.from(field.querySelectorAll('.word'))){
    if(!valid(w))continue;
    const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;
@@ -8373,6 +8380,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    if(Math.hypot(x-b.x,y-b.y)>radius)continue;
    crossRewardOrbs(w);collect(w,'fire');count++;
   }
+  taCrossRewardTargets=null;
   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
    taSeconds+=count*0.5;taRender();
    const box=document.getElementById('taTimeBox');if(box){box.classList.remove('ta-frame-flash');void box.offsetWidth;box.classList.add('ta-frame-flash');}
@@ -8383,16 +8391,31 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // The final white flash clears every remaining word in the collection field.
   // Reuse the normal elemental collection path so scoring and special effects remain consistent.
   const words=Array.from(field.querySelectorAll('.word'));
+  taCrossRewardTargets=taCrossTargets();
   let count=0;
   for(const w of words){
    if(!valid(w)||w.dataset.taElementClaim)continue;
    crossRewardOrbs(w);collect(w,'fire');count++;
   }
+  taCrossRewardTargets=null;
   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
    taSeconds+=count*0.5;taRender();
    const box=document.getElementById('taTimeBox');
    if(box){box.classList.remove('ta-frame-flash');void box.offsetWidth;box.classList.add('ta-frame-flash');}
   }
+ }
+ // Static blade normals and taper profile: calculate once at the cross trigger.
+ function taCrossBladePoints(path){
+  if(!path||path.length<2)return [];
+  const lengths=[0];let total=0;
+  for(let j=1;j<path.length;j++){total+=Math.hypot(path[j].x-path[j-1].x,path[j].y-path[j-1].y);lengths.push(total);}
+  if(total<2)return [];
+  return path.map((p,j)=>{
+   const a=path[Math.max(0,j-1)],z=path[Math.min(path.length-1,j+1)];
+   const dx=z.x-a.x,dy=z.y-a.y,len=Math.hypot(dx,dy)||1;
+   const v=lengths[j]/total;
+   return {x:p.x,y:p.y,nx:-dy/len,ny:dx/len,profile:Math.pow(Math.max(0,Math.sin(Math.PI*v)),.8)};
+  });
  }
  function triggerCross(a,b){
   const hit=crossCandidate(a,b);if(!hit||a.resonated||b.resonated)return;
@@ -8401,7 +8424,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   traces=traces.filter(f=>f!==a&&f!==b);
   const now=performance.now();
   const ultimateId=taUltimateShow("cross","全部なかったことに");
-  crossBursts.push({ultimateId,x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({path:f.path.map(p=>({x:p.x,y:p.y})),segs:f.segs})),rain:Array.from({length:taMobileFx?26:145},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taMobileFx?18:36},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?18:36)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
+  crossBursts.push({ultimateId,x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({points:taCrossBladePoints(f.path)})),rain:Array.from({length:taMobileFx?26:145},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taMobileFx?18:36},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?18:36)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
   spark(hit.x,hit.y,'fire',taMobileFx?5:10);spark(hit.x,hit.y,'ice',taMobileFx?5:10);
   playElementSound('cross');
  }
@@ -8429,19 +8452,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
     // Tapered luminous blades: a broad center and sharp pointed tips.
     // Rebuild the outline from the recorded stroke path, without blur filters.
     for(const f of b.whiteTraces){
-     const path=f.path;if(!path||path.length<2)continue;
-     const lengths=[0];let total=0;
-     for(let j=1;j<path.length;j++){total+=Math.hypot(path[j].x-path[j-1].x,path[j].y-path[j-1].y);lengths.push(total)}
-     if(total<2)continue;
-     const points=[];
-     for(let j=0;j<path.length;j++){
-      const a=path[Math.max(0,j-1)],z=path[Math.min(path.length-1,j+1)];
-      const dx=z.x-a.x,dy=z.y-a.y,len=Math.hypot(dx,dy)||1;
-      const v=lengths[j]/total;
-      // sin(pi*v) creates truly pointed ends; power widens the luminous middle.
-      const profile=Math.pow(Math.max(0,Math.sin(Math.PI*v)),.8);
-      points.push({x:path[j].x,y:path[j].y,nx:-dy/len,ny:dx/len,profile});
-     }
+     const points=f.points;if(!points||points.length<2)continue;
      const drawBlade=(width,alpha,color)=>{
       ctx.globalAlpha=alpha*Math.pow(1-u,1.05);
       ctx.fillStyle=color;ctx.beginPath();
