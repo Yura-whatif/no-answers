@@ -8171,10 +8171,12 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  document.addEventListener('visibilitychange',()=>{if(!active()){selected=null;removeRewardOrb();}sync();});
  sync();
  function spark(x,y,type,n=12){for(let i=0;i<n;i++){const a=type==='fire'?(Math.PI*1.5+(Math.random()-.5)*1.28):Math.random()*Math.PI*2,v=25+Math.random()*85;particles.push({x,y,vx:Math.cos(a)*v*(type==='fire'?.62:1),vy:type==='fire'?-(60+Math.random()*115):Math.sin(a)*v,life:.4+Math.random()*.65,max:1,r:1+Math.random()*3,type,...(type==='fire'?{heat:Math.random(),sway:Math.random()*6.283,trail:Math.random()>.28}:{} )});}if(particles.length>(taMobileFx?110:380))particles.splice(0,particles.length-(taMobileFx?110:380))}
- function wordFx(w,type){const r=w.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;const fx=document.createElement('span');fx.className='ta-element-word-fx';fx.textContent=w.textContent;fx.style.left=x+'px';fx.style.top=y+'px';fx.style.color=type==='fire'?'#ffba69':'#d9faff';fx.style.textShadow=type==='fire'?'0 0 10px #ff4b16,0 0 20px #f86a20':'0 0 10px #8ce6ff,0 0 20px #65b9ff';document.body.append(fx);
+ const taCrossRectCache=new WeakMap();
+ let taCrossHeroRect=null;
+ function wordFx(w,type){const r=taCrossRectCache.get(w)||w.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;const fx=document.createElement('span');fx.className='ta-element-word-fx';fx.textContent=w.textContent;fx.style.left=x+'px';fx.style.top=y+'px';fx.style.color=type==='fire'?'#ffba69':'#d9faff';fx.style.textShadow=type==='fire'?'0 0 10px #ff4b16,0 0 20px #f86a20':'0 0 10px #8ce6ff,0 0 20px #65b9ff';document.body.append(fx);
  const k=type==='fire'?[{opacity:1,transform:'translate(-50%,-50%) scale(1)',filter:'brightness(1)'},{opacity:.95,transform:'translate(-50%,-75%) scale(1.14)',filter:'brightness(2)',offset:.4},{opacity:0,transform:'translate(-50%,-145%) scale(.25) rotate(-9deg)',filter:'blur(8px)'}]:[{opacity:1,transform:'translate(-50%,-50%) scale(1)',filter:'brightness(1)'},{opacity:1,transform:'translate(-50%,-50%) scale(1.25)',filter:'brightness(2.5)',offset:.22},{opacity:0,transform:'translate(-50%,-50%) scale(1.7) rotate(8deg)',filter:'blur(9px)'}];
  const anim=fx.animate(k,{duration:type==='fire'?650:470,easing:'ease-out',fill:'forwards'});anim.onfinish=()=>fx.remove();
- const hr=hero.getBoundingClientRect();spark(x-hr.left,y-hr.top,type,type==='fire'?18:24);
+ const hr=taCrossHeroRect||hero.getBoundingClientRect();spark(x-hr.left,y-hr.top,type,type==='fire'?18:24);
  }
  let lastIceContactSound=0;
  function iceContactSound(){
@@ -8197,7 +8199,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  // Keep the element available while its effect handler reads its position.
  const isSpecial=w.matches(specials);
  if(isSpecial){
-  const rr=w.getBoundingClientRect(),cx=rr.left+rr.width/2,cy=rr.top+rr.height/2;
+  const rr=taCrossRectCache.get(w)||w.getBoundingClientRect(),cx=rr.left+rr.width/2,cy=rr.top+rr.height/2;
   if(w.classList.contains('special')){startFlood(w);sfx.special();sfx.timeStop();}
   else if(w.classList.contains('petal'))sakuraBloom(w);
   else if(w.classList.contains('pull'))pullAll(cx,cy,w);
@@ -8446,22 +8448,26 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    if(!valid(w))continue;
    const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;
    const dx=r.left+r.width/2-hr.left,dy=r.top+r.height/2-hr.top;
-   if(dx*dx+dy*dy<=radiusSq)hits.push({w,x:r.left+r.width/2,y:r.top+r.height/2});
+   if(dx*dx+dy*dy<=radiusSq)hits.push({w,x:r.left+r.width/2,y:r.top+r.height/2,rect:r});
   }
   if(taPerfEnabled)taPerfCost('read',performance.now()-phaseReadStart);
   taCrossRewardTargets=taCrossTargets();
+  taCrossHeroRect=hr;
   for(const hit of hits){
    const w=hit.w;
    if(!valid(w)||w.dataset.taElementClaim)continue;
+   taCrossRectCache.set(w,hit.rect);
    const phaseOrbStart=taPerfEnabled?performance.now():0;
    crossRewardOrbs(w,hit);
    if(taPerfEnabled)taPerfCost('orbs',performance.now()-phaseOrbStart);
    const phaseLogicStart=taPerfEnabled?performance.now():0;
    collect(w,'fire');
+   taCrossRectCache.delete(w);
    if(taPerfEnabled)taPerfCost('logic',performance.now()-phaseLogicStart);
    count++;
   }
   taCrossRewardTargets=null;
+  taCrossHeroRect=null;
   const phaseHudStart=taPerfEnabled?performance.now():0;
   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
    taSeconds+=count*0.5;taRender();
@@ -8479,23 +8485,27 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   for(const w of field.querySelectorAll('.word')){
    if(!valid(w)||w.dataset.taElementClaim)continue;
    const r=w.getBoundingClientRect();
-   hits.push({w,x:r.left+r.width/2,y:r.top+r.height/2});
+   hits.push({w,x:r.left+r.width/2,y:r.top+r.height/2,rect:r});
   }
   if(taPerfEnabled)taPerfCost('read',performance.now()-phaseReadStart);
   taCrossRewardTargets=taCrossTargets();
+  taCrossHeroRect=hero.getBoundingClientRect();
   let count=0;
   for(const hit of hits){
    const w=hit.w;
    if(!valid(w)||w.dataset.taElementClaim)continue;
+   taCrossRectCache.set(w,hit.rect);
    const phaseOrbStart=taPerfEnabled?performance.now():0;
    crossRewardOrbs(w,hit);
    if(taPerfEnabled)taPerfCost('orbs',performance.now()-phaseOrbStart);
    const phaseLogicStart=taPerfEnabled?performance.now():0;
    collect(w,'fire');
+   taCrossRectCache.delete(w);
    if(taPerfEnabled)taPerfCost('logic',performance.now()-phaseLogicStart);
    count++;
   }
   taCrossRewardTargets=null;
+  taCrossHeroRect=null;
   const phaseHudStart=taPerfEnabled?performance.now():0;
   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
    taSeconds+=count*0.5;taRender();
