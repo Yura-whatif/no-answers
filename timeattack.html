@@ -421,6 +421,19 @@ html[data-yura="black"].ta-century-lit #viewMain>.hero.ta-active-visual>picture.
 #paneRank .ta-guide-phases p{font-size:.78rem;margin:7px 0 0}
 #paneRank .ta-guide-ending{text-align:center;margin-top:30px!important;letter-spacing:.06em}
 @media(max-width:600px){#paneRank .ta-guide-page{padding-left:16px!important;padding-right:16px!important}#paneRank .ta-guide-phases{grid-template-columns:1fr}#paneRank .ta-guide-intro{font-size:.82rem}#paneRank .ta-guide-tabs button{padding:9px 13px}}
+
+/* Time Attack: preparation overlay (stage 1) */
+#taLoading{position:fixed;inset:0;z-index:100100;display:grid;place-items:center;background:rgba(9,12,22,.97);color:#eadfc9;overscroll-behavior:contain}
+#taLoading[hidden]{display:none!important}
+#taLoading .ta-loading-panel{width:min(85vw,360px);text-align:center;font-family:var(--mincho),serif}
+#taLoading .ta-loading-title{font-size:clamp(22px,5vw,32px);letter-spacing:.13em;margin:0 0 12px}
+#taLoading .ta-loading-book{font-size:42px;color:#d8bf91;line-height:1.5;animation:taLoadingBreathe 2.4s ease-in-out infinite}
+#taLoading .ta-loading-caption{font-size:13px;letter-spacing:.13em;min-height:2em;color:#c6bda9}
+#taLoading .ta-loading-track{height:3px;background:#3c3940;border-radius:6px;overflow:hidden;margin:18px 0 10px}
+#taLoading .ta-loading-fill{height:100%;width:0;background:linear-gradient(90deg,#8b765a,#f2dcab);transition:width .2s ease}
+#taLoading .ta-loading-percent{font:12px sans-serif;color:#b5ac9d}
+@keyframes taLoadingBreathe{50%{opacity:.65;transform:scale(1.045)}}
+@media(prefers-reduced-motion:reduce){#taLoading .ta-loading-book{animation:none}}
 </style>
 <script>
 /* 最初の描画より前に、前回の世界（白/黒）を決めておく。万一起動処理が止まっても4秒で必ず見せる */
@@ -7240,7 +7253,7 @@ setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
     </div>
 
   </div>
-</div><div id="taStartFlash" hidden aria-live="polite">START</div>
+</div><div id="taLoading" hidden role="status" aria-live="polite" aria-label="プレイの準備中"><div class="ta-loading-panel"><div class="ta-loading-book" aria-hidden="true">✧</div><h2 class="ta-loading-title">言葉の残響</h2><p class="ta-loading-caption" id="taLoadingCaption">夜の頁をひらいています</p><div class="ta-loading-track"><div class="ta-loading-fill" id="taLoadingFill"></div></div><div class="ta-loading-percent" id="taLoadingPercent">0%</div></div></div><div id="taStartFlash" hidden aria-live="polite">START</div>
 <script>
 /* Low-priority background decode: avoid a first-use hitch on the night/day crossfade.
    Preload only the viewport's image pair and leave the image DOM and visuals unchanged. */
@@ -7483,7 +7496,7 @@ document.addEventListener('touchmove',e=>{
   if(e.target.closest && e.target.closest('.hero'))e.preventDefault();
 },{passive:false});
 let taStarting=false;
-function taBegin(){
+function taBeginReady(){
   if(taRunning||taStarting)return;
   // Defensive cleanup: a previous unranked result must never block another run.
   document.documentElement.classList.remove('ta-result-locked');
@@ -7523,6 +7536,106 @@ function taBegin(){
    sfx.toggle();
   const token=taFinishToken;setTimeout(()=>{if(token!==taFinishToken||!taStarting)return;flash.hidden=true;taStarting=false;taRunning=true;document.dispatchEvent(new Event('ta-item-start-activate'));taUpdatePlay();taLast=performance.now();taRaf=requestAnimationFrame(taTick)},1800);
 }
+
+// Prepare the actual viewport assets before the timer starts. No gameplay FX are removed.
+let taLoadingBusy=false;
+let taPreparedViewport='';
+const taReadyImages=new Map();
+function taPreloadImage(src){
+  if(taReadyImages.has(src))return taReadyImages.get(src);
+  const job=new Promise(resolve=>{
+    const image=new Image();image.decoding='async';
+    image.onload=()=>{
+      if(image.decode)image.decode().catch(()=>{}).then(()=>resolve(true));
+      else resolve(true);
+    };
+    image.onerror=()=>resolve(false);image.src=src;
+  });
+  taReadyImages.set(src,job);return job;
+}
+function taPrepareAudio(src){
+  return new Promise(resolve=>{
+    const a=new Audio();a.preload='auto';a.src=src;
+    let finished=false;
+    const done=()=>{if(finished)return;finished=true;a.removeEventListener('canplaythrough',done);a.removeEventListener('canplay',done);a.removeEventListener('error',done);resolve();};
+    a.addEventListener('canplaythrough',done,{once:true});a.addEventListener('canplay',done,{once:true});a.addEventListener('error',done,{once:true});
+    a.load();setTimeout(done,1600);
+  });
+}
+async function taBegin(){
+  if(taRunning||taStarting||taLoadingBusy)return;
+  taLoadingBusy=true;
+  const taLoadingStartedAt=performance.now();
+  const overlay=document.getElementById('taLoading');
+  const caption=document.getElementById('taLoadingCaption');
+  const fill=document.getElementById('taLoadingFill');
+  const percent=document.getElementById('taLoadingPercent');
+  const progress=(n,label)=>{caption.textContent=label;fill.style.width=n+'%';percent.textContent=n+'%';};
+  overlay.hidden=false;progress(0,'夜の頁をひらいています');
+  // Allow overlay to paint before expensive preparation begins.
+  await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
+  try{
+    const mobile=matchMedia('(max-width: 700px)').matches;
+    const viewport=mobile?'mobile':'desktop';
+    progress(15,'夜と朝の景色を準備しています');
+    if(taPreparedViewport!==viewport){
+      const names=mobile?['night_mobile.webp','day_mobile.webp']:['night.webp','day.webp'];
+      await Promise.all(names.map(n=>taPreloadImage('img/'+n)));
+      taPreparedViewport=viewport;
+    }
+    progress(55,'言葉を準備しています');
+    // Decode the three item-orb images in advance, without changing their appearance.
+    await Promise.allSettled([
+      taPreloadImage('assets/timeattack/orb-fire.png'),
+      taPreloadImage('assets/timeattack/orb-ice.png'),
+      taPreloadImage('assets/timeattack/orb-summon.png')
+    ]);
+    if(document.fonts&&document.fonts.load){
+      await Promise.allSettled([document.fonts.load('400 24px "Shippori Mincho"'),document.fonts.load('600 36px "Shippori Mincho"')]);
+    }
+    // Stage 2: render both day/night petal sprites once during Loading.
+    // The existing sakura painter already reuses these canvases; warming both
+    // palettes here removes the first-use Path2D/gradient/shadow work mid-play.
+    progress(65,'花の記憶を準備しています');
+    if(typeof skSprites==='function'){
+      try{
+        const palettes=[skSprites(false),skSprites(true)];
+        // Touch each cached canvas once so its backing store is allocated
+        // before the first sakura frame (no visual changes or petal reduction).
+        const warm=document.createElement('canvas');
+        warm.width=warm.height=96;
+        const wctx=warm.getContext('2d',{alpha:true});
+        if(wctx){for(const palette of palettes){
+          for(const sprite of [...palette.back,...palette.front,palette.glint]){
+            wctx.clearRect(0,0,96,96);wctx.drawImage(sprite,0,0);
+          }
+        }}
+      }catch(e){console.warn('Sakura sprite prewarm fallback',e);}
+    }
+    progress(75,'音の記憶を準備しています');
+    // Media elements retain their own loading logic. This warms the browser cache.
+    if(!taBegin.audioWarm){
+      taBegin.audioWarm=true;
+      await Promise.allSettled([
+        taPrepareAudio('audio/element-fire-cast.wav'),
+        taPrepareAudio('audio/element-ice-cast.wav'),
+        taPrepareAudio('audio/element-cross-burst.wav'),
+        taPrepareAudio('audio/element-summon-cast.wav'),
+        taPrepareAudio('audio/chain100-weight-of-the-pendulum.mp3?v=20261024')
+      ]);
+    }
+    progress(100,'準備が整いました');
+  }catch(error){console.warn('Time Attack loading fallback',error);}
+  finally{
+    // Keep the loading screen visible for at least one second, including on cache hits.
+    // Wait after preparation so the existing start animation and 60s timer stay unchanged.
+    const remaining=Math.max(0,1000-(performance.now()-taLoadingStartedAt));
+    if(remaining>0)await new Promise(resolve=>setTimeout(resolve,remaining));
+    overlay.hidden=true;taLoadingBusy=false;
+  }
+  taBeginReady();
+}
+
 document.getElementById('taPlay').addEventListener('click',()=>{
   if(taRunning||taStarting){
     // The X button must end an active time stop immediately, not leave
