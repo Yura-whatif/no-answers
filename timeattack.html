@@ -8267,6 +8267,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  function near(x,y,a,b,r){const dx=b.x-a.x,dy=b.y-a.y,d=dx*dx+dy*dy,t=d?Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/d)):0;return Math.hypot(x-a.x-t*dx,y-a.y-t*dy)<=r}
  // Emerald word-summoning: atmospheric runic fragments converge, then real collectible words materialize.
  function summon(g){
+  const taGreenStarted=taPerfEnabled?performance.now():0;
   const pts=g.points;if(!pts.length)return;
   let length=0;for(let i=1;i<pts.length;i++)length+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
   const tap=length<22,n=tap?6:9; // Keep full green-orb word output even during mobile cross bursts.
@@ -8294,13 +8295,16 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
      if(available.length)placeStill(available[Math.floor(Math.random()*available.length)]);
      return;
     }
+    const taSpawnStarted=taPerfEnabled?performance.now():0;
     const w=spawnWord({force:true,plain:true,summonX:c.x/fw*100,summonY:c.y/fh*100});
+    if(taPerfEnabled)taPerfCost('spawn',performance.now()-taSpawnStarted);
     if(!w)return;
     // A single animation owns opacity, transform and glow for the whole lifetime.
     // Avoid a separate WAAPI animation reverting to drift's initial (invisible) frame.
     w.classList.add('ta-summoned-word');
    },210+i*57));
   });
+  if(taPerfEnabled)taPerfCost('green',performance.now()-taGreenStarted);
   // A small expanding pressure-wave makes the spell feel powerful without an RPG magic circle.
   if(!(taMobileFx&&crossBursts.length)){const anchor=pts[Math.floor(pts.length/2)];summonBursts.push({x:anchor.x,y:anchor.y,start:performance.now(),wave:true,fragments:[]});}
  }
@@ -8352,23 +8356,54 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   orb.remove();orb.removeAttribute('style');orb.className='orb';
   if(taCrossOrbPool.length<TA_CROSS_ORB_POOL_LIMIT)taCrossOrbPool.push(orb);
  }
- // Lightweight diagnostics, opt-in via ?taPerf=1; no HUD changes otherwise.
+ // Stage 6-C diagnostics: passive sampling only; no gameplay or visual changes.
  const taPerfEnabled=new URLSearchParams(location.search).get('taPerf')==='1';
- let taPerfPanel=null,taPerfFrames=0,taPerfSlow=0,taPerfWorst=0,taPerfTotal=0,taPerfWindow=performance.now(),taPerfLastFrame=0;
+ let taPerfPanel=null;
+ const taPerfStats={rafCount:0,rafSlow:0,rafMax:0,rafLast:0,paintCount:0,paintSum:0,paintMax:0,
+  crossCount:0,crossMs:0,crossMax:0,greenCount:0,greenMs:0,greenMax:0,
+  collectCount:0,collectMs:0,collectMax:0,spawnCount:0,spawnMs:0,spawnMax:0,longCount:0,longMax:0};
+ let taPerfWindow=performance.now(),taPerfWorst5={raf:0,paint:0,cross:0,green:0,collect:0,spawn:0,long:0},taPerfHistory=[];
+ function taPerfCost(kind,ms){if(!taPerfEnabled)return;const t=taPerfStats;t[kind+'Count']++;t[kind+'Ms']+=ms;t[kind+'Max']=Math.max(t[kind+'Max'],ms);}
+ function taPerfFrame(now){
+  if(!taPerfEnabled)return;
+  const t=taPerfStats;
+  if(t.rafLast){const gap=now-t.rafLast;t.rafMax=Math.max(t.rafMax,gap);if(gap>50)t.rafSlow++;}
+  t.rafLast=now;t.rafCount++;
+ }
  if(taPerfEnabled){
   taPerfPanel=document.createElement('div');taPerfPanel.id='taPerfPanel';
-  taPerfPanel.style.cssText='position:fixed;right:6px;bottom:6px;z-index:99999;background:rgba(0,0,0,.75);color:#baffcf;font:11px monospace;padding:6px;border-radius:5px;pointer-events:none;white-space:pre;';
+  taPerfPanel.style.cssText='position:fixed;right:5px;bottom:5px;z-index:99999;background:rgba(0,0,0,.85);color:#baffcf;font:10px/1.35 monospace;padding:6px;border-radius:5px;pointer-events:none;white-space:pre;max-width:calc(100vw - 12px)';
   taPerfPanel.textContent='Performance monitoring...';document.body.append(taPerfPanel);
+  if(typeof PerformanceObserver!=='undefined')try{
+   const observer=new PerformanceObserver(list=>{for(const e of list.getEntries()){taPerfStats.longCount++;taPerfStats.longMax=Math.max(taPerfStats.longMax,e.duration);}});
+   observer.observe({entryTypes:['longtask']});
+  }catch(_){}
+  // Independent display refresh; idle FX scheduling must not be mistaken for low game FPS.
+  (function monitorRaf(now){taPerfFrame(now);requestAnimationFrame(monitorRaf)})(performance.now());
  }
  function taPerfRecord(now,paintMs){
   if(!taPerfEnabled)return;
-  if(taPerfLastFrame){const frameMs=now-taPerfLastFrame;if(frameMs>50)taPerfSlow++;}
-  taPerfLastFrame=now;taPerfFrames++;taPerfTotal+=paintMs;taPerfWorst=Math.max(taPerfWorst,paintMs);
-  if(now-taPerfWindow>=1500){
-   const elapsed=now-taPerfWindow;
-   taPerfPanel.textContent='FX FPS '+(taPerfFrames*1000/elapsed).toFixed(1)+'\nPaint avg '+(taPerfTotal/Math.max(1,taPerfFrames)).toFixed(1)+'ms max '+taPerfWorst.toFixed(1)+'ms\nSlow frames '+taPerfSlow+'\nCross '+crossBursts.length+' / Green '+summonBursts.length+'\nOrbs pooled '+taCrossOrbPool.length;
-   taPerfWindow=now;taPerfFrames=0;taPerfSlow=0;taPerfWorst=0;taPerfTotal=0;
-  }
+  const t=taPerfStats;t.paintCount++;t.paintSum+=paintMs;t.paintMax=Math.max(t.paintMax,paintMs);
+  if(now-taPerfWindow<1500)return;
+  const elapsed=now-taPerfWindow;
+  const sample={time:now,raf:t.rafMax,paint:t.paintMax,cross:t.crossMax,green:t.greenMax,collect:t.collectMax,spawn:t.spawnMax,long:t.longMax};
+  taPerfHistory.push(sample);taPerfHistory=taPerfHistory.filter(x=>now-x.time<=5000);
+  for(const k of ['raf','paint','cross','green','collect','spawn','long'])taPerfWorst5[k]=Math.max(...taPerfHistory.map(x=>x[k]));
+  const fmt=n=>n.toFixed(1),avg=(sum,n)=>fmt(sum/Math.max(1,n));
+  taPerfPanel.textContent='Screen RAF '+fmt(t.rafCount*1000/elapsed)+' gap '+fmt(t.rafMax)+'ms'+
+   '\nFX Paint '+avg(t.paintSum,t.paintCount)+' / '+fmt(t.paintMax)+'ms'+
+   '\nCross '+t.crossCount+' '+avg(t.crossMs,t.crossCount)+'ms max '+fmt(t.crossMax)+
+   '\nGreen '+t.greenCount+' '+avg(t.greenMs,t.greenCount)+'ms max '+fmt(t.greenMax)+
+   '\nCollect '+t.collectCount+' max '+fmt(t.collectMax)+'ms'+
+   '\nSpawn '+t.spawnCount+' max '+fmt(t.spawnMax)+'ms'+
+   '\nLongTask '+t.longCount+' max '+fmt(t.longMax)+'ms'+
+   '\nSlow RAF '+t.rafSlow+'  Cross/Green '+crossBursts.length+'/'+summonBursts.length+
+   '\nLast 5s gap '+fmt(taPerfWorst5.raf)+' paint '+fmt(taPerfWorst5.paint)+
+   '\nLast 5s cross '+fmt(taPerfWorst5.cross)+' green '+fmt(taPerfWorst5.green)+
+   '\nLast 5s collect '+fmt(taPerfWorst5.collect)+' spawn '+fmt(taPerfWorst5.spawn)+
+   '\nOrbs pooled '+taCrossOrbPool.length;
+  taPerfWindow=now;
+  for(const k of ['rafCount','rafSlow','rafMax','paintCount','paintSum','paintMax','crossCount','crossMs','crossMax','greenCount','greenMs','greenMax','collectCount','collectMs','collectMax','spawnCount','spawnMs','spawnMax','longCount','longMax'])t[k]=0;
  }
  let taCrossRewardTargets=null;
  function taCrossTargets(){
@@ -8446,6 +8481,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   });
  }
  function triggerCross(a,b){
+  const taCrossStarted=taPerfEnabled?performance.now():0;
   const hit=crossCandidate(a,b);if(!hit||a.resonated||b.resonated)return;
   a.resonated=true;b.resonated=true;
   // The two elemental strokes turn white, contract and fade before vanishing.
@@ -8455,20 +8491,21 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   crossBursts.push({ultimateId,x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({points:taCrossBladePoints(f.path)})),rain:Array.from({length:taMobileFx?26:145},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taMobileFx?18:36},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?18:36)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
   spark(hit.x,hit.y,'fire',taMobileFx?5:10);spark(hit.x,hit.y,'ice',taMobileFx?5:10);
   playElementSound('cross');
+  if(taPerfEnabled)taPerfCost('cross',performance.now()-taCrossStarted);
  }
  function renderCrossBursts(now){
   crossBursts=crossBursts.filter(b=>{if(now-b.start<7000)return true;taUltimateHide(b.ultimateId);return false;});
   for(const b of crossBursts){
    const t=(now-b.start)/1000;
-   if(t>=3.22&&!b.flashCollected){b.flashCollected=true;taFlashArenaEdge("cross");finalFlashCollect(b);b.lastAfterCollect=now;}
+   if(t>=3.22&&!b.flashCollected){b.flashCollected=true;taFlashArenaEdge("cross");{const tm=taPerfEnabled?performance.now():0;finalFlashCollect(b);if(taPerfEnabled)taPerfCost('collect',performance.now()-tm);}b.lastAfterCollect=now;}
    // Keep the final explosion's collection field active for one more second.
    // New words spawned after the flash are also collected, at most every 80ms.
    if(b.flashCollected&&t<4.22&&now-b.lastAfterCollect>=80){
-    b.lastAfterCollect=now;finalFlashCollect(b);
+    b.lastAfterCollect=now;{const tm=taPerfEnabled?performance.now():0;finalFlashCollect(b);if(taPerfEnabled)taPerfCost('collect',performance.now()-tm);}
    }
    // Exactly three one-second pulses, including newly spawned words.
    const due=Math.min(3,Math.floor(t));
-   while(b.pulses<due){b.pulses++;taFlashArenaEdge("cross");pulseCollect(b,CROSS_PULSE_RADII[b.pulses-1]);spark(b.x,b.y,b.pulses%2?'ice':'fire',taMobileFx?4:9);}
+   while(b.pulses<due){b.pulses++;taFlashArenaEdge("cross");{const tm=taPerfEnabled?performance.now():0;pulseCollect(b,CROSS_PULSE_RADII[b.pulses-1]);if(taPerfEnabled)taPerfCost('collect',performance.now()-tm);}spark(b.x,b.y,b.pulses%2?'ice':'fire',taMobileFx?4:9);}
    const phase=t-Math.floor(t),beat=t>=1&&t<3.18?Math.max(0,1-phase/.46):0;
    const forming=Math.max(0,1-t/.27),ending=t>=3.22?Math.min(1,(t-3.22)/.36):0;
    const orbAlpha=t<3.22?1:Math.max(0,1-ending);
