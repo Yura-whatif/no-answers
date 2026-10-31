@@ -1828,6 +1828,23 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
 }
 #taTitleScreen .ta-title-start.is-loading{box-shadow:none!important;filter:none!important}
 @media(max-aspect-ratio:3/4){#taTitleScreen .ta-title-start::after{inset:0 3%}}
+/* Mobile portrait artwork: full-height 941x1672 composition, not a letterboxed PC image. */
+@media (max-aspect-ratio: 3/4) {
+  #taTitleScreen .ta-title-art {
+    width: min(100vw, 56.2799dvh);
+    height: auto;
+    max-height: 100dvh;
+    aspect-ratio: 941 / 1672;
+  }
+  #taTitleScreen .ta-title-start {
+    left: 25%; top: 51.6%; width: 50%; height: 6.3%;
+    min-height: 0; border-radius: 0;
+  }
+  #taTitleScreen .ta-title-start::after { inset: 4% 2%; }
+  #taTitleScreen .ta-title-progress {
+    left: 20%; width: 60%; top: 63%; bottom: auto; height: 8px;
+  }
+}
 </style>
 </head>
 <body>
@@ -1837,7 +1854,7 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
 #taTitleScreen.ta-title-fading{opacity:0;pointer-events:none}
 @media(prefers-reduced-motion:reduce){#taTitleScreen{transition-duration:0ms}}
 </style>
-<div id="taTitleScreen" role="region" aria-label="No Answers タイトル画面"><div class="ta-title-art"><picture class="ta-title-picture"><source media="(max-aspect-ratio:3/4)" srcset="img/ta_title_mobile.jpg"><img src="img/ta_title_no_petals.png" alt="No Answers ―言葉の残響― タイトルイラスト"></picture><button type="button" class="ta-title-start" id="taTitleStart" aria-label="はじめる">はじめる</button><div class="ta-title-progress" id="taTitleProgress" hidden><div class="ta-title-progress-fill" id="taTitleProgressFill"></div></div></div></div>
+<div id="taTitleScreen" role="region" aria-label="No Answers タイトル画面"><div class="ta-title-art"><picture class="ta-title-picture"><source media="(max-aspect-ratio:3/4)" srcset="img/ta_title_mobile.jpg?v=portrait2"><img src="img/ta_title_no_petals.png" alt="No Answers ―言葉の残響― タイトルイラスト"></picture><button type="button" class="ta-title-start" id="taTitleStart" aria-label="はじめる">はじめる</button><div class="ta-title-progress" id="taTitleProgress" hidden><div class="ta-title-progress-fill" id="taTitleProgressFill"></div></div></div></div>
 
 
 <div class="aura" aria-hidden="true"><i class="w"></i><i class="b"></i><i class="s"></i></div>
