@@ -4843,6 +4843,9 @@ function spawnWord(opt = {}){
     else if(r < .18){ const dl = 1.5 + Math.random() * .6; w.style.animationDelay = dl.toFixed(2) + "s"; w.style.animationFillMode = "both"; w.classList.add("late"); w.dataset.late = "1";   // 遅れて現れる（1.5〜2.1秒は見えず、触れない）
       setTimeout(()=>w.classList.remove("late"), dl * 1000 + 250); lifeMs += dl * 1000; } }
   if(!vortex && !crack) setTimeout(()=>w.isConnected && !w.classList.contains("got") && !w.dataset.frozen && !w.classList.contains("still") && w.remove(), lifeMs);
+  // Mobile burst guard: preserve every hit and award, but bound simultaneous
+  // DOM animations and audio voices when a dense emerald swarm is swiped.
+  let taSwipeBurstWindow=0,taSwipeBurstCount=0,taSwipeLastTouch=0;
   w.addEventListener("click", e => {
     e.stopPropagation();
     if(w.classList.contains("vortex") || w.classList.contains("crack")) return;   // 渦は長押し、ひびは専用の処理で使う
@@ -4850,7 +4853,14 @@ function spawnWord(opt = {}){
     if(isGem){ startFlood(w); sfx.special(); sfx.timeStop(); return; }
     if(w.classList.contains("petal")){ sakuraBloom(w); return; }   // ひとひらの花びらに触れると、桜吹雪／夜桜が始まる      // 懐中時計に触れると時間が止まる（時計はその場で静止）
     if(w.classList.contains("still")){ stopTap(w); return; }   // 止まった時間の中の言葉は、霧になってその場に止まる
-    sfx.touch(); // 100連鎖以降も通常時と同じタップ音
+    const taCoarse=window.matchMedia&&matchMedia('(pointer:coarse)').matches;
+    const taNow=performance.now();
+    if(taNow-taSwipeBurstWindow>450){taSwipeBurstWindow=taNow;taSwipeBurstCount=0;}
+    taSwipeBurstCount++;
+    const taDenseSwipe=taCoarse && !!w.dataset.swiped && taSwipeBurstCount>5;
+    // Do not start a separate oscillator for every word in a rapid swipe.
+    if(!taDenseSwipe || taNow-taSwipeLastTouch>115){sfx.touch();taSwipeLastTouch=taNow;}
+    // 100連鎖以降も通常時と同じタップ音
     const isOdd = w.classList.contains("odd"); if(isOdd) track("odd", "逆さまの言葉");
     if(w.classList.contains("pull")){ const rr = w.getBoundingClientRect(); pullAll(rr.left + rr.width/2, rr.top + rr.height/2, w); }
     if(w.classList.contains("glow")) startGlow(false, w.dataset.word || w.textContent);
@@ -4864,6 +4874,13 @@ function spawnWord(opt = {}){
     const fireScore = w.dataset.taFireScore === "1" && !taTime;
     const taPoints = fireScore ? 2 : Math.max(1,cm) * (glowRemain>0?2:1);
     const moonBoostAtCollect=mode==='black'&&glowRemain>0;const arrive = () => { taAward(taTime,taPoints,false,moonBoostAtCollect); sfx.arrive(); };
+    if(taDenseSwipe){
+      // Keep the original arrival delay, score, time and combo semantics.
+      // Skip only redundant per-word flying clones, blur, mist and orbs.
+      w.remove();
+      setTimeout(arrive, flood?620:900);
+      return;
+    }
     const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
     if(reduce || !w.animate){ w.remove(); arrive(); return; }
     // 触れた言葉がほどけて光の玉になり、右上の違和感へ弧を描いて吸い込まれる
