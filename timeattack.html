@@ -1630,6 +1630,15 @@ body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width
 </style>
 <script>function track(){} // 既存イベント呼び出しとの互換性のみ維持（通信なし）</script>
 <style>
+
+/* Time Attack result: text-only rotating hint, preserving score and ranking. */
+#taLaunch .ta-card{padding-bottom:23px;max-height:calc(100dvh - 22px);overflow-y:auto;overscroll-behavior:contain}
+#taLaunch .ta-result-score strong{font-size:clamp(2.15rem,8.3vw,3.05rem)}
+#taLaunch .ta-result-score{margin-bottom:15px}
+#taLaunch .ta-tip-box{display:flex;align-items:center;justify-content:center;gap:12px;min-height:72px;box-sizing:border-box;margin:20px 0 0;padding:14px 15px;border:1px solid rgba(197,151,85,.58);border-radius:8px;background:linear-gradient(110deg,rgba(58,43,38,.42),rgba(13,18,28,.6));box-shadow:inset 0 0 15px rgba(212,166,98,.06)}
+#taLaunch .ta-tip-icon{flex:0 0 auto;font-size:1.35rem;color:#e3bb78;text-shadow:0 0 12px rgba(240,187,96,.45)}
+#taLaunch .ta-tip-text{margin:0;min-width:0;font:400 clamp(.76rem,2.85vw,.93rem)/1.7 var(--mincho);letter-spacing:.045em;color:#e6d2ac;text-align:left;overflow-wrap:anywhere}
+@media(max-width:380px){#taLaunch .ta-card{padding:18px 17px 19px}#taLaunch .ta-book-scene{height:124px}#taLaunch .ta-tip-box{margin-top:15px;padding:10px 11px;min-height:65px}#taLaunch .ta-result-stats{padding-top:12px}}
 /* Result redesign: restrained typography, manuscript and falling light. */
 #taLaunch .ta-card{padding:27px 28px 30px;width:min(410px,100%);border-color:rgba(186,150,98,.62);background:radial-gradient(ellipse at 50% 18%,rgba(89,72,64,.28),transparent 62%),linear-gradient(155deg,#1c1d27,#10141b)}
 #taLaunch .ta-card::before{inset:8px;border-color:rgba(219,178,113,.15)}
@@ -7372,13 +7381,13 @@ setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
     <div class="ta-book-scene" role="img" aria-label="夜桜の城都に佇む、光を帯びた古書">
       <img class="ta-book-photo" src="img/timeattack-result-book.webp" alt="" aria-hidden="true">
     </div>
-    <p class="ta-result-eyebrow">TIME ATTACK / RECORD</p>
     <h2 id="taResultHeading">採集の記録</h2>
     <p class="ta-result-score"><strong id="taEndDetail">0</strong><span>点</span></p>
     <div class="ta-result-stats">
       <div><span>最大連鎖</span><strong id="taEndCombo">0</strong></div>
       <div><span>今回の順位</span><strong id="taEndRank">—</strong></div>
     </div>
+    <div class="ta-tip-box" aria-label="ゲームのヒント"><span class="ta-tip-icon" aria-hidden="true">✦</span><p id="taResultTip" class="ta-tip-text">言葉の重なりに、次の発見が隠れているかもしれません。</p></div>
 
   </div>
 </div><div id="taLoading" hidden role="status" aria-live="polite" aria-label="プレイの準備中"><div class="ta-loading-panel"><img class="ta-loading-logo" src="img/ta_loading_logo.webp" alt="No Answers ―言葉の残響―" decoding="async"><p class="ta-loading-caption" id="taLoadingCaption">夜の頁をひらいています</p><div class="ta-loading-track"><div class="ta-loading-fill" id="taLoadingFill"></div></div><div class="ta-loading-percent" id="taLoadingPercent">0%</div></div></div><div id="taStartFlash" hidden aria-live="polite">START</div>
@@ -7569,6 +7578,48 @@ function taUpdatePlay(){
   document.dispatchEvent(new Event('ta-item-state-change'));
   btn.querySelector('svg').innerHTML=active?'<path d="M6 6 18 18 M18 6 6 18"/>':'<path d="M8 5.5 18 12 8 18.5Z"/>';
 }
+
+// Result hints: one per finished record; avoid repeating any of the last three.
+// Text can be replaced without changing the layout or selection logic.
+const taResultHints = [
+  '炎と氷が交わると、何が起こる……？',
+  '緑の力が重なると、言葉の景色も変わっていく。',
+  '言葉が密集したときこそ、一筋の軌跡を探してみよう。',
+  '銀の力には、時の流れを変える秘密がある。',
+  '長い連鎖の先では、夜の景色にも変化が訪れる。',
+  'すばやく触れた言葉には、小さなご褒美があるかもしれない。',
+  '言葉の中心を見極めると、思わぬ力が生まれる。',
+  '二つ、三つ、四つ。まとめて消す意味を探してみよう。',
+  '時間が止まっても、連鎖の可能性は止まらない。',
+  '同じ言葉でも、消し方によって違う表情を見せる。',
+  '緑の力を使ったあとは、画面全体を見渡してみよう。',
+  '炎が走ったあとに残るものにも、目を向けてみよう。',
+  '氷の力は、時間の使い方を変えてくれる。',
+  '連鎖が途切れそうなとき、別の道が見えることもある。',
+  '特別な言葉は、出現した瞬間にも秘密を持つ。',
+  '光の軌跡が重なる瞬間に、思いがけない変化がある。',
+  'たくさんの言葉を一度に消すと、何が起こるだろう。',
+  '画面の隅に残った言葉が、次の連鎖の鍵になる。',
+  '緑の力と氷の力、使う順番も考えてみよう。',
+  '桜が舞う夜には、いつもと違う景色が待っている。',
+  'ひとつの動きで、複数の言葉に触れられる。',
+  '連鎖を重ねるほど、静かな変化に気づくかもしれない。',
+  '赤と青の力には、まだ別の使い道がある。',
+  '一瞬の判断が、思いがけない得点につながる。',
+  '見慣れた演出の中にも、まだ知らない仕組みが隠れている。'
+];
+function taPickResultHint(){
+  const node=document.getElementById('taResultTip');
+  if(!node)return;
+  let recent=[];
+  try{const raw=JSON.parse(sessionStorage.getItem('taResultHintRecent')||'[]');if(Array.isArray(raw))recent=raw.filter(Number.isInteger).slice(-3)}catch(_e){}
+  const pool=taResultHints.map((_,i)=>i).filter(i=>!recent.includes(i));
+  const candidates=pool.length?pool:taResultHints.map((_,i)=>i);
+  const index=candidates[Math.floor(Math.random()*candidates.length)];
+  node.textContent=taResultHints[index];
+  try{sessionStorage.setItem('taResultHintRecent',JSON.stringify([...recent,index].slice(-3)))}catch(_e){}
+}
+
 function taFinish(){
   if(!taRunning&&!taStarting)return;
   taCenturyMusic.stop(true);
@@ -7605,6 +7656,7 @@ function taFinish(){
     document.getElementById('taEndDetail').textContent=taScoreFormat(taScore);
     document.getElementById('taEndCombo').textContent=taSessionMaxCombo.toLocaleString('ja-JP');
     document.getElementById('taEndRank').textContent=finishedPosition>=0?(finishedPosition+1)+'位':'—';
+    if(finishedQualified)taPickResultHint();
     const qualified=finishedQualified;
     document.getElementById('taLaunch').hidden=!qualified;
     // Unranked runs skip the record screen; BGM fades after a 2-second delay.
