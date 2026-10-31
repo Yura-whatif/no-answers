@@ -36,7 +36,7 @@ html.boot .wrap{opacity:0}
 .wrap{transition:opacity .45s ease}
 
 /* Time Attack: preserve the original hero and slip geometry and FX */
-#taHud{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:14px 18px;background:#101319;color:#c8ccd3;border:1px solid #252b35;outline:1px solid #1a2029;outline-offset:-9px;box-shadow:inset 0 0 0 7px #101319;box-sizing:border-box;pointer-events:none;font-family:var(--mincho)}
+#taHud{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:14px 18px;background:#101319;color:#c8ccd3;border:1px solid #252b35;box-shadow:inset 0 0 0 7px #101319;box-sizing:border-box;pointer-events:none;font-family:var(--mincho)}
 .ta-head{font-size:.72rem;letter-spacing:.26em;text-align:center}.ta-head span{display:block;font-size:.57rem;opacity:.65;margin-top:7px}
 .ta-stats{display:flex;justify-content:space-around;align-items:center;width:100%;gap:8px}.ta-stats>div{flex:1;text-align:center;min-width:0}.ta-stats small{display:block;font-size:.7rem;letter-spacing:.12em;margin-bottom:8px;color:#bfb0a4}.ta-stats strong{font-weight:500;font-size:clamp(1.8rem,6vw,3.5rem);font-variant-numeric:tabular-nums;white-space:nowrap;text-shadow:0 0 13px currentColor}#taTime{color:#8fc9ed}#taScore{color:#f0d18f}.ta-foot{font-size:.7rem;letter-spacing:.2em;opacity:.7}
 .ta-blue{color:#9fd5ff!important;text-shadow:0 0 9px #6dbbff!important}
@@ -60,7 +60,7 @@ html.boot .wrap{opacity:0}
 @media(prefers-reduced-motion:reduce){#taHud .ta-pop{animation:none}}
 
 /* Time Attack UI adjustments: original understated manuscript frame. */
-#taHud{background:#11141a;border:1px solid #303640;outline:1px solid #20262f;outline-offset:-10px;box-shadow:none;padding:16px 18px}
+#taHud{background:#11141a;border:1px solid #303640;box-shadow:none;padding:16px 18px}
 #taHud .ta-stats strong{text-shadow:none}
 #taHud .ta-stats small{color:#a9aab0}
 #taPlay{display:grid;place-items:center;flex:none}
@@ -173,7 +173,7 @@ html[data-view="lib"] #taPlay{display:none!important}
 #taHud.ta-hud-demo .ta-stats>div{border-color:rgba(140,143,150,.17)!important;background:rgba(255,255,255,.008);box-shadow:none!important}
 #taHud.ta-hud-demo .ta-stats strong{color:#777b84!important;text-shadow:none!important;opacity:.62}
 #taHud.ta-hud-demo .ta-stats small{color:#777b84!important;opacity:.68}
-#taHud.ta-hud-reveal .ta-stats>div{animation:taHudFrameReveal 1.6s cubic-bezier(.42,0,.58,1) both}
+#taHud.ta-hud-reveal .ta-stats>div:not(.ta-start-frame-glow){animation:taHudFrameReveal 1.6s cubic-bezier(.42,0,.58,1) both}
 #taHud.ta-hud-reveal .ta-stats strong{animation:taHudNumberReveal 1.6s cubic-bezier(.42,0,.58,1) both}
 #taHud.ta-hud-reveal .ta-stats small{animation:taHudLabelReveal 1.6s cubic-bezier(.42,0,.58,1) both}
 @keyframes taHudFrameReveal{
@@ -236,7 +236,7 @@ html[data-view="lib"] #taPlay{display:none!important}
 
 /* Item control layout v2: larger, separated touch targets; compact score/time header. */
 #viewMain>.slip{padding:2px 9px 3px!important}
-#viewMain>.slip #taHud{padding:2px 8px!important;outline-offset:-2px}
+#viewMain>.slip #taHud{padding:2px 8px!important;}
 #viewMain>.slip #taHud .ta-stats{gap:7px}
 #viewMain>.slip #taHud .ta-stats>div{padding:2px 6px 3px!important}
 #viewMain>.slip #taHud .ta-stats small{font-size:.59rem!important;margin-bottom:0!important;line-height:1.05}
@@ -1388,7 +1388,7 @@ header > .hdr-r{grid-column:3;grid-row:1}
 .bix-sec h4 span{font-size:.72rem;font-variant-numeric:tabular-nums}
 .bix-item{display:flex;align-items:baseline;gap:12px;width:100%;text-align:left;border:0;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent);background:none;padding:11px 6px;cursor:pointer;color:var(--ink);font:inherit}
 .bix-item:hover{background:color-mix(in srgb,var(--accent) 9%,transparent)}
-.bix-item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.bix-item:focus-visible{outline:2px solid var(--accent);}
 .bix-no{flex:none;width:2.8em;font-size:.72rem;color:var(--mute);letter-spacing:.08em}
 .bix-tx{min-width:0;display:flex;flex-direction:column;gap:3px}
 .bix-tx b{font-family:var(--mincho);font-weight:600;font-size:.98rem;letter-spacing:.05em;line-height:1.3}
@@ -1503,7 +1503,7 @@ header > .hdr-r{grid-column:3;grid-row:1}
 .dtabs button span{display:block;margin-top:2px;font-family:var(--gothic);font-size:.68rem;font-weight:400;letter-spacing:.1em;opacity:.8}
 .dtabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .dtabs button:hover{color:var(--ink)}
-.dtabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.dtabs button:focus-visible{outline:2px solid var(--accent);}
 .dict.one{grid-template-columns:1fr}
 .dict-sec{min-width:0;padding:20px 22px;border-radius:4px;color:var(--page-ink);background:var(--noise),var(--page);
   box-shadow:1px 1px 0 var(--page-edge),2px 2px 0 var(--page),3px 3px 0 var(--page-edge),0 14px 20px -12px var(--shadow)}
@@ -1514,7 +1514,7 @@ header > .hdr-r{grid-column:3;grid-row:1}
 .dict-item.tap{cursor:pointer;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:4px;transition:background-color .2s}
 .dict-item.tap:hover{background:color-mix(in srgb,var(--page-ink) 6%,transparent)}
 .dict-item.tap:active{background:color-mix(in srgb,var(--page-ink) 10%,transparent)}
-.dict-item.tap:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.dict-item.tap:focus-visible{outline:2px solid var(--accent);}
 .share-box.notitle{padding-top:46px}
 .dict-item dt{font-family:var(--mincho);font-weight:600;font-size:.98rem;letter-spacing:.06em}
 .dict-item dd{margin:4px 0 0;font-family:var(--mincho);font-size:.86rem;line-height:1.8;color:color-mix(in srgb,var(--page-ink) 82%,transparent)}
@@ -1561,7 +1561,7 @@ body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.slip.open .third .ch{opacity:1}.slip.open #l3{-webkit-mask-image:none;mask-image:none}}
 
 /* Time Attack: preserve the original hero and slip geometry and FX */
-#taHud{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:14px 18px;background:#101319;color:#c8ccd3;border:1px solid #252b35;outline:1px solid #1a2029;outline-offset:-9px;box-shadow:inset 0 0 0 7px #101319;box-sizing:border-box;pointer-events:none;font-family:var(--mincho)}
+#taHud{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:14px 18px;background:#101319;color:#c8ccd3;border:1px solid #252b35;box-shadow:inset 0 0 0 7px #101319;box-sizing:border-box;pointer-events:none;font-family:var(--mincho)}
 .ta-head{font-size:.72rem;letter-spacing:.26em;text-align:center}.ta-head span{display:block;font-size:.57rem;opacity:.65;margin-top:7px}
 .ta-stats{display:flex;justify-content:space-around;align-items:center;width:100%;gap:8px}.ta-stats>div{flex:1;text-align:center;min-width:0}.ta-stats small{display:block;font-size:.7rem;letter-spacing:.12em;margin-bottom:8px;color:#bfb0a4}.ta-stats strong{font-weight:500;font-size:clamp(1.8rem,6vw,3.5rem);font-variant-numeric:tabular-nums;white-space:nowrap;text-shadow:0 0 13px currentColor}#taTime{color:#8fc9ed}#taScore{color:#f0d18f}.ta-foot{font-size:.7rem;letter-spacing:.2em;opacity:.7}
 .ta-blue{color:#9fd5ff!important;text-shadow:0 0 9px #6dbbff!important}
@@ -1673,7 +1673,7 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
 /* Elemental items: compact HUD without changing the collection image height. */
 #viewMain{gap:8px}
 #viewMain>.slip{padding:5px 12px 6px;gap:0}
-#viewMain>.slip #taHud{padding:5px 12px;outline-offset:-5px}
+#viewMain>.slip #taHud{padding:5px 12px;}
 #viewMain>.slip #taHud .ta-stats>div{padding:4px 5px 5px}
 #viewMain>.slip #taHud .ta-stats small{font-size:.61rem;margin-bottom:1px}
 #viewMain>.slip #taHud .ta-stats strong{font-size:clamp(1.35rem,4.7vw,2.45rem);line-height:1.15}
@@ -1834,6 +1834,83 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
  }
 }
 </style>
+
+<style id="ta-start-hud-glow-style">
+/* Start-of-run HUD illumination: bright orb-arrival colors, gently settling to the original frames. */
+/* Silver on the HUD shared outermost frame, matching collection/inventory. */
+#taHud.ta-start-outer-silver{animation:taHudOuterSilver 1.6s ease-out both!important}
+/* The parent .slip clips box-shadow on #taHud. Apply outer halo to the
+   actual visible HUD plaque using drop-shadow, which is outside its clip. */
+#viewMain>.slip.ta-start-shared-outer-glow{
+ animation:taSharedOuterVisibleGlow 1.6s ease-out both!important;
+}
+@keyframes taSharedOuterVisibleGlow{
+ 0%{filter:drop-shadow(0 0 11px rgba(210,229,255,.88)) drop-shadow(0 0 5px rgba(241,247,255,.82));}
+ 24%{filter:drop-shadow(0 0 10px rgba(207,228,255,.70)) drop-shadow(0 0 4px rgba(241,247,255,.62));}
+ 100%{filter:drop-shadow(0 0 0 rgba(210,229,255,0));}
+}
+
+@keyframes taHudOuterSilver{
+  /* Match the collection-area and inventory-frame silver illumination exactly. */
+  0%{border-color:rgba(241,247,255,1);box-shadow:0 0 19px 5px rgba(210,229,255,.72),inset 0 0 13px rgba(235,245,255,.46)}
+  24%{border-color:rgba(233,244,255,1);box-shadow:0 0 17px 4px rgba(207,228,255,.61),inset 0 0 11px rgba(235,245,255,.34)}
+  100%{border-color:#303640;box-shadow:none}
+}
+#taHud.ta-hud-reveal #taScoreBox.ta-start-frame-glow,#taHud #taScoreBox.ta-start-frame-glow{animation:taStartScoreFrameGlow 1.6s ease-out both!important}
+#taHud.ta-hud-reveal #taTimeBox.ta-start-frame-glow,#taHud #taTimeBox.ta-start-frame-glow{animation:taStartTimeFrameGlow 1.6s ease-out both!important}
+#viewMain>.ta-items.ta-start-frame-glow{animation:taStartItemFrameGlow 1.6s ease-out both!important}
+/* The floating-letter collection field itself (figure.hero), not the surrounding manuscript. */
+#viewMain>.hero.ta-start-collection-glow{animation:taStartCollectionFrameGlow 1.6s ease-out both!important}
+@keyframes taStartCollectionFrameGlow{
+  0%{border-color:rgba(241,247,255,1);box-shadow:0 0 19px 5px rgba(210,229,255,.72),inset 0 0 13px rgba(235,245,255,.46)}
+  24%{border-color:rgba(233,244,255,1);box-shadow:0 0 17px 4px rgba(207,228,255,.61),inset 0 0 11px rgba(235,245,255,.34)}
+  100%{border-color:var(--line);box-shadow:0 30px 60px -30px color-mix(in srgb,var(--ink) 45%,transparent)}
+}
+
+@keyframes taStartScoreFrameGlow{
+  0%{border-color:rgba(241,247,255,1);box-shadow:0 0 19px 5px rgba(210,229,255,.72),inset 0 0 13px rgba(235,245,255,.46)}
+  24%{border-color:rgba(233,244,255,1);box-shadow:0 0 17px 4px rgba(207,228,255,.61),inset 0 0 11px rgba(235,245,255,.34)}
+  100%{border-color:rgba(235,197,126,.40);box-shadow:none}
+}
+@keyframes taStartTimeFrameGlow{
+  0%{border-color:rgba(155,223,255,1);box-shadow:0 0 18px 5px rgba(107,200,255,.74),inset 0 0 14px rgba(107,200,255,.5)}
+  24%{border-color:rgba(155,223,255,1);box-shadow:0 0 16px 4px rgba(107,200,255,.64),inset 0 0 12px rgba(107,200,255,.4)}
+  100%{border-color:rgba(135,197,236,.40);box-shadow:none}
+}
+@keyframes taStartItemFrameGlow{
+  0%{border-color:rgba(241,247,255,1);box-shadow:0 0 19px 5px rgba(210,229,255,.72),inset 0 0 13px rgba(235,245,255,.46)}
+  24%{border-color:rgba(233,244,255,1);box-shadow:0 0 17px 4px rgba(207,228,255,.61),inset 0 0 11px rgba(235,245,255,.34)}
+  100%{border-color:rgba(187,155,109,.36);box-shadow:0 3px 13px #0003}
+}
+/* A collected silver orb lights the inventory frame when the recharge actually lands. */
+#viewMain>.ta-items.ta-silver-recharge-frame-glow{animation:taStartItemFrameGlow 1.6s ease-out both!important}
+/* START button flashes silver in sync with the orb-stock frame. */
+#taPlay.ta-start-button-silver{animation:taStartButtonSilver 1.6s ease-out both!important}
+@keyframes taStartButtonSilver{
+  0%,15%{color:#fff;border-color:rgba(241,247,255,1);background-color:rgba(217,234,255,.27);box-shadow:0 0 19px 5px rgba(210,229,255,.72),inset 0 0 13px rgba(235,245,255,.46);filter:brightness(1.2)}
+  100%{color:#e7c49a;border-color:rgba(187,155,109,.36);background-color:transparent;box-shadow:none;filter:brightness(1)}
+}
+@media(prefers-reduced-motion:reduce){#taHud.ta-start-outer-silver,#taHud #taScoreBox.ta-start-frame-glow,#taHud #taTimeBox.ta-start-frame-glow,#viewMain>.ta-items.ta-start-frame-glow,#viewMain>.hero.ta-start-collection-glow,#viewMain>.ta-items.ta-silver-recharge-frame-glow{animation:none!important}}
+
+@media(prefers-reduced-motion:reduce){#viewMain>.slip.ta-start-shared-outer-glow{animation:none!important}}
+/* HUD: exactly three visible structural borders (outer HUD, time, score). */
+#viewMain>.slip:has(#taHud)::before{content:none!important;display:none!important}
+#viewMain>.slip:has(#taHud){border-color:transparent!important}
+#viewMain>.slip #taHud{outline:none!important}
+</style>
+
+<style id="ta-result-no-scroll-final">
+/* Keep the entire result card visible without horizontal or vertical scrollbars. */
+#taLaunch{overflow:hidden!important;min-width:0!important;max-width:100vw!important;max-height:100dvh!important;}
+#taLaunch .ta-card{box-sizing:border-box!important;width:min(410px,calc(100vw - 28px))!important;max-width:calc(100vw - 28px)!important;max-height:none!important;overflow:hidden!important;min-width:0!important;}
+#taLaunch .ta-result-art-wrap,#taLaunch .ta-tip-box,#taLaunch .ta-result-stats{max-width:100%;box-sizing:border-box;}
+@media(max-height:720px){#taLaunch .ta-card{zoom:.92;}}
+@media(max-height:640px){#taLaunch .ta-card{zoom:.83;}}
+@media(max-height:570px){#taLaunch .ta-card{zoom:.74;}}
+@media(max-height:490px){#taLaunch .ta-card{zoom:.63;}}
+@media(max-height:410px){#taLaunch .ta-card{zoom:.52;}}
+@media(max-width:380px){#taLaunch .ta-card{padding:18px 16px 19px!important;}}
+</style>
 </head>
 <body>
 <style>
@@ -1841,6 +1918,10 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
 #taTitleScreen{opacity:1;transition:opacity 520ms ease-in-out}
 #taTitleScreen.ta-title-fading{opacity:0;pointer-events:none}
 @media(prefers-reduced-motion:reduce){#taTitleScreen{transition-duration:0ms}}
+/* DEMO collection-area dimmer: fades away smoothly on START. */
+#taDemoShade{position:absolute;inset:0;z-index:4;pointer-events:none;background:rgba(3,7,15,.58);opacity:1;transition:opacity 1800ms ease-in-out;will-change:opacity}
+#taDemoShade.ta-demo-bright{opacity:0}
+@media(prefers-reduced-motion:reduce){#taDemoShade{transition-duration:0ms}}
 </style>
 <div id="taTitleScreen" role="region" aria-label="No Answers タイトル画面"><div class="ta-title-art"><picture class="ta-title-picture"><source media="(max-aspect-ratio:3/4)" srcset="img/ta_title_mobile.jpg?v=clean1031"><img src="img/ta_title_no_petals.png?v=clean1031" alt="No Answers ―言葉の残響― タイトルイラスト"></picture><button type="button" class="ta-title-start" id="taTitleStart" aria-label="はじめる">はじめる</button><div class="ta-title-progress" id="taTitleProgress" hidden><div class="ta-title-progress-fill" id="taTitleProgressFill"></div></div></div></div>
 
@@ -1887,6 +1968,7 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
       </filter>
     </svg>
     <figcaption id="cap" hidden>WHITE YURA</figcaption>
+    <div id="taDemoShade" aria-hidden="true"></div>
     <div class="drift" id="drift" aria-label="漂う言葉"></div>
     <div id="taDemoPlay" hidden aria-hidden="true">DEMO PLAY</div>
     <div class="combo" id="combo" aria-hidden="true">連鎖 <b id="cbn">0</b><em id="cbx"></em><i></i><span class="cpause">一時停止</span></div>
@@ -7560,6 +7642,8 @@ function taSyncDemo(){
   if(slip){slip.classList.toggle('ta-demo-frame',!taRunning&&!taStarting);if(!taRunning&&!taStarting)slip.classList.remove('ta-game-frame');}
   const hud=document.getElementById('taHud');
   if(hud)hud.classList.toggle('ta-hud-demo',!taRunning&&!taStarting);
+  const shade=document.getElementById('taDemoShade');
+  if(shade)shade.classList.toggle('ta-demo-bright',taRunning||taStarting);
   const demo=document.getElementById('taDemoPlay');
   const result=document.getElementById('taLaunch');
   const library=document.getElementById('viewLib');
@@ -7571,6 +7655,7 @@ function taUpdatePlay(){
   const btn=document.getElementById('taPlay');
   const active=taRunning||taStarting;
   btn.classList.toggle('ta-is-running',active);
+  if(!active)btn.classList.remove('ta-start-button-silver');
   if(active)btn.classList.remove('ta-demo-pulse');
   btn.setAttribute('aria-label',active?'ゲームを終了':'タイムアタックを開始');
   btn.title=active?'ゲームを終了':'タイムアタックを開始';
@@ -7582,31 +7667,31 @@ function taUpdatePlay(){
 // Result hints: one per finished record; avoid repeating any of the last three.
 // Text can be replaced without changing the layout or selection logic.
 const taResultHints = [
-  '炎と氷が交わると、何が起こる……？',
-  '緑の力が重なると、言葉の景色も変わっていく。',
-  '言葉が密集したときこそ、一筋の軌跡を探してみよう。',
-  '銀の力には、時の流れを変える秘密がある。',
-  '長い連鎖の先では、夜の景色にも変化が訪れる。',
-  'すばやく触れた言葉には、小さなご褒美があるかもしれない。',
-  '言葉の中心を見極めると、思わぬ力が生まれる。',
-  '二つ、三つ、四つ。まとめて消す意味を探してみよう。',
-  '時間が止まっても、連鎖の可能性は止まらない。',
-  '同じ言葉でも、消し方によって違う表情を見せる。',
-  '緑の力を使ったあとは、画面全体を見渡してみよう。',
-  '炎が走ったあとに残るものにも、目を向けてみよう。',
-  '氷の力は、時間の使い方を変えてくれる。',
-  '連鎖が途切れそうなとき、別の道が見えることもある。',
-  '特別な言葉は、出現した瞬間にも秘密を持つ。',
-  '光の軌跡が重なる瞬間に、思いがけない変化がある。',
-  'たくさんの言葉を一度に消すと、何が起こるだろう。',
-  '画面の隅に残った言葉が、次の連鎖の鍵になる。',
-  '緑の力と氷の力、使う順番も考えてみよう。',
-  '桜が舞う夜には、いつもと違う景色が待っている。',
-  'ひとつの動きで、複数の言葉に触れられる。',
-  '連鎖を重ねるほど、静かな変化に気づくかもしれない。',
-  '赤と青の力には、まだ別の使い道がある。',
-  '一瞬の判断が、思いがけない得点につながる。',
-  '見慣れた演出の中にも、まだ知らない仕組みが隠れている。'
+  '炎と氷を交わらせると、何が起こる……？',
+  '炎と氷の力を借りて、時計を描いてみよう。',
+  '時計には、円だけでなく二本の針が必要だ。',
+  '時が止まれば、連鎖の時間も止まる。',
+  '二つの力を交差させると、画面を貫く光が生まれる。',
+  '特殊技と緑玉を組み合わせれば、一度に多くの言葉を集められる。',
+  '連鎖が続くほど、次の一手が大切になる。',
+  '一つずつ消すだけでなく、指を滑らせて言葉をつなごう。',
+  '連鎖が途切れそうなときこそ、特殊な玉の使いどころ。',
+  '100連鎖の先には、夜明けが待っている。',
+  '時間を増やす方法は、ただ速く消すことだけではない。',
+  '時を止めれば、焦らず次の言葉を探せる。',
+  '時間停止中も、言葉を集める手を止める必要はない。',
+  '時間停止の解除後を考えて、次の言葉を選ぼう。',
+  '残り時間が少ないとき、特殊技が逆転の鍵になるかもしれない。',
+  '言葉が現れた瞬間を逃さなければ、「神速」が応える。',
+  '画面の中央を狙うと、「心眼」が目覚めることがある。',
+  '二つ、三つ、四つ……まとめて消すほど「一閃」は鋭くなる。',
+  '同じ言葉でも、消し方によって得点が変わる。',
+  '特殊技の一撃は、大量得点のきっかけになる。',
+  '連鎖だけでなく、一つひとつの消し方にも技が隠されている。',
+  '赤玉と青玉は、組み合わせ次第で異なる力を生む。',
+  '緑玉は、失われた言葉を呼び戻す力を持つ。',
+  '白銀玉は、特別な力を補充する貴重な玉。',
+  '玉を使う順番を変えると、思いがけない技が生まれるかもしれない。'
 ];
 function taPickResultHint(){
   const node=document.getElementById('taResultTip');
@@ -7702,6 +7787,17 @@ function taBeginReady(){
   void hud.offsetWidth;
   hud.classList.add('ta-hud-reveal');
   taUpdatePlay();
+  // Visual start cue only: all three frames glow together, then fade to their normal colors.
+  const startGlowFrames=[document.getElementById('taTimeBox'),document.querySelector('#viewMain>.ta-items'),document.querySelector('#viewMain>.hero')].filter(Boolean);
+  hud.classList.remove('ta-start-outer-silver');void hud.offsetWidth;hud.classList.add('ta-start-outer-silver');
+  const hudPlaque=hud.closest('.slip');
+  if(hudPlaque){hudPlaque.classList.remove('ta-start-shared-outer-glow');void hudPlaque.offsetWidth;hudPlaque.classList.add('ta-start-shared-outer-glow');}
+
+  startGlowFrames.forEach(el=>{const cls=el.matches('.hero')?'ta-start-collection-glow':'ta-start-frame-glow';el.classList.remove(cls);void el.offsetWidth;el.classList.add(cls);});
+  const startButton=document.getElementById('taPlay');
+  startButton.classList.remove('ta-start-button-silver');void startButton.offsetWidth;startButton.classList.add('ta-start-button-silver');
+  const glowToken=taFinishToken;
+  setTimeout(()=>{if(glowToken===taFinishToken){startGlowFrames.forEach(el=>el.classList.remove(el.matches('.hero')?'ta-start-collection-glow':'ta-start-frame-glow'));startButton.classList.remove('ta-start-button-silver');hud.classList.remove('ta-start-outer-silver');if(hudPlaque)hudPlaque.classList.remove('ta-start-shared-outer-glow');}},1650);
   const revealToken=taFinishToken;
   setTimeout(()=>{if(revealToken===taFinishToken){manuscript.classList.remove('ta-soft-reveal');manuscript.classList.add('ta-game-frame');hud.classList.remove('ta-hud-reveal');}},1600);
   document.getElementById('taLaunch').hidden=true;
@@ -8167,7 +8263,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const maxX=Math.max(minX,f.right-r.left),maxY=Math.max(minY,f.bottom-r.top);
   return{x:Math.max(minX,Math.min(maxX,e.clientX-r.left)),y:Math.max(minY,Math.min(maxY,e.clientY-r.top))};};
  function cancelStartup(){startupGeneration++;startupTimers.forEach(clearTimeout);startupTimers=[];ui.classList.remove('ta-items-revealing');}
- document.addEventListener('ta-item-reset',()=>{cancelStartup();clearRechargeTimers();usesLeft=0;previousPips=0;clear();sync();});
+ document.addEventListener('ta-item-reset',()=>{clearTimeout(ui._taSilverFrameTimer);ui.classList.remove('ta-silver-recharge-frame-glow');cancelStartup();clearRechargeTimers();usesLeft=0;previousPips=0;clear();sync();});
  document.addEventListener('ta-item-start-activate',()=>{
   cancelStartup();usesLeft=0;previousPips=0;
   pipNodes.forEach(p=>p.classList.remove('burning-out','ta-item-pip-recharged'));
@@ -8196,7 +8292,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   rechargeAnimations.forEach(entry=>{entry.animation.cancel();entry.element.remove();});
   rechargeAnimations.clear();
  }
- function grantItemWithRing(visualDelay=0){
+ function grantItemWithRing(visualDelay=0,fromSilverOrb=false){
   if(!active()||usesLeft+pendingRecharges.size>=MAX_USES)return false;
   const generation=rechargeGeneration;
   const entry={timer:null,animation:null,ring:null};
@@ -8208,6 +8304,13 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
     const pip=pipNodes[usesLeft];
     usesLeft++;sync();
     sfx.refill(); // Ring has landed; stock is actually credited.
+    if(fromSilverOrb){
+     ui.classList.remove('ta-silver-recharge-frame-glow');
+     void ui.offsetWidth;
+     ui.classList.add('ta-silver-recharge-frame-glow');
+     clearTimeout(ui._taSilverFrameTimer);
+     ui._taSilverFrameTimer=setTimeout(()=>ui.classList.remove('ta-silver-recharge-frame-glow'),1650);
+    }
     const counter=ui.querySelector('.ta-item-counter');
     if(counter){counter.classList.remove('ta-item-bonus-flash');void counter.offsetWidth;counter.classList.add('ta-item-bonus-flash');}
     pip.classList.remove('ta-item-pip-recharged');void pip.offsetWidth;pip.classList.add('ta-item-pip-recharged');
@@ -8245,7 +8348,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  }
  document.addEventListener('ta-item-score-recharge',()=>{
   // Score milestones are consumed even at capacity; no visual recharge at five.
-  if(usesLeft+pendingRecharges.size<MAX_USES)grantItemWithRing();
+  if(usesLeft+pendingRecharges.size<MAX_USES)grantItemWithRing(0,true);
  });
 
  // One neutral collectible orb appears every 20-30 seconds of active game time.
@@ -8348,7 +8451,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   try{sfx.boon();sfx.pickupShimmer();}catch(_){}
   // A full inventory still allows collecting and bursting the field orb,
   // but does not schedule a recharge ring or illuminate an inventory pip.
-  if(usesLeft+pendingRecharges.size<MAX_USES)grantItemWithRing(430);
+  if(usesLeft+pendingRecharges.size<MAX_USES)grantItemWithRing(430,true);
  }
  document.addEventListener('pointermove',e=>{
   if(!rewardOrb||!(e.buttons&1))return;
