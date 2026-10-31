@@ -8384,8 +8384,8 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   centers.forEach((c,i)=>{
    const suppressDecor=(taMobileFx&&crossBursts.length>0)||dualActive;
    if(!suppressDecor){
-    const fragments=Array.from({length:taMobileFx?6:18},(_,j)=>({angle:Math.random()*Math.PI*2,radius:27+Math.random()*68,phase:Math.random()*6.28,size:.6+Math.random()*1.7,kind:j%5===0?'glyph':'spark'}));
-    summonBursts.push({x:c.x,y:c.y,start:performance.now()+i*57,fragments});
+    const fragments=Array.from({length:taMobileFx?3:18},(_,j)=>({angle:Math.random()*Math.PI*2,radius:27+Math.random()*68,phase:Math.random()*6.28,size:.6+Math.random()*1.7,kind:j%5===0?'glyph':'spark'}));
+    if(!taMobileFx||summonBursts.length<20)summonBursts.push({x:c.x,y:c.y,start:performance.now()+i*(taMobileFx?85:57),fragments});
    }
    summonTimers.push(setTimeout(()=>{
     if(!active()||typeof spawnWord!=='function')return;
@@ -8403,7 +8403,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
     // A single animation owns opacity, transform and glow for the whole lifetime.
     // Avoid a separate WAAPI animation reverting to drift's initial (invisible) frame.
     w.classList.add('ta-summoned-word');
-   },210+i*57));
+   },210+i*(taMobileFx?85:57)));
   });
   if(taPerfEnabled)taPerfCost('green',performance.now()-taGreenStarted);
   // A small expanding pressure-wave makes the spell feel powerful without an RPG magic circle.
@@ -8836,19 +8836,21 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   ctx.save();ctx.globalCompositeOperation='screen';
   for(let si=0;si<f.segs.length;si++){
    const seg=f.segs[si],a=seg[0],b=seg[1],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
-   const steps=Math.max(2,Math.ceil(L/(taMobileFx?22:13)));
+   const steps=Math.max(2,Math.ceil(L/(taMobileFx?34:13)));
    for(let j=0;j<=steps;j++){
     const t=j/steps,pt=fxPoint(seg,t),seed=si*307+j*41,sz=(9+hash(seed+2)*23)*taFxScale;
     const drift=Math.sin(now*.0018+seed)*1.8;
-    const frost=ctx.createRadialGradient(pt.x,pt.y,0,pt.x,pt.y,sz*1.8);
+    if(taMobileFx){ctx.globalAlpha=alpha*.16;ctx.fillStyle='#8bd8fa';ctx.beginPath();ctx.arc(pt.x,pt.y,sz*1.12,0,Math.PI*2);ctx.fill();}
+    else{const frost=ctx.createRadialGradient(pt.x,pt.y,0,pt.x,pt.y,sz*1.8);
     frost.addColorStop(0,'rgba(205,242,255,.24)');frost.addColorStop(.48,'rgba(83,164,201,.12)');frost.addColorStop(1,'rgba(65,140,190,0)');
-    ctx.globalAlpha=alpha;ctx.fillStyle=frost;ctx.beginPath();ctx.arc(pt.x,pt.y,sz*1.8,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=alpha;ctx.fillStyle=frost;ctx.beginPath();ctx.arc(pt.x,pt.y,sz*1.8,0,Math.PI*2);ctx.fill();}
     for(let side=-1;side<=1;side+=2){
      const height=sz*(.65+hash(seed+side+10)*.85),lean=(hash(seed+side+30)-.5)*sz*.9;
      const bx=pt.x+nx*side*sz*.18,by=pt.y+ny*side*sz*.18;
      const tx=bx+nx*side*height+lean+drift,ty=by+ny*side*height-height*.26;
-     const shard=ctx.createLinearGradient(bx,by,tx,ty);
-     shard.addColorStop(0,'rgba(188,239,255,.45)');shard.addColorStop(.45,'rgba(86,179,223,.32)');shard.addColorStop(1,'rgba(236,253,255,.75)');
+     let shard;if(taMobileFx){shard='rgba(156,224,252,.52)';}
+     else{shard=ctx.createLinearGradient(bx,by,tx,ty);
+     shard.addColorStop(0,'rgba(188,239,255,.45)');shard.addColorStop(.45,'rgba(86,179,223,.32)');shard.addColorStop(1,'rgba(236,253,255,.75)');}
      ctx.globalAlpha=alpha*.8;ctx.fillStyle=shard;ctx.strokeStyle='rgba(221,249,255,.55)';ctx.lineWidth=.6;
      ctx.beginPath();ctx.moveTo(bx-sz*.35,by+sz*.12);ctx.lineTo(tx,ty);ctx.lineTo(bx+sz*.32,by-sz*.1);ctx.lineTo(bx+nx*side*sz*.24,by+ny*side*sz*.24);ctx.closePath();ctx.fill();ctx.stroke();
      ctx.strokeStyle='rgba(245,255,255,.43)';ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(bx+nx*side*sz*.24,by+ny*side*sz*.24);ctx.stroke();
