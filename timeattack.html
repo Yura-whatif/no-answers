@@ -1919,7 +1919,7 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
 #taTitleScreen.ta-title-fading{opacity:0;pointer-events:none}
 @media(prefers-reduced-motion:reduce){#taTitleScreen{transition-duration:0ms}}
 /* DEMO collection-area dimmer: fades away smoothly on START. */
-#taDemoShade{position:absolute;inset:0;z-index:4;pointer-events:none;background:rgba(3,7,15,.58);opacity:1;transition:opacity 1800ms ease-in-out;will-change:opacity}
+#taDemoShade{position:absolute;inset:0;z-index:1;pointer-events:none;background:rgba(3,7,15,.58);opacity:1;transition:opacity 1800ms ease-in-out;will-change:opacity}
 #taDemoShade.ta-demo-bright{opacity:0}
 @media(prefers-reduced-motion:reduce){#taDemoShade{transition-duration:0ms}}
 </style>
@@ -7976,7 +7976,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
 /* Residual elemental traces: fire collects; ice instantly shatters for +0.5s. */
 (()=>{
  const field=document.getElementById('drift'),hero=field&&field.closest('.hero');if(!field||!hero)return;
- const ui=document.createElement('div');ui.className='ta-items';ui.innerHTML='<span class="ta-items-label">ITEM</span><button class="ta-orb fire" type="button" data-orb="fire" aria-label="赤玉・炎" aria-pressed="false">🔥</button><button class="ta-orb ice" type="button" data-orb="ice" aria-label="青玉・氷" aria-pressed="false">❄</button><button class="ta-orb summon" type="button" data-orb="summon" aria-label="緑玉・言霊召喚" aria-pressed="false">✧</button><span class="ta-item-counter" aria-live="polite"><b id="taItemRemaining">5</b><small>/5</small><span class="ta-item-pips" aria-hidden="true"></span></span>';
+ const ui=document.createElement('div');ui.className='ta-items';ui.innerHTML='<span class="ta-items-label">ITEM</span><button class="ta-orb fire" type="button" data-orb="fire" aria-label="赤玉・炎" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>🔥</button><button class="ta-orb ice" type="button" data-orb="ice" aria-label="青玉・氷" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>❄</button><button class="ta-orb summon" type="button" data-orb="summon" aria-label="緑玉・言霊召喚" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>✧</button><span class="ta-item-counter" aria-live="polite"><b id="taItemRemaining">5</b><small>/5</small><span class="ta-item-pips" aria-hidden="true"></span></span>';
  hero.insertAdjacentElement('afterend',ui);
  // The initial fit runs before the orb bar exists; fit again after insertion.
  requestAnimationFrame(()=>{ if(typeof fitLayout==='function') fitLayout(); });
@@ -9361,6 +9361,149 @@ body>.ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!importa
   guide.addEventListener('click',()=>showGuide(true));
 })();
 </script>
+
+<style id="ta-demo-background-only-orb-slow-spin-v1">
+/* DEMO: the darkening layer stays behind floating words and overlays. */
+#viewMain>.hero>#taDemoShade{z-index:1!important}
+#viewMain>.hero>.drift{z-index:2}
+/* Spin artwork, not the button or the selection ring; enabled inventory only. */
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon){background-image:none!important}
+#viewMain>.ta-items .ta-orb .ta-orb-rotating-art{position:absolute;inset:0;display:block;border-radius:50%;pointer-events:none;background-position:center;background-size:100% 100%;background-repeat:no-repeat;animation:taInventoryOrbSlowSpin 14s linear infinite;will-change:transform;z-index:-1}
+#viewMain>.ta-items .ta-orb.fire .ta-orb-rotating-art{background-image:url('assets/timeattack/orb-fire.png')}
+#viewMain>.ta-items .ta-orb.ice .ta-orb-rotating-art{background-image:url('assets/timeattack/orb-ice.png')}
+#viewMain>.ta-items .ta-orb.summon .ta-orb-rotating-art{background-image:url('assets/timeattack/orb-summon.png')}
+#viewMain>.ta-items .ta-orb:disabled .ta-orb-rotating-art{animation-play-state:paused}
+@keyframes taInventoryOrbSlowSpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#viewMain>.ta-items .ta-orb .ta-orb-rotating-art{animation:none}}
+</style>
+
+<style id="ta-orb-horizontal-sphere-rotation-v2">
+/* Keep the spherical silhouette fixed. Animate the internal meridians horizontally. */
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon){isolation:isolate!important;overflow:hidden!important}
+#viewMain>.ta-items .ta-orb .ta-orb-rotating-art{
+  z-index:0!important;inset:2px!important;overflow:hidden!important;
+  transform:none!important;animation:none!important;
+  border-radius:50%!important;box-shadow:inset -5px -5px 9px rgba(0,0,0,.42),inset 3px 3px 6px rgba(255,255,255,.23);
+}
+/* A transparent pattern traverses the illuminated sphere. Edge shading never rotates. */
+#viewMain>.ta-items .ta-orb .ta-orb-rotating-art::before{
+  content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  background-image:repeating-linear-gradient(90deg,transparent 0%,rgba(255,255,255,.06) 7%,rgba(255,255,255,.25) 11%,rgba(10,10,30,.14) 16%,transparent 23%),radial-gradient(ellipse 24% 78% at 50% 48%,rgba(255,255,255,.26),transparent 95%);
+  background-size:220% 100%,210% 100%;background-position:0% 50%,0% 50%;
+  animation:taOrbSurfaceTurnY 14s linear infinite;
+  mask-image:radial-gradient(ellipse at center,#000 58%,transparent 98%);
+}
+#viewMain>.ta-items .ta-orb .ta-orb-rotating-art::after{
+  content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  background:radial-gradient(ellipse at 28% 20%,rgba(255,255,255,.50),transparent 34%),radial-gradient(ellipse at 77% 68%,transparent 43%,rgba(0,0,0,.38) 100%);
+}
+#viewMain>.ta-items .ta-orb:disabled .ta-orb-rotating-art::before{animation-play-state:paused!important}
+@keyframes taOrbSurfaceTurnY{from{background-position:0% 50%,0% 50%}to{background-position:100% 50%,100% 50%}}
+@media(prefers-reduced-motion:reduce){#viewMain>.ta-items .ta-orb .ta-orb-rotating-art::before{animation:none!important}}
+</style>
+<style id="ta-orb-spherical-mapping-v3">
+/* A real spherical projection: the sphere silhouette and specular light stay still. */
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon){font-size:0!important;overflow:hidden!important;isolation:isolate!important;background-image:none!important}
+#viewMain>.ta-items .ta-orb .ta-orb-rotating-art{display:none!important}
+#viewMain>.ta-items .ta-orb canvas.ta-sphere-surface{position:absolute!important;inset:1px!important;width:calc(100% - 2px)!important;height:calc(100% - 2px)!important;border-radius:50%!important;pointer-events:none!important;z-index:0!important}
+@media(prefers-reduced-motion:reduce){#viewMain>.ta-items .ta-orb canvas.ta-sphere-surface{animation:none!important}}
+</style>
+<script id="ta-orb-spherical-mapping-script-v3">
+(()=>{
+'use strict';
+const W=72,H=72,TW=256,TH=128,PERIOD=16000,INTERVAL=55;
+const palette={fire:[255,64,32],ice:[47,174,255],summon:[55,238,139]};
+const clamp=(x)=>Math.max(0,Math.min(255,x));
+const texture=(base,seed)=>{
+ const arr=new Uint8ClampedArray(TW*TH*3);
+ for(let y=0;y<TH;y++)for(let x=0;x<TW;x++){
+  const u=x/TW*Math.PI*2,v=y/TH*Math.PI;
+  // All longitude terms are periodic: no seam at the full rotation.
+  const a=Math.sin(3*u+2.7*Math.cos(2*v+seed));
+  const b=Math.sin(7*u-3*v+seed)*Math.cos(2*u+4*v);
+  const c=Math.cos(11*u+5*Math.sin(v*3+seed));
+  const ribbon=Math.pow(Math.max(0,Math.sin(4*u+3*Math.sin(v*2+seed))),5);
+  const f=.47+.18*a+.13*b+.09*c+.31*ribbon;
+  const p=(y*TW+x)*3;
+  for(let k=0;k<3;k++)arr[p+k]=clamp(base[k]*(.45+f*.65)+ribbon*(k===0?58:82));
+ }
+ return arr;
+};
+const cache=Object.fromEntries(Object.entries(palette).map(([key,base],i)=>[key,texture(base,i*1.8)]));
+const mapping=[];
+for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+ const nx=(x+.5-W/2)/(W/2-1),ny=(y+.5-H/2)/(H/2-1),r=nx*nx+ny*ny;
+ if(r>=1){mapping.push(null);continue}
+ const nz=Math.sqrt(1-r),lat=Math.asin(-ny),lon=Math.atan2(nx,nz);
+ const shade=.39+.63*Math.max(0,nz*.78-nx*.36-ny*.32);
+ const spec=Math.pow(Math.max(0,nx*(-.42)+ny*(-.57)+nz*.71),26)*.78;
+ const edge=Math.pow(1-nz,2)*.35;
+ mapping.push([lon,Math.max(0,Math.min(TH-1,Math.floor((.5-lat/Math.PI)*TH))),shade,spec,edge]);
+}
+const states=[];
+function setup(){
+ document.querySelectorAll('#viewMain>.ta-items .ta-orb.fire,#viewMain>.ta-items .ta-orb.ice,#viewMain>.ta-items .ta-orb.summon').forEach((button)=>{
+  if(button.querySelector('canvas.ta-sphere-surface'))return;
+  const kind=button.classList.contains('fire')?'fire':button.classList.contains('ice')?'ice':'summon';
+  const canvas=document.createElement('canvas');canvas.className='ta-sphere-surface';canvas.width=W;canvas.height=H;canvas.setAttribute('aria-hidden','true');
+  button.insertBefore(canvas,button.firstChild);
+  const ctx=canvas.getContext('2d',{alpha:true});if(ctx)states.push({button,ctx,img:ctx.createImageData(W,H),tex:cache[kind]});
+ });
+}
+function draw(state,phase){
+ const {img,tex,ctx}=state,d=img.data;
+ const base=state.button.classList.contains('fire')?[255,62,32]:state.button.classList.contains('ice')?[42,163,255]:[36,238,119];
+ const offset=phase*TW,twopi=Math.PI*2;
+ for(let i=0;i<mapping.length;i++){
+  const p=i*4,m=mapping[i];if(!m){d[p+3]=0;continue}
+  const x=(i%W+.5-W/2)/(W/2-1),y=(Math.floor(i/W)+.5-H/2)/(H/2-1),r=Math.hypot(x,y);
+  const [lon,ty]=m;
+  const tx=((Math.floor((lon/twopi+.5)*TW+offset)%TW)+TW)%TW;
+  const ti=(ty*TW+tx)*3;
+  const wave=(tex[ti]+tex[ti+1]+tex[ti+2])/765;
+  // Clear glass, not a dark opaque body. The rotating texture becomes translucent energy filaments.
+  const inner=Math.exp(-((x*.96)**2+(y*.96)**2)/.25);
+  const hot=Math.exp(-((x+.015)**2+(y+.018)**2)/.024);
+  const shell=Math.exp(-Math.pow((r-.91)/.065,2));
+  const reflection=Math.exp(-((x+.40)**2/.027+(y+.47)**2/.09));
+  const rotating=(.5+.5*Math.sin(9*lon+offset/TW*twopi*5+7*y+Math.sin(5*lon-4*y)));
+  const filament=Math.pow(rotating,9)*Math.exp(-r*r/.72)*(0.5+wave);
+  const energy=Math.min(1,.20*inner+.40*filament+.88*hot);
+  const alpha=Math.max(0,Math.min(1,(1-r)*9))*(.11+.40*inner+.30*filament+.35*shell+.8*hot);
+  const whiten=Math.min(1,hot*1.1+reflection*.8);
+  for(let k=0;k<3;k++)d[p+k]=clamp(base[k]*(.60+.60*energy)*(1-whiten)+255*whiten);
+  d[p+3]=Math.round(255*Math.min(.97,alpha));
+ }
+ ctx.putImageData(img,0,0);
+ // Source-over glow and radiant heart, deliberately outside the image-data pixel layer.
+ ctx.save();ctx.globalCompositeOperation='screen';
+ const glow=ctx.createRadialGradient(W*.5,H*.5,0,W*.5,H*.5,W*.48);
+ glow.addColorStop(0,'rgba(255,255,255,.98)');
+ glow.addColorStop(.085,`rgba(${base.join(',')},.96)`);
+ glow.addColorStop(.26,`rgba(${base.join(',')},.48)`);
+ glow.addColorStop(.60,`rgba(${base.join(',')},.13)`);
+ glow.addColorStop(1,'rgba(0,0,0,0)');
+ ctx.fillStyle=glow;ctx.beginPath();ctx.arc(W/2,H/2,W*.48,0,twopi);ctx.fill();
+ ctx.restore();
+}
+let last=0;
+function frame(now){
+ if(now-last>=INTERVAL){
+  setup();
+  const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const phase=reduce?0:(now%PERIOD)/PERIOD;
+  for(const state of states){
+   if(!state.button.isConnected)continue;
+   if(state.button.disabled){if(!state.drawn){draw(state,phase);state.drawn=true}continue}
+   state.drawn=false;draw(state,phase);
+  }
+  last=now;
+ }
+ requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
 </body>
 <style>
 /* Readable thousand-point popup labels in the collection area. */
@@ -9368,6 +9511,30 @@ body>.ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!importa
 .oddplus{font-size:clamp(.78rem,3.4vw,1.45rem)!important;max-width:min(90vw,380px);white-space:nowrap;}
 </style>
 
+
+<style id="ta-orb-inner-radiance-v4">
+/* Light originates within the orb and diffuses outward. Preserve the rotating spherical map. */
+#viewMain>.ta-items .ta-orb.fire{--ta-aura-rgb:255,61,42!important}
+#viewMain>.ta-items .ta-orb.ice{--ta-aura-rgb:40,151,255!important}
+#viewMain>.ta-items .ta-orb.summon{--ta-aura-rgb:39,235,129!important}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon){
+ border-color:transparent!important;
+ background:radial-gradient(circle at 48% 46%,rgba(255,255,255,.17) 0%,rgba(var(--ta-aura-rgb),.32) 31%,rgba(var(--ta-aura-rgb),.16) 59%,transparent 79%)!important;
+ box-shadow:0 0 7px 2px rgba(var(--ta-aura-rgb),.40),0 0 16px 5px rgba(var(--ta-aura-rgb),.19),0 0 26px 8px rgba(var(--ta-aura-rgb),.08)!important;
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon)::before{
+ inset:-15px!important;
+ background:radial-gradient(circle,rgba(var(--ta-aura-rgb),.35) 0%,rgba(var(--ta-aura-rgb),.25) 31%,rgba(var(--ta-aura-rgb),.12) 52%,transparent 79%)!important;
+ opacity:.9!important;
+}
+#viewMain>.ta-items .ta-orb canvas.ta-sphere-surface{
+ inset:0!important;width:100%!important;height:100%!important;
+ border-radius:50%!important;
+ filter:saturate(1.18) brightness(1.12) drop-shadow(0 0 4px rgba(var(--ta-aura-rgb),.5))!important;
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled{box-shadow:none!important}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled::before{opacity:0!important}
+</style>
 </html>
 
 <style>/* 連鎖レベルは未採用。倍率計算は維持し、レベル表記のみ非表示 */
@@ -9589,3 +9756,61 @@ html.ta-result-locked #taLaunch{pointer-events:auto!important}
 .oddplus{font-size:clamp(.78rem,3.4vw,1.45rem)!important;max-width:min(90vw,380px);white-space:nowrap;}
 </style>
 
+
+<style id="ta-orb-energy-aura-final-v5">
+/* Deliberately last: the late illustration-selection style previously restored
+   the old orb PNG over the rotating sphere canvas. */
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon){
+  background-image:none!important;
+  background-color:transparent!important;
+  border:0!important;
+  overflow:visible!important;
+  filter:none!important;
+  --energy-rgb:255,88,52;
+  box-shadow:0 0 8px 2px rgba(var(--energy-rgb),.48),
+             0 0 18px 5px rgba(var(--energy-rgb),.27),
+             0 0 29px 8px rgba(var(--energy-rgb),.10)!important;
+}
+#viewMain>.ta-items .ta-orb.ice{--energy-rgb:40,158,255}
+#viewMain>.ta-items .ta-orb.summon{--energy-rgb:30,238,130}
+#viewMain>.ta-items .ta-orb canvas.ta-sphere-surface{
+  inset:0!important;width:100%!important;height:100%!important;
+  border-radius:50%!important;
+  mask-image:radial-gradient(circle,black 0%,black 59%,rgba(0,0,0,.78) 73%,transparent 99%)!important;
+  -webkit-mask-image:radial-gradient(circle,black 0%,black 59%,rgba(0,0,0,.78) 73%,transparent 99%)!important;
+  filter:saturate(1.25) brightness(1.12) drop-shadow(0 0 5px rgba(var(--energy-rgb),.52))!important;
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled{
+  box-shadow:none!important;
+}
+/* Keep the original selected-item ring and arrow above the new aura. */
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon)[aria-pressed="true"]{
+  box-shadow:0 0 10px 3px rgba(var(--energy-rgb),.6),
+             0 0 24px 8px rgba(var(--energy-rgb),.26)!important;
+}
+</style>
+
+<style id="ta-orb-glass-lantern-v6">
+/* Glass lanterns: clear shell, soft colored flame, floating halo, subtle orbital arcs. */
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon){
+  --energy-rgb:255,73,42;
+  background:radial-gradient(circle at 33% 22%,rgba(255,255,255,.17),transparent 22%),radial-gradient(circle at 50% 55%,rgba(var(--energy-rgb),.13),transparent 69%)!important;
+  border:1px solid rgba(225,237,255,.24)!important;
+  border-radius:50%!important;
+  box-shadow:inset -3px -5px 8px rgba(0,0,0,.15),inset 2px 3px 5px rgba(255,255,255,.14),0 0 9px 2px rgba(var(--energy-rgb),.55),0 0 22px 6px rgba(var(--energy-rgb),.27),0 0 32px 8px rgba(var(--energy-rgb),.12)!important;
+}
+#viewMain>.ta-items .ta-orb.ice{--energy-rgb:35,156,255}
+#viewMain>.ta-items .ta-orb.summon{--energy-rgb:36,236,112}
+#viewMain>.ta-items .ta-orb canvas.ta-sphere-surface{
+  mask-image:radial-gradient(circle,black 0%,black 79%,rgba(0,0,0,.68) 91%,transparent 100%)!important;
+  -webkit-mask-image:radial-gradient(circle,black 0%,black 79%,rgba(0,0,0,.68) 91%,transparent 100%)!important;
+  filter:drop-shadow(0 0 4px rgba(var(--energy-rgb),.85))!important;
+}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled{box-shadow:none!important;opacity:.55}
+</style>
+
+<style id="ta-orb-glass-heart-v6">
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon){background:transparent!important;border:0!important;overflow:visible!important;box-shadow:0 0 9px 2px rgba(var(--energy-rgb),.28),0 0 20px 6px rgba(var(--energy-rgb),.13)!important}
+#viewMain>.ta-items .ta-orb canvas.ta-sphere-surface{opacity:1!important;mask-image:none!important;-webkit-mask-image:none!important;filter:drop-shadow(0 0 4px rgba(var(--energy-rgb),.7)) brightness(1.28)!important}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled{box-shadow:none!important}
+</style>
