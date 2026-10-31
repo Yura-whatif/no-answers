@@ -4789,6 +4789,10 @@ function spawnLoop(){
   setTimeout(spawnLoop, flood ? 430 : (taRunning ? 240+Math.random()*210 : 520+Math.random()*340));
 }
 
+// Shared across spawned words: dense-swipe detection must not reset for each word.
+let taSwipeBurstWindow=0,taSwipeBurstCount=0,taSwipeLastTouch=0,taSwipeLastArrivalSound=0;
+// Mobile: a dense sweep needs fewer overlapping visual/audio voices. Gameplay stays synchronous.
+let taMobileSwipeSoundWindow=0;
 function spawnWord(opt = {}){
   if(!taRunning && !taStarting) opt = {...opt, plain:true}; // DEMO: ordinary / time-extension words only
   const field = $("drift");
@@ -4845,7 +4849,6 @@ function spawnWord(opt = {}){
   if(!vortex && !crack) setTimeout(()=>w.isConnected && !w.classList.contains("got") && !w.dataset.frozen && !w.classList.contains("still") && w.remove(), lifeMs);
   // Mobile burst guard: preserve every hit and award, but bound simultaneous
   // DOM animations and audio voices when a dense emerald swarm is swiped.
-  let taSwipeBurstWindow=0,taSwipeBurstCount=0,taSwipeLastTouch=0;
   w.addEventListener("click", e => {
     e.stopPropagation();
     if(w.classList.contains("vortex") || w.classList.contains("crack")) return;   // 渦は長押し、ひびは専用の処理で使う
@@ -4857,9 +4860,10 @@ function spawnWord(opt = {}){
     const taNow=performance.now();
     if(taNow-taSwipeBurstWindow>450){taSwipeBurstWindow=taNow;taSwipeBurstCount=0;}
     taSwipeBurstCount++;
-    const taDenseSwipe=taCoarse && !!w.dataset.swiped && taSwipeBurstCount>5;
+    // Keep early hits expressive; omit overlapping effects after the fifth hit.
+    const taDenseSwipe=taCoarse && !!w.dataset.swiped && taSwipeBurstCount>2;
     // Do not start a separate oscillator for every word in a rapid swipe.
-    if(!taDenseSwipe || taNow-taSwipeLastTouch>115){sfx.touch();taSwipeLastTouch=taNow;}
+    if(!taDenseSwipe || taNow-taSwipeLastTouch>210){sfx.touch();taSwipeLastTouch=taNow;}
     // 100連鎖以降も通常時と同じタップ音
     const isOdd = w.classList.contains("odd"); if(isOdd) track("odd", "逆さまの言葉");
     if(w.classList.contains("pull")){ const rr = w.getBoundingClientRect(); pullAll(rr.left + rr.width/2, rr.top + rr.height/2, w); }
@@ -4873,7 +4877,14 @@ function spawnWord(opt = {}){
     const taTime = w.dataset.taTime === "1";
     const fireScore = w.dataset.taFireScore === "1" && !taTime;
     const taPoints = fireScore ? 2 : Math.max(1,cm) * (glowRemain>0?2:1);
-    const moonBoostAtCollect=mode==='black'&&glowRemain>0;const arrive = () => { taAward(taTime,taPoints,false,moonBoostAtCollect); sfx.arrive(); };
+    const moonBoostAtCollect=mode==='black'&&glowRemain>0;
+    const arrive = () => {
+      // All points and seconds are credited. Dense, overlapping arrivals
+      // share one audible cue and omit unreadable score popups/reflows.
+      taAward(taTime,taPoints,taDenseSwipe,moonBoostAtCollect,taDenseSwipe);
+      const at=performance.now();
+      if(!taDenseSwipe || at-taSwipeLastArrivalSound>260){sfx.arrive();taSwipeLastArrivalSound=at;}
+    };
     if(taDenseSwipe){
       // Keep the original arrival delay, score, time and combo semantics.
       // Skip only redundant per-word flying clones, blur, mist and orbs.
@@ -7454,7 +7465,7 @@ function taStyleRewardOrb(orb,isTime,boosted=false){
   if(boosted)orb.classList.add('ta-reward-boost');
   return orb;
 }
-function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null){if(!taRunning)return;const id=isTime?'taTime':'taScore';const taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect)?2:1)):0;if(isTime)taSeconds+=taTimeGain;else {taScore+=pts;taScoreRefresh();}taRender();const el=document.getElementById(id);el.classList.remove('ta-pop');void el.offsetWidth;el.classList.add('ta-pop');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}if(suppressPlus)return;const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+taTimeGain+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
+function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null){if(!taRunning)return;const id=isTime?'taTime':'taScore';const taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect)?2:1)):0;if(isTime)taSeconds+=taTimeGain;else {taScore+=pts;taScoreRefresh();}taRender();if(suppressPlus){return;}const el=document.getElementById(id);el.classList.remove('ta-pop');void el.offsetWidth;el.classList.add('ta-pop');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+taTimeGain+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
 const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
