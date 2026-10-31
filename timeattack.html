@@ -5592,12 +5592,16 @@ function vortexRelease(){
   const MIN_SPEED = 360; // px/s: ゆっくりなぞった場合は発光しない
   // 通常文字と特殊効果文字を一閃採集の対象にする。長押し・専用タップ型は誤作動防止のため除外。
   const isSwipeable = w => !w.matches('.vortex,.crack') && !w.classList.contains('got') && (!w.classList.contains('still') || flood);
+  // One pointer event shares one word-rectangle snapshot across all 9px hit samples.
+  // This avoids repeated layout reads on dense green-orb sweeps.
+  let swipeHitSnapshot=null;
   function hit(x,y){
     // elementFromPointはポインターキャプチャ・重なったエフェクトの影響を受けるため、
     // 採集可能な言葉の実際の表示矩形と軌跡の交差で判定する。
-    for(const w of field.querySelectorAll('.word')){
+    for(const entry of (swipeHitSnapshot || Array.from(field.querySelectorAll('.word'),w=>({w,r:w.getBoundingClientRect()})))){
+      const w=entry.w;
       if(w.classList.contains('got') || w.dataset.swiped || !isSwipeable(w) || w.classList.contains('late')) continue;
-      const r=w.getBoundingClientRect();
+      const r=entry.r;
       if(x<r.left-5 || x>r.right+5 || y<r.top-8 || y>r.bottom+8) continue;
       // スワイプ中も、出現から850ms以内に触れた最初の通常文字を神速候補にする。
       // pointerdown時の文字も含めて1操作につき1回だけ判定する。
@@ -5613,7 +5617,9 @@ function vortexRelease(){
   }
   function sweep(x,y){
     const d=Math.hypot(x-lx,y-ly), n=Math.max(1,Math.ceil(d/9));
-    for(let i=1;i<=n;i++) hit(lx+(x-lx)*i/n,ly+(y-ly)*i/n);
+    swipeHitSnapshot=Array.from(field.querySelectorAll('.word'),w=>({w,r:w.getBoundingClientRect()}));
+    try{for(let i=1;i<=n;i++) hit(lx+(x-lx)*i/n,ly+(y-ly)*i/n);}
+    finally{swipeHitSnapshot=null;}
     lx=x;ly=y;
     // スワイプと判定できた時点で、最初に触れた対象文字の神速を即時発動。
     if(!shinsokuAwarded && Math.hypot(x-points[0].x,y-points[0].y)>=13)
@@ -8349,7 +8355,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    const label=document.createElement('span');label.textContent='+1秒';label.className='ta-element-word-fx';
    label.style.cssText='left:'+tx+'px;top:'+(ty-24)+'px;color:#c4f1ff;text-shadow:0 0 12px #67c8ff';document.body.append(label);
    label.animate([{opacity:1,transform:'translate(-50%,-50%)'},{opacity:0,transform:'translate(-50%,-95%)'}],{duration:850}).onfinish=()=>label.remove();
-   if(typeof sfx!=='undefined'&&sfx.arrive)sfx.arrive();
+   if(typeof sfx!=='undefined'&&sfx.arrive){const nowSound=performance.now();if(!taMobileFx||nowSound-(window.taLastIceArriveSound||0)>90){window.taLastIceArriveSound=nowSound;sfx.arrive();}}
   };
   setTimeout(()=>{if(!taRunning){frozen.remove();orb.remove();return;}
    // 凍った文字が細かな氷片に崩れ落ちてから時間オーブが飛び立つ。
