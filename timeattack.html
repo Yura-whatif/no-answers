@@ -3990,14 +3990,14 @@ function comboStepBonus(n){
 }
 // 100-chain BGM.  Keep its state independent of ranking/result music.
 const taCenturyMusic=(()=>{
-  const src='audio/chain100-weight-of-the-pendulum.mp3?v=20261024';
+  const src='audio/Beneath_the_Granite_Sky.mp3?v=20261101';
   let audio=null,active=false,stoppedForTime=false,fadeId=0,fadeTimer=0,serial=0;
-  const volume=.19;
+  const volume=.72;
   function clearFade(){++fadeId;if(fadeTimer){cancelAnimationFrame(fadeTimer);fadeTimer=0;}}
   function ensure(){if(!audio){audio=new Audio(src);audio.loop=true;audio.preload='auto';audio.volume=0;}return audio;}
   function play(){
     if(!active||stoppedForTime||!taRunning||!sfx.on||document.hidden)return;
-    const a=ensure();clearFade();a.volume=volume;
+    const a=ensure();clearFade();a.volume=volume;sfx.setCenturyMix(true);
     const ticket=serial;
     const promise=a.play();if(promise&&promise.catch)promise.catch(()=>{if(ticket===serial){/* Mobile autoplay restrictions: retry at next gesture. */}});
   }
@@ -4007,11 +4007,11 @@ const taCenturyMusic=(()=>{
     const a=ensure();clearFade();try{a.currentTime=0;}catch(_){}
     if(!stoppedForTime)play();
   }
-  function timeStop(){if(!active)return;stoppedForTime=true;clearFade();if(audio)audio.pause();}
+  function timeStop(){if(!active)return;stoppedForTime=true;clearFade();sfx.setCenturyMix(false);if(audio)audio.pause();}
   function timeResume(){if(!active)return;stoppedForTime=false;play();}
   function stop(immediate=false){
     if(!active&&!audio)return;
-    active=false;stoppedForTime=false;serial++;clearFade();
+    active=false;stoppedForTime=false;serial++;clearFade();sfx.setCenturyMix(false);
     if(!audio)return;
     const a=audio;
     if(immediate||a.paused){a.pause();try{a.currentTime=0;}catch(_){}a.volume=0;return;}
@@ -7391,6 +7391,13 @@ const sfx = (()=>{
         g2.gain.setValueAtTime(0.0001, t + d); g2.gain.exponentialRampToValueAtTime(.015, t + d + .004); g2.gain.exponentialRampToValueAtTime(0.0001, t + d + .25);
         o2.connect(g2); g2.connect(bus); o2.start(t + d); o2.stop(t + d + .3); });
     },
+    // During the century BGM, keep game SFX audible but behind the music.
+    setCenturyMix(enabled){
+      if(!ctx||!bus)return;
+      const now=ctx.currentTime;
+      bus.gain.cancelScheduledValues(now);
+      bus.gain.setTargetAtTime(enabled ? .48 : 1,now,.12);
+    },
     unlock(){return ac();},
     get on(){ return on; },
     set on(v){ on = v; store.set("ta-yura-sound", v); }
@@ -8518,8 +8525,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  // Elemental effects can collect them without bypassing the time-stop scoring rules.
  if(flood&&w.classList.contains('still')){
   if(type==='fire'&&w.dataset.taTime!=='1')w.dataset.taFireScore='1';
+  // stopTap queues the reward in stopPend. Do not award immediately:
+  // endFlood delivers the queued orb and awards exactly once on arrival.
   stopTap(w);
-  if(type==='ice')taAward(true,0);
   return;
  }
  // Elemental contact activates the original special effect before destruction.
