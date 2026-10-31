@@ -3992,12 +3992,25 @@ function comboStepBonus(n){
 const taCenturyMusic=(()=>{
   const src='audio/Beneath_the_Granite_Sky.mp3?v=20261101';
   let audio=null,active=false,stoppedForTime=false,fadeId=0,fadeTimer=0,serial=0;
-  const volume=.72;
+  const volume=.66;
+  const fadeInMs=1600;
   function clearFade(){++fadeId;if(fadeTimer){cancelAnimationFrame(fadeTimer);fadeTimer=0;}}
   function ensure(){if(!audio){audio=new Audio(src);audio.loop=true;audio.preload='auto';audio.volume=0;}return audio;}
   function play(){
     if(!active||stoppedForTime||!taRunning||!sfx.on||document.hidden)return;
-    const a=ensure();clearFade();a.volume=volume;sfx.setCenturyMix(true);
+    const a=ensure();clearFade();
+    const initial=a.paused?0:Math.min(a.volume,volume);
+    a.volume=initial;
+    sfx.setCenturyMix(true);
+    const fadeTicket=fadeId,fadeStarted=performance.now();
+    const fadeStep=now=>{
+      if(fadeTicket!==fadeId||!active||stoppedForTime||a.paused)return;
+      const t=Math.min(1,(now-fadeStarted)/fadeInMs);
+      a.volume=Math.min(1,initial+(volume-initial)*(t*t*(3-2*t)));
+      if(t<1)fadeTimer=requestAnimationFrame(fadeStep);
+      else fadeTimer=0;
+    };
+    fadeTimer=requestAnimationFrame(fadeStep);
     const ticket=serial;
     const promise=a.play();if(promise&&promise.catch)promise.catch(()=>{if(ticket===serial){/* Mobile autoplay restrictions: retry at next gesture. */}});
   }
@@ -7396,7 +7409,7 @@ const sfx = (()=>{
       if(!ctx||!bus)return;
       const now=ctx.currentTime;
       bus.gain.cancelScheduledValues(now);
-      bus.gain.setTargetAtTime(enabled ? .48 : 1,now,.12);
+      bus.gain.setTargetAtTime(enabled ? .68 : 1,now,.12);
     },
     unlock(){return ac();},
     get on(){ return on; },
