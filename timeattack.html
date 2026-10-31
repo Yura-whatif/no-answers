@@ -7111,16 +7111,33 @@ const sfx = (()=>{
         const fo = Math.floor(sr * .7); for(let n = 0; n < len; n++){ const g = n > len - fo ? (len - n) / fo : 1; L[n] = L[n] / m * g; R[n] = R[n] / m * g; }
         return b; })(); },
     sakura(){ const a = ac(); if(!a) return; this.prepSakura(); const t = ctx.currentTime + .03, sr = ctx.sampleRate, suzu = sfxKoto.suzu;
-      const hall = sfxKoto.hall || (sfxKoto.hall = (() => {   // 社殿のような、明るく長めの残響
-        const len = Math.floor(sr * 2.8), ir = ctx.createBuffer(2, len, sr);
-        for(let c = 0; c < 2; c++){ const d = ir.getChannelData(c); let lp = 0;
-          for(let n = Math.floor(sr * (.018 + c * .004)); n < len; n++){ const q = n / len, cut = .75 - q * .55; lp += cut * ((Math.random() * 2 - 1) - lp); d[n] = lp * Math.pow(1 - q, 3) * .5; } }
-        const cv = ctx.createConvolver(); cv.buffer = ir; const wet = ctx.createGain(); wet.gain.value = .5; cv.connect(wet); wet.connect(bus); return cv; })());
-      const src = ctx.createBufferSource(), dry = ctx.createGain(), send = ctx.createGain(), hs = ctx.createBiquadFilter();
-      src.buffer = suzu; hs.type = "highshelf"; hs.frequency.value = 7000; hs.gain.value = -4;   // 耳に痛い高域を少し丸める
-      dry.gain.value = .14; send.gain.value = .12;
-      src.connect(hs); hs.connect(dry); dry.connect(bus); hs.connect(send); send.connect(hall);
-      src.start(t); src.stop(t + suzu.duration);
+      // Mobile: a 2.8-second live convolution stays in the audio graph after
+      // the chime, competing with subsequent green/ice/clear sounds. Preserve
+      // the bell and stereo sparkle, but replace the costly convolution with
+      // two quiet, short, pre-scheduled echoes. Desktop retains original hall.
+      const mobileAudio = window.matchMedia('(pointer:coarse)').matches;
+      if(mobileAudio){
+        const src=ctx.createBufferSource(), dry=ctx.createGain(), hs=ctx.createBiquadFilter();
+        src.buffer=suzu; hs.type='highshelf';hs.frequency.value=7000;hs.gain.value=-4;
+        dry.gain.value=.17;src.connect(hs);hs.connect(dry);dry.connect(bus);
+        src.start(t);src.stop(t+suzu.duration);
+        for(const [delay,level] of [[.095,.032],[.22,.018]]){
+          const echo=ctx.createBufferSource(),gain=ctx.createGain();echo.buffer=suzu;
+          gain.gain.value=level;echo.connect(gain);gain.connect(bus);
+          echo.start(t+delay);echo.stop(t+delay+suzu.duration);
+        }
+      }else{
+        const hall = sfxKoto.hall || (sfxKoto.hall = (() => {
+          const len = Math.floor(sr * 2.8), ir = ctx.createBuffer(2, len, sr);
+          for(let c = 0; c < 2; c++){ const d = ir.getChannelData(c); let lp = 0;
+            for(let n = Math.floor(sr * (.018 + c * .004)); n < len; n++){ const q = n / len, cut = .75 - q * .55; lp += cut * ((Math.random() * 2 - 1) - lp); d[n] = lp * Math.pow(1 - q, 3) * .5; } }
+          const cv = ctx.createConvolver(); cv.buffer = ir; const wet = ctx.createGain(); wet.gain.value = .5; cv.connect(wet); wet.connect(bus); return cv; })());
+        const src = ctx.createBufferSource(), dry = ctx.createGain(), send = ctx.createGain(), hs = ctx.createBiquadFilter();
+        src.buffer = suzu; hs.type = 'highshelf'; hs.frequency.value = 7000; hs.gain.value = -4;
+        dry.gain.value = .14; send.gain.value = .12;
+        src.connect(hs); hs.connect(dry); dry.connect(bus); hs.connect(send); send.connect(hall);
+        src.start(t); src.stop(t + suzu.duration);
+      }
       taStereoShimmer(t+.28,1864.7,.009,1.18); },
     // 読了特典を使うときの、豪華なきらめき（上昇アルペジオ＋和音＋高音の尾）
     boon(){ const a = ac(); if(!a) return; const t = a.currentTime, rv = reverb(), n = notes();
