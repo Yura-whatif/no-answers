@@ -1945,6 +1945,15 @@ html.ta-century-lit #viewMain .drift .word.ta-blue:not(.got):not(.special):not(.
   box-shadow:0 0 9px 2px rgba(255,214,133,.43),0 0 17px 4px rgba(89,165,255,.22);
 }
 </style>
+<style>
+/* Result hint images: replace the book only for the corresponding special move. */
+#taLaunch .ta-special-hint-art{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;height:154px;max-width:340px;margin:0 auto 13px;align-items:center;justify-items:center;overflow:hidden;background:#050608;border:1px solid rgba(206,166,106,.2);border-radius:4px}
+#taLaunch .ta-special-hint-art[hidden],#taLaunch .ta-book-scene[hidden]{display:none!important}
+#taLaunch .ta-special-hint-art.one{grid-template-columns:1fr}
+#taLaunch .ta-special-hint-art img{display:block;width:100%;height:148px;object-fit:contain;min-width:0}
+#taLaunch .ta-special-hint-art.one img{width:min(165px,100%)}
+@media(max-width:380px){#taLaunch .ta-special-hint-art{height:125px}#taLaunch .ta-special-hint-art img{height:120px}}
+</style>
 </head>
 <body>
 <style>
@@ -6488,7 +6497,7 @@ function renderStatus(){
 // 本棚は別の画面。開いたとき、まだ見ていない書き写しがあればその頁を開いて滲ませる
 function showLib(on){
   // 時間が止まっているあいだは本棚へ行けない（本のボタンが小さく首を振る）
-  if(on && (flood || shattering)){ const lb = $("libbtn"); lb.classList.remove("nope"); void lb.offsetWidth; lb.classList.add("nope"); return; }
+  if(on && (taRunning || taStarting || flood || shattering)){ const lb = $("libbtn"); lb.classList.remove("nope"); void lb.offsetWidth; lb.classList.add("nope"); return; }
   libOpen = on; if(on){track("library", "本棚を開いた");if(sfx.on)sfx.unlock();}
   if(on) sfx.bgmStart(); else sfx.bgmStop();
   if(on){
@@ -7696,6 +7705,7 @@ setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
     <div class="ta-book-scene" role="img" aria-label="夜桜の城都に佇む、光を帯びた古書">
       <img class="ta-book-photo" src="img/timeattack-result-book.webp" alt="" aria-hidden="true">
     </div>
+    <div id="taSpecialHintArt" class="ta-special-hint-art" hidden aria-label="特殊技のヒント画像"></div>
     <h2 id="taResultHeading">採集の記録</h2>
     <p class="ta-result-score"><strong id="taEndDetail">0</strong><span>点</span></p>
     <div class="ta-result-stats">
@@ -7900,20 +7910,17 @@ function taUpdatePlay(){
 // Result hints: one per finished record; avoid repeating any of the last three.
 // Text can be replaced without changing the layout or selection logic.
 const taResultHints = [
-  '炎と氷を交わらせると、何が起こる……？',
-  '炎と氷の力を借りて、時計を描いてみよう。',
-  '時計には、円だけでなく二本の針が必要だ。',
+  '炎と氷を交差させ、十字を描く。二つの力が交わるとき、周囲の言葉を巻き込む大きな力が生まれる。',
+  '炎か氷をワンタップして円を作り、もう一方の力で二本の針を描く。円と針の役割を入れ替えても、時を止めることができる。',
+  '円はワンタップで作れる。炎の円に氷の針でも、氷の円に炎の針でも時を止められる。',
   '時が止まれば、連鎖の時間も止まる。',
-  '二つの力を交差させると、画面を貫く光が生まれる。',
+  '炎と氷で斜めの十字を描く。交差した場所から、周囲の言葉へ力が広がる。',
   '特殊技と緑玉を組み合わせれば、一度に多くの言葉を集められる。',
-  '連鎖が続くほど、次の一手が大切になる。',
   '一つずつ消すだけでなく、指を滑らせて言葉をつなごう。',
   '連鎖が途切れそうなときこそ、特殊な玉の使いどころ。',
   '100連鎖の先には、夜明けが待っている。',
   '時間を増やす方法は、ただ速く消すことだけではない。',
   '時を止めれば、焦らず次の言葉を探せる。',
-  '時間停止中も、言葉を集める手を止める必要はない。',
-  '時間停止の解除後を考えて、次の言葉を選ぼう。',
   '残り時間が少ないとき、特殊技が逆転の鍵になるかもしれない。',
   '言葉が現れた瞬間を逃さなければ、「神速」が応える。',
   '画面の中央を狙うと、「心眼」が目覚めることがある。',
@@ -7921,23 +7928,41 @@ const taResultHints = [
   '同じ言葉でも、消し方によって得点が変わる。',
   '特殊技の一撃は、大量得点のきっかけになる。',
   '連鎖だけでなく、一つひとつの消し方にも技が隠されている。',
-  '赤玉と青玉は、組み合わせ次第で異なる力を生む。',
+  '炎と氷をそれぞれワンタップして、同じ場所に円を重ねる。どちらを後に重ねるかによって、生まれる力は異なる。',
   '緑玉は、失われた言葉を呼び戻す力を持つ。',
   '白銀玉は、特別な力を補充する貴重な玉。',
-  '玉を使う順番を変えると、思いがけない技が生まれるかもしれない。'
+  '炎が上でも氷が上でも、二つの円は重ねられる。ワンタップで円を作り、順番による効果の違いを試そう。',
+  '夜空に流れ星が降り注ぐとき、集めた言葉の輝きは二倍になる。',
+  '長い連鎖の果てに夜が明ければ、言葉の輝きは三倍に。夜明けの力を、得点に変えよう。'
 ];
-function taPickResultHint(){
-  const node=document.getElementById('taResultTip');
-  if(!node)return;
-  let recent=[];
-  try{const raw=JSON.parse(sessionStorage.getItem('taResultHintRecent')||'[]');if(Array.isArray(raw))recent=raw.filter(Number.isInteger).slice(-3)}catch(_e){}
-  const pool=taResultHints.map((_,i)=>i).filter(i=>!recent.includes(i));
-  const candidates=pool.length?pool:taResultHints.map((_,i)=>i);
-  const index=candidates[Math.floor(Math.random()*candidates.length)];
-  node.textContent=taResultHints[index];
-  try{sessionStorage.setItem('taResultHintRecent',JSON.stringify([...recent,index].slice(-3)))}catch(_e){}
+const taSpecialHintTypes={0:'cross',1:'clock',2:'clock',4:'cross',18:'eclipse',21:'eclipse'};
+const taSpecialHintImages={
+ cross:[['hint-cross.webp','炎と氷で描く十字']],
+ clock:[['hint-clock-fire.webp','炎の円と氷の針'],['hint-clock-ice.webp','氷の円と炎の針']],
+ eclipse:[['hint-eclipse-fire.webp','炎と氷の円・炎が上'],['hint-eclipse-ice.webp','炎と氷の円・氷が上']]
+};
+function taShowResultHint(index){
+ const node=document.getElementById('taResultTip');if(!node)return;
+ node.textContent=taResultHints[index]||taResultHints[0];
+ const type=taSpecialHintTypes[index],art=document.getElementById('taSpecialHintArt'),book=document.querySelector('#taLaunch .ta-book-scene');
+ if(!type){art.hidden=true;book.hidden=false;art.replaceChildren();return;}
+ art.replaceChildren();art.classList.toggle('one',type==='cross');
+ for(const [name,alt] of taSpecialHintImages[type]){const img=document.createElement('img');img.src='img/'+name;img.alt=alt;img.decoding='async';art.appendChild(img);}
+ art.hidden=false;book.hidden=true;
 }
-
+function taPickResultHint(){
+ let recent=[];
+ try{const raw=JSON.parse(sessionStorage.getItem('taResultHintRecent')||'[]');if(Array.isArray(raw))recent=raw.filter(Number.isInteger).slice(-3)}catch(_e){}
+ const pool=taResultHints.map((_,i)=>i).filter(i=>!recent.includes(i));
+ const candidates=pool.length?pool:taResultHints.map((_,i)=>i);
+ // Special-move hints are 4x as likely as ordinary hints; retain the last-three exclusion.
+ const special=candidates.filter(i=>Object.prototype.hasOwnProperty.call(taSpecialHintTypes,i));
+ const ordinary=candidates.filter(i=>!Object.prototype.hasOwnProperty.call(taSpecialHintTypes,i));
+ const weighted=[...ordinary,...special.flatMap(i=>[i,i,i,i])];
+ const index=weighted[Math.floor(Math.random()*weighted.length)];
+ taShowResultHint(index);
+ try{sessionStorage.setItem('taResultHintRecent',JSON.stringify([...recent,index].slice(-3)))}catch(_e){}
+}
 function taFinish(){
   if(!taRunning&&!taStarting)return;
   // Preserve the century track only when the finished score enters the top 20.
@@ -8337,6 +8362,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const CLOCK_FADE_MS=480;
  const CLOCK_GRACE_MS=1000;
  const CLOCK_WINDOW=CLOCK_VISIBLE_MS+CLOCK_FADE_MS+CLOCK_GRACE_MS;
+ // Initialize the capture scene only after clockDial has been declared.
  function clearClock(){clearTimeout(clockTimer);clockTimer=null;clockDial=null;if(clockFx){const old=clockFx;clockFx=null;old.classList.add('clock-expiring');setTimeout(()=>old.remove(),460);}}
  function clockDialFx(pt,type){
   if(flood){
