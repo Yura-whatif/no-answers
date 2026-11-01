@@ -5219,16 +5219,30 @@ function spawnWord(opt = {}){
       {transform:"scale(1.12) translateY(-4px)", opacity:.35, filter:"blur(5px)", letterSpacing:"0.3em", offset:.55},
       {transform:"scale(1.25) translateY(-10px)", opacity:0, filter:"blur(12px)", letterSpacing:"0.5em"}
     ], {duration: lite ? 480 : 620, easing:"cubic-bezier(.2,.6,.3,1)", fill:"forwards"}).onfinish = () => f.remove();
+// Fixed-capacity pool for the purely decorative 100-chain star. The star is never
+// part of hit testing, scoring or chain timing. Keep the SVG DOM between uses.
+const taCenturyFlashPool=[];
+const TA_CENTURY_FLASH_POOL_MAX=18;
+const taCenturyFlashMarkup=`<svg class="star" viewBox="0 0 112 94" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="taGoldStarGradient" cx="50%" cy="50%" r="68%"><stop offset="0" stop-color="#ffffff"/><stop offset=".12" stop-color="#ffffff"/><stop offset=".40" stop-color="#f5faff"/><stop offset="1" stop-color="#e9f2ff" stop-opacity=".12"/></radialGradient></defs><path class="halo" d="M56 0 Q58 37 66 39 Q82 45 112 47 Q82 49 66 55 Q58 57 56 94 Q54 57 46 55 Q30 49 0 47 Q30 45 46 39 Q54 37 56 0Z"/><path class="ray" d="M56 1 C58 30 59 40 65 42 C76 45 95 46 111 47 C95 48 76 49 65 52 C59 54 58 64 56 93 C54 64 53 54 47 52 C36 49 17 48 1 47 C17 46 36 45 47 42 C53 40 54 30 56 1Z"/><circle class="center" cx="56" cy="47" r="3.3"/></svg>`;
+function taAcquireCenturyFlash(){
+ const el=taCenturyFlashPool.pop()||document.createElement('span');
+ el.className='ta-gold-collapse';
+ if(!el.firstChild)el.innerHTML=taCenturyFlashMarkup;
+ return el;
+}
+function taReleaseCenturyFlash(el){
+ el.remove();
+ if(taCenturyFlashPool.length<TA_CENTURY_FLASH_POOL_MAX)taCenturyFlashPool.push(el);
+}
     if(combo>=100){
       // 文字の中心に金色の十字光を最初から表示し、広がらず中央へ収縮させて消す。
       // 光は操作を妨げず、既存の舞い上がる金粉はそのまま残す。
-      const flash=document.createElement('span');
-      flash.className='ta-gold-collapse';
+      // Reuse the decorative 100-chain star instead of parsing SVG and allocating DOM on every tap.
+      const flash=taAcquireCenturyFlash();
       flash.style.left=(r.left+r.width/2)+'px';
       flash.style.top=(r.top+r.height/2)+'px';
-      flash.innerHTML=`<svg class="star" viewBox="0 0 112 94" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="taGoldStarGradient" cx="50%" cy="50%" r="68%"><stop offset="0" stop-color="#ffffff"/><stop offset=".12" stop-color="#ffffff"/><stop offset=".40" stop-color="#f5faff"/><stop offset="1" stop-color="#e9f2ff" stop-opacity=".12"/></radialGradient></defs><path class="halo" d="M56 0 Q58 37 66 39 Q82 45 112 47 Q82 49 66 55 Q58 57 56 94 Q54 57 46 55 Q30 49 0 47 Q30 45 46 39 Q54 37 56 0Z"/><path class="ray" d="M56 1 C58 30 59 40 65 42 C76 45 95 46 111 47 C95 48 76 49 65 52 C59 54 58 64 56 93 C54 64 53 54 47 52 C36 49 17 48 1 47 C17 46 36 45 47 42 C53 40 54 30 56 1Z"/><circle class="center" cx="56" cy="47" r="3.3"/></svg>`;
       document.body.append(flash);
-      setTimeout(()=>flash.remove(),550);
+      setTimeout(()=>taReleaseCenturyFlash(flash),550);
       if(!window.matchMedia("(pointer:coarse)").matches || Math.random()>.35)setTimeout(()=>taCenturyDust.emit(r),95);
     }else mist(r, lite ? 2 : 7);
     if(isOdd){ const p = document.createElement("span"); p.className = "oddplus"; p.textContent = taPointPlus(ODD_PT); p.style.fontSize = plusSize(ODD_PT, 1.2);
@@ -9107,7 +9121,8 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    '\nLast 5s collect '+fmt(taPerfWorst5.collect)+' spawn '+fmt(taPerfWorst5.spawn)+
    '\nPhase read '+fmt(taPerfWorst5.read)+' orb '+fmt(taPerfWorst5.orbs)+
    '\nPhase logic '+fmt(taPerfWorst5.logic)+' HUD '+fmt(taPerfWorst5.hud)+
-   '\nOrbs pooled '+taCrossOrbPool.length;
+   '\nOrbs pooled '+taCrossOrbPool.length+' star '+taCenturyFlashPool.length+
+   '\nChain '+(typeof combo==='number'?combo:'?')+' /100 '+(typeof combo==='number'&&combo>=100?'ON':'OFF');
   taPerfWindow=now;
   for(const k of ['rafCount','rafSlow','rafMax','paintCount','paintSum','paintMax','crossCount','crossMs','crossMax','greenCount','greenMs','greenMax','collectCount','collectMs','collectMax','readCount','readMs','readMax','orbsCount','orbsMs','orbsMax','logicCount','logicMs','logicMax','hudCount','hudMs','hudMax','spawnCount','spawnMs','spawnMax','longCount','longMax'])t[k]=0;
  }
