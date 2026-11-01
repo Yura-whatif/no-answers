@@ -3763,6 +3763,8 @@ function mist(r, n = 7){
 // 1枚のCanvasを共用し、描画個数に上限を設けてスマホ負荷を抑える。
 const taCenturyDust=(()=>{
   let canvas=null,ctx=null,raf=0,particles=[],last=0;
+  const pool=[];const poolLimit=120;
+  function recycle(p){if(pool.length<poolLimit)pool.push(p);}
   const mobile=window.matchMedia('(pointer:coarse)').matches;
   const max=mobile?72:110;
   function frame(now){
@@ -3771,7 +3773,7 @@ const taCenturyDust=(()=>{
     ctx.clearRect(0,0,canvas.width,canvas.height);
     for(let i=particles.length-1;i>=0;i--){
       const p=particles[i];p.life-=dt;
-      if(p.life<=0){particles.splice(i,1);continue;}
+      if(p.life<=0){recycle(p);particles.splice(i,1);continue;}
       p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx+=Math.sin(p.phase+p.life*4)*dt*8;
       const alpha=Math.min(1,p.life/.42)*Math.min(1,(p.max-p.life)/.14);
       ctx.globalAlpha=alpha*.9;ctx.fillStyle=p.bright?'#fff0b4':'#eebc56';
@@ -3791,12 +3793,15 @@ const taCenturyDust=(()=>{
     const n=mobile?6:9,cx=r.left+r.width/2,cy=r.top+r.height/2;
     for(let i=0;i<n;i++){
       const life=1.30+Math.random()*.65;
-      particles.push({x:cx+(Math.random()-.5)*Math.min(44,r.width),
-        y:cy+(Math.random()-.5)*Math.min(22,r.height),vx:(Math.random()-.5)*32,
-        vy:-(42+Math.random()*58),life,max:life,radius:.9+Math.random()*1.35,
-        phase:Math.random()*6.283,bright:Math.random()>.48});
+      const p=pool.pop()||{};
+      p.x=cx+(Math.random()-.5)*Math.min(44,r.width);
+      p.y=cy+(Math.random()-.5)*Math.min(22,r.height);
+      p.vx=(Math.random()-.5)*32;p.vy=-(42+Math.random()*58);
+      p.life=life;p.max=life;p.radius=.9+Math.random()*1.35;
+      p.phase=Math.random()*6.283;p.bright=Math.random()>.48;
+      particles.push(p);
     }
-    if(particles.length>max)particles.splice(0,particles.length-max);
+    if(particles.length>max){const extra=particles.length-max;for(let j=0;j<extra;j++)recycle(particles[j]);particles.splice(0,extra);}
     if(!raf){last=performance.now();raf=requestAnimationFrame(frame);}
   }
   return {emit};
@@ -8608,7 +8613,26 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  document.addEventListener('ta-item-state-change',()=>{if(!active()){selected=null;cancelStartup();removeRewardOrb();rewardElapsed=0;rewardNext=35+Math.random()*15;}sync();});
  document.addEventListener('visibilitychange',()=>{if(!active()){selected=null;removeRewardOrb();}sync();});
  sync();
- function spark(x,y,type,n=12){for(let i=0;i<n;i++){const a=type==='fire'?(Math.PI*1.5+(Math.random()-.5)*1.28):Math.random()*Math.PI*2,v=25+Math.random()*85;particles.push({x,y,vx:Math.cos(a)*v*(type==='fire'?.62:1),vy:type==='fire'?-(60+Math.random()*115):Math.sin(a)*v,life:.4+Math.random()*.65,max:1,r:1+Math.random()*3,type,...(type==='fire'?{heat:Math.random(),sway:Math.random()*6.283,trail:Math.random()>.28}:{} )});}if(particles.length>(taMobileFx?110:380))particles.splice(0,particles.length-(taMobileFx?110:380))}
+ // Stage 3/4: 装飾粒子を再利用し、バースト中の大量生成と配列切り詰めを抑制。
+ const taSparkPool=[];
+ const taSparkPoolLimit=400;
+ function taRecycleSpark(p){if(taSparkPool.length<taSparkPoolLimit)taSparkPool.push(p);}
+ function spark(x,y,type,n=12){
+  const cap=taMobileFx?110:380;
+  // 既存の粒子を優先。上限を超える古い装飾だけを再利用する。
+  const overflow=Math.max(0,particles.length+n-cap);
+  for(let j=0;j<overflow;j++)taRecycleSpark(particles[j]);
+  if(overflow)particles.splice(0,overflow);
+  for(let i=0;i<n;i++){
+   const a=type==='fire'?(Math.PI*1.5+(Math.random()-.5)*1.28):Math.random()*Math.PI*2,v=25+Math.random()*85;
+   const p=taSparkPool.pop()||{};
+   p.x=x;p.y=y;p.vx=Math.cos(a)*v*(type==='fire'?.62:1);
+   p.vy=type==='fire'?-(60+Math.random()*115):Math.sin(a)*v;
+   p.life=.4+Math.random()*.65;p.max=1;p.r=1+Math.random()*3;p.type=type;
+   if(type==='fire'){p.heat=Math.random();p.sway=Math.random()*6.283;p.trail=Math.random()>.28;}
+   particles.push(p);
+  }
+ }
  const taCrossRectCache=new WeakMap();
  let taCrossHeroRect=null;
  function wordFx(w,type){const r=taCrossRectCache.get(w)||w.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;const fx=document.createElement('span');fx.className='ta-element-word-fx';fx.textContent=w.textContent;fx.style.left=x+'px';fx.style.top=y+'px';fx.style.color=type==='fire'?'#ffba69':'#d9faff';fx.style.textShadow=type==='fire'?'0 0 10px #ff4b16,0 0 20px #f86a20':'0 0 10px #8ce6ff,0 0 20px #65b9ff';document.body.append(fx);
@@ -9320,7 +9344,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   }
  }
  traces=traces.filter(f=>f.left>0);checkWords();renderCrossBursts(now);
- for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy+=(p.type==='fire'?-24:18)*dt;if(p.type==='fire'){p.sway+=dt*12;p.vx+=Math.sin(p.sway)*dt*22;}if(taAdaptiveLevel===2&&i%3!==0)continue;if(taAdaptiveLevel===1&&i%2!==0)continue;const a=Math.min(1,p.life*2);ctx.save();ctx.globalAlpha=a;if(p.type==='fire'){const heat=p.heat??.5;const tint=heat>.76?'#fff0bd':heat>.4?'#ffba58':'#e95425';ctx.fillStyle=tint;ctx.shadowColor=heat>.4?'#ff9d36':'#b83819';ctx.shadowBlur=taAdaptiveLevel?0:(taMobileFx?2:(heat>.7?10:5));if(p.trail){ctx.strokeStyle=tint;ctx.globalAlpha=a*.42;ctx.lineWidth=Math.max(.5,p.r*.55);ctx.beginPath();ctx.moveTo(p.x-p.vx*.035,p.y-p.vy*.035);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.globalAlpha=a;}ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(.55,p.r*.58),Math.max(.8,p.r*(1.15+heat*.5)),Math.atan2(p.vy,p.vx)+Math.PI/2,0,Math.PI*2);ctx.fill();}else{ctx.fillStyle=Math.random()>.5?'#e3fbff':'#80d8ff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=taAdaptiveLevel?0:(taMobileFx?2:9);ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}if(p.type==='ice'){ctx.strokeStyle='#e6faff';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p.x-p.r*2,p.y);ctx.lineTo(p.x+p.r*2,p.y);ctx.moveTo(p.x,p.y-p.r*2);ctx.lineTo(p.x,p.y+p.r*2);ctx.stroke()}ctx.restore()}
+ for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){taRecycleSpark(p);particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy+=(p.type==='fire'?-24:18)*dt;if(p.type==='fire'){p.sway+=dt*12;p.vx+=Math.sin(p.sway)*dt*22;}if(taAdaptiveLevel===2&&i%3!==0)continue;if(taAdaptiveLevel===1&&i%2!==0)continue;const a=Math.min(1,p.life*2);ctx.save();ctx.globalAlpha=a;if(p.type==='fire'){const heat=p.heat??.5;const tint=heat>.76?'#fff0bd':heat>.4?'#ffba58':'#e95425';ctx.fillStyle=tint;ctx.shadowColor=heat>.4?'#ff9d36':'#b83819';ctx.shadowBlur=taAdaptiveLevel?0:(taMobileFx?2:(heat>.7?10:5));if(p.trail){ctx.strokeStyle=tint;ctx.globalAlpha=a*.42;ctx.lineWidth=Math.max(.5,p.r*.55);ctx.beginPath();ctx.moveTo(p.x-p.vx*.035,p.y-p.vy*.035);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.globalAlpha=a;}ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(.55,p.r*.58),Math.max(.8,p.r*(1.15+heat*.5)),Math.atan2(p.vy,p.vx)+Math.PI/2,0,Math.PI*2);ctx.fill();}else{ctx.fillStyle=Math.random()>.5?'#e3fbff':'#80d8ff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=taAdaptiveLevel?0:(taMobileFx?2:9);ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}if(p.type==='ice'){ctx.strokeStyle='#e6faff';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p.x-p.r*2,p.y);ctx.lineTo(p.x+p.r*2,p.y);ctx.moveTo(p.x,p.y-p.r*2);ctx.lineTo(p.x,p.y+p.r*2);ctx.stroke()}ctx.restore()}
  // Full-screen final white flash, followed by a gentle shower of white motes.
  // Draw in viewport coordinates, not field coordinates, so nothing is clipped.
  for(const b of crossBursts){
