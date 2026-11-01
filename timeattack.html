@@ -9099,7 +9099,17 @@ function taReleaseCenturyFlash(el){
    observer.observe({entryTypes:['longtask']});
   }catch(_){}
   // Independent display refresh; idle FX scheduling must not be mistaken for low game FPS.
-  (function monitorRaf(now){taPerfFrame(now);requestAnimationFrame(monitorRaf)})(performance.now());
+  (function monitorRaf(now){
+   taPerfFrame(now);
+   // Keep collecting diagnostics while playing, without covering the play field.
+   // The results become visible again automatically after TimeOver.
+   if(taPerfPanel){
+    const playing=taRunning||taStarting;
+    const next=playing?'none':'block';
+    if(taPerfPanel.style.display!==next)taPerfPanel.style.display=next;
+   }
+   requestAnimationFrame(monitorRaf);
+  })(performance.now());
  }
  function taPerfRecord(now,paintMs){
   if(!taPerfEnabled)return;
