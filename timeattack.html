@@ -4352,7 +4352,35 @@ function taUltimateClear(){
   taUltimateLabels.clear();document.getElementById('taUltimateLabels')?.replaceChildren();
 }
 function startFlood(gem){
-  if(flood || shattering) return;
+  if(shattering) return;
+  if(flood){
+    // A second successful clock technique replaces the first clock and resets
+    // the stop duration. Keep collected rewards so no points/time are lost.
+    if(stopWatch && stopWatch!==gem && stopWatch.isConnected)stopWatch.remove();
+    stopWatch=null;
+    document.querySelectorAll('.ta-dual-clock.clock-persistent').forEach(el=>{
+      if(el!==taCompletedClock)el.remove();
+    });
+    if(taCompletedClock){
+      placeCompletedClockBehindWords();
+      taCompletedClock.classList.add('clock-time-dark');
+    }
+    stopVeil(true,gem);
+    const bar=$('floodbar');
+    bar.style.setProperty('--ta-stop-duration',FLOOD_MS+'ms');
+    bar.hidden=false;bar.classList.remove('run');void bar.offsetWidth;bar.classList.add('run');
+    clearTimeout(startFlood.h);
+    clearTimeout(startFlood.tickDelay);clearInterval(startFlood.tk);
+    sfx.prepClockTick();
+    startFlood.tickDelay=setTimeout(()=>{
+      if(!flood)return;
+      let count=0;sfx.clockTick(count++);
+      startFlood.tk=setInterval(()=>{if(!flood)return clearInterval(startFlood.tk);sfx.clockTick(count++);},1000);
+    },700);
+    startFlood.h=setTimeout(endFlood,FLOOD_MS);
+    layoutBars();taUltimateLayout();
+    return;
+  }
   flood = true; stopPend = []; taCenturyMusic.timeStop(); track("timestop", "時止め");
   // Freeze the actual combo-expiry timer and its visual countdown together.
   taFloodComboRemaining = null;
@@ -8207,6 +8235,12 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const CLOCK_WINDOW=CLOCK_VISIBLE_MS+CLOCK_FADE_MS+CLOCK_GRACE_MS;
  function clearClock(){clearTimeout(clockTimer);clockTimer=null;clockDial=null;if(clockFx){const old=clockFx;clockFx=null;old.classList.add('clock-expiring');setTimeout(()=>old.remove(),460);}}
  function clockDialFx(pt,type){
+  if(flood){
+    if(taCompletedClock){taCompletedClock.remove();taCompletedClock=null;}
+    // The next dial is now the sole visible clock, including the canvas face.
+    clearPaintedClock();clockCanvas.classList.remove('ta-clock-front');
+    taClockVeilCenter=null;taCompletedClockAnchor=null;
+  }
   clearClock();const r=72;const el=document.createElement('div');el.className='ta-dual-clock';
   // Use the same hero-local point as the canvas, projected to viewport CSS pixels.
   const heroRect=hero.getBoundingClientRect();
@@ -8292,7 +8326,8 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   setTimeout(()=>{
    // The hands freeze on precisely the same frame as the existing time-stop effect.
    if(fx)fx.classList.add('clock-frozen');
-   if(!active()||flood){if(fx)fx.remove();if(taCompletedClock===fx)taCompletedClock=null;taClockVeilCenter=null;taCompletedClockAnchor=null;return;}
+   if(!active()){if(fx)fx.remove();if(taCompletedClock===fx)taCompletedClock=null;taClockVeilCenter=null;taCompletedClockAnchor=null;return;}
+   // Re-activation while already stopped is valid: replace the old clock.
    startFlood(null);sfx.special();sfx.timeStop();
   },850);
   return true;
