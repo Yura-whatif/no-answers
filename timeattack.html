@@ -8256,6 +8256,44 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  }
 
  const taMobileFx=window.matchMedia('(pointer:coarse)').matches;
+ // Stage 2: adaptive *decorative* rendering only. Gameplay, collision checks,
+ // reward timing, and the main FX update cadence are never throttled.
+ let taAdaptiveLevel=0; // 0 full, 1 balanced, 2 light
+ let taAdaptiveLast=0,taAdaptiveSlow=0,taAdaptiveGood=0,taAdaptiveFrames=0;
+ let taAdaptiveActive=false,taAdaptivePrevious=0;
+ function taAdaptiveFrame(ts){
+  if(document.hidden){taAdaptivePrevious=0;taAdaptiveActive=false;return;}
+  const inGame=active();
+  if(!inGame){taAdaptivePrevious=0;taAdaptiveActive=false;taAdaptiveSlow=0;taAdaptiveGood=0;return;}
+  if(taAdaptivePrevious){
+   const gap=ts-taAdaptivePrevious;
+   // Ignore huge gaps from tab switches and debugger pauses.
+   if(gap<250){
+    taAdaptiveFrames++;
+    if(gap>32)taAdaptiveSlow++;else if(gap<22)taAdaptiveGood++;
+   }
+  }
+  taAdaptivePrevious=ts;
+  if(ts-taAdaptiveLast>=2200){
+   // Hysteresis: sustained congestion reduces decoration; recovery is slower.
+   const total=taAdaptiveFrames||1,slow=taAdaptiveSlow/total,good=taAdaptiveGood/total;
+   if(total>=12){
+    if(slow>.46)taAdaptiveLevel=Math.min(2,taAdaptiveLevel+1);
+    else if(good>.80&&slow<.12)taAdaptiveLevel=Math.max(0,taAdaptiveLevel-1);
+   }
+   taAdaptiveLast=ts;taAdaptiveFrames=0;taAdaptiveSlow=0;taAdaptiveGood=0;
+  }
+  requestAnimationFrame(taAdaptiveFrame);
+ }
+ function taAdaptiveStart(){
+  if(taAdaptiveActive||document.hidden||!active())return;
+  taAdaptiveActive=true;taAdaptivePrevious=0;taAdaptiveLast=performance.now();
+  requestAnimationFrame(taAdaptiveFrame);
+ }
+ // Low-rate wake check avoids an always-running monitoring RAF on the title screen.
+ setInterval(taAdaptiveStart,650);
+ document.addEventListener('visibilitychange',()=>{taAdaptivePrevious=0;if(!document.hidden)taAdaptiveStart();});
+
  const taFxScale=taMobileFx?.72:1;
  // Warm the elemental gradient painter during Loading (once per page).
  let fxWarmupDone=false;
@@ -8747,7 +8785,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    if(b.wave){const r=16+135*t;ctx.globalAlpha=.3*fade;ctx.strokeStyle='#85f2b4';ctx.lineWidth=2.5*(1-t);ctx.beginPath();ctx.arc(b.x,b.y,r,0,Math.PI*2);ctx.stroke();continue;}
    if(taMobileFx&&crossBursts.length)continue; // Cross explosion takes priority over decorative emerald particles.
    const sprite=taFxSpriteCache.get('summon-glow');ctx.globalAlpha=fade*.85;if(sprite){const radius=38*(1-t*.3);ctx.drawImage(sprite,b.x-radius,b.y-radius,radius*2,radius*2);}else{const glow=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,38*(1-t*.3));glow.addColorStop(0,'rgba(240,255,193,.62)');glow.addColorStop(.28,'rgba(94,255,171,.32)');glow.addColorStop(1,'rgba(9,110,80,0)');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(b.x,b.y,42,0,Math.PI*2);ctx.fill();}
-   for(const f of b.fragments){const q=Math.min(1,Math.max(0,age/.48));const spiral=f.angle+(1-q)*2.4+f.phase*.12;const r=f.radius*(1-q)*(1-q);const x=b.x+Math.cos(spiral)*r,y=b.y+Math.sin(spiral)*r*.75;ctx.globalAlpha=fade*(.35+.65*q);ctx.fillStyle=f.kind==='glyph'?'#e7d4a0':'#8afac9';ctx.shadowColor=f.kind==='glyph'?'#f4cf84':'#6afac0';ctx.shadowBlur=taMobileFx?0:7;ctx.save();ctx.translate(x,y);ctx.rotate(spiral);if(f.kind==='glyph'){ctx.font='12px serif';ctx.fillText('✧',0,0);}else{ctx.fillRect(-f.size/2,-f.size/2,f.size*1.4,f.size*2.3);}ctx.restore();}
+   for(let fi=0;fi<b.fragments.length;fi++){if(taAdaptiveLevel===2&&fi%3!==0)continue;if(taAdaptiveLevel===1&&fi%2!==0)continue;const f=b.fragments[fi];const q=Math.min(1,Math.max(0,age/.48));const spiral=f.angle+(1-q)*2.4+f.phase*.12;const r=f.radius*(1-q)*(1-q);const x=b.x+Math.cos(spiral)*r,y=b.y+Math.sin(spiral)*r*.75;ctx.globalAlpha=fade*(.35+.65*q);ctx.fillStyle=f.kind==='glyph'?'#e7d4a0':'#8afac9';ctx.shadowColor=f.kind==='glyph'?'#f4cf84':'#6afac0';ctx.shadowBlur=taMobileFx?0:7;ctx.save();ctx.translate(x,y);ctx.rotate(spiral);if(f.kind==='glyph'){ctx.font='12px serif';ctx.fillText('✧',0,0);}else{ctx.fillRect(-f.size/2,-f.size/2,f.size*1.4,f.size*2.3);}ctx.restore();}
   }
   ctx.restore();if(summonBursts.length&&now-summonBursts[0].start>=1000)summonBursts=summonBursts.filter(b=>now-b.start<1000);
  }
@@ -9282,7 +9320,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   }
  }
  traces=traces.filter(f=>f.left>0);checkWords();renderCrossBursts(now);
- for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy+=(p.type==='fire'?-24:18)*dt;if(p.type==='fire'){p.sway+=dt*12;p.vx+=Math.sin(p.sway)*dt*22;}const a=Math.min(1,p.life*2);ctx.save();ctx.globalAlpha=a;if(p.type==='fire'){const heat=p.heat??.5;const tint=heat>.76?'#fff0bd':heat>.4?'#ffba58':'#e95425';ctx.fillStyle=tint;ctx.shadowColor=heat>.4?'#ff9d36':'#b83819';ctx.shadowBlur=taMobileFx?2:(heat>.7?10:5);if(p.trail){ctx.strokeStyle=tint;ctx.globalAlpha=a*.42;ctx.lineWidth=Math.max(.5,p.r*.55);ctx.beginPath();ctx.moveTo(p.x-p.vx*.035,p.y-p.vy*.035);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.globalAlpha=a;}ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(.55,p.r*.58),Math.max(.8,p.r*(1.15+heat*.5)),Math.atan2(p.vy,p.vx)+Math.PI/2,0,Math.PI*2);ctx.fill();}else{ctx.fillStyle=Math.random()>.5?'#e3fbff':'#80d8ff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=taMobileFx?2:9;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}if(p.type==='ice'){ctx.strokeStyle='#e6faff';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p.x-p.r*2,p.y);ctx.lineTo(p.x+p.r*2,p.y);ctx.moveTo(p.x,p.y-p.r*2);ctx.lineTo(p.x,p.y+p.r*2);ctx.stroke()}ctx.restore()}
+ for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy+=(p.type==='fire'?-24:18)*dt;if(p.type==='fire'){p.sway+=dt*12;p.vx+=Math.sin(p.sway)*dt*22;}if(taAdaptiveLevel===2&&i%3!==0)continue;if(taAdaptiveLevel===1&&i%2!==0)continue;const a=Math.min(1,p.life*2);ctx.save();ctx.globalAlpha=a;if(p.type==='fire'){const heat=p.heat??.5;const tint=heat>.76?'#fff0bd':heat>.4?'#ffba58':'#e95425';ctx.fillStyle=tint;ctx.shadowColor=heat>.4?'#ff9d36':'#b83819';ctx.shadowBlur=taAdaptiveLevel?0:(taMobileFx?2:(heat>.7?10:5));if(p.trail){ctx.strokeStyle=tint;ctx.globalAlpha=a*.42;ctx.lineWidth=Math.max(.5,p.r*.55);ctx.beginPath();ctx.moveTo(p.x-p.vx*.035,p.y-p.vy*.035);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.globalAlpha=a;}ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(.55,p.r*.58),Math.max(.8,p.r*(1.15+heat*.5)),Math.atan2(p.vy,p.vx)+Math.PI/2,0,Math.PI*2);ctx.fill();}else{ctx.fillStyle=Math.random()>.5?'#e3fbff':'#80d8ff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=taAdaptiveLevel?0:(taMobileFx?2:9);ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}if(p.type==='ice'){ctx.strokeStyle='#e6faff';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p.x-p.r*2,p.y);ctx.lineTo(p.x+p.r*2,p.y);ctx.moveTo(p.x,p.y-p.r*2);ctx.lineTo(p.x,p.y+p.r*2);ctx.stroke()}ctx.restore()}
  // Full-screen final white flash, followed by a gentle shower of white motes.
  // Draw in viewport coordinates, not field coordinates, so nothing is clipped.
  for(const b of crossBursts){
