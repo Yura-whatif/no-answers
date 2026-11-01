@@ -5214,11 +5214,8 @@ function pullAll(x, y, self, eclipse=false, eclipseElement=null){
     if(!n) return;
     if(eclipse)taFlashArenaEdge(eclipseIce?"ice":"fire");
     vortexFlash({getBoundingClientRect:() => ({left:x, top:y, width:0, height:0})});
-    const p = document.createElement("span"); p.className = "oddplus"; p.textContent = taPointPlus(sum); p.style.fontSize = plusSize(sum, 1.2);
-    p.style.left = x + "px"; p.style.top = y + "px"; document.body.append(p);
-    p.animate([{opacity:0, transform:"translate(-50%,-30%) scale(.8)"},{opacity:1, transform:"translate(-50%,-110%) scale(1.15)", offset:.25},{opacity:1, transform:"translate(-50%,-150%) scale(1)", offset:.7},{opacity:0, transform:"translate(-50%,-200%) scale(1)"}],
-      {duration:1600, easing:"ease-out", fill:"forwards"}).onfinish = () => p.remove();
-    orbsFromCollected(collected, x, y);
+    // 集約報酬のプラス値は得点・時間エリアへの到着時だけ表示する。
+    orbsFromCollected(collected, x, y, eclipse);
   };
   if(eclipse){
     setTimeout(()=>{
@@ -5236,31 +5233,51 @@ function pullAll(x, y, self, eclipse=false, eclipseElement=null){
   }, duration);
 }
 // タイムアタック専用：引き寄せの吸引演出は元のまま、回収した文字ごとに着地点を振り分ける。
-function orbsFromCollected(items, cx, cy){
-  if(!items.length) return;
+// 引き寄せ・蝕：吸収演出と連鎖計算は従来どおり、報酬の飛行だけ集約する。
+// 得点と時間は別々の着地点なので最大2個。月明かりの2倍玉相当をサイズ上限とする。
+function orbsFromCollected(items, cx, cy, eclipse=false){
+  if(!items.length)return;
+  const totals={score:0,time:0};
+  let boosted=false;
+  for(const item of items){
+    if(item.isTime)totals.time+=item.timeGain ?? 1;
+    else totals.score+=item.pts;
+    if(item.pts>1)boosted=true;
+  }
+  const batches=[];
+  if(totals.score>0)batches.push({isTime:false,value:totals.score});
+  if(totals.time>0)batches.push({isTime:true,value:totals.time});
   sfx.fly(.9);
-  items.forEach(({isTime,pts,timeGain},i)=>{
-    setTimeout(()=>{
-      const o=document.createElement("span"); o.className="orb"; taStyleRewardOrb(o,isTime,glowRemain>0); document.body.append(o);
-      const k=items.length, ang=(i/Math.max(k,1))*Math.PI*2+Math.random()*.6;
-      const spread=26+Math.random()*18, ox=cx+Math.cos(ang)*spread, oy=cy+Math.sin(ang)*spread;
-      const dur=900+Math.random()*250, t0=performance.now();
-      const step=now=>{
-        const q=Math.min(1,(now-t0)/dur), e=q<.5?2*q*q:1-Math.pow(-2*q+2,2)/2;
-        const r=$(isTime?"taTime":"taScore").getBoundingClientRect();
-        const tx=r.left+r.width/2, ty=r.top+r.height/2;
-        const mx=(ox+tx)/2+Math.cos(ang)*40, my=(oy+ty)/2-50;
-        const u=Math.max(0,Math.min(1,(e-.08)/.92));
-        const px=q<.2?cx+(ox-cx)*(q/.2):(1-u)*(1-u)*ox+2*(1-u)*u*mx+u*u*tx;
-        const py=q<.2?cy+(oy-cy)*(q/.2):(1-u)*(1-u)*oy+2*(1-u)*u*my+u*u*ty;
-        o.style.left=px+"px"; o.style.top=py+"px";
-        o.style.transform=`scale(${q<.2?.4+q*6:Math.max(.45,1.6-q)})`;
-        o.style.opacity=q>.9?(1-q)*10:1;
-        if(q<1)requestAnimationFrame(step);
-        else{o.remove();taAward(isTime,isTime?1:pts,false,o.classList.contains('ta-reward-boost')&&mode==='black',false,timeGain);sfx.arrive();}
-      };
-      requestAnimationFrame(step);
-    },120+i*90);
+  batches.forEach(({isTime,value},i)=>{
+    const o=document.createElement('span');o.className='orb ta-aggregated-reward'+(eclipse?' ta-eclipse-aggregated-reward':'');
+    const moonBoost=glowRemain>0;
+    taStyleRewardOrb(o,isTime,moonBoost);
+    document.body.append(o);
+    const ang=(i/batches.length)*Math.PI*2-Math.PI/2;
+    const ox=cx+Math.cos(ang)*30,oy=cy+Math.sin(ang)*30;
+    const dur=1050,t0=performance.now();
+    const step=now=>{
+      const q=Math.min(1,(now-t0)/dur),e=q<.5?2*q*q:1-Math.pow(-2*q+2,2)/2;
+      const target=$(isTime?'taTime':'taScore');
+      if(!target||!taRunning){o.remove();return;}
+      const r=target.getBoundingClientRect(),tx=r.left+r.width/2,ty=r.top+r.height/2;
+      const mx=(ox+tx)/2+Math.cos(ang)*40,my=(oy+ty)/2-50;
+      const u=Math.max(0,Math.min(1,(e-.08)/.92));
+      const px=q<.2?cx+(ox-cx)*q/.2:(1-u)*(1-u)*ox+2*(1-u)*u*mx+u*u*tx;
+      const py=q<.2?cy+(oy-cy)*q/.2:(1-u)*(1-u)*oy+2*(1-u)*u*my+u*u*ty;
+      o.style.left=px+'px';o.style.top=py+'px';
+      // 従来の月明かり2倍報酬玉を超えない最大1.6倍。
+      o.style.transform='scale('+Math.min(1.6,q<.2?.4+q*6:Math.max(.45,1.6-q))+')';
+      o.style.opacity=q>.9?(1-q)*10:1;
+      if(q<1)requestAnimationFrame(step);
+      else{
+        o.remove();
+        // 合計時間はtimeGainOverrideへ渡し、二重加算しない。
+        taAward(isTime,isTime?1:value,false,false,false,isTime?value:null);
+        sfx.arrive();
+      }
+    };
+    requestAnimationFrame(step);
   });
 }
 // ---------- 共鳴：触れた言葉から、いちばん近い言葉へ光の線が伝わり、届いた言葉が鳴って違和感になる。届く範囲にある限り次々に続く ----------
@@ -8697,8 +8714,8 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   centers.forEach((c,i)=>{
    const suppressDecor=(taMobileFx&&crossBursts.length>0)||dualActive;
    if(!suppressDecor){
-    const fragments=Array.from({length:taMobileFx?3:18},(_,j)=>({angle:Math.random()*Math.PI*2,radius:27+Math.random()*68,phase:Math.random()*6.28,size:.6+Math.random()*1.7,kind:j%5===0?'glyph':'spark'}));
-    if(!taMobileFx||summonBursts.length<20)summonBursts.push({x:c.x,y:c.y,start:performance.now()+i*(taMobileFx?85:57),fragments});
+    const fragments=Array.from({length:taMobileFx?2:12},(_,j)=>({angle:Math.random()*Math.PI*2,radius:27+Math.random()*68,phase:Math.random()*6.28,size:.6+Math.random()*1.7,kind:j%5===0?'glyph':'spark'}));
+    if(!taMobileFx||summonBursts.length<12)summonBursts.push({x:c.x,y:c.y,start:performance.now()+i*(taMobileFx?85:57),fragments});
    }
    summonTimers.push(setTimeout(()=>{
     if(!active()||typeof spawnWord!=='function')return;
@@ -8732,7 +8749,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    const sprite=taFxSpriteCache.get('summon-glow');ctx.globalAlpha=fade*.85;if(sprite){const radius=38*(1-t*.3);ctx.drawImage(sprite,b.x-radius,b.y-radius,radius*2,radius*2);}else{const glow=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,38*(1-t*.3));glow.addColorStop(0,'rgba(240,255,193,.62)');glow.addColorStop(.28,'rgba(94,255,171,.32)');glow.addColorStop(1,'rgba(9,110,80,0)');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(b.x,b.y,42,0,Math.PI*2);ctx.fill();}
    for(const f of b.fragments){const q=Math.min(1,Math.max(0,age/.48));const spiral=f.angle+(1-q)*2.4+f.phase*.12;const r=f.radius*(1-q)*(1-q);const x=b.x+Math.cos(spiral)*r,y=b.y+Math.sin(spiral)*r*.75;ctx.globalAlpha=fade*(.35+.65*q);ctx.fillStyle=f.kind==='glyph'?'#e7d4a0':'#8afac9';ctx.shadowColor=f.kind==='glyph'?'#f4cf84':'#6afac0';ctx.shadowBlur=taMobileFx?0:7;ctx.save();ctx.translate(x,y);ctx.rotate(spiral);if(f.kind==='glyph'){ctx.font='12px serif';ctx.fillText('✧',0,0);}else{ctx.fillRect(-f.size/2,-f.size/2,f.size*1.4,f.size*2.3);}ctx.restore();}
   }
-  ctx.restore();summonBursts=summonBursts.filter(b=>now-b.start<1000);
+  ctx.restore();if(summonBursts.length&&now-summonBursts[0].start>=1000)summonBursts=summonBursts.filter(b=>now-b.start<1000);
  }
  // Fire x ice resonance: require a clean near-perpendicular cross around BOTH stroke centers.
  function crossCandidate(a,b){
@@ -8958,7 +8975,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const now=performance.now();
   taLastDualFinisher=now;
   const ultimateId=taUltimateShow("cross","全部なかったことに");
-  crossBursts.push({ultimateId,x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({points:taCrossBladePoints(f.path)})),rain:Array.from({length:taMobileFx?26:145},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taMobileFx?14:36},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?14:36)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
+  crossBursts.push({ultimateId,x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({points:taCrossBladePoints(f.path)})),rain:Array.from({length:taMobileFx?18:105},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taMobileFx?12:30},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?12:30)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
   spark(hit.x,hit.y,'fire',taMobileFx?5:10);spark(hit.x,hit.y,'ice',taMobileFx?5:10);
   playElementSound('cross');
   if(taPerfEnabled)taPerfCost('cross',performance.now()-taCrossStarted);
@@ -9492,7 +9509,7 @@ body>.ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!importa
 <script id="ta-orb-spherical-mapping-script-v3">
 (()=>{
 'use strict';
-const W=72,H=72,TW=256,TH=128,PERIOD=16000,INTERVAL=55;
+const W=72,H=72,TW=256,TH=128,PERIOD=16000,INTERVAL=95;
 const palette={fire:[255,64,32],ice:[47,174,255],summon:[55,238,139]};
 const clamp=(x)=>Math.max(0,Math.min(255,x));
 const texture=(base,seed)=>{
@@ -9521,6 +9538,7 @@ for(let y=0;y<H;y++)for(let x=0;x<W;x++){
  const edge=Math.pow(1-nz,2)*.35;
  mapping.push([lon,Math.max(0,Math.min(TH-1,Math.floor((.5-lat/Math.PI)*TH))),shade,spec,edge]);
 }
+const spherePixels=mapping.map((m,i)=>{if(!m)return null;const x=(i%W+.5-W/2)/(W/2-1),y=(Math.floor(i/W)+.5-H/2)/(H/2-1),r=Math.hypot(x,y);return {x,y,r,inner:Math.exp(-((x*.96)**2+(y*.96)**2)/.25),hot:Math.exp(-((x+.015)**2+(y+.018)**2)/.024),shell:Math.exp(-Math.pow((r-.91)/.065,2)),reflection:Math.exp(-((x+.40)**2/.027+(y+.47)**2/.09)),fade:Math.max(0,Math.min(1,(1-r)*9)),falloff:Math.exp(-r*r/.72)};});
 const states=[];
 function setup(){
  document.querySelectorAll('#viewMain>.ta-items .ta-orb.fire,#viewMain>.ta-items .ta-orb.ice,#viewMain>.ta-items .ta-orb.summon').forEach((button)=>{
@@ -9528,7 +9546,7 @@ function setup(){
   const kind=button.classList.contains('fire')?'fire':button.classList.contains('ice')?'ice':'summon';
   const canvas=document.createElement('canvas');canvas.className='ta-sphere-surface';canvas.width=W;canvas.height=H;canvas.setAttribute('aria-hidden','true');
   button.insertBefore(canvas,button.firstChild);
-  const ctx=canvas.getContext('2d',{alpha:true});if(ctx)states.push({button,ctx,img:ctx.createImageData(W,H),tex:cache[kind]});
+  const ctx=canvas.getContext('2d',{alpha:true});if(ctx){const state={button,ctx,img:ctx.createImageData(W,H),tex:cache[kind],drawn:false};states.push(state);draw(state,0);}
  });
 }
 function draw(state,phase){
@@ -9537,20 +9555,16 @@ function draw(state,phase){
  const offset=phase*TW,twopi=Math.PI*2;
  for(let i=0;i<mapping.length;i++){
   const p=i*4,m=mapping[i];if(!m){d[p+3]=0;continue}
-  const x=(i%W+.5-W/2)/(W/2-1),y=(Math.floor(i/W)+.5-H/2)/(H/2-1),r=Math.hypot(x,y);
+  const {x,y,r,inner,hot,shell,reflection,fade,falloff}=spherePixels[i];
   const [lon,ty]=m;
   const tx=((Math.floor((lon/twopi+.5)*TW+offset)%TW)+TW)%TW;
   const ti=(ty*TW+tx)*3;
   const wave=(tex[ti]+tex[ti+1]+tex[ti+2])/765;
   // Clear glass, not a dark opaque body. The rotating texture becomes translucent energy filaments.
-  const inner=Math.exp(-((x*.96)**2+(y*.96)**2)/.25);
-  const hot=Math.exp(-((x+.015)**2+(y+.018)**2)/.024);
-  const shell=Math.exp(-Math.pow((r-.91)/.065,2));
-  const reflection=Math.exp(-((x+.40)**2/.027+(y+.47)**2/.09));
-  const rotating=(.5+.5*Math.sin(9*lon+offset/TW*twopi*5+7*y+Math.sin(5*lon-4*y)));
-  const filament=Math.pow(rotating,9)*Math.exp(-r*r/.72)*(0.5+wave);
+    const rotating=(.5+.5*Math.sin(9*lon+offset/TW*twopi*5+7*y+Math.sin(5*lon-4*y)));
+  const filament=Math.pow(rotating,9)*falloff*(0.5+wave);
   const energy=Math.min(1,.20*inner+.40*filament+.88*hot);
-  const alpha=Math.max(0,Math.min(1,(1-r)*9))*(.11+.40*inner+.30*filament+.35*shell+.8*hot);
+  const alpha=fade*(.11+.40*inner+.30*filament+.35*shell+.8*hot);
   const whiten=Math.min(1,hot*1.1+reflection*.8);
   for(let k=0;k<3;k++)d[p+k]=clamp(base[k]*(.60+.60*energy)*(1-whiten)+255*whiten);
   d[p+3]=Math.round(255*Math.min(.97,alpha));
@@ -9569,6 +9583,7 @@ function draw(state,phase){
 }
 let last=0;
 function frame(now){
+ if(document.hidden){last=now;requestAnimationFrame(frame);return;}
  if(now-last>=INTERVAL){
   setup();
   const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -9601,6 +9616,17 @@ requestAnimationFrame(frame);
   }, {capture:true});
 })();
 </script>
+
+<style id="ta-eclipse-aggregated-orb-glow-v1">
+/* 蝕の集約報酬：サイズは月明かり2倍ボーナスの上限を維持し、光量のみ強める。 */
+.orb.ta-eclipse-aggregated-reward{
+  filter:brightness(1.55) saturate(1.22)!important;
+  box-shadow:0 0 7px 3px rgba(255,255,255,.95),0 0 16px 7px rgba(249,217,255,.80),0 0 27px 10px rgba(174,104,255,.42)!important;
+}
+.orb.ta-eclipse-aggregated-reward.ta-reward-time{
+  box-shadow:0 0 7px 3px rgba(245,253,255,.98),0 0 17px 7px rgba(94,204,255,.85),0 0 27px 10px rgba(64,138,255,.42)!important;
+}
+</style>
 </body>
 <style>
 /* Readable thousand-point popup labels in the collection area. */
