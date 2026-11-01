@@ -435,6 +435,13 @@ html[data-yura="black"].ta-century-lit #viewMain>.hero.ta-active-visual>picture.
 #taLoading .ta-loading-percent{font:12px sans-serif;color:#b5ac9d}
 @keyframes taLoadingBreathe{50%{opacity:.65;transform:scale(1.045)}}
 @media(prefers-reduced-motion:reduce){#taLoading .ta-loading-book{animation:none}}
+
+/* 50-chain meteor background: between night and existing 100-chain scene. */
+#viewMain>.hero>picture.ta-bg-picture.ta-meteor50{opacity:0!important;transition:opacity 3s ease-in-out;pointer-events:none;}
+html[data-yura="black"].ta-meteor-lit #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-meteor50{opacity:1!important;}
+/* On leaving 100 chains, skip the meteor image and return directly to night. */
+html.ta-meteor-skip #viewMain>.hero>picture.ta-bg-picture.ta-meteor50{opacity:0!important;transition-duration:0s!important;}
+
 </style>
 <script>
 /* 最初の描画より前に、前回の世界（白/黒）を決めておく。万一起動処理が止まっても4秒で必ず見せる */
@@ -1967,6 +1974,7 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
   <figure class="hero">
     <img class="w" src="img/key-white.webp" alt="白ユラ：祈るように手を組む人物。The world is less in order than I expected.">
     <picture class="ta-bg-picture b"><source media="(max-width:600px)" srcset="img/night_mobile.webp"><img src="img/night.webp" alt="夜の書斎と城下町"></picture>
+    <picture class="ta-bg-picture b ta-meteor50" aria-hidden="true"><source media="(max-width:600px)" srcset="img/meteor50_mobile.webp"><img src="img/meteor50.webp" alt="" decoding="async"></picture>
     <picture class="ta-bg-picture b castle-dim" aria-hidden="true"><source media="(max-width:600px)" srcset="img/day_mobile.webp"><img src="img/day.webp" alt=""></picture>
     <!-- 髪だけを、ゆるやかな揺らぎで重ねてなびかせる -->
     <img class="w hair hair-w" src="img/key-white.webp" alt="" aria-hidden="true">
@@ -4119,10 +4127,18 @@ function taSyncDriftingGlowWords(){
     w.setAttribute("aria-label",label + "（触れると、しばらく違和感が2倍）");
   });
 }
+var taMeteorHadCentury=false;
+function taMeteorReset(){
+  const doc=document.documentElement;
+  doc.classList.remove('ta-meteor-lit');
+  if(taMeteorHadCentury)doc.classList.add('ta-meteor-skip');
+  taMeteorHadCentury=false;
+}
 function expireCombo(){
+  taMeteorReset();
   combo=0;comboWindowMs=COMBO_MS;
   taSyncDriftingGlowWords();
-  document.documentElement.classList.remove("ta-century-lit");
+  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit");
   const el=$("combo");el.classList.remove("on","x2","x3","run","heat","ta-skill-grace");
   el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();
 }
@@ -4134,6 +4150,7 @@ function bumpCombo(){
   combo = (flood || comboPaused || now - comboAt <= comboWindowMs) ? combo + 1 : 1; comboAt = now;
   comboWindowMs=COMBO_MS; // Ordinary collection does not inherit skill grace.
   $("combo").classList.remove("ta-skill-grace");
+  if(combo===1 && taMeteorHadCentury)taMeteorReset();
   if(combo>taSessionMaxCombo) taSessionMaxCombo=combo;
   if(combo > maxCombo){ maxCombo = combo; store.set("ta-yura-maxcombo", maxCombo); }
   const m = comboMult(combo), el = $("combo"), prevX = el.classList.contains("x3") ? 3 : el.classList.contains("x2") ? 2 : 1;
@@ -4149,7 +4166,14 @@ function bumpCombo(){
   el.style.setProperty("--ct", COMBO_MS + "ms");
   el.classList.toggle("on", combo >= 2); el.classList.toggle("x2", m === 2); el.classList.toggle("x3", m === 3); el.classList.toggle("hold", flood);
   comboRush(m === 3);
+  if(combo>=50){
+    document.documentElement.classList.remove("ta-meteor-skip");
+    document.documentElement.classList.add("ta-meteor-lit");
+  }else{
+    document.documentElement.classList.remove("ta-meteor-lit");
+  }
   document.documentElement.classList.toggle("ta-century-lit", combo>=100);
+  if(combo>=100)taMeteorHadCentury=true;
   if(combo===100 || combo===1) taSyncDriftingGlowWords();
   // Start the special BGM at 100 chains; stop it if the chain resets.
   if(combo===100)taCenturyMusic.start();
@@ -4460,7 +4484,7 @@ function endFlood(){
       comboEl.classList.add("run");
       comboAt=Date.now()-(comboWindowMs-remaining);
       clearTimeout(bumpCombo.h);
-      bumpCombo.h=setTimeout(()=>{combo=0;taSyncDriftingGlowWords();document.documentElement.classList.remove("ta-century-lit");const el=$("combo");el.classList.remove("on","x2","x3","run","heat");el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();},remaining);
+      bumpCombo.h=setTimeout(()=>{taMeteorReset();combo=0;taSyncDriftingGlowWords();document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit");const el=$("combo");el.classList.remove("on","x2","x3","run","heat");el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();},remaining);
     }
   }
   // 位置は先にまとめて読む（クラスを外したあとに読むと、画面全体の再計算をその場で強いて重くなる）
@@ -7871,12 +7895,13 @@ function taFinish(){
   // Preserve the century track only when the finished score enters the top 20.
   const wasCentury=combo>=100 && taCenturyMusic.isActive();
   clearTimeout(bumpCombo.h);
+  taMeteorReset();
   // End the visual/gameplay century state immediately. The ranked-outro BGM
   // is deliberately managed separately by taCenturyMusic below.
   taRunning=false;taStarting=false;
   combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;
   taFloodComboRemaining=null;
-  document.documentElement.classList.remove("ta-century-lit");
+  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit");
   const finishedComboEl=document.getElementById('combo');
   if(finishedComboEl){
     finishedComboEl.classList.remove('on','x2','x3','run','heat','hold','paused','hit','up','ta-skill-grace');
@@ -7953,8 +7978,9 @@ function taBeginReady(){
   document.getElementById('taLaunch').hidden=true;
   sfx.resultStop(true);
   taCenturyMusic.stop(true);
+  taMeteorReset();
   // DEMOでの操作履歴をゲーム本番へ持ち越さない。
-  clearTimeout(bumpCombo.h);combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit");
+  clearTimeout(bumpCombo.h);combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit");
   const comboEl=document.getElementById("combo");
   if(comboEl){comboEl.classList.remove("on","x2","x3","run","heat","paused","hold","ta-skill-grace");comboEl.style.removeProperty("--heat");}
   document.getElementById("cbn").textContent="0";document.getElementById("cbx").textContent="";comboRush(false);
@@ -9793,6 +9819,17 @@ requestAnimationFrame(frame);
   box-shadow:0 0 7px 3px rgba(245,253,255,.98),0 0 17px 7px rgba(94,204,255,.85),0 0 27px 10px rgba(64,138,255,.42)!important;
 }
 </style>
+
+<script>
+/* Preload the two 50-chain backgrounds well before reaching the milestone. */
+(function(){
+  const mobile=window.matchMedia('(max-width:600px)').matches;
+  const img=new Image();
+  img.decoding='async';
+  img.src=mobile?'img/meteor50_mobile.webp':'img/meteor50.webp';
+  if(img.decode)img.decode().catch(()=>{});
+})();
+</script>
 </body>
 <style>
 /* Readable thousand-point popup labels in the collection area. */
