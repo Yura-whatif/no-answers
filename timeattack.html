@@ -9081,6 +9081,7 @@ function taReleaseCenturyFlash(el){
  const taPerfStats={rafCount:0,rafSlow:0,rafMax:0,rafLast:0,paintCount:0,paintSum:0,paintMax:0,
   crossCount:0,crossMs:0,crossMax:0,greenCount:0,greenMs:0,greenMax:0,
   collectCount:0,collectMs:0,collectMax:0,readCount:0,readMs:0,readMax:0,orbsCount:0,orbsMs:0,orbsMax:0,logicCount:0,logicMs:0,logicMax:0,hudCount:0,hudMs:0,hudMax:0,spawnCount:0,spawnMs:0,spawnMax:0,longCount:0,longMax:0};
+ let taPerfCentury={samples:0,gap:0,paint:0,cross:0,green:0,collect:0,spawn:0,long:0,slow:0};
  let taPerfWindow=performance.now(),taPerfWorst5={raf:0,paint:0,cross:0,green:0,collect:0,read:0,orbs:0,logic:0,hud:0,spawn:0,long:0},taPerfHistory=[];
  function taPerfCost(kind,ms){if(!taPerfEnabled)return;const t=taPerfStats;t[kind+'Count']++;t[kind+'Ms']+=ms;t[kind+'Max']=Math.max(t[kind+'Max'],ms);}
  function taPerfFrame(now){
@@ -9091,7 +9092,7 @@ function taReleaseCenturyFlash(el){
  }
  if(taPerfEnabled){
   taPerfPanel=document.createElement('div');taPerfPanel.id='taPerfPanel';
-  taPerfPanel.style.cssText='position:fixed;right:5px;bottom:5px;z-index:99999;background:rgba(0,0,0,.85);color:#baffcf;font:10px/1.35 monospace;padding:6px;border-radius:5px;pointer-events:none;white-space:pre;max-width:calc(100vw - 12px)';
+  taPerfPanel.style.cssText='position:fixed;left:6px;top:56px;z-index:99999;background:rgba(0,0,0,.85);color:#baffcf;font:10px/1.35 monospace;padding:6px;border-radius:5px;pointer-events:none;white-space:pre;max-width:calc(100vw - 12px)';
   taPerfPanel.textContent='Performance monitoring...';document.body.append(taPerfPanel);
   if(typeof PerformanceObserver!=='undefined')try{
    const observer=new PerformanceObserver(list=>{for(const e of list.getEntries()){taPerfStats.longCount++;taPerfStats.longMax=Math.max(taPerfStats.longMax,e.duration);}});
@@ -9106,6 +9107,12 @@ function taReleaseCenturyFlash(el){
   if(now-taPerfWindow<1500)return;
   const elapsed=now-taPerfWindow;
   const sample={time:now,raf:t.rafMax,paint:t.paintMax,cross:t.crossMax,green:t.greenMax,collect:t.collectMax,read:t.readMax,orbs:t.orbsMax,logic:t.logicMax,hud:t.hudMax,spawn:t.spawnMax,long:t.longMax};
+  if(typeof combo==='number'&&combo>=100){
+   const c=taPerfCentury;c.samples++;c.gap=Math.max(c.gap,sample.raf);c.paint=Math.max(c.paint,sample.paint);
+   c.cross=Math.max(c.cross,sample.cross);c.green=Math.max(c.green,sample.green);
+   c.collect=Math.max(c.collect,sample.collect);c.spawn=Math.max(c.spawn,sample.spawn);
+   c.long=Math.max(c.long,sample.long);c.slow+=t.rafSlow;
+  }
   taPerfHistory.push(sample);taPerfHistory=taPerfHistory.filter(x=>now-x.time<=5000);
   for(const k of ['raf','paint','cross','green','collect','read','orbs','logic','hud','spawn','long'])taPerfWorst5[k]=Math.max(...taPerfHistory.map(x=>x[k]));
   const fmt=n=>n.toFixed(1),avg=(sum,n)=>fmt(sum/Math.max(1,n));
@@ -9123,7 +9130,10 @@ function taReleaseCenturyFlash(el){
    '\nPhase read '+fmt(taPerfWorst5.read)+' orb '+fmt(taPerfWorst5.orbs)+
    '\nPhase logic '+fmt(taPerfWorst5.logic)+' HUD '+fmt(taPerfWorst5.hud)+
    '\nOrbs pooled '+taCrossOrbPool.length+' star '+taCenturyFlashPool.length+
-   '\nChain '+(typeof combo==='number'?combo:'?')+' /100 '+(typeof combo==='number'&&combo>=100?'ON':'OFF');
+   '\nChain '+(typeof combo==='number'?combo:'?')+' /100 '+(typeof combo==='number'&&combo>=100?'ON':'OFF')+
+   '\n100+ peak ('+taPerfCentury.samples+' windows) gap '+fmt(taPerfCentury.gap)+'ms'+
+   '\n100+ FX '+fmt(taPerfCentury.paint)+' cross '+fmt(taPerfCentury.cross)+' green '+fmt(taPerfCentury.green)+
+   '\n100+ collect '+fmt(taPerfCentury.collect)+' spawn '+fmt(taPerfCentury.spawn)+' long '+fmt(taPerfCentury.long);
   taPerfWindow=now;
   for(const k of ['rafCount','rafSlow','rafMax','paintCount','paintSum','paintMax','crossCount','crossMs','crossMax','greenCount','greenMs','greenMax','collectCount','collectMs','collectMax','readCount','readMs','readMax','orbsCount','orbsMs','orbsMax','logicCount','logicMs','logicMax','hudCount','hudMs','hudMax','spawnCount','spawnMs','spawnMax','longCount','longMax'])t[k]=0;
  }
