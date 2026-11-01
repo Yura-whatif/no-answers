@@ -4521,12 +4521,46 @@ function endFlood(){
   // No legacy pocket-watch clone: the completed clock receives gemBurst above.
   if(sw && sw.isConnected)sw.remove();
   // 並んでいた言葉は、時間が動き出すと溶けて消える
-  $("drift").querySelectorAll(".word.still:not(.got)").forEach(w => { w.classList.add("got"); w.animate([{opacity:1},{opacity:0, transform:"translateY(-8px)"}], {duration:500, fill:"forwards"}).onfinish = () => w.remove(); });
+  // Stage 8: avoid starting dozens of Web Animations in the same release task.
+  // The first input after unfreezing must not wait behind a large animation batch.
+  const taStillAtRelease = Array.from($("drift").querySelectorAll(".word.still:not(.got)"));
+  let taStillCursor = 0;
+  const taReleaseSession = taFinishToken;
+  function taDrainStillWords(){
+    if(taReleaseSession !== taFinishToken || !taRunning)return;
+    const until=Math.min(taStillCursor+6,taStillAtRelease.length);
+    for(;taStillCursor<until;taStillCursor++){
+      const w=taStillAtRelease[taStillCursor];
+      if(!w.isConnected || w.classList.contains('got'))continue;
+      w.classList.add('got');
+      const a=w.animate([{opacity:1},{opacity:0,transform:'translateY(-8px)'}],{duration:500,fill:'forwards'});
+      a.onfinish=()=>w.remove();
+    }
+    if(taStillCursor<taStillAtRelease.length)requestAnimationFrame(taDrainStillWords);
+  }
+  if(taStillAtRelease.length)requestAnimationFrame(taDrainStillWords);
   // 解除後の光の玉は、回収時に記録した種類に従って得点／時間へ向かう。
   // 元の霧化・光の玉・解除演出はそのまま維持する。
   const pend = stopPend; stopPend = [];
   if(pend.length) setTimeout(()=>sfx.burst(), 60);
-  pend.forEach((p, i) => setTimeout(()=>addToDict(p.word), 1500 + i * 70));
+  // Stage 8: one dictionary queue timer rather than one timer per collected word.
+  // Keep the original 1500 + i*70 ms cadence and ordering.
+  if(pend.length){
+    const taDictSession=taFinishToken;
+    let taDictIndex=0;
+    const taDictStart=performance.now()+1500;
+    const taDictStep=()=>{
+      if(taDictSession!==taFinishToken || !taRunning)return;
+      const now=performance.now();
+      let n=0;
+      while(taDictIndex<pend.length && taDictStart+taDictIndex*70<=now && n<5){
+        addToDict(pend[taDictIndex++].word);n++;
+      }
+      if(taDictIndex<pend.length)
+        setTimeout(taDictStep,Math.max(0,taDictStart+taDictIndex*70-performance.now()));
+    };
+    setTimeout(taDictStep,1500);
+  }
   // 回収数が12個を超えても先行加算せず、すべてのオーブ到着時に反映する。
   const awardSession = taFinishToken;
   // Stage 5: Only decorative flying orbs are sampled; ALL rewards and
@@ -8090,6 +8124,20 @@ async function taBegin(prepareOnly=false){
       await Promise.all(names.map(n=>taPreloadImage('img/'+n)));
       taPreparedViewport=viewport;
     }
+    // Stage 8: decode combo backgrounds before the first combo transition.
+    // Failures remain nonfatal (same behavior as the other optional assets).
+    await Promise.allSettled([
+      taPreloadImage(mobile?'img/meteor50_mobile.webp':'img/meteor50.webp')
+    ]);
+    // Warm reward-orb CSS/paint once while the loading screen is visible.
+    // Do not retain any active animations or change scoring behavior.
+    try{
+      const warmOrb=document.createElement('span');warmOrb.className='orb';
+      warmOrb.style.cssText='position:fixed;left:-200px;top:-200px;visibility:hidden;pointer-events:none';
+      document.body.append(warmOrb);
+      if(typeof taStyleRewardOrb==='function')taStyleRewardOrb(warmOrb,false,false);
+      warmOrb.getBoundingClientRect();warmOrb.remove();
+    }catch(e){console.warn('Orb prewarm fallback',e);}
     progress(55,'言葉を準備しています');
     // Decode the three item-orb images in advance, without changing their appearance.
     await Promise.allSettled([
