@@ -8302,6 +8302,14 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  // Stage 2: adaptive *decorative* rendering only. Gameplay, collision checks,
  // reward timing, and the main FX update cadence are never throttled.
  let taAdaptiveLevel=0; // 0 full, 1 balanced, 2 light
+ // Stage 6: compound-skill load guard. Only decorative work is reduced.
+ // Cross collection pulses, stop rewards, hit tests and +value UI remain intact.
+ function taCompoundFxLevel(){
+  const cross=crossBursts.length;
+  const overlap=(cross>=2)||(cross>0&&(flood||summonBursts.length>0||particles.length>90));
+  return overlap?2:cross>0?Math.max(1,taAdaptiveLevel):taAdaptiveLevel;
+ }
+
  let taAdaptiveLast=0,taAdaptiveSlow=0,taAdaptiveGood=0,taAdaptiveFrames=0;
  let taAdaptiveActive=false,taAdaptivePrevious=0;
  function taAdaptiveFrame(ts){
@@ -9075,7 +9083,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const now=performance.now();
   taLastDualFinisher=now;
   const ultimateId=taUltimateShow("cross","全部なかったことに");
-  crossBursts.push({ultimateId,x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({points:taCrossBladePoints(f.path)})),rain:Array.from({length:taMobileFx?18:105},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taMobileFx?12:30},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?12:30)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
+  crossBursts.push({ultimateId,x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({points:taCrossBladePoints(f.path)})),rain:Array.from({length:taCompoundFxLevel()===2?12:(taMobileFx?18:105)},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taCompoundFxLevel()===2?9:(taMobileFx?12:30)},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?12:30)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
   spark(hit.x,hit.y,'fire',taMobileFx?5:10);spark(hit.x,hit.y,'ice',taMobileFx?5:10);
   playElementSound('cross');
   if(taPerfEnabled)taPerfCost('cross',performance.now()-taCrossStarted);
@@ -9147,7 +9155,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
     ctx.globalAlpha=Math.pow(1-u,1.4)*.9;ctx.strokeStyle='#ecfbff';ctx.lineWidth=5*(1-u)+.5;
     ctx.beginPath();ctx.arc(b.x,b.y,rr,0,Math.PI*2);ctx.stroke();
     if(flash>0){const glow=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,95+90*u);glow.addColorStop(0,`rgba(255,255,255,${flash*.85})`);glow.addColorStop(1,'rgba(120,225,255,0)');ctx.globalAlpha=1;ctx.fillStyle=glow;ctx.beginPath();ctx.arc(b.x,b.y,95+90*u,0,Math.PI*2);ctx.fill();}
-    for(const p of b.shards){const dist=p.speed*u,x=b.x+Math.cos(p.angle)*dist,y=b.y+Math.sin(p.angle)*dist;ctx.globalAlpha=(1-u)*.8;ctx.fillStyle=p.kind===0?'#ffc898':p.kind===1?'#bceeff':'#fff';ctx.beginPath();ctx.arc(x,y,p.size*(1-u*.6),0,Math.PI*2);ctx.fill();}
+    for(let si=0;si<b.shards.length;si++){if(taCompoundFxLevel()===2&&si%3!==0)continue;const p=b.shards[si];const dist=p.speed*u,x=b.x+Math.cos(p.angle)*dist,y=b.y+Math.sin(p.angle)*dist;ctx.globalAlpha=(1-u)*.8;ctx.fillStyle=p.kind===0?'#ffc898':p.kind===1?'#bceeff':'#fff';ctx.beginPath();ctx.arc(x,y,p.size*(1-u*.6),0,Math.PI*2);ctx.fill();}
    }
    ctx.restore();
   }
@@ -9228,6 +9236,8 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    if(fxWasDrawing){ctx.clearRect(0,0,canvas.width,canvas.height);clockCtx.clearRect(0,0,clockCanvas.width,clockCanvas.height);fxWasDrawing=false;}
    last=now;scheduleFxIdle(110);return;
   }
+  // Keep all simulation/collection events running; skip only costly visual paints.
+  const taCompoundLevel=taCompoundFxLevel();
   const targetMs=taMobileFx?(crossBursts.length?50:40):16;
   if(now-lastFxPaint<targetMs){requestAnimationFrame(draw);return;}
   lastFxPaint=now;fxWasDrawing=true;const taPaintStart=taPerfEnabled?performance.now():0;
@@ -9382,7 +9392,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   }
  }
  traces=traces.filter(f=>f.left>0);checkWords();renderCrossBursts(now);
- for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){taRecycleSpark(p);particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy+=(p.type==='fire'?-24:18)*dt;if(p.type==='fire'){p.sway+=dt*12;p.vx+=Math.sin(p.sway)*dt*22;}if(taAdaptiveLevel===2&&i%3!==0)continue;if(taAdaptiveLevel===1&&i%2!==0)continue;const a=Math.min(1,p.life*2);ctx.save();ctx.globalAlpha=a;if(p.type==='fire'){const heat=p.heat??.5;const tint=heat>.76?'#fff0bd':heat>.4?'#ffba58':'#e95425';ctx.fillStyle=tint;ctx.shadowColor=heat>.4?'#ff9d36':'#b83819';ctx.shadowBlur=taAdaptiveLevel?0:(taMobileFx?2:(heat>.7?10:5));if(p.trail){ctx.strokeStyle=tint;ctx.globalAlpha=a*.42;ctx.lineWidth=Math.max(.5,p.r*.55);ctx.beginPath();ctx.moveTo(p.x-p.vx*.035,p.y-p.vy*.035);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.globalAlpha=a;}ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(.55,p.r*.58),Math.max(.8,p.r*(1.15+heat*.5)),Math.atan2(p.vy,p.vx)+Math.PI/2,0,Math.PI*2);ctx.fill();}else{ctx.fillStyle=Math.random()>.5?'#e3fbff':'#80d8ff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=taAdaptiveLevel?0:(taMobileFx?2:9);ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}if(p.type==='ice'){ctx.strokeStyle='#e6faff';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p.x-p.r*2,p.y);ctx.lineTo(p.x+p.r*2,p.y);ctx.moveTo(p.x,p.y-p.r*2);ctx.lineTo(p.x,p.y+p.r*2);ctx.stroke()}ctx.restore()}
+ for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){taRecycleSpark(p);particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy+=(p.type==='fire'?-24:18)*dt;if(p.type==='fire'){p.sway+=dt*12;p.vx+=Math.sin(p.sway)*dt*22;}if(taCompoundLevel===2&&i%4!==0)continue;if(taCompoundLevel===1&&i%2!==0)continue;const a=Math.min(1,p.life*2);ctx.save();ctx.globalAlpha=a;if(p.type==='fire'){const heat=p.heat??.5;const tint=heat>.76?'#fff0bd':heat>.4?'#ffba58':'#e95425';ctx.fillStyle=tint;ctx.shadowColor=heat>.4?'#ff9d36':'#b83819';ctx.shadowBlur=taCompoundLevel?0:(taMobileFx?2:(heat>.7?10:5));if(p.trail){ctx.strokeStyle=tint;ctx.globalAlpha=a*.42;ctx.lineWidth=Math.max(.5,p.r*.55);ctx.beginPath();ctx.moveTo(p.x-p.vx*.035,p.y-p.vy*.035);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.globalAlpha=a;}ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(.55,p.r*.58),Math.max(.8,p.r*(1.15+heat*.5)),Math.atan2(p.vy,p.vx)+Math.PI/2,0,Math.PI*2);ctx.fill();}else{ctx.fillStyle=Math.random()>.5?'#e3fbff':'#80d8ff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=taCompoundLevel?0:(taMobileFx?2:9);ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}if(p.type==='ice'){ctx.strokeStyle='#e6faff';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p.x-p.r*2,p.y);ctx.lineTo(p.x+p.r*2,p.y);ctx.moveTo(p.x,p.y-p.r*2);ctx.lineTo(p.x,p.y+p.r*2);ctx.stroke()}ctx.restore()}
  // Full-screen final white flash, followed by a gentle shower of white motes.
  // Draw in viewport coordinates, not field coordinates, so nothing is clipped.
  for(const b of crossBursts){
@@ -9400,6 +9410,10 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    for(let pi=0;pi<b.rain.length;pi++){
     // On mobile, draw fewer overlapping background motes during the busy middle;
     // preserve the visible final flash and foreground finish unchanged.
+    // Multiple active bursts: old decorative rain is the first thing to thin.
+    // The white flash and all gameplay collection events are untouched.
+    if(taCompoundLevel===2&&pi%4!==0)continue;
+    if(taCompoundLevel===1&&pi%2!==0)continue;
     if(taMobileFx&&crossBursts.length&&after<2.8&&pi%3!==0)continue;
     const p=b.rain[pi];
     const elapsed=fall-p.delay;if(elapsed<0)continue;
