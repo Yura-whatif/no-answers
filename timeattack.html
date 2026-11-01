@@ -4141,8 +4141,9 @@ function bumpCombo(){
   // Only milestone counts animate; replay even if the next milestone arrives quickly.
   if(combo>=10 && combo%10===0){
     const number=$('cbn');
+    // Restart only the number animation; do not force synchronous layout.
+    number.getAnimations().forEach(a=>{if(a.effect && a.effect.target===number)a.cancel();});
     number.classList.remove('ta-chain-ten','ta-chain-hundred');
-    void number.offsetWidth;
     number.classList.add(combo%100===0?'ta-chain-hundred':'ta-chain-ten');
   }
   el.style.setProperty("--ct", COMBO_MS + "ms");
@@ -4153,8 +4154,23 @@ function bumpCombo(){
   // Start the special BGM at 100 chains; stop it if the chain resets.
   if(combo===100)taCenturyMusic.start();
   else if(combo===1)taCenturyMusic.stop();
-  el.classList.remove("hit","run"); void el.offsetWidth; el.classList.add("hit","run");
-  if(m > prevX && !flood){ el.classList.remove("up"); void el.offsetWidth; el.classList.add("up"); sfx.line(0); }
+  // The previous offsetWidth read forced a full style/layout flush on EVERY
+  // collection, especially expensive while multiple skills animate.
+  // Replay the same 0.3 s pulse using WAAPI, without synchronous reflow.
+  const comboNumber=el.querySelector('b');
+  if(comboNumber && comboNumber.animate){
+    if(bumpCombo.hitAnim)bumpCombo.hitAnim.cancel();
+    bumpCombo.hitAnim=comboNumber.animate(
+      [{transform:'scale(1)'},{transform:'scale(1.3)',offset:.4},{transform:'scale(1)'}],
+      {duration:300,easing:'ease'});
+  }
+  el.classList.remove("hit");
+  el.classList.add("run");
+  if(m > prevX && !flood){
+    el.classList.remove("up");
+    requestAnimationFrame(()=>{if(taRunning)el.classList.add("up");});
+    sfx.line(0);
+  }
   // Any combo created during stopped time must have a frozen, full gauge.
   if(flood){
     taFloodComboRemaining=COMBO_MS;
@@ -9730,12 +9746,13 @@ function draw(state,phase){
  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(W/2,H/2,W*.48,0,twopi);ctx.fill();
  ctx.restore();
 }
+const taReducedMotionQuery=window.matchMedia?window.matchMedia('(prefers-reduced-motion: reduce)'):null;
 let last=0;
 function frame(now){
  if(document.hidden){last=now;requestAnimationFrame(frame);return;}
  if(now-last>=INTERVAL){
   setup();
-  const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce=!!(taReducedMotionQuery&&taReducedMotionQuery.matches);
   const phase=reduce?0:(now%PERIOD)/PERIOD;
   for(const state of states){
    if(!state.button.isConnected)continue;
