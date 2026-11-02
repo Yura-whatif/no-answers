@@ -8325,6 +8325,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  // Crystal clock face is prerendered once; only the hands animate each frame.
  const crystalFace=document.createElement('canvas');crystalFace.width=360;crystalFace.height=360;
  const cf=crystalFace.getContext('2d');
+ // Numerals illuminate shortly before the time-stop veil darkens.
+ const numeralFace=document.createElement('canvas');numeralFace.width=360;numeralFace.height=360;
+ const nf=numeralFace.getContext('2d');nf.translate(180,180);nf.scale(2,2);
  (function prepareCrystalFace(){
   cf.translate(180,180);cf.scale(2,2);
   let glass=cf.createRadialGradient(-27,-38,8,0,0,77);
@@ -8363,17 +8366,17 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   }
   const roman=['XII','I','II','III','IV','V','VI','VII','VIII','IX','X','XI'];
   // Prebaked fluorescent-blue numerals and ticks: no per-frame blur cost.
-  cf.textAlign='center';cf.textBaseline='middle';cf.font='bold 11px Georgia,serif';
+  nf.textAlign='center';nf.textBaseline='middle';nf.font='bold 11px Georgia,serif';
   for(let i=0;i<12;i++){
    const a=i*Math.PI/6-Math.PI/2;
    const x=Math.cos(a)*48,y=Math.sin(a)*48;
-   cf.save();
-   cf.shadowColor='rgba(23,176,255,.95)';cf.shadowBlur=9;
-   cf.fillStyle='rgba(45,179,255,.72)';cf.fillText(roman[i],x,y);
-   cf.shadowBlur=3;cf.fillStyle='#b5f4ff';cf.fillText(roman[i],x,y);
+   nf.save();
+   nf.shadowColor='rgba(0,176,255,1)';nf.shadowBlur=14;
+   nf.fillStyle='#25baff';nf.fillText(roman[i],x,y);
+   nf.shadowBlur=5;nf.fillStyle='#d4faff';nf.fillText(roman[i],x,y);
    cf.shadowBlur=5;cf.strokeStyle='rgba(65,209,255,.9)';cf.lineWidth=1.1;
    cf.beginPath();cf.moveTo(Math.cos(a)*61,Math.sin(a)*61);cf.lineTo(Math.cos(a)*64,Math.sin(a)*64);cf.stroke();
-   cf.restore();
+   nf.restore();
   }
   cf.strokeStyle='rgba(230,245,255,.5)';cf.lineWidth=1;
   cf.beginPath();cf.arc(0,0,26,0,Math.PI*2);cf.stroke();
@@ -8425,6 +8428,19 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   clockCtx.save();clockCtx.globalAlpha=smooth;
   clockCtx.drawImage(crystalFace,-90,-90,180,180);
   clockCtx.restore();
+  // Illuminate the fluorescent-blue numerals just before the time-stop
+  // darkening starts (850ms after the hands are recognized). Keep the original
+  // hand winding, veil and time-stop timings unchanged.
+  const numeralRevealAt=.70;
+  if(elapsed>=numeralRevealAt){
+   const litAge=Math.max(0,elapsed-numeralRevealAt);
+   const lit=Math.min(1,litAge/.10);
+   const pulse=1+.22*Math.exp(-litAge*4);
+   clockCtx.save();clockCtx.globalAlpha=lit;
+   clockCtx.drawImage(numeralFace,-90,-90,180,180);
+   if(litAge<.52){clockCtx.globalAlpha=lit*Math.max(0,1-litAge/.52)*.38;clockCtx.drawImage(numeralFace,-90*pulse,-90*pulse,180*pulse,180*pulse);}
+   clockCtx.restore();
+  }
   if(smooth<1){
    clockCtx.strokeStyle='rgba(135,212,255,'+((1-smooth)*.88)+')';clockCtx.lineWidth=3.2;
    clockCtx.beginPath();clockCtx.arc(0,0,70,0,Math.PI*2);clockCtx.stroke();
@@ -9318,7 +9334,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const phaseHudStart=taPerfEnabled?performance.now():0;
   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
    taSeconds+=count*0.5;taRender();
-   const box=document.getElementById('taTimeBox');if(box){box.classList.remove('ta-frame-flash');void box.offsetWidth;box.classList.add('ta-frame-flash');}
+   const box=document.getElementById('taTimeBox');if(box){box.classList.remove('ta-frame-flash');requestAnimationFrame(()=>{if(box.isConnected)box.classList.add('ta-frame-flash');});}
   }
   if(taPerfEnabled)taPerfCost('hud',performance.now()-phaseHudStart);
  }
@@ -9357,7 +9373,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
    taSeconds+=count*0.5;taRender();
    const box=document.getElementById('taTimeBox');
-   if(box){box.classList.remove('ta-frame-flash');void box.offsetWidth;box.classList.add('ta-frame-flash');}
+   if(box){box.classList.remove('ta-frame-flash');requestAnimationFrame(()=>{if(box.isConnected)box.classList.add('ta-frame-flash');});}
   }
   if(taPerfEnabled)taPerfCost('hud',performance.now()-phaseHudStart);
  }
@@ -9538,6 +9554,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   }
   // Keep all simulation/collection events running; skip only costly visual paints.
   const taCompoundLevel=taCompoundFxLevel();
+  // Cross+emerald overlap is dominated by FX paints (131ms observed).
+  // Reduce decorative redraw frequency only; the hit/award logic is unchanged.
+  const taDenseCombo=taMobileFx&&crossBursts.length>0&&(summonBursts.length>0||traces.some(f=>f.type==='summon')||taCompoundLevel===2);
   const targetMs=taMobileFx?(crossBursts.length?50:40):16;
   if(now-lastFxPaint<targetMs){requestAnimationFrame(draw);return;}
   lastFxPaint=now;fxWasDrawing=true;const taPaintStart=taPerfEnabled?performance.now():0;
@@ -9550,7 +9569,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   ctx.save();ctx.globalCompositeOperation='screen';
   for(let si=0;si<f.segs.length;si++){
    const seg=f.segs[si],a=seg[0],b=seg[1],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
-   const steps=Math.max(2,Math.ceil(L/(taMobileFx?18:9)));
+   const steps=Math.max(2,Math.ceil(L/(taDenseCombo?28:(taMobileFx?18:9))));
    for(let j=0;j<=steps;j++){
     const t=j/steps,ptX=a.x+dx*t,ptY=a.y+dy*t,seed=si*211+j*19;
     const flick=Math.sin(now*.013+seed)*.5+.5;
@@ -9591,7 +9610,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   ctx.save();ctx.globalCompositeOperation='screen';
   for(let si=0;si<f.segs.length;si++){
    const seg=f.segs[si],a=seg[0],b=seg[1],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
-   const steps=Math.max(2,Math.ceil(L/(taMobileFx?34:13)));
+   const steps=Math.max(2,Math.ceil(L/(taDenseCombo?48:(taMobileFx?34:13))));
    for(let j=0;j<=steps;j++){
     const t=j/steps,pt=fxPoint(seg,t),seed=si*307+j*41,sz=(9+hash(seed+2)*23)*taFxScale;
     const drift=Math.sin(now*.0018+seed)*1.8;
