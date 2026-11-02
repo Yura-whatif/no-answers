@@ -4061,9 +4061,9 @@ function comboStepBonus(n){
 }
 // 100-chain BGM.  Keep its state independent of ranking/result music.
 const taCenturyMusic=(()=>{
-  const src='audio/Beneath_the_Granite_Sky.mp3?v=20261101';
+  const src='audio/Across_the_Heather.mp3?v=20261102';
   let audio=null,active=false,stoppedForTime=false,fadeId=0,fadeTimer=0,serial=0;
-  const volume=.53; // 100-chain BGM: slightly softer (was .58)
+  const volume=.38; // Lower level; preserve existing fade and timing
   const fadeInMs=2200;
   function clearFade(){++fadeId;if(fadeTimer){cancelAnimationFrame(fadeTimer);fadeTimer=0;}}
   function ensure(){if(!audio){audio=new Audio(src);audio.loop=true;audio.preload='auto';audio.volume=0;}return audio;}
@@ -9142,8 +9142,15 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  // Stage 6-C diagnostics: passive sampling only; no gameplay or visual changes.
  const taPerfEnabled=true; // Startup diagnostic build
  // Startup-only diagnostics: retained for TimeOver, never shown during play.
- const taStartupDiag={started:0,previousPlaying:false,bins:[0,1,2].map(()=>({frames:0,slow:0,maxGap:0,longTasks:0,longMax:0})),lastFrame:0,lastBin:-1,orbAtStart:0,orbAt15:0};
+ const taStartupDiag={started:0,previousPlaying:false,bins:[0,1,2].map(()=>({frames:0,slow:0,maxGap:0,longTasks:0,longMax:0,paintCount:0,paintSum:0,paintMax:0,costs:{},events:{}})),lastFrame:0,lastBin:-1,orbAtStart:0,orbAt15:0};
  window.__taStartupDiag=taStartupDiag;
+ function taStartupBin(at=performance.now()){
+  const d=taStartupDiag;if(!d.started)return null;
+  const idx=Math.floor((at-d.started)/5000);
+  return idx>=0&&idx<3?d.bins[idx]:null;
+ }
+ function taStartupEvent(name){const b=taStartupBin();if(b)b.events[name]=(b.events[name]||0)+1;}
+
 
  let taPerfPanel=null;
  const taPerfStats={rafCount:0,rafSlow:0,rafMax:0,rafLast:0,paintCount:0,paintSum:0,paintMax:0,
@@ -9151,7 +9158,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   collectCount:0,collectMs:0,collectMax:0,readCount:0,readMs:0,readMax:0,orbsCount:0,orbsMs:0,orbsMax:0,logicCount:0,logicMs:0,logicMax:0,hudCount:0,hudMs:0,hudMax:0,spawnCount:0,spawnMs:0,spawnMax:0,longCount:0,longMax:0};
  let taPerfCentury={samples:0,gap:0,paint:0,cross:0,green:0,collect:0,spawn:0,long:0,slow:0};
  let taPerfWindow=performance.now(),taPerfWorst5={raf:0,paint:0,cross:0,green:0,collect:0,read:0,orbs:0,logic:0,hud:0,spawn:0,long:0},taPerfHistory=[];
- function taPerfCost(kind,ms){if(!taPerfEnabled)return;const t=taPerfStats;t[kind+'Count']++;t[kind+'Ms']+=ms;t[kind+'Max']=Math.max(t[kind+'Max'],ms);}
+ function taPerfCost(kind,ms){if(!taPerfEnabled)return;const t=taPerfStats;t[kind+'Count']++;t[kind+'Ms']+=ms;t[kind+'Max']=Math.max(t[kind+'Max'],ms);
+  const b=taStartupBin();if(b){const c=b.costs[kind]||(b.costs[kind]={count:0,sum:0,max:0});c.count++;c.sum+=ms;c.max=Math.max(c.max,ms);}
+ }
  function taPerfFrame(now){
   if(!taPerfEnabled)return;
   const t=taPerfStats;
@@ -9170,7 +9179,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   (function monitorRaf(now){
    taPerfFrame(now);
    const sd=taStartupDiag,playingNow=!!(taRunning||taStarting);
-   if(playingNow&&!sd.previousPlaying){sd.started=now;sd.lastFrame=now;sd.bins.forEach(b=>{b.frames=0;b.slow=0;b.maxGap=0;b.longTasks=0;b.longMax=0;});sd.orbAtStart=window.__taOrbFramesMade||0;sd.orbAt15=sd.orbAtStart;}
+   if(playingNow&&!sd.previousPlaying){sd.started=now;sd.lastFrame=now;sd.bins.forEach(b=>{b.frames=0;b.slow=0;b.maxGap=0;b.longTasks=0;b.longMax=0;b.paintCount=0;b.paintSum=0;b.paintMax=0;b.costs={};b.events={};});sd.orbAtStart=window.__taOrbFramesMade||0;sd.orbAt15=sd.orbAtStart;}
    if(playingNow&&sd.started){const bin=Math.floor((now-sd.started)/5000);if(bin>=0&&bin<3){const b=sd.bins[bin];const gap=now-sd.lastFrame;b.frames++;b.maxGap=Math.max(b.maxGap,gap);if(gap>50)b.slow++;sd.orbAt15=window.__taOrbFramesMade||0;}sd.lastFrame=now;}
    sd.previousPlaying=playingNow;
    // Keep collecting diagnostics while playing, without covering the play field.
@@ -9185,7 +9194,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  }
  function taPerfRecord(now,paintMs){
   if(!taPerfEnabled)return;
-  const t=taPerfStats;t.paintCount++;t.paintSum+=paintMs;t.paintMax=Math.max(t.paintMax,paintMs);
+  const t=taPerfStats;t.paintCount++;t.paintSum+=paintMs;t.paintMax=Math.max(t.paintMax,paintMs);const startupBin=taStartupBin(now);if(startupBin){startupBin.paintCount++;startupBin.paintSum+=paintMs;startupBin.paintMax=Math.max(startupBin.paintMax,paintMs);startupBin.events.crossFrames=(startupBin.events.crossFrames||0)+crossBursts.length;startupBin.events.greenFrames=(startupBin.events.greenFrames||0)+summonBursts.length;}
   if(now-taPerfWindow<1500)return;
   const elapsed=now-taPerfWindow;
   const sample={time:now,raf:t.rafMax,paint:t.paintMax,cross:t.crossMax,green:t.greenMax,collect:t.collectMax,read:t.readMax,orbs:t.orbsMax,logic:t.logicMax,hud:t.hudMax,spawn:t.spawnMax,long:t.longMax};
@@ -9216,7 +9225,10 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    '\n100+ peak ('+taPerfCentury.samples+' windows) gap '+fmt(taPerfCentury.gap)+'ms'+
    '\n100+ FX '+fmt(taPerfCentury.paint)+' cross '+fmt(taPerfCentury.cross)+' green '+fmt(taPerfCentury.green)+
    '\n100+ collect '+fmt(taPerfCentury.collect)+' spawn '+fmt(taPerfCentury.spawn)+' long '+fmt(taPerfCentury.long) + '\n--- STARTUP 0-15s ---' +
-   taStartupDiag.bins.map((b,i)=>'\n'+(i*5)+'-'+((i+1)*5)+'s: frames '+b.frames+' slow '+b.slow+' gap '+fmt(b.maxGap)+'ms long '+b.longTasks+' max '+fmt(b.longMax)+'ms').join('') +
+   taStartupDiag.bins.map((b,i)=>'\n'+(i*5)+'-'+((i+1)*5)+'s: frames '+b.frames+' slow '+b.slow+' gap '+fmt(b.maxGap)+'ms long '+b.longTasks+' max '+fmt(b.longMax)+'ms'+
+    '\n  FX avg/max '+fmt(b.paintSum/Math.max(1,b.paintCount))+'/'+fmt(b.paintMax)+'ms'+
+    ['collect','cross','green','spawn','read','orbs','logic','hud'].map(k=>{const c=b.costs[k];return c?'\n  '+k+' '+c.count+' avg/max '+fmt(c.sum/c.count)+'/'+fmt(c.max)+'ms':'';}).join('')+
+    '\n  active FX frames cross/green '+(b.events.crossFrames||0)+'/'+(b.events.greenFrames||0)).join('') +
    '\nOrb frames '+taStartupDiag.orbAtStart+' -> '+taStartupDiag.orbAt15+' / '+(window.__taOrbFramesMade||0)+' of 216' ;
   taPerfWindow=now;
   for(const k of ['rafCount','rafSlow','rafMax','paintCount','paintSum','paintMax','crossCount','crossMs','crossMax','greenCount','greenMs','greenMax','collectCount','collectMs','collectMax','readCount','readMs','readMax','orbsCount','orbsMs','orbsMax','logicCount','logicMs','logicMax','hudCount','hudMs','hudMax','spawnCount','spawnMs','spawnMax','longCount','longMax'])t[k]=0;
