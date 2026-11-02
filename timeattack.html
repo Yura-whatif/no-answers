@@ -8309,6 +8309,64 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  };
  function clearPaintedClock(){paintedClock=null;paintedClockRelease=0;clockCtx.clearRect(0,0,clockCanvas.width,clockCanvas.height);}
  window.taClockCanvasRelease=()=>{if(paintedClock){paintedClockRelease=performance.now();clockCanvas.classList.add('ta-clock-front');setTimeout(()=>{if(paintedClockRelease&&performance.now()-paintedClockRelease>=520){clearPaintedClock();clockCanvas.classList.remove('ta-clock-front');}},550);}};
+ // Crystal clock face is prerendered once; only the hands animate each frame.
+ const crystalFace=document.createElement('canvas');crystalFace.width=360;crystalFace.height=360;
+ const cf=crystalFace.getContext('2d');
+ (function prepareCrystalFace(){
+  cf.translate(180,180);cf.scale(2,2);
+  let glass=cf.createRadialGradient(-27,-38,8,0,0,77);
+  glass.addColorStop(0,'rgba(201,223,250,.27)');glass.addColorStop(.55,'rgba(42,61,110,.32)');glass.addColorStop(.88,'rgba(19,27,61,.78)');glass.addColorStop(1,'rgba(121,156,205,.24)');
+  cf.fillStyle=glass;cf.beginPath();cf.arc(0,0,71,0,Math.PI*2);cf.fill();
+  for(let i=0;i<36;i++){
+   const a=i*Math.PI/18-Math.PI/2;
+   cf.strokeStyle=i%3===0?'rgba(212,231,255,.24)':'rgba(116,172,236,.10)';
+   cf.lineWidth=i%3===0?.9:.45;cf.beginPath();cf.moveTo(Math.cos(a)*10,Math.sin(a)*10);cf.lineTo(Math.cos(a)*59,Math.sin(a)*59);cf.stroke();
+  }
+  // Soft fluorescent-blue indirect rim lighting: baked once into the face texture.
+  // A broad translucent annulus provides the halo without per-frame canvas blur.
+  const silverHalo=cf.createRadialGradient(0,0,66,0,0,90);
+  silverHalo.addColorStop(0,'rgba(85,200,255,0)');
+  silverHalo.addColorStop(.19,'rgba(43,185,255,.13)');
+  silverHalo.addColorStop(.36,'rgba(77,220,255,.38)');
+  silverHalo.addColorStop(.52,'rgba(24,160,255,.26)');
+  silverHalo.addColorStop(.76,'rgba(15,125,245,.12)');
+  silverHalo.addColorStop(1,'rgba(14,130,255,0)');
+  cf.fillStyle=silverHalo;cf.beginPath();cf.arc(0,0,90,0,Math.PI*2);cf.fill();
+  // Faceted silver bezel: restrained reflections, brighter at four cardinal points.
+  for(let j=0;j<48;j++){
+   const a=j*Math.PI/24-Math.PI/2;
+   const strength=.12+.25*Math.pow(Math.max(0,Math.cos(a+.7)),6);
+   cf.strokeStyle='rgba(242,249,255,'+strength.toFixed(3)+')';
+   cf.lineWidth=j%4===0?1.6:.8;
+   cf.beginPath();cf.moveTo(Math.cos(a)*72,Math.sin(a)*72);
+   cf.lineTo(Math.cos(a+.055)*77,Math.sin(a+.055)*77);cf.stroke();
+  }
+  cf.strokeStyle='rgba(160,239,255,.87)';cf.lineWidth=1.15;
+  cf.beginPath();cf.arc(0,0,74,Math.PI*1.08,Math.PI*1.86);cf.stroke();
+  cf.strokeStyle='rgba(62,198,255,.68)';cf.lineWidth=1;
+  cf.beginPath();cf.arc(0,0,76,Math.PI*.03,Math.PI*.88);cf.stroke();
+  for(const [r,color,width] of [[74,'rgba(47,196,255,.36)',3.4],[70,'#a2ecff',1.5],[65,'rgba(241,207,137,.75)',1.2],[56,'rgba(77,187,255,.35)',.8]]){
+   cf.strokeStyle=color;cf.lineWidth=width;cf.beginPath();cf.arc(0,0,r,0,Math.PI*2);cf.stroke();
+  }
+  const roman=['XII','I','II','III','IV','V','VI','VII','VIII','IX','X','XI'];
+  // Prebaked fluorescent-blue numerals and ticks: no per-frame blur cost.
+  cf.textAlign='center';cf.textBaseline='middle';cf.font='bold 11px Georgia,serif';
+  for(let i=0;i<12;i++){
+   const a=i*Math.PI/6-Math.PI/2;
+   const x=Math.cos(a)*48,y=Math.sin(a)*48;
+   cf.save();
+   cf.shadowColor='rgba(23,176,255,.95)';cf.shadowBlur=9;
+   cf.fillStyle='rgba(45,179,255,.72)';cf.fillText(roman[i],x,y);
+   cf.shadowBlur=3;cf.fillStyle='#b5f4ff';cf.fillText(roman[i],x,y);
+   cf.shadowBlur=5;cf.strokeStyle='rgba(65,209,255,.9)';cf.lineWidth=1.1;
+   cf.beginPath();cf.moveTo(Math.cos(a)*61,Math.sin(a)*61);cf.lineTo(Math.cos(a)*64,Math.sin(a)*64);cf.stroke();
+   cf.restore();
+  }
+  cf.strokeStyle='rgba(230,245,255,.5)';cf.lineWidth=1;
+  cf.beginPath();cf.arc(0,0,26,0,Math.PI*2);cf.stroke();
+  cf.beginPath();cf.ellipse(-22,-27,17,37,-.55,Math.PI*1.05,Math.PI*1.83);cf.stroke();
+  cf.fillStyle='rgba(247,251,255,.24)';cf.beginPath();cf.ellipse(-31,-39,8,19,-.65,0,Math.PI*2);cf.fill();
+ })();
  function drawCompletedClock(now){
   const fr=field.getBoundingClientRect(),hr=hero.getBoundingClientRect();
   const cw=Math.max(1,Math.round(fr.width)),ch=Math.max(1,Math.round(fr.height));
@@ -8338,18 +8396,39 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // turn forward. Keep the canvas and its origin stationary so no jump occurs.
   const releaseEase=releaseProgress*releaseProgress*(3-2*releaseProgress);
   const releaseScale=paintedClockRelease?Math.max(0,1-releaseEase):1;
-  const rot=paintedClockRelease?(-Math.PI*2+Math.PI*2*releaseProgress):-Math.PI*2*Math.min(1,elapsed/.85);
+  // During appearance the long hand turns three times while the short hand
+  // completes one turn. Both ease into their original drawn directions.
+  const wind=Math.min(1,Math.max(0,elapsed/1.15));
+  const windEase=1-Math.pow(1-wind,3);
+  const releaseRot=paintedClockRelease?(-Math.PI*2*(1-releaseProgress)):0;
+  const longRot=paintedClockRelease?releaseRot:-Math.PI*6*(1-windEase);
+  const shortRot=paintedClockRelease?releaseRot:-Math.PI*2*(1-windEase);
   clockCanvas.classList.toggle('ta-clock-behind',frozen);
   clockCtx.save();clockCtx.translate(x,y);clockCtx.scale(releaseScale,releaseScale);
   clockCtx.globalAlpha=dark;
-  clockCtx.shadowColor='#d7a24e';clockCtx.shadowBlur=frozen?3:8;
-  clockCtx.lineWidth=8;clockCtx.strokeStyle='rgba(233,187,101,.24)';clockCtx.beginPath();clockCtx.arc(0,0,74,0,Math.PI*2);clockCtx.stroke();
-  clockCtx.shadowBlur=frozen?2:5;clockCtx.lineWidth=3.4;clockCtx.strokeStyle='#f4d48b';clockCtx.beginPath();clockCtx.arc(0,0,70,0,Math.PI*2);clockCtx.stroke();
-  clockCtx.shadowBlur=0;clockCtx.lineWidth=2;clockCtx.strokeStyle='#ffe6a6';
-  for(let i=0;i<12;i++){const a=i*Math.PI/6-Math.PI/2;clockCtx.beginPath();clockCtx.moveTo(Math.cos(a)*60,Math.sin(a)*60);clockCtx.lineTo(Math.cos(a)*66,Math.sin(a)*66);clockCtx.stroke();}
-  clockCtx.rotate(rot);clockCtx.strokeStyle='#f6d47d';clockCtx.lineWidth=5.4;clockCtx.lineCap='round';clockCtx.lineJoin='round';clockCtx.shadowColor='#f6d47d';clockCtx.shadowBlur=frozen?2:8;
-  clockCtx.beginPath();clockCtx.moveTo(d.u1.x*d.len1,d.u1.y*d.len1);clockCtx.lineTo(0,0);clockCtx.lineTo(d.u2.x*d.len2,d.u2.y*d.len2);clockCtx.stroke();
-  clockCtx.fillStyle='#fff0b2';clockCtx.beginPath();clockCtx.arc(0,0,3,0,Math.PI*2);clockCtx.fill();clockCtx.restore();
+  // First retain the elemental outline, then smoothly reveal the crystal face.
+  const reveal=Math.max(0,Math.min(1,elapsed/.52));
+  const smooth=reveal*reveal*(3-2*reveal);
+  clockCtx.save();clockCtx.globalAlpha=smooth;
+  clockCtx.drawImage(crystalFace,-90,-90,180,180);
+  clockCtx.restore();
+  if(smooth<1){
+   clockCtx.strokeStyle='rgba(135,212,255,'+((1-smooth)*.88)+')';clockCtx.lineWidth=3.2;
+   clockCtx.beginPath();clockCtx.arc(0,0,70,0,Math.PI*2);clockCtx.stroke();
+  }
+  clockCtx.strokeStyle=elapsed<.52?'#d8f5ff':'#e7f2ff';
+  clockCtx.lineCap='round';clockCtx.lineJoin='round';
+  clockCtx.shadowColor='#9fdfff';clockCtx.shadowBlur=frozen?2:6;
+  // Long hand: fast; short hand: slow. Independent rotations, shared center.
+  clockCtx.save();clockCtx.rotate(longRot);clockCtx.lineWidth=4.2;
+  clockCtx.beginPath();clockCtx.moveTo(0,0);
+  clockCtx.lineTo(d.u1.x*d.len1,d.u1.y*d.len1);clockCtx.stroke();clockCtx.restore();
+  clockCtx.save();clockCtx.rotate(shortRot);clockCtx.lineWidth=5.8;
+  clockCtx.beginPath();clockCtx.moveTo(0,0);
+  clockCtx.lineTo(d.u2.x*d.len2,d.u2.y*d.len2);clockCtx.stroke();clockCtx.restore();
+  clockCtx.shadowBlur=0;clockCtx.fillStyle='#f8fcff';
+  clockCtx.beginPath();clockCtx.arc(0,0,3,0,Math.PI*2);clockCtx.fill();
+  clockCtx.restore();
  }
 
  let selected=null,gesture=null,traces=[],eclipseRims=[],particles=[],summonBursts=[],summonTimers=[],crossBursts=[],last=performance.now(),wasActive=false;
@@ -9822,6 +9901,7 @@ const atlas={};const states=[];
 const point=(x,y,z,theta)=>[x*Math.cos(theta)+z*Math.sin(theta),y,-x*Math.sin(theta)+z*Math.cos(theta)];
 function emblem(ctx,kind,theta){
  const cx=SIZE/2,cy=SIZE/2,scale=SIZE*.29;
+ const pulse=.90+.10*Math.sin(theta*2-.45); // Subtle rotation-linked internal illumination (pre-rendered).
  const rgb=kinds[kind].rgb,ink=`rgb(${rgb.join(',')})`;
  const strokes=[];
  function line(a,b,width=1,bright=1){const A=point(...a,theta),B=point(...b,theta);strokes.push({A,B,width,bright,depth:(A[2]+B[2])/2});}
@@ -9854,14 +9934,23 @@ function emblem(ctx,kind,theta){
  }
  strokes.sort((a,b)=>a.depth-b.depth);
  ctx.save();ctx.translate(cx,cy);ctx.lineCap='round';ctx.lineJoin='round';
- for(const s of strokes){const depth=(s.depth+1)/2;const alpha=(.42+.58*depth)*s.bright;ctx.strokeStyle=`rgba(${rgb.join(',')},${alpha})`;ctx.lineWidth=s.width*(.7+.3*depth);ctx.shadowColor=ink;ctx.shadowBlur=5;ctx.beginPath();ctx.moveTo(s.A[0]*scale,s.A[1]*scale);ctx.lineTo(s.B[0]*scale,s.B[1]*scale);ctx.stroke();}
- ctx.shadowColor=ink;ctx.shadowBlur=14;ctx.fillStyle='rgba(255,255,245,.98)';ctx.beginPath();ctx.arc(0,0,3.2,0,Math.PI*2);ctx.fill();ctx.restore();
+ for(const s of strokes){const depth=(s.depth+1)/2;const alpha=Math.min(1,(.36+.64*depth)*s.bright*(.91+.09*Math.cos(theta+depth*2)));ctx.strokeStyle=`rgba(${rgb.join(',')},${alpha})`;ctx.lineWidth=s.width*(.7+.3*depth);ctx.shadowColor=ink;ctx.shadowBlur=4;ctx.beginPath();ctx.moveTo(s.A[0]*scale,s.A[1]*scale);ctx.lineTo(s.B[0]*scale,s.B[1]*scale);ctx.stroke();}
+ ctx.shadowColor=ink;ctx.shadowBlur=10;ctx.fillStyle=`rgba(255,255,245,${.90+.10*pulse})`;ctx.beginPath();ctx.arc(0,0,3.2+pulse*.5,0,Math.PI*2);ctx.fill();ctx.restore();
 }
 function makeFrame(kind,idx){
  const c=document.createElement('canvas');c.width=c.height=SIZE;const ctx=c.getContext('2d');const {rgb}=kinds[kind];const color=rgb.join(',');const cx=SIZE/2,cy=SIZE/2;
+ const phase=idx/FRAMES*Math.PI*2;const pulse=.86+.14*(.5+.5*Math.sin(phase*2-.55));
  // Soft internal volumetric light, separate from the glass shell.
- let g=ctx.createRadialGradient(cx,cy,1,cx,cy,42);g.addColorStop(0,'rgba(255,255,255,.62)');g.addColorStop(.16,`rgba(${color},.36)`);g.addColorStop(.62,`rgba(${color},.075)`);g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.fillRect(0,0,SIZE,SIZE);
- emblem(ctx,kind,idx/FRAMES*Math.PI*2);
+ let g=ctx.createRadialGradient(cx,cy,1,cx,cy,42);g.addColorStop(0,`rgba(255,255,255,${(.66+.18*pulse).toFixed(3)})`);g.addColorStop(.16,`rgba(${color},${(.33+.14*pulse).toFixed(3)})`);g.addColorStop(.62,`rgba(${color},.075)`);g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.fillRect(0,0,SIZE,SIZE);
+ emblem(ctx,kind,phase);
+
+ // A small luminous heart: two cached gradients, not a runtime blur/filter.
+ let heart=ctx.createRadialGradient(cx,cy,0,cx,cy,17);
+ heart.addColorStop(0,`rgba(255,255,247,${(.90+.10*pulse).toFixed(3)})`);
+ heart.addColorStop(.17,`rgba(255,251,233,${(.67+.19*pulse).toFixed(3)})`);
+ heart.addColorStop(.43,`rgba(${color},${(.28+.22*pulse).toFixed(3)})`);
+ heart.addColorStop(1,'rgba(0,0,0,0)');
+ ctx.fillStyle=heart;ctx.fillRect(cx-18,cy-18,36,36);
  // Glass silhouette remains static; the inner emblem alone rotates.
  g=ctx.createRadialGradient(33,24,4,cx,cy,47);g.addColorStop(0,'rgba(255,255,255,.13)');g.addColorStop(.60,'rgba(255,255,255,.025)');g.addColorStop(.85,`rgba(${color},.06)`);g.addColorStop(.94,`rgba(${color},.24)`);g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,46,0,Math.PI*2);ctx.fill();
  ctx.strokeStyle=`rgba(${color},.65)`;ctx.lineWidth=1.45;ctx.shadowColor=`rgb(${color})`;ctx.shadowBlur=5;ctx.beginPath();ctx.arc(cx,cy,43.2,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;
