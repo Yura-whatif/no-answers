@@ -1954,6 +1954,11 @@ html.ta-century-lit #viewMain .drift .word.ta-blue:not(.got):not(.special):not(.
 #taLaunch .ta-special-hint-art.one img{width:min(165px,100%)}
 @media(max-width:380px){#taLaunch .ta-special-hint-art{height:125px}#taLaunch .ta-special-hint-art img{height:120px}}
 </style>
+
+<script>
+/* Diagnostics disabled after the reference-error root cause was repaired. */
+window.taOrbDiag={mark(){},error(where,e){console.warn('Orb effect:',where,e)},report(){}};
+</script>
 </head>
 <body>
 <style>
@@ -3445,6 +3450,22 @@ note: https://note.com/whatif_lab/n/n52b77b5c4bf6
 黒 | 二人で買ったソファ | 片方だけが座り続ける、思い出の置き場所。
 </script>
 <script>
+/* 100-chain flash helpers are deliberately declared in the gameplay script.
+   They must be available even when later optional effect scripts fail. */
+const taCenturyFlashPool=[];
+const TA_CENTURY_FLASH_POOL_MAX=18;
+const taCenturyFlashMarkup=`<svg class="star" viewBox="0 0 112 94" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path class="halo" d="M56 0 Q58 37 66 39 Q82 45 112 47 Q82 49 66 55 Q58 57 56 94 Q54 57 46 55 Q30 49 0 47 Q30 45 46 39 Q54 37 56 0Z"/><path class="ray" d="M56 1 C58 30 59 40 65 42 C76 45 95 46 111 47 C95 48 76 49 65 52 C59 54 58 64 56 93 C54 64 53 54 47 52 C36 49 17 48 1 47 C17 46 36 45 47 42 C53 40 54 30 56 1Z"/><circle class="center" cx="56" cy="47" r="3.3"/></svg>`;
+function taAcquireCenturyFlash(){
+ const el=taCenturyFlashPool.pop()||document.createElement('span');
+ el.className='ta-gold-collapse';
+ if(!el.firstChild)el.innerHTML=taCenturyFlashMarkup;
+ return el;
+}
+function taReleaseCenturyFlash(el){
+ el.remove();
+ if(taCenturyFlashPool.length<TA_CENTURY_FLASH_POOL_MAX)taCenturyFlashPool.push(el);
+}
+
 const N = "https://note.com/whatif_lab/n/";
 // 作品と辞典は data/works.txt と data/words.txt から読み込む（読み込みは boot() で）
 const SHARE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3.5M7.5 8 12 3.5 16.5 8"/><path d="M5 12.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-6.5"/></svg>';
@@ -3615,7 +3636,8 @@ function autoPour(){
   for(let i=0;i<n;i++){
     const share = base + (rest-- > 0 ? 1 : 0);
     setTimeout(()=>{
-      const o = document.createElement("span"); o.className = "orb"; document.body.append(o);
+      if(combo>=100)window.taOrbDiag.mark("orb create reached");
+    const o = document.createElement("span"); o.className = "orb"; document.body.append(o);
       const sway = (Math.random()*2-1) * 40, dur = 800, t0 = performance.now();
       const step = now => {
         const k = Math.min(1, (now - t0) / dur), e = k < .5 ? 2*k*k : 1 - Math.pow(-2*k + 2, 2) / 2;
@@ -3797,7 +3819,7 @@ const taCenturyDust=(()=>{
   const pool=[];const poolLimit=120;
   function recycle(p){if(pool.length<poolLimit)pool.push(p);}
   const mobile=window.matchMedia('(pointer:coarse)').matches;
-  const max=mobile?72:110;
+  const max=mobile?30:48;
   function frame(now){
     if(!canvas)return;
     const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
@@ -3821,9 +3843,9 @@ const taCenturyDust=(()=>{
       canvas.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:10016;pointer-events:none;';
       ctx=canvas.getContext('2d');}
     if(!canvas.isConnected){canvas.width=innerWidth;canvas.height=innerHeight;document.body.append(canvas);}
-    const n=mobile?6:9,cx=r.left+r.width/2,cy=r.top+r.height/2;
+    const n=mobile?3:5,cx=r.left+r.width/2,cy=r.top+r.height/2;
     for(let i=0;i<n;i++){
-      const life=1.30+Math.random()*.65;
+      const life=.68+Math.random()*.35;
       const p=pool.pop()||{};
       p.x=cx+(Math.random()-.5)*Math.min(44,r.width);
       p.y=cy+(Math.random()-.5)*Math.min(22,r.height);
@@ -5168,7 +5190,7 @@ function spawnWord(opt = {}){
     if(taNow-taSwipeBurstWindow>450){taSwipeBurstWindow=taNow;taSwipeBurstCount=0;}
     taSwipeBurstCount++;
     // Keep early hits expressive; omit overlapping effects after the fifth hit.
-    const taDenseSwipe=taCoarse && !!w.dataset.swiped && taSwipeBurstCount>2;
+    const taDenseSwipe=taCoarse && combo<99 && !!w.dataset.swiped && taSwipeBurstCount>2; // 100+ always shows reward orbs
     // Do not start a separate oscillator for every word in a rapid swipe.
     if(taRunning && combo>=100 && !flood){if(taNow-taSwipeLastTouch>95){sfx.goldTap();taSwipeLastTouch=taNow;}}else if(!taDenseSwipe || taNow-taSwipeLastTouch>210){sfx.touch();taSwipeLastTouch=taNow;}
     // 100連鎖以降は専用のクリスタルSE。連鎖終了後は通常音へ戻る。
@@ -5177,7 +5199,7 @@ function spawnWord(opt = {}){
     if(w.classList.contains("glow")) startGlow(false, w.dataset.word || w.textContent);
     if(w.classList.contains("reso")){ const rr = w.getBoundingClientRect(); resonate(rr.left + rr.width/2, rr.top + rr.height/2, w); }
     if(w.classList.contains("multi")){ const fr = $("drift").getBoundingClientRect(), rr = w.getBoundingClientRect(); multiply(rr.left + rr.width/2 - fr.left, rr.top + rr.height/2 - fr.top, {boon: w.classList.contains("boon")}); }
-    const cm = bumpCombo();
+    const cm = bumpCombo(); if(cm>=100)window.taOrbDiag.mark("100+ hit");
     const g = isOdd ? ODD_PT : yieldNow() * cm;   // 時間停止中も連鎖倍率を引き継ぐ
     const wordText = w.dataset.word || w.textContent;
     const toPen = false;
@@ -5193,6 +5215,7 @@ function spawnWord(opt = {}){
       if(!taDenseSwipe || at-taSwipeLastArrivalSound>260){sfx.arrive();taSwipeLastArrivalSound=at;}
     };
     if(taDenseSwipe){
+      if(combo>=100)window.taOrbDiag.mark("early return dense swipe");
       // Keep the original arrival delay, score, time and combo semantics.
       // Skip only redundant per-word flying clones, blur, mist and orbs.
       w.remove();
@@ -5200,7 +5223,7 @@ function spawnWord(opt = {}){
       return;
     }
     const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if(reduce || !w.animate){ w.remove(); arrive(); return; }
+    if(reduce || !w.animate){ if(combo>=100)window.taOrbDiag.mark("early return reduced-motion / no animate"); w.remove(); arrive(); return; }
     // 触れた言葉がほどけて光の玉になり、右上の違和感へ弧を描いて吸い込まれる
     const r = w.getBoundingClientRect(), t = (taTime ? $("taTime") : $("taScore")).getBoundingClientRect();
     const f = w.cloneNode(true); f.classList.add("flying");
@@ -5223,12 +5246,13 @@ function spawnWord(opt = {}){
       // 文字の中心に金色の十字光を最初から表示し、広がらず中央へ収縮させて消す。
       // 光は操作を妨げず、既存の舞い上がる金粉はそのまま残す。
       // Reuse the decorative 100-chain star instead of parsing SVG and allocating DOM on every tap.
+      window.taOrbDiag.mark("100+ flash begin");
       const flash=taAcquireCenturyFlash();
       flash.style.left=(r.left+r.width/2)+'px';
       flash.style.top=(r.top+r.height/2)+'px';
       document.body.append(flash);
-      setTimeout(()=>taReleaseCenturyFlash(flash),550);
-      if(!window.matchMedia("(pointer:coarse)").matches || Math.random()>.35)setTimeout(()=>taCenturyDust.emit(r),95);
+      setTimeout(()=>taReleaseCenturyFlash(flash),550); window.taOrbDiag.mark("100+ flash complete");
+      if(!window.matchMedia("(pointer:coarse)").matches || Math.random()>.5)setTimeout(()=>taCenturyDust.emit(r),95);
     }else mist(r, lite ? 2 : 7);
     if(isOdd){ const p = document.createElement("span"); p.className = "oddplus"; p.textContent = taPointPlus(ODD_PT); p.style.fontSize = plusSize(ODD_PT, 1.2);
       p.style.left = (r.left + r.width/2) + "px"; p.style.top = r.top + "px"; document.body.append(p);
@@ -5238,7 +5262,7 @@ function spawnWord(opt = {}){
     const cx = r.left + r.width/2, cy = r.top + r.height/2;
     if(!flood || Date.now() - (sfx.lastFly || 0) > 260){ sfx.lastFly = Date.now(); sfx.fly(flood ? .62 : .9); }
     const o = document.createElement("span"); o.className = "orb"; taStyleRewardOrb(o,taTime,glowRemain>0 || fireScore);
-    o.style.left = cx + "px"; o.style.top = cy + "px"; document.body.append(o);
+    o.style.left = cx + "px"; o.style.top = cy + "px"; document.body.append(o); if(combo>=100)window.taOrbDiag.mark("orb appended",getComputedStyle(o).display+"/"+getComputedStyle(o).opacity);
     const dx = (t.left + t.width/2) - cx, dy = (t.top + t.height/2) - cy;
     const lift = Math.min(46, Math.abs(dx) * .18 + 14), sway = (Math.random()*2-1) * 18;
     const flightFrames=[
@@ -5248,33 +5272,9 @@ function spawnWord(opt = {}){
       {transform:`translate(${dx}px,${dy}px) scale(.45)`, opacity:.5}
     ];
     const flightDuration=flood?620:900;
-    // 100連鎖時: 金色の細い曲線がオーブの後ろに短く残り、徐々に消える。
-    // SVGは各オーブ1本のみ、最大12本。描画はWAAPIのopacityとstrokeDashoffsetだけ。
-    if(combo>=100 && !(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)){
-      const NS='http://www.w3.org/2000/svg';
-      const svg=document.createElementNS(NS,'svg');
-      svg.setAttribute('viewBox',`0 0 ${innerWidth} ${innerHeight}`);
-      svg.setAttribute('width',innerWidth);svg.setAttribute('height',innerHeight);
-      svg.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:9997;overflow:visible';
-      const path=document.createElementNS(NS,'path');
-      // オーブと同じ始点・中間点・終点を通る滑らかな線。
-      const mx=cx+dx*.3+sway,my=cy+dy*.3-lift;
-      const controlX=2*mx-(cx+(cx+dx))*.5,controlY=2*my-(cy+(cy+dy))*.5;
-      path.setAttribute('d',`M ${cx} ${cy} Q ${controlX} ${controlY} ${cx+dx} ${cy+dy}`);
-      path.setAttribute('fill','none');path.setAttribute('stroke','#f9cf78');
-      path.setAttribute('stroke-width','2.5');path.setAttribute('stroke-linecap','round');
-      path.setAttribute('opacity','.52');svg.append(path);document.body.append(svg);
-      const len=path.getTotalLength();path.style.strokeDasharray=`${Math.min(43,len*.25)} ${len+50}`;
-      const anim=path.animate([
-        {strokeDashoffset:Math.min(43,len*.25),opacity:0},
-        {strokeDashoffset:-len*.45,opacity:.42,offset:.5},
-        {strokeDashoffset:-len,opacity:0}
-      ],{duration:flightDuration+170,easing:'cubic-bezier(.45,0,.6,1)',fill:'forwards'});
-      const trails=window.taGoldLineTrails||(window.taGoldLineTrails=[]);
-      trails.push(svg);if(trails.length>(matchMedia("(pointer:coarse)").matches?5:8))trails.shift().remove();
-      anim.onfinish=()=>{svg.remove();const k=trails.indexOf(svg);if(k>=0)trails.splice(k,1);};
-    }
-    o.animate(flightFrames,{duration:flightDuration,easing:"cubic-bezier(.45,0,.6,1)",fill:"forwards"}).onfinish=()=>{o.remove();arrive();};
+    // 100連鎖以降の金色の飛行軌跡は非表示。オーブ飛行は維持。
+    if(combo>=100)window.taOrbDiag.mark("orb animate called");
+    o.animate(flightFrames,{duration:flightDuration,easing:"cubic-bezier(.45,0,.6,1)",fill:"forwards"}).onfinish=()=>{if(combo>=100)window.taOrbDiag.mark("orb arrived");o.remove();arrive();};
   });
   w.dataset.taVisibleAt = String(performance.now() + (w.classList.contains("late") ? (parseFloat(w.style.animationDelay) || 0) * 1000 : 0));
   field.append(w);
@@ -7963,6 +7963,7 @@ function taPickResultHint(){
  try{sessionStorage.setItem('taResultHintRecent',JSON.stringify([...recent,index].slice(-3)))}catch(_e){}
 }
 function taFinish(){
+  if(window.taOrbDiag)setTimeout(()=>window.taOrbDiag.report(),2100);
   if(!taRunning&&!taStarting)return;
   // Preserve the century track only when the finished score enters the top 20.
   const wasCentury=combo>=100 && taCenturyMusic.isActive();
@@ -9051,22 +9052,6 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  // These two orbs are visual-only: one boosted gold score orb and one plain blue time orb.
  // Stage 6-A: cache HUD destinations for a collection batch; avoid repeated layout reads.
  // Stage 6-B: reuse detached visual reward nodes instead of allocating on each hit.
-// Fixed-capacity pool for the purely decorative 100-chain star. The star is never
-// part of hit testing, scoring or chain timing. Keep the SVG DOM between uses.
-const taCenturyFlashPool=[];
-const TA_CENTURY_FLASH_POOL_MAX=18;
-const taCenturyFlashMarkup=`<svg class="star" viewBox="0 0 112 94" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="taGoldStarGradient" cx="50%" cy="50%" r="68%"><stop offset="0" stop-color="#ffffff"/><stop offset=".12" stop-color="#ffffff"/><stop offset=".40" stop-color="#f5faff"/><stop offset="1" stop-color="#e9f2ff" stop-opacity=".12"/></radialGradient></defs><path class="halo" d="M56 0 Q58 37 66 39 Q82 45 112 47 Q82 49 66 55 Q58 57 56 94 Q54 57 46 55 Q30 49 0 47 Q30 45 46 39 Q54 37 56 0Z"/><path class="ray" d="M56 1 C58 30 59 40 65 42 C76 45 95 46 111 47 C95 48 76 49 65 52 C59 54 58 64 56 93 C54 64 53 54 47 52 C36 49 17 48 1 47 C17 46 36 45 47 42 C53 40 54 30 56 1Z"/><circle class="center" cx="56" cy="47" r="3.3"/></svg>`;
-function taAcquireCenturyFlash(){
- const el=taCenturyFlashPool.pop()||document.createElement('span');
- el.className='ta-gold-collapse';
- if(!el.firstChild)el.innerHTML=taCenturyFlashMarkup;
- return el;
-}
-function taReleaseCenturyFlash(el){
- el.remove();
- if(taCenturyFlashPool.length<TA_CENTURY_FLASH_POOL_MAX)taCenturyFlashPool.push(el);
-}
-
  const taCrossOrbPool=[];
  const TA_CROSS_ORB_POOL_LIMIT=64;
  function taTakeCrossOrb(){return taCrossOrbPool.pop()||document.createElement('span');}
