@@ -9140,7 +9140,11 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(taCrossOrbPool.length<TA_CROSS_ORB_POOL_LIMIT)taCrossOrbPool.push(orb);
  }
  // Stage 6-C diagnostics: passive sampling only; no gameplay or visual changes.
- const taPerfEnabled=new URLSearchParams(location.search).get('taPerf')==='1';
+ const taPerfEnabled=true; // Startup diagnostic build
+ // Startup-only diagnostics: retained for TimeOver, never shown during play.
+ const taStartupDiag={started:0,previousPlaying:false,bins:[0,1,2].map(()=>({frames:0,slow:0,maxGap:0,longTasks:0,longMax:0})),lastFrame:0,lastBin:-1,orbAtStart:0,orbAt15:0};
+ window.__taStartupDiag=taStartupDiag;
+
  let taPerfPanel=null;
  const taPerfStats={rafCount:0,rafSlow:0,rafMax:0,rafLast:0,paintCount:0,paintSum:0,paintMax:0,
   crossCount:0,crossMs:0,crossMax:0,greenCount:0,greenMs:0,greenMax:0,
@@ -9159,12 +9163,16 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   taPerfPanel.style.cssText='position:fixed;left:6px;top:56px;z-index:99999;background:rgba(0,0,0,.85);color:#baffcf;font:10px/1.35 monospace;padding:6px;border-radius:5px;pointer-events:none;white-space:pre;max-width:calc(100vw - 12px)';
   taPerfPanel.textContent='Performance monitoring...';document.body.append(taPerfPanel);
   if(typeof PerformanceObserver!=='undefined')try{
-   const observer=new PerformanceObserver(list=>{for(const e of list.getEntries()){taPerfStats.longCount++;taPerfStats.longMax=Math.max(taPerfStats.longMax,e.duration);}});
+   const observer=new PerformanceObserver(list=>{for(const e of list.getEntries()){taPerfStats.longCount++;taPerfStats.longMax=Math.max(taPerfStats.longMax,e.duration);const sd=taStartupDiag;if(sd.started&&e.startTime>=sd.started){const bi=Math.floor((e.startTime-sd.started)/5000);if(bi>=0&&bi<3){sd.bins[bi].longTasks++;sd.bins[bi].longMax=Math.max(sd.bins[bi].longMax,e.duration);}}}});
    observer.observe({entryTypes:['longtask']});
   }catch(_){}
   // Independent display refresh; idle FX scheduling must not be mistaken for low game FPS.
   (function monitorRaf(now){
    taPerfFrame(now);
+   const sd=taStartupDiag,playingNow=!!(taRunning||taStarting);
+   if(playingNow&&!sd.previousPlaying){sd.started=now;sd.lastFrame=now;sd.bins.forEach(b=>{b.frames=0;b.slow=0;b.maxGap=0;b.longTasks=0;b.longMax=0;});sd.orbAtStart=window.__taOrbFramesMade||0;sd.orbAt15=sd.orbAtStart;}
+   if(playingNow&&sd.started){const bin=Math.floor((now-sd.started)/5000);if(bin>=0&&bin<3){const b=sd.bins[bin];const gap=now-sd.lastFrame;b.frames++;b.maxGap=Math.max(b.maxGap,gap);if(gap>50)b.slow++;sd.orbAt15=window.__taOrbFramesMade||0;}sd.lastFrame=now;}
+   sd.previousPlaying=playingNow;
    // Keep collecting diagnostics while playing, without covering the play field.
    // The results become visible again automatically after TimeOver.
    if(taPerfPanel){
@@ -9207,7 +9215,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    '\nChain '+(typeof combo==='number'?combo:'?')+' /100 '+(typeof combo==='number'&&combo>=100?'ON':'OFF')+
    '\n100+ peak ('+taPerfCentury.samples+' windows) gap '+fmt(taPerfCentury.gap)+'ms'+
    '\n100+ FX '+fmt(taPerfCentury.paint)+' cross '+fmt(taPerfCentury.cross)+' green '+fmt(taPerfCentury.green)+
-   '\n100+ collect '+fmt(taPerfCentury.collect)+' spawn '+fmt(taPerfCentury.spawn)+' long '+fmt(taPerfCentury.long);
+   '\n100+ collect '+fmt(taPerfCentury.collect)+' spawn '+fmt(taPerfCentury.spawn)+' long '+fmt(taPerfCentury.long) + '\n--- STARTUP 0-15s ---' +
+   taStartupDiag.bins.map((b,i)=>'\n'+(i*5)+'-'+((i+1)*5)+'s: frames '+b.frames+' slow '+b.slow+' gap '+fmt(b.maxGap)+'ms long '+b.longTasks+' max '+fmt(b.longMax)+'ms').join('') +
+   '\nOrb frames '+taStartupDiag.orbAtStart+' -> '+taStartupDiag.orbAt15+' / '+(window.__taOrbFramesMade||0)+' of 216' ;
   taPerfWindow=now;
   for(const k of ['rafCount','rafSlow','rafMax','paintCount','paintSum','paintMax','crossCount','crossMs','crossMax','greenCount','greenMs','greenMax','collectCount','collectMs','collectMax','readCount','readMs','readMax','orbsCount','orbsMs','orbsMax','logicCount','logicMs','logicMax','hudCount','hudMs','hudMax','spawnCount','spawnMs','spawnMax','longCount','longMax'])t[k]=0;
  }
@@ -9938,6 +9948,7 @@ function emblem(ctx,kind,theta){
  ctx.shadowColor=ink;ctx.shadowBlur=10;ctx.fillStyle=`rgba(255,255,245,${.90+.10*pulse})`;ctx.beginPath();ctx.arc(0,0,3.2+pulse*.5,0,Math.PI*2);ctx.fill();ctx.restore();
 }
 function makeFrame(kind,idx){
+ window.__taOrbFramesMade=(window.__taOrbFramesMade||0)+1;
  const c=document.createElement('canvas');c.width=c.height=SIZE;const ctx=c.getContext('2d');const {rgb}=kinds[kind];const color=rgb.join(',');const cx=SIZE/2,cy=SIZE/2;
  const phase=idx/FRAMES*Math.PI*2;const pulse=.86+.14*(.5+.5*Math.sin(phase*2-.55));
  // Soft internal volumetric light, separate from the glass shell.
