@@ -9268,10 +9268,14 @@ function taReleaseCenturyFlash(el){
   const lengths=[0];let total=0;
   for(let j=1;j<path.length;j++){total+=Math.hypot(path[j].x-path[j-1].x,path[j].y-path[j-1].y);lengths.push(total);}
   if(total<2)return [];
-  return path.map((p,j)=>{
-   const a=path[Math.max(0,j-1)],z=path[Math.min(path.length-1,j+1)];
+  // Limit only the visual outline tessellation; the actual stroke and hit tests stay untouched.
+  const visualPath=path.length>28?path.filter((_,i)=>i===0||i===path.length-1||i%Math.ceil(path.length/26)===0):path;
+  const visualLengths=[0];let visualTotal=0;
+  for(let j=1;j<visualPath.length;j++){visualTotal+=Math.hypot(visualPath[j].x-visualPath[j-1].x,visualPath[j].y-visualPath[j-1].y);visualLengths.push(visualTotal);}
+  return visualPath.map((p,j)=>{
+   const a=visualPath[Math.max(0,j-1)],z=visualPath[Math.min(visualPath.length-1,j+1)];
    const dx=z.x-a.x,dy=z.y-a.y,len=Math.hypot(dx,dy)||1;
-   const v=lengths[j]/total;
+   const v=visualLengths[j]/(visualTotal||1);
    return {x:p.x,y:p.y,nx:-dy/len,ny:dx/len,profile:Math.pow(Math.max(0,Math.sin(Math.PI*v)),.8)};
   });
  }
@@ -9451,16 +9455,19 @@ function taReleaseCenturyFlash(el){
   ctx.save();ctx.globalCompositeOperation='screen';
   for(let si=0;si<f.segs.length;si++){
    const seg=f.segs[si],a=seg[0],b=seg[1],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
-   const steps=Math.max(2,Math.ceil(L/(taMobileFx?18:9)));
+   // At 100+ chains on phones, reduce only visual sampling density.
+   const steps=Math.max(2,Math.ceil(L/(taMobileFx?(combo>=100?27:18):9)));
    for(let j=0;j<=steps;j++){
     const t=j/steps,ptX=a.x+dx*t,ptY=a.y+dy*t,seed=si*211+j*19;
     const flick=Math.sin(now*.013+seed)*.5+.5;
     const radius=seg[2]*(.7+hash(seed)*.55)*taFxScale,rise=(14+hash(seed+3)*31)*(0.65+flick*.7)*taFxScale;
     // Smoky, low-opacity turbulent outer volume rather than a solid glowing stripe.
+    if(!(taMobileFx&&combo>=100)){
     const smokeX=ptX+nx*(hash(seed+4)-.5)*radius*.7,smokeY=ptY-rise*.65;
     const smoke=ctx.createRadialGradient(smokeX,smokeY,0,smokeX,smokeY,radius*1.6);
     smoke.addColorStop(0,'rgba(100,73,65,.18)');smoke.addColorStop(.5,'rgba(60,54,58,.10)');smoke.addColorStop(1,'rgba(30,29,34,0)');
     ctx.globalAlpha=alpha*.65;ctx.fillStyle=smoke;ctx.beginPath();ctx.arc(smokeX,smokeY,radius*1.6,0,Math.PI*2);ctx.fill();
+    }
     for(let k=0;k<(taMobileFx?2:3);k++){
      const wobble=Math.sin(now*.009+seed*1.7+k*2.8)*radius*.35;
      const baseX=ptX+nx*(k-1)*radius*.35,baseY=ptY+ny*(k-1)*radius*.35;
@@ -9476,9 +9483,11 @@ function taReleaseCenturyFlash(el){
      ctx.bezierCurveTo(tipX+radius*.25,tipY+rise*.2,baseX+radius*.8,baseY-rise*.22,baseX+radius*.45,baseY+radius*.2);
      ctx.closePath();ctx.fill();
     }
+    if(!(taMobileFx&&combo>=100&&j%2===1)){
     const hot=ctx.createRadialGradient(ptX,ptY,0,ptX,ptY,radius*.8);
     hot.addColorStop(0,'rgba(255,239,176,.68)');hot.addColorStop(.28,'rgba(255,139,40,.35)');hot.addColorStop(1,'rgba(244,51,12,0)');
     ctx.globalAlpha=alpha*.78;ctx.fillStyle=hot;ctx.beginPath();ctx.arc(ptX,ptY,radius*.8,0,Math.PI*2);ctx.fill();
+    }
    }
   }
   ctx.restore();
@@ -9865,12 +9874,19 @@ function emblem(ctx,kind,theta){
  strokes.sort((a,b)=>a.depth-b.depth);
  ctx.save();ctx.translate(cx,cy);ctx.lineCap='round';ctx.lineJoin='round';
  for(const s of strokes){const depth=(s.depth+1)/2;const alpha=(.42+.58*depth)*s.bright;ctx.strokeStyle=`rgba(${rgb.join(',')},${alpha})`;ctx.lineWidth=s.width*(.7+.3*depth);ctx.shadowColor=ink;ctx.shadowBlur=5;ctx.beginPath();ctx.moveTo(s.A[0]*scale,s.A[1]*scale);ctx.lineTo(s.B[0]*scale,s.B[1]*scale);ctx.stroke();}
- ctx.shadowColor=ink;ctx.shadowBlur=14;ctx.fillStyle='rgba(255,255,245,.98)';ctx.beginPath();ctx.arc(0,0,3.2,0,Math.PI*2);ctx.fill();ctx.restore();
+ // Broad, feathered core instead of a sharp pinpoint. Pre-rendered during loading.
+ const halo=ctx.createRadialGradient(0,0,0,0,0,15);
+ halo.addColorStop(0,'rgba(255,255,246,.80)');
+ halo.addColorStop(.19,'rgba(255,255,245,.58)');
+ halo.addColorStop(.42,`rgba(${rgb.join(',')},.35)`);
+ halo.addColorStop(.76,`rgba(${rgb.join(',')},.11)`);
+ halo.addColorStop(1,'rgba(255,255,255,0)');
+ ctx.shadowBlur=0;ctx.fillStyle=halo;ctx.beginPath();ctx.arc(0,0,15,0,Math.PI*2);ctx.fill();ctx.restore();
 }
 function makeFrame(kind,idx){
  const c=document.createElement('canvas');c.width=c.height=SIZE;const ctx=c.getContext('2d');const {rgb}=kinds[kind];const color=rgb.join(',');const cx=SIZE/2,cy=SIZE/2;
  // Soft internal volumetric light, separate from the glass shell.
- let g=ctx.createRadialGradient(cx,cy,1,cx,cy,42);g.addColorStop(0,'rgba(255,255,255,.62)');g.addColorStop(.16,`rgba(${color},.36)`);g.addColorStop(.62,`rgba(${color},.075)`);g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.fillRect(0,0,SIZE,SIZE);
+ let g=ctx.createRadialGradient(cx,cy,1,cx,cy,42);g.addColorStop(0,'rgba(255,255,255,.67)');g.addColorStop(.22,`rgba(${color},.33)`);g.addColorStop(.62,`rgba(${color},.085)`);g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.fillRect(0,0,SIZE,SIZE);
  emblem(ctx,kind,idx/FRAMES*Math.PI*2);
  // Glass silhouette remains static; the inner emblem alone rotates.
  g=ctx.createRadialGradient(33,24,4,cx,cy,47);g.addColorStop(0,'rgba(255,255,255,.13)');g.addColorStop(.60,'rgba(255,255,255,.025)');g.addColorStop(.85,`rgba(${color},.06)`);g.addColorStop(.94,`rgba(${color},.24)`);g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,46,0,Math.PI*2);ctx.fill();
@@ -9884,7 +9900,7 @@ function setup(){document.querySelectorAll('#viewMain>.ta-items .ta-orb.fire,#vi
 });}
 let prepared=false;
 function prepare(){if(prepared)return;prepared=true;setup();let kindIndex=0,frameIndex=0;const names=Object.keys(kinds);
- function batch(){const limit=frameIndex+6;while(kindIndex<names.length){const kind=names[kindIndex];if(!atlas[kind])atlas[kind]=[];while(frameIndex<FRAMES&&frameIndex<limit){atlas[kind].push(makeFrame(kind,frameIndex++));}if(frameIndex<FRAMES)break;kindIndex++;frameIndex=0;break;}if(kindIndex<names.length){setTimeout(batch,0);}else{for(const s of states){if(s.ctx){s.ctx.drawImage(atlas[s.kind][0],0,0);s.last=0;}}}}
+ function batch(){const limit=frameIndex+18;while(kindIndex<names.length){const kind=names[kindIndex];if(!atlas[kind])atlas[kind]=[];while(frameIndex<FRAMES&&frameIndex<limit){atlas[kind].push(makeFrame(kind,frameIndex++));}if(frameIndex<FRAMES)break;kindIndex++;frameIndex=0;break;}if(kindIndex<names.length){setTimeout(batch,0);}else{for(const s of states){if(s.ctx){s.ctx.drawImage(atlas[s.kind][0],0,0);s.last=0;}}}}
  batch();}
 let last=0;function tick(now){requestAnimationFrame(tick);if(document.hidden||now-last<INTERVAL)return;last=now;setup();const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;const idx=reduce?0:Math.floor((now%PERIOD)/PERIOD*FRAMES);for(const s of states){if(!s.button.isConnected||!s.ctx||!atlas[s.kind])continue;const frame=s.button.disabled?0:idx;if(frame===s.last||!atlas[s.kind][frame])continue;s.ctx.clearRect(0,0,SIZE,SIZE);s.ctx.drawImage(atlas[s.kind][frame],0,0);s.last=frame;}}
 // Prepare on the title/loading screen, not at the first skill activation.
