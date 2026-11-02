@@ -840,7 +840,7 @@ html.glow-moon .up-fly{color:#bcd0ff;text-shadow:0 0 8px rgba(160,190,255,.85);s
 /* 時間停止中もLv表記はLv2以上のときだけ（Lv1は出さない） */
 .combo.up{animation:comboUp .6s ease}
 .combo i{position:absolute;left:10px;right:10px;bottom:2px;height:1.5px;border-radius:2px;background:var(--accent);transform-origin:left;transform:scaleX(0);opacity:.7}
-.combo.ta-skill-grace i{height:3px;opacity:1;background:#e5c17b;box-shadow:0 0 7px 2px rgba(245,201,112,.72),0 0 14px rgba(245,201,112,.28)}
+.combo.ta-skill-grace i{height:3px;opacity:1;background:var(--accent);box-shadow:0 0 7px 2px color-mix(in srgb,var(--accent) 70%,transparent),0 0 14px color-mix(in srgb,var(--accent) 30%,transparent)}
 .combo.run i{animation:comboTimer var(--ct,2400ms) linear forwards}
 .combo .cpause{display:none;position:absolute;inset:0;z-index:2;align-items:center;justify-content:center;border-radius:inherit;background:color-mix(in srgb,var(--ground) 82%,transparent);color:var(--accent);font-family:var(--mincho);font-weight:600;font-size:.76rem;letter-spacing:.16em}
 .combo.paused .cpause{display:flex;animation:cpauseFade 1.6s ease-in-out infinite}
@@ -4145,7 +4145,7 @@ function setComboSkillGrace(skill){
   if(!duration)return;
   comboWindowMs=duration;
   const el=$("combo");
-  el.classList.add("ta-skill-grace");
+  el.classList.add("ta-skill-grace", "on");
   el.style.setProperty("--ct",duration+"ms");
   if(flood || comboPaused){
     if(flood)taFloodComboRemaining=duration;
@@ -4155,7 +4155,11 @@ function setComboSkillGrace(skill){
   }
   // Restart both the real expiry and the visible bar from the same instant.
   comboAt=Date.now();
-  el.classList.remove("run");void el.offsetWidth;el.classList.add("run");
+  el.classList.remove("run");
+  const gauge=el.querySelector("i");
+  if(gauge)gauge.getAnimations().forEach(a=>a.cancel());
+  void el.offsetWidth;
+  el.classList.add("run");
   clearTimeout(bumpCombo.h);
   bumpCombo.h=setTimeout(expireCombo,duration);
 }
@@ -4522,21 +4526,25 @@ function endFlood(){
     comboWindowMs=COMBO_SKILL_MS.timeResume;
     taFloodComboRemaining=comboWindowMs;
     $("combo").classList.add("ta-skill-grace");
+    $("combo").classList.add("on");
   }
   // A combo that began while time was stopped must resume from a full bar.
   if(taFloodComboRemaining===null && combo>=2 && !comboPaused)taFloodComboRemaining=comboWindowMs;
   if(taFloodComboRemaining!==null){
     const remaining=taFloodComboRemaining;taFloodComboRemaining=null;
     $("combo").classList.remove("paused");
-    if(combo>=2 && !comboPaused){
+    if(combo>=1 && !comboPaused){
       const comboEl=$("combo");
+      comboEl.classList.add("on");
       comboEl.style.setProperty("--ct",remaining+"ms");
       comboEl.classList.remove("run");
+      const gauge=comboEl.querySelector("i");
+      if(gauge)gauge.getAnimations().forEach(a=>a.cancel());
       void comboEl.offsetWidth;
       comboEl.classList.add("run");
       comboAt=Date.now()-(comboWindowMs-remaining);
       clearTimeout(bumpCombo.h);
-      bumpCombo.h=setTimeout(()=>{taMeteorReset();combo=0;taSyncDriftingGlowWords();document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit");const el=$("combo");el.classList.remove("on","x2","x3","run","heat");el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();},remaining);
+      bumpCombo.h=setTimeout(expireCombo,remaining);
     }
   }
   // 位置は先にまとめて読む（クラスを外したあとに読むと、画面全体の再計算をその場で強いて重くなる）
