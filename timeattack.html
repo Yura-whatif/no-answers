@@ -3881,7 +3881,7 @@ function plusSize(n, base){ const step = n < 10 ? 0 : Math.floor(n / 10); return
 const COMBO_BONUS = 100;   // 100連鎖ごとのボーナス
 const COMBO_STEP_FROM = 10; // 10連鎖ごとに10点、100連鎖ごとに100点
 const COMBO_MS = 2200;
-const COMBO_SKILL_MS = {issen:3000, shingan:3000, shinsoku:3000, timeResume:3000, eclipse:3000, pull:3000};
+const COMBO_SKILL_MS = {issen:3000, shingan:3000, shinsoku:3000, timeResume:3000, eclipse:3000, pull:3000, crossFinish:3000};
 let comboWindowMs = COMBO_MS;
 let combo = 0, comboAt = 0, comboPaused = false;
 let taFloodComboRemaining = null;
@@ -9155,7 +9155,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   }return best;
  }
  // Fire and ice fuse into a stationary three-beat resonance orb.
- const CROSS_PULSE_RADII=[130,185,240]; // Each successive beat reaches farther.
+ const CROSS_PULSE_RADII=[150,195,240]; // Each successive beat reaches farther.
  // Cross explosion awards are calculated by the existing collection code.
  // These two orbs are visual-only: one boosted gold score orb and one plain blue time orb.
  // Stage 6-A: cache HUD destinations for a collection batch; avoid repeated layout reads.
@@ -9309,7 +9309,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   for(const w of field.querySelectorAll('.word')){
    if(!valid(w))continue;
    const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;
-   const dx=r.left+r.width/2-hr.left,dy=r.top+r.height/2-hr.top;
+   // Match the visible burst center (b.x/b.y are hero-local CSS pixels).
+   // Compare word centers in the same coordinate space, not against the hero origin.
+   const dx=r.left+r.width/2-(hr.left+b.x),dy=r.top+r.height/2-(hr.top+b.y);
    if(dx*dx+dy*dy<=radiusSq)hits.push({w,x:r.left+r.width/2,y:r.top+r.height/2,rect:r});
   }
   if(taPerfEnabled)taPerfCost('read',performance.now()-phaseReadStart);
@@ -9411,6 +9413,12 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    if(t>=3.22&&!b.flashCollected){b.flashCollected=true;taFlashArenaEdge("cross");{const tm=taPerfEnabled?performance.now():0;finalFlashCollect(b);if(taPerfEnabled)taPerfCost('collect',performance.now()-tm);}b.lastAfterCollect=now;}
    // Keep the final explosion's collection field active for one more second.
    // New words spawned after the flash are also collected, at most every 80ms.
+   // The final full-field collection continues for one second after the flash.
+   // Grant skill grace only when that collection window has fully ended.
+   if(b.flashCollected&&t>=4.22&&!b.graceGranted){
+    b.graceGranted=true;
+    if(taRunning&&combo>=1)setComboSkillGrace('crossFinish');
+   }
    if(b.flashCollected&&t<4.22&&now-b.lastAfterCollect>=80){
     b.lastAfterCollect=now;{const tm=taPerfEnabled?performance.now():0;finalFlashCollect(b);if(taPerfEnabled)taPerfCost('collect',performance.now()-tm);}
    }
@@ -9604,6 +9612,16 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
     ctx.globalAlpha=alpha*.78;ctx.fillStyle=hot;ctx.beginPath();ctx.arc(ptX,ptY,radius*.8,0,Math.PI*2);ctx.fill();
    }
   }
+  // Trial visual pass: a single tapered-looking luminous spine per segment.
+  // Two strokes only, no additional particles or gradients per sample.
+  if(!taDenseCombo && taCompoundLevel===0){
+   ctx.globalAlpha=alpha*.72;ctx.lineCap='round';ctx.lineJoin='round';
+   ctx.shadowBlur=taMobileFx?0:5;ctx.shadowColor='#ff8b30';
+   ctx.strokeStyle='rgba(255,112,32,.48)';ctx.lineWidth=taMobileFx?3.2:4.4;
+   ctx.beginPath();for(const seg of f.segs){ctx.moveTo(seg[0].x,seg[0].y);ctx.lineTo(seg[1].x,seg[1].y)}ctx.stroke();
+   ctx.shadowBlur=0;ctx.strokeStyle='rgba(255,242,195,.78)';ctx.lineWidth=taMobileFx?0.85:1.25;
+   ctx.stroke();
+  }
   ctx.restore();
  }
  function renderIce(f,alpha){
@@ -9633,6 +9651,15 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
     ctx.globalAlpha=alpha*.55;ctx.strokeStyle='rgba(213,246,255,.55)';ctx.lineWidth=.65;
     ctx.beginPath();ctx.moveTo(pt.x-sz*.4,pt.y+sz*.25);ctx.lineTo(pt.x+sz*.12,pt.y-sz*.25);ctx.lineTo(pt.x+sz*.48,pt.y-sz*.42);ctx.stroke();
    }
+  }
+  // Trial visual pass: crystalline spine and sparse facet highlights.
+  // Keep it to two batched strokes; skip under overlapping heavy effects.
+  if(!taDenseCombo && taCompoundLevel===0){
+   ctx.globalAlpha=alpha*.82;ctx.lineCap='round';ctx.lineJoin='miter';
+   ctx.shadowBlur=taMobileFx?0:5;ctx.shadowColor='#66d9ff';
+   ctx.strokeStyle='rgba(75,185,245,.48)';ctx.lineWidth=taMobileFx?3:4;
+   ctx.beginPath();for(const seg of f.segs){ctx.moveTo(seg[0].x,seg[0].y);ctx.lineTo(seg[1].x,seg[1].y)}ctx.stroke();
+   ctx.shadowBlur=0;ctx.strokeStyle='rgba(239,254,255,.92)';ctx.lineWidth=taMobileFx?.8:1.2;ctx.stroke();
   }
   ctx.restore();
  }
