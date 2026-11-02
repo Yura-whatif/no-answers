@@ -3878,7 +3878,7 @@ function plusSize(n, base){ const step = n < 10 ? 0 : Math.floor(n / 10); return
 const COMBO_BONUS = 100;   // 100連鎖ごとのボーナス
 const COMBO_STEP_FROM = 10; // 10連鎖ごとに10点、100連鎖ごとに100点
 const COMBO_MS = 2200;
-const COMBO_SKILL_MS = {issen:3000, shingan:3000, shinsoku:3000};
+const COMBO_SKILL_MS = {issen:3000, shingan:3000, shinsoku:3000, timeResume:3000, eclipse:3000, pull:3000};
 let comboWindowMs = COMBO_MS;
 let combo = 0, comboAt = 0, comboPaused = false;
 let taFloodComboRemaining = null;
@@ -4516,6 +4516,13 @@ function startFlood(gem){
 function endFlood(){
   clearTimeout(startFlood.h);
   flood = false; document.documentElement.classList.remove("ta-sakura-time-frozen"); taCenturyMusic.timeResume(); clearTimeout(startFlood.tickDelay); clearInterval(startFlood.tk);
+  // When time resumes, the next collection receives a fresh 3-second grace.
+  // Reuse the existing skill gauge and expiry timer after the frozen state ends.
+  if(taRunning && combo>=1){
+    comboWindowMs=COMBO_SKILL_MS.timeResume;
+    taFloodComboRemaining=comboWindowMs;
+    $("combo").classList.add("ta-skill-grace");
+  }
   // A combo that began while time was stopped must resume from a full bar.
   if(taFloodComboRemaining===null && combo>=2 && !comboPaused)taFloodComboRemaining=comboWindowMs;
   if(taFloodComboRemaining!==null){
@@ -5377,6 +5384,8 @@ function pullAll(x, y, self, eclipse=false, eclipseElement=null){
   }, 250 + Math.random() * 900);
   const finish = () => {
     if(done) return; done = true; snd.stop();
+    // Start the 3-second skill-style grace after the last absorbed word.
+    if(taRunning && combo>=1) setComboSkillGrace(eclipse ? "eclipse" : "pull");
     core.animate([{scale:"1", opacity:1},{scale:"1.5", opacity:1, offset:.3},{scale:"0", opacity:0}], {duration:420, easing:"ease-in", fill:"forwards"}).onfinish = () => core.remove();
     if(!n) return;
     if(eclipse)taFlashArenaEdge(eclipseIce?"ice":"fire");
