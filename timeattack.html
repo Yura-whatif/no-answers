@@ -4061,27 +4061,17 @@ function comboStepBonus(n){
 }
 // 100-chain BGM.  Keep its state independent of ranking/result music.
 const taCenturyMusic=(()=>{
-  const src='audio/Across_the_Heather.mp3?v=20261102';
+  const src='audio/Upon_the_Silent_Threshold.mp3?v=20261102';
   let audio=null,active=false,stoppedForTime=false,fadeId=0,fadeTimer=0,serial=0;
   const volume=.38; // Lower level; preserve existing fade and timing
-  const fadeInMs=2200;
   function clearFade(){++fadeId;if(fadeTimer){cancelAnimationFrame(fadeTimer);fadeTimer=0;}}
   function ensure(){if(!audio){audio=new Audio(src);audio.loop=true;audio.preload='auto';audio.volume=0;}return audio;}
   function play(){
     if(!active||stoppedForTime||!taRunning||!sfx.on||document.hidden)return;
     const a=ensure();clearFade();
-    const initial=a.paused?0:Math.min(a.volume,volume);
-    a.volume=initial;
+    // Start immediately at the target level; keep pause/resume and outro fades unchanged.
+    a.volume=volume;
     sfx.setCenturyMix(true);
-    const fadeTicket=fadeId,fadeStarted=performance.now();
-    const fadeStep=now=>{
-      if(fadeTicket!==fadeId||!active||stoppedForTime||a.paused)return;
-      const t=Math.min(1,(now-fadeStarted)/fadeInMs);
-      a.volume=Math.min(1,initial+(volume-initial)*(t*t*(3-2*t)));
-      if(t<1)fadeTimer=requestAnimationFrame(fadeStep);
-      else fadeTimer=0;
-    };
-    fadeTimer=requestAnimationFrame(fadeStep);
     const ticket=serial;
     const promise=a.play();if(promise&&promise.catch)promise.catch(()=>{if(ticket===serial){/* Mobile autoplay restrictions: retry at next gesture. */}});
   }
