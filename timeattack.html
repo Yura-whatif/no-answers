@@ -9272,7 +9272,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(taCrossOrbPool.length<TA_CROSS_ORB_POOL_LIMIT)taCrossOrbPool.push(orb);
  }
  // Stage 6-C diagnostics: passive sampling only; no gameplay or visual changes.
- const taPerfEnabled=true; // Startup diagnostic build
+ const taPerfEnabled=(location.hash||'').includes('test') || new URLSearchParams(location.search).has('perf'); // Opt-in diagnostic; normal play avoids instrumentation
  // Startup-only diagnostics: retained for TimeOver, never shown during play.
  const taStartupDiag={started:0,previousPlaying:false,bins:[0,1,2].map(()=>({frames:0,slow:0,maxGap:0,longTasks:0,longMax:0,paintCount:0,paintSum:0,paintMax:0,costs:{},events:{}})),lastFrame:0,lastBin:-1,orbAtStart:0,orbAt15:0};
  window.__taStartupDiag=taStartupDiag;
@@ -9669,7 +9669,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // Reduce decorative redraw frequency only; the hit/award logic is unchanged.
   const taDenseCombo=taMobileFx&&crossBursts.length>0&&(summonBursts.length>0||traces.some(f=>f.type==='summon')||taCompoundLevel===2);
   const targetMs=taMobileFx?(crossBursts.length?50:40):16;
-  if(now-lastFxPaint<targetMs){requestAnimationFrame(draw);return;}
+  if(now-lastFxPaint<targetMs){scheduleFxIdle(Math.max(8,Math.ceil(targetMs-(now-lastFxPaint))));return;}
   lastFxPaint=now;fxWasDrawing=true;const taPaintStart=taPerfEnabled?performance.now():0;
   const dt=Math.min(.05,(now-last)/1000);last=now;
  const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,taMobileFx?1:2),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);drawCompletedClock(now);renderSummons(now);
@@ -10150,7 +10150,34 @@ let prepared=false;
 function prepare(){if(prepared)return;prepared=true;setup();let kindIndex=0,frameIndex=0;const names=Object.keys(kinds);
  function batch(){const limit=frameIndex+6;while(kindIndex<names.length){const kind=names[kindIndex];if(!atlas[kind])atlas[kind]=[];while(frameIndex<FRAMES&&frameIndex<limit){atlas[kind].push(makeFrame(kind,frameIndex++));}if(frameIndex<FRAMES)break;kindIndex++;frameIndex=0;break;}if(kindIndex<names.length){setTimeout(batch,0);}else{for(const s of states){if(s.ctx){s.ctx.drawImage(atlas[s.kind][0],0,0);s.last=0;}}}}
  batch();}
-let last=0;function tick(now){requestAnimationFrame(tick);if(document.hidden||now-last<INTERVAL)return;last=now;setup();const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;const idx=reduce?0:Math.floor((now%PERIOD)/PERIOD*FRAMES);for(const s of states){if(!s.button.isConnected||!s.ctx||!atlas[s.kind])continue;const frame=s.button.disabled?0:idx;if(frame===s.last||!atlas[s.kind][frame])continue;s.ctx.clearRect(0,0,SIZE,SIZE);s.ctx.drawImage(atlas[s.kind][frame],0,0);s.last=frame;}}
+// Inventory animation: don't wake the renderer for invisible/unused orbs.
+// Reduce redraws when the device is congested without changing animation speed.
+const orbReduceQuery=window.matchMedia('(prefers-reduced-motion: reduce)');
+let last=0,lastSetup=0;
+let orbTimer=0;
+function scheduleOrbTick(delay){
+ if(orbTimer)clearTimeout(orbTimer);
+ orbTimer=setTimeout(()=>{orbTimer=0;requestAnimationFrame(tick);},Math.max(12,delay));
+}
+function tick(now){
+ if(document.hidden){scheduleOrbTick(300);return;}
+ const quality=(typeof taAdaptiveLevel==='number'?taAdaptiveLevel:0);
+ const interval=quality>=2?110:quality===1?75:INTERVAL;
+ if(now-last<interval){scheduleOrbTick(interval-(now-last));return;}
+ last=now;
+ scheduleOrbTick(interval);
+ if(now-lastSetup>1200){setup();lastSetup=now;}
+ const reduce=orbReduceQuery.matches;
+ const idx=reduce?0:Math.floor((now%PERIOD)/PERIOD*FRAMES);
+ for(const s of states){
+  if(!s.button.isConnected||!s.ctx||!atlas[s.kind])continue;
+  // Hidden orbs do not need repeated canvas uploads to the GPU.
+  if(s.button.getClientRects().length===0)continue;
+  const frame=s.button.disabled?0:idx;
+  if(frame===s.last||!atlas[s.kind][frame])continue;
+  s.ctx.drawImage(atlas[s.kind][frame],0,0);s.last=frame;
+ }
+}
 // Prepare on the title/loading screen, not at the first skill activation.
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',prepare,{once:true});else prepare();requestAnimationFrame(tick);
 })();
