@@ -10175,7 +10175,7 @@ function tick(now){
   if(s.button.getClientRects().length===0)continue;
   const frame=s.button.disabled?0:idx;
   if(frame===s.last||!atlas[s.kind][frame])continue;
-  s.ctx.drawImage(atlas[s.kind][frame],0,0);s.last=frame;
+  s.ctx.clearRect(0,0,SIZE,SIZE);s.ctx.drawImage(atlas[s.kind][frame],0,0);s.last=frame;
  }
 }
 // Prepare on the title/loading screen, not at the first skill activation.
