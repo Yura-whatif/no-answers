@@ -1788,6 +1788,33 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
 @media(prefers-reduced-motion:reduce){.ta-shinsoku-streak{animation:none;opacity:0}}
 
 </style>
+<style id="ta-result-tip-shine">
+/* Result hint: reuse the title start button's metallic sweep without changing layout. */
+#taLaunch .ta-tip-box{
+ position:relative;isolation:isolate;overflow:hidden;
+ border-color:rgba(232,190,113,.88);
+ box-shadow:inset 0 0 15px rgba(212,166,98,.10),0 0 11px rgba(237,181,88,.24);
+ animation:taTipGlow 3.8s ease-in-out infinite;
+}
+#taLaunch .ta-tip-box::after{
+ content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+ background:linear-gradient(115deg,transparent 0%,transparent 39%,rgba(252,221,154,.16) 45%,rgba(255,255,242,.78) 49%,rgba(255,247,207,.24) 53%,transparent 60%,transparent 100%);
+ background-size:320% 100%;background-position:110% 0;
+ opacity:0;mix-blend-mode:screen;
+ animation:taTipMetalSweep 4.6s ease-in-out infinite;
+}
+#taLaunch .ta-tip-icon,#taLaunch .ta-tip-text{position:relative;z-index:1}
+@keyframes taTipMetalSweep{
+ 0%,12%{opacity:0;background-position:110% 0}
+ 17%,34%{opacity:1}
+ 48%,100%{opacity:0;background-position:-10% 0}
+}
+@keyframes taTipGlow{
+ 0%,100%{box-shadow:inset 0 0 15px rgba(212,166,98,.10),0 0 8px rgba(237,181,88,.18)}
+ 50%{box-shadow:inset 0 0 18px rgba(212,166,98,.16),0 0 16px rgba(237,181,88,.42)}
+}
+@media(prefers-reduced-motion:reduce){#taLaunch .ta-tip-box,#taLaunch .ta-tip-box::after{animation:none!important}}
+</style>
 <style id="ta-new-title-style">
 /* Single authoritative title layout; avoid competing legacy overrides. */
 #taTitleScreen{position:fixed;inset:0;z-index:100200;background:#090d19;display:grid;place-items:center;overflow:hidden}
