@@ -3860,13 +3860,15 @@ const taCenturyDust=(()=>{
     if(!canvas){canvas=document.createElement('canvas');canvas.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:10016;pointer-events:none;';ctx=canvas.getContext('2d',{alpha:true});}
     if(!canvas.isConnected){canvas.width=innerWidth;canvas.height=innerHeight;document.body.append(canvas);}
   }
-  function stamp(text,font,w,h){
-    const key=text+'|'+font+'|'+w+'|'+h;
+  function stamp(text,font,w,h,spacing){
+    const key=text+'|'+font+'|'+w+'|'+h+'|'+spacing;
     if(cache.has(key))return cache.get(key);
     const off=document.createElement('canvas');off.width=Math.max(4,Math.ceil(w));off.height=Math.max(4,Math.ceil(h));
     const c=off.getContext('2d',{willReadFrequently:true});
-    c.font=font;c.textAlign='center';c.textBaseline='middle';c.fillStyle='#fff';
-    c.fillText(text,off.width/2,off.height/2,off.width-2);
+    c.font=font;c.textAlign='left';c.textBaseline='middle';c.fillStyle='#fff';
+    // Match the original DOM text's CSS letter spacing when supported.
+    if('letterSpacing' in c)c.letterSpacing=spacing;
+    c.fillText(text,2,off.height/2,off.width-4);
     const pixels=c.getImageData(0,0,off.width,off.height).data;
     const spots=[];
     // Sample the real letter shapes, not a rectangular shutter or a uniform cloud.
@@ -3906,27 +3908,35 @@ const taCenturyDust=(()=>{
     if(glyphs.length||grains.length)raf=requestAnimationFrame(frame);
     else{raf=0;canvas.remove();}
   }
-  function emit(r,word,style){
+  function emit(r,word,style,textRect){
     if(!taRunning||combo<100||!r||!r.width||!r.height||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
     ensure();
     const now=performance.now(),cx=r.left+r.width/2,cy=r.top+r.height/2;
     if(word){
       const font=style?.font||'16px serif';
-      const tw=Math.min(220,Math.max(20,r.width-10)),th=Math.min(56,Math.max(20,r.height-4));
-      const texture=stamp(word,font,tw,th);
+      const spacing=style?.letterSpacing||'normal';
+      // Position from the actual DOM text bounds, not the capsule center.
+      // Capsule padding, letter-spacing and font metrics can shift the text.
+      const bounds=textRect&&textRect.width>0?textRect:null;
+      const tw=bounds?Math.ceil(bounds.width)+4:Math.min(220,Math.max(20,r.width-10));
+      const th=bounds?Math.ceil(bounds.height)+4:Math.min(56,Math.max(20,r.height-4));
+      const gx=bounds?bounds.left-2:cx-tw/2;
+      const gy=bounds?bounds.top-2:cy-th/2;
+      const texture=stamp(word,font,tw,th,spacing);
       // The golden glyph is drawn separately from the ordinary silver frame.
       // Tint cached alpha via a one-time source-in operation.
       let tinted=texture.gold;
       if(!tinted){tinted=document.createElement('canvas');tinted.width=texture.image.width;tinted.height=texture.image.height;
         const c=tinted.getContext('2d');c.drawImage(texture.image,0,0);c.globalCompositeOperation='source-in';c.fillStyle='#ffdc8b';c.fillRect(0,0,tinted.width,tinted.height);texture.gold=tinted;}
-      glyphs.push({image:tinted,x:cx-tw/2,y:cy-th/2,w:tw,h:th,start:now});
+      // Gold afterimage disabled: avoid misaligned duplicate glyph; keep rising gold sand.
+      // glyphs.push({image:tinted,x:gx,y:gy,w:tw,h:th,start:now});
       if(glyphs.length>maxGlyphs)glyphs.splice(0,glyphs.length-maxGlyphs);
       // Each speck starts from an actual opaque part of a letter. Staggering
       // releases creates gradual erosion without any horizontal clipping edge.
       const n=mobile?20:30,spots=texture.spots;
       for(let i=0;i<n&&spots.length;i++){
         const pt=spots[(Math.random()*spots.length)|0];
-        grains.push({x:cx-tw/2+pt[0],y:cy-th/2+pt[1],vx:(Math.random()-.5)*23,
+        grains.push({x:gx+pt[0],y:gy+pt[1],vx:(Math.random()-.5)*23,
           speed:22+Math.random()*37,phase:Math.random()*6.28,
           delay:.13+Math.random()*.30,life:.58+Math.random()*.36,
           sz:.6+Math.random()*.95,light:i%5===0,start:now});
@@ -5317,6 +5327,14 @@ function spawnWord(opt = {}){
     if(reduce || !w.animate){ if(combo>=100)window.taOrbDiag.mark("early return reduced-motion / no animate"); w.remove(); arrive(); return; }
     // 触れた言葉がほどけて光の玉になり、右上の違和感へ弧を描いて吸い込まれる
     const r = w.getBoundingClientRect(), t = (taTime ? $("taTime") : $("taScore")).getBoundingClientRect();
+    // Capture the real glyph bounds before removing the original word.
+    let centuryTextRect=null;
+    if(combo>=100 && plainWord){
+      const range=document.createRange();range.selectNodeContents(w);
+      const tr=range.getBoundingClientRect();
+      if(tr.width>0&&tr.height>0)centuryTextRect={left:tr.left,top:tr.top,width:tr.width,height:tr.height};
+      range.detach?.();
+    }
     const f = w.cloneNode(true); f.classList.add("flying");
     f.style.left = r.left + "px"; f.style.top = r.top + "px";
     w.remove(); document.body.append(f);
@@ -5366,7 +5384,7 @@ function spawnWord(opt = {}){
       flash.style.top=(r.top+r.height/2)+'px';
       document.body.append(flash);
       setTimeout(()=>taReleaseCenturyFlash(flash),550); window.taOrbDiag.mark("100+ flash complete");
-      taCenturyDust.emit(r,centuryEcho?wordText:null,centuryEcho?getComputedStyle(f):null);
+      taCenturyDust.emit(r,centuryEcho?wordText:null,centuryEcho?getComputedStyle(f):null,centuryTextRect);
     }else mist(r, lite ? 2 : 7);
     if(isOdd){ const p = document.createElement("span"); p.className = "oddplus"; p.textContent = taPointPlus(ODD_PT); p.style.fontSize = plusSize(ODD_PT, 1.2);
       p.style.left = (r.left + r.width/2) + "px"; p.style.top = r.top + "px"; document.body.append(p);
