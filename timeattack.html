@@ -3949,30 +3949,30 @@ const taCenturyDust=(()=>{
       const th=bounds?Math.ceil(bounds.height)+4:Math.min(56,Math.max(20,r.height-4));
       const gx=bounds?bounds.left-2:cx-tw/2;
       const gy=bounds?bounds.top-2:cy-th/2;
-      const texture=stamp(word,font,tw,th,spacing);
+      // High-chain optimization: avoid per-word pixel readback on touch devices.
+      // Sample particles from the text bounds instead; the gold-sand effect remains.
+      const texture=mobile?null:stamp(word,font,tw,th,spacing);
       // The golden glyph is drawn separately from the ordinary silver frame.
       // Tint cached alpha via a one-time source-in operation.
-      let tinted=texture.gold;
-      if(!tinted){tinted=document.createElement('canvas');tinted.width=texture.image.width;tinted.height=texture.image.height;
-        const c=tinted.getContext('2d');c.drawImage(texture.image,0,0);c.globalCompositeOperation='source-in';c.fillStyle='#ffdc8b';c.fillRect(0,0,tinted.width,tinted.height);texture.gold=tinted;}
+      // Gold glyph overlay is disabled; skip creating its unused tinted canvas.
       // Gold afterimage disabled: avoid misaligned duplicate glyph; keep rising gold sand.
       // glyphs.push({image:tinted,x:gx,y:gy,w:tw,h:th,start:now});
       if(glyphs.length>maxGlyphs)glyphs.splice(0,glyphs.length-maxGlyphs);
       // Each speck starts from an actual opaque part of a letter. Staggering
       // releases creates gradual erosion without any horizontal clipping edge.
-      const n=mobile?20:30,spots=texture.spots;
-      for(let i=0;i<n&&spots.length;i++){
-        const pt=spots[(Math.random()*spots.length)|0];
+      const n=mobile?14:30,spots=texture?.spots;
+      for(let i=0;i<n&&(mobile||spots?.length);i++){
+        const pt=mobile?[Math.random()*Math.max(4,tw-4),Math.random()*Math.max(4,th-4)]:spots[(Math.random()*spots.length)|0];
         grains.push({x:gx+pt[0],y:gy+pt[1],vx:(Math.random()-.5)*23,
           speed:22+Math.random()*37,phase:Math.random()*6.28,
           delay:.13+Math.random()*.30,life:.58+Math.random()*.36,
-          sz:.6+Math.random()*.95,light:i%5===0,start:now});
+          sz:(.6+Math.random()*.95)*1.4,light:i%5===0,start:now});
       }
     }else{
       // Preserve time-stop collection behavior without adding another emitter.
       for(let i=0;i<6;i++)grains.push({x:cx+(Math.random()-.5)*r.width*.5,y:cy+(Math.random()-.5)*r.height*.5,
         vx:(Math.random()-.5)*20,speed:25+Math.random()*30,phase:Math.random()*6.28,
-        delay:Math.random()*.12,life:.6,sz:1,light:i%3===0,start:now});
+        delay:Math.random()*.12,life:.6,sz:1.4,light:i%3===0,start:now});
     }
     if(grains.length>maxGrains)grains.splice(0,grains.length-maxGrains);
     if(!raf){last=now;raf=requestAnimationFrame(frame);}
@@ -5429,16 +5429,8 @@ function spawnWord(opt = {}){
       {transform:"scale(1.25) translateY(-10px)", opacity:0, filter:"blur(12px)", letterSpacing:"0.5em"}
     ], {duration: centuryEcho ? 390 : silverPickup ? 390 : lite ? 480 : 620, easing:"cubic-bezier(.2,.6,.3,1)", fill:"forwards"}).onfinish = () => f.remove();
     if(combo>=100){
-      // 文字の中心に金色の十字光を最初から表示し、広がらず中央へ収縮させて消す。
-      // 光は操作を妨げず、金砂は単一Canvasに統合する。
-      // Reuse the decorative 100-chain star instead of parsing SVG and allocating DOM on every tap.
-      window.taOrbDiag.mark("100+ flash begin");
-      const flash=taAcquireCenturyFlash();
-      flash.style.left=(r.left+r.width/2)+'px';
-      flash.style.top=(r.top+r.height/2)+'px';
-      document.body.append(flash);
-      setTimeout(()=>taReleaseCenturyFlash(flash),550); window.taOrbDiag.mark("100+ flash complete");
-      taCenturyDust.emit(r,centuryEcho?wordText:null,centuryEcho?getComputedStyle(f):null,centuryTextRect);
+      // 100+ pickup: omit the per-word cross flash; retain pooled gold sand.
+      taCenturyDust.emit(r,centuryEcho?wordText:null,centuryEcho&&!taMobileFx?getComputedStyle(f):null,centuryTextRect);
     }else mist(r, lite ? 2 : 7);
     if(isOdd){ const p = document.createElement("span"); p.className = "oddplus"; p.textContent = taPointPlus(ODD_PT); p.style.fontSize = plusSize(ODD_PT, 1.2);
       p.style.left = (r.left + r.width/2) + "px"; p.style.top = r.top + "px"; document.body.append(p);
