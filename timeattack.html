@@ -3975,6 +3975,15 @@ const COMBO_SKILL_MS = {issen:3000, shingan:3000, shinsoku:3000, timeResume:3000
 let comboWindowMs = COMBO_MS;
 let combo = 0, comboAt = 0, comboPaused = false;
 let taFloodComboRemaining = null;
+// Keep the combo countdown disarmed during the expensive time-resume transition.
+// A new successful collection cancels this grace and starts the normal countdown.
+let taFloodResumeTimer = null;
+let taFloodResumeSerial = 0;
+function taCancelFloodResume(){
+  taFloodResumeSerial++;
+  if(taFloodResumeTimer !== null){clearTimeout(taFloodResumeTimer);taFloodResumeTimer=null;}
+}
+
 let maxCombo = store.get("ta-yura-maxcombo", 0);
 // 倍率（＝連鎖Lv）：1〜49はLv1（×1）、50でLv2（×2）、100でLv3（×3）
 const comboMult = n => n >= 100 ? 3 : n >= 50 ? 2 : 1;
@@ -4267,6 +4276,7 @@ function taMeteorReset(){
   taMeteorHadCentury=false;
 }
 function expireCombo(){
+  taCancelFloodResume();
   taMeteorReset();
   combo=0;comboWindowMs=COMBO_MS;
   taSyncDriftingGlowWords();
@@ -4275,6 +4285,7 @@ function expireCombo(){
   el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();
 }
 function bumpCombo(){
+  taCancelFloodResume();
   // DEMO / START演出中は連鎖を発生させない。
   if(!taRunning) return 1;
   const now = Date.now();
@@ -4528,6 +4539,7 @@ function taUltimateClear(){
 }
 function startFlood(gem){
   if(shattering) return;
+  taCancelFloodResume();
   if(flood){
     // A second successful clock technique replaces the first clock and resets
     // the stop duration. Keep collected rewards so no points/time are lost.
@@ -4606,32 +4618,39 @@ function startFlood(gem){
 function endFlood(){
   clearTimeout(startFlood.h);
   flood = false; document.documentElement.classList.remove("ta-sakura-time-frozen"); taCenturyMusic.timeResume(); clearTimeout(startFlood.tickDelay); clearInterval(startFlood.tk);
-  // When time resumes, the next collection receives a fresh 3-second grace.
-  // Reuse the existing skill gauge and expiry timer after the frozen state ends.
+  // The transition back to normal rendering can take over a second on slower
+  // Android devices. Do not consume the 3s combo window during that transition.
+  // A new tap immediately restores the ordinary 2.2s rule in bumpCombo().
+  taCancelFloodResume();
   if(taRunning && combo>=1){
+    const comboEl=$("combo");
     comboWindowMs=COMBO_SKILL_MS.timeResume;
-    taFloodComboRemaining=comboWindowMs;
-    $("combo").classList.add("ta-skill-grace");
-    $("combo").classList.add("on");
-  }
-  // A combo that began while time was stopped must resume from a full bar.
-  if(taFloodComboRemaining===null && combo>=2 && !comboPaused)taFloodComboRemaining=comboWindowMs;
-  if(taFloodComboRemaining!==null){
-    const remaining=taFloodComboRemaining;taFloodComboRemaining=null;
-    $("combo").classList.remove("paused");
-    if(combo>=1 && !comboPaused){
-      const comboEl=$("combo");
-      comboEl.classList.add("on");
-      comboEl.style.setProperty("--ct",remaining+"ms");
+    taFloodComboRemaining=null;
+    clearTimeout(bumpCombo.h);
+    comboEl.classList.add("ta-skill-grace", "on", "paused");
+    comboEl.classList.remove("run");
+    comboEl.style.setProperty("--ct",comboWindowMs+"ms");
+    const gauge=comboEl.querySelector("i");
+    if(gauge)gauge.getAnimations().forEach(a=>a.cancel());
+    const serial=taFloodResumeSerial;
+    // The veil and clock settle within 1.5s; avoid arming expiry until then.
+    taFloodResumeTimer=setTimeout(()=>{
+      taFloodResumeTimer=null;
+      if(serial!==taFloodResumeSerial || flood || !taRunning || combo<1)return;
+      // If another mechanic is pausing the combo, let that mechanic resume it.
+      if(comboPaused)return;
+      comboEl.classList.remove("paused");
+      comboEl.style.setProperty("--ct",comboWindowMs+"ms");
       comboEl.classList.remove("run");
-      const gauge=comboEl.querySelector("i");
-      if(gauge)gauge.getAnimations().forEach(a=>a.cancel());
       void comboEl.offsetWidth;
       comboEl.classList.add("run");
-      comboAt=Date.now()-(comboWindowMs-remaining);
+      comboAt=Date.now();
       clearTimeout(bumpCombo.h);
-      bumpCombo.h=setTimeout(expireCombo,remaining);
-    }
+      bumpCombo.h=setTimeout(expireCombo,comboWindowMs);
+    },1500);
+  } else {
+    taFloodComboRemaining=null;
+    $("combo").classList.remove("paused");
   }
   // 位置は先にまとめて読む（クラスを外したあとに読むと、画面全体の再計算をその場で強いて重くなる）
   const hero = document.querySelector(".hero"), fr = $("drift").getBoundingClientRect();
@@ -8106,7 +8125,7 @@ function taFinish(){
   // End the visual/gameplay century state immediately. The ranked-outro BGM
   // is deliberately managed separately by taCenturyMusic below.
   taRunning=false;taStarting=false;
-  combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;
+  taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;
   taFloodComboRemaining=null;
   document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit");
   const finishedComboEl=document.getElementById('combo');
@@ -8187,7 +8206,7 @@ function taBeginReady(){
   taCenturyMusic.stop(true);
   taMeteorReset();
   // DEMOでの操作履歴をゲーム本番へ持ち越さない。
-  clearTimeout(bumpCombo.h);combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit");
+  taCancelFloodResume();clearTimeout(bumpCombo.h);taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit");
   const comboEl=document.getElementById("combo");
   if(comboEl){comboEl.classList.remove("on","x2","x3","run","heat","paused","hold","ta-skill-grace");comboEl.style.removeProperty("--heat");}
   document.getElementById("cbn").textContent="0";document.getElementById("cbx").textContent="";comboRush(false);
