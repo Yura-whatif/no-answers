@@ -5430,7 +5430,9 @@ function spawnWord(opt = {}){
     ], {duration: centuryEcho ? 390 : silverPickup ? 390 : lite ? 480 : 620, easing:"cubic-bezier(.2,.6,.3,1)", fill:"forwards"}).onfinish = () => f.remove();
     if(combo>=100){
       // 100+ pickup: omit the per-word cross flash; retain pooled gold sand.
-      taCenturyDust.emit(r,centuryEcho?wordText:null,centuryEcho&&!taMobileFx?getComputedStyle(f):null,centuryTextRect);
+      // Decorative particles must never interrupt orb flight or scoring.
+      try { taCenturyDust.emit(r,centuryEcho?wordText:null,centuryEcho&&!taMobileFx?getComputedStyle(f):null,centuryTextRect); }
+      catch (fxError) { console.warn('Gold sand effect skipped:',fxError); }
     }else mist(r, lite ? 2 : 7);
     if(isOdd){ const p = document.createElement("span"); p.className = "oddplus"; p.textContent = taPointPlus(ODD_PT); p.style.fontSize = plusSize(ODD_PT, 1.2);
       p.style.left = (r.left + r.width/2) + "px"; p.style.top = r.top + "px"; document.body.append(p);
@@ -5440,7 +5442,7 @@ function spawnWord(opt = {}){
     const cx = r.left + r.width/2, cy = r.top + r.height/2;
     if(!flood || Date.now() - (sfx.lastFly || 0) > 260){ sfx.lastFly = Date.now(); sfx.fly(flood ? .62 : .9); }
     const o = document.createElement("span"); o.className = "orb"; taStyleRewardOrb(o,taTime,glowRemain>0 || fireScore);
-    o.style.left = cx + "px"; o.style.top = cy + "px"; document.body.append(o); if(combo>=100)window.taOrbDiag.mark("orb appended",getComputedStyle(o).display+"/"+getComputedStyle(o).opacity);
+    o.style.left = cx + "px"; o.style.top = cy + "px"; document.body.append(o); if(combo>=100)window.taOrbDiag.mark("orb appended");
     const dx = (t.left + t.width/2) - cx, dy = (t.top + t.height/2) - cy;
     const lift = Math.min(46, Math.abs(dx) * .18 + 14), sway = (Math.random()*2-1) * 18;
     const flightFrames=[
@@ -5452,7 +5454,16 @@ function spawnWord(opt = {}){
     const flightDuration=flood?620:900;
     // 100連鎖以降の金色の飛行軌跡は非表示。オーブ飛行は維持。
     if(combo>=100)window.taOrbDiag.mark("orb animate called");
-    o.animate(flightFrames,{duration:flightDuration,easing:"cubic-bezier(.45,0,.6,1)",fill:"forwards"}).onfinish=()=>{if(combo>=100)window.taOrbDiag.mark("orb arrived");o.remove();arrive();};
+    // Credit the pickup even if the browser cancels/throttles the visual animation.
+    // A one-shot guard prevents duplicate points from animation finish + timeout.
+    let orbSettled=false;
+    const settleOrb=()=>{if(orbSettled)return;orbSettled=true;if(combo>=100)window.taOrbDiag.mark("orb arrived");o.remove();arrive();};
+    try {
+      const flight=o.animate(flightFrames,{duration:flightDuration,easing:"cubic-bezier(.45,0,.6,1)",fill:"forwards"});
+      flight.onfinish=settleOrb;
+      flight.oncancel=settleOrb;
+    } catch (orbError) { console.warn('Orb animation fallback:',orbError); }
+    setTimeout(settleOrb,flightDuration+120);
   });
   w.dataset.taVisibleAt = String(performance.now() + (w.classList.contains("late") ? (parseFloat(w.style.animationDelay) || 0) * 1000 : 0));
   field.append(w);
@@ -7985,7 +7996,14 @@ function taScoreRefresh(){
  taScoreLast=performance.now();taScoreAnim=requestAnimationFrame(taScoreDraw);
 }
 function taScoreReset(){if(taScoreAnim)cancelAnimationFrame(taScoreAnim);taScoreAnim=0;taShownScore=taScore;const el=document.getElementById('taScore');if(el)el.textContent=taScoreFormat(taScore);}
-function taFlashScoreFrame(){const frame=document.getElementById('taScoreBox');if(!frame)return;frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}
+// CSSアニメーションをレイアウト強制なしで先頭から再生する。
+function taReplayCssAnimation(el,cls,keyframe){
+  if(!el)return;
+  if(!el.classList.contains(cls)){el.classList.add(cls);return;}
+  const anim=el.getAnimations().find(a=>a.animationName===keyframe);
+  if(anim){anim.cancel();anim.play();}
+}
+function taFlashScoreFrame(){const frame=document.getElementById('taScoreBox');if(!frame)return;taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}
 let taPlusLastArrival=0,taPlusArrivalCount=0;
 // Score orbs retain the original artwork. Time orbs are blue regardless of the active effect.
 // Bonus orbs get an extra glow without changing their destination color.
@@ -7995,7 +8013,7 @@ function taStyleRewardOrb(orb,isTime,boosted=false){
   if(boosted)orb.classList.add('ta-reward-boost');
   return orb;
 }
-function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null){if(!taRunning)return;const id=isTime?'taTime':'taScore';const taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect)?2:1)):0;if(isTime)taSeconds+=taTimeGain;else {taScore+=pts;taScoreRefresh();}taRender();if(suppressPlus){return;}const el=document.getElementById(id);el.classList.remove('ta-pop');void el.offsetWidth;el.classList.add('ta-pop');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){frame.classList.remove('ta-frame-flash');void frame.offsetWidth;frame.classList.add('ta-frame-flash');}const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+taTimeGain+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
+function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null){if(!taRunning)return;const id=isTime?'taTime':'taScore';const taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect)?2:1)):0;if(isTime)taSeconds+=taTimeGain;else {taScore+=pts;taScoreRefresh();}taRender();if(suppressPlus){return;}const el=document.getElementById(id);taReplayCssAnimation(el,'ta-pop','taPulse');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+taTimeGain+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
 const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
@@ -8055,7 +8073,7 @@ function taRender(){
     taLastCountdownNumber=count;
   }
   if(!countdown){timeEl.classList.remove('ta-countdown-beat');if(timeFrame)timeFrame.classList.remove('ta-countdown-frame-beat');}
-  if(!taScoreAnim){const el=document.getElementById('taScore');if(el)el.textContent=taScoreFormat(taShownScore);}
+  if(!taScoreAnim){const el=document.getElementById('taScore');if(el){const t=taScoreFormat(taShownScore);if(el.textContent!==t)el.textContent=t;}}
 }
 function taSyncDemo(){
   const hero=document.querySelector('#viewMain > .hero');
