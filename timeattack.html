@@ -1935,6 +1935,31 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
 }
 </style>
 
+<style id="ta-normal-word-silver-flash-v3">
+/* Shared ordinary-word exit for normal, sakura and century states.
+   Exclude skill objects, moving clones and time-stop tearing: their distinct
+   gameplay animations must not be replaced. No extra nodes or particles. */
+#viewMain .drift .word.got:not(.special):not(.multi):not(.odd):not(.petal):not(.crack):not(.vortex):not(.flying):not(.still):not(.stop-tearing):not(.pull):not(.glow):not(.reso){
+  animation:taWordSilverFlashV3 390ms cubic-bezier(.22,.7,.3,1) both!important;
+  pointer-events:none;
+}
+/* Stronger crisp rim: outline is more legible than a diffuse shadow on phones. */
+@keyframes taWordSilverFlashV3{
+  0%{opacity:1;transform:translateY(0) scale(1);outline:1.5px solid rgba(246,251,255,.98);outline-offset:1px;border-color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.85),0 0 0 2px rgba(242,249,255,.92),0 0 10px 2px rgba(218,239,255,.7)}
+  24%{opacity:1;transform:translateY(-2px) scale(1.025);outline:2px solid #fff;outline-offset:2px;border-color:#fff;box-shadow:inset 0 0 0 1px #fff,0 0 0 2px rgba(255,255,255,.98),0 0 14px 3px rgba(220,240,255,.85)}
+  55%{opacity:.85;transform:translateY(-7px) scale(.94);outline:1px solid rgba(233,246,255,.7);outline-offset:1px;box-shadow:0 0 0 1px rgba(232,244,255,.6),0 0 9px 2px rgba(190,225,255,.42)}
+  100%{opacity:0;transform:translateY(-17px) scale(.77);outline-color:transparent;box-shadow:none;border-color:transparent}
+}
+/* The century state keeps its gold language while sharing the same exit motion. */
+html.ta-century-lit #viewMain .drift .word.got:not(.special):not(.multi):not(.odd):not(.petal):not(.crack):not(.vortex):not(.flying):not(.still):not(.stop-tearing):not(.pull):not(.glow):not(.reso){animation-name:taWordGoldFlashV3!important}
+@keyframes taWordGoldFlashV3{
+  0%{opacity:1;transform:translateY(0) scale(1);outline:1.5px solid rgba(255,235,169,.98);outline-offset:1px;border-color:#ffdc86;box-shadow:inset 0 0 0 1px rgba(255,239,188,.85),0 0 0 2px rgba(255,219,122,.9),0 0 10px 2px rgba(255,192,80,.65)}
+  24%{opacity:1;transform:translateY(-2px) scale(1.025);outline:2px solid #fff2c1;outline-offset:2px;border-color:#fff1b7;box-shadow:inset 0 0 0 1px #fff2c1,0 0 0 2px rgba(255,223,141,.98),0 0 14px 3px rgba(255,193,85,.8)}
+  55%{opacity:.85;transform:translateY(-7px) scale(.94);outline:1px solid rgba(255,223,152,.7);outline-offset:1px;box-shadow:0 0 0 1px rgba(255,217,135,.6),0 0 9px 2px rgba(255,185,75,.42)}
+  100%{opacity:0;transform:translateY(-17px) scale(.77);outline-color:transparent;box-shadow:none;border-color:transparent}
+}
+@media(prefers-reduced-motion:reduce){#viewMain .drift .word.got:not(.special):not(.multi):not(.odd):not(.petal):not(.crack):not(.vortex):not(.flying):not(.still):not(.stop-tearing):not(.pull):not(.glow):not(.reso){animation-duration:120ms!important}}
+</style>
 <style id="ta-stage9-century-word-rim">
 /* Stage 9: gold rims for ordinary floating words at 100+ combo.
    Do not alter skill/special-word silhouettes or hit targets. */
@@ -1947,6 +1972,13 @@ html.ta-century-lit #viewMain .drift .word.ta-blue:not(.got):not(.special):not(.
   border-color:rgba(250,209,125,.96);
   box-shadow:0 0 9px 2px rgba(255,214,133,.43),0 0 17px 4px rgba(89,165,255,.22);
 }
+/* Trial: moonlit silver rim for ordinary words before 100 chains.
+   The century gold rules above retain precedence once ta-century-lit is set. */
+html:not(.ta-century-lit) #viewMain .drift .word:not(.got):not(.special):not(.multi):not(.odd):not(.petal):not(.crack):not(.vortex):not(.sk-fall):not(.flying):not(.ta-blue){
+  border-color:rgba(213,225,239,.68);
+  box-shadow:0 0 5px 1px rgba(228,237,250,.19),inset 0 0 3px rgba(242,248,255,.08);
+}
+/* Keep the distinctive blue time-extension rim, and all skill word styles. */
 </style>
 <style>
 /* Result hint images: replace the book only for the corresponding special move. */
@@ -3817,48 +3849,96 @@ function mist(r, n = 7){
 }
 // 100連鎖以降：採集した文字から金の微粒子が上へ舞い、自然に消える。
 // 1枚のCanvasを共用し、描画個数に上限を設けてスマホ負荷を抑える。
+// Golden Sand Ascension trial: one pooled canvas replaces the previous century dust.
+// One burst per collected word; shared particle cap prevents dense cross+green spikes.
 const taCenturyDust=(()=>{
-  let canvas=null,ctx=null,raf=0,particles=[],last=0;
-  const pool=[];const poolLimit=120;
-  function recycle(p){if(pool.length<poolLimit)pool.push(p);}
-  const mobile=window.matchMedia('(pointer:coarse)').matches;
-  const max=mobile?30:48;
+  let canvas=null,ctx=null,raf=0,last=0,grains=[],glyphs=[];
+  const mobile=matchMedia('(pointer:coarse)').matches;
+  const maxGrains=mobile?130:220, maxGlyphs=mobile?5:8;
+  const cache=new Map();
+  function ensure(){
+    if(!canvas){canvas=document.createElement('canvas');canvas.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:10016;pointer-events:none;';ctx=canvas.getContext('2d',{alpha:true});}
+    if(!canvas.isConnected){canvas.width=innerWidth;canvas.height=innerHeight;document.body.append(canvas);}
+  }
+  function stamp(text,font,w,h){
+    const key=text+'|'+font+'|'+w+'|'+h;
+    if(cache.has(key))return cache.get(key);
+    const off=document.createElement('canvas');off.width=Math.max(4,Math.ceil(w));off.height=Math.max(4,Math.ceil(h));
+    const c=off.getContext('2d',{willReadFrequently:true});
+    c.font=font;c.textAlign='center';c.textBaseline='middle';c.fillStyle='#fff';
+    c.fillText(text,off.width/2,off.height/2,off.width-2);
+    const pixels=c.getImageData(0,0,off.width,off.height).data;
+    const spots=[];
+    // Sample the real letter shapes, not a rectangular shutter or a uniform cloud.
+    for(let y=2;y<off.height-2;y+=2)for(let x=2;x<off.width-2;x+=2){
+      if(pixels[(y*off.width+x)*4+3]>110)spots.push([x,y]);
+    }
+    const result={image:off,spots};
+    if(cache.size>90)cache.clear();cache.set(key,result);return result;
+  }
   function frame(now){
     if(!canvas)return;
-    const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
+    const dt=Math.min(.04,Math.max(0,(now-last)/1000));last=now;
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    for(let i=particles.length-1;i>=0;i--){
-      const p=particles[i];p.life-=dt;
-      if(p.life<=0){recycle(p);particles.splice(i,1);continue;}
-      p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx+=Math.sin(p.phase+p.life*4)*dt*8;
-      const alpha=Math.min(1,p.life/.42)*Math.min(1,(p.max-p.life)/.14);
-      ctx.globalAlpha=alpha*.9;ctx.fillStyle=p.bright?'#fff0b4':'#eebc56';
-      ctx.beginPath();ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);ctx.fill();
+    for(let i=glyphs.length-1;i>=0;i--){
+      const g=glyphs[i],age=(now-g.start)/1000;
+      if(age>.58){glyphs.splice(i,1);continue;}
+      // Gold lettering stays intact briefly, then softens in place. No clipping.
+      const fade=age<.17?1:Math.max(0,1-(age-.17)/.29);
+      ctx.globalAlpha=fade;
+      ctx.shadowColor='#f6c66c';ctx.shadowBlur=age<.18?7:3;
+      ctx.drawImage(g.image,g.x,g.y,g.w,g.h);
+      ctx.shadowBlur=0;
+    }
+    for(let i=grains.length-1;i>=0;i--){
+      const g=grains[i],age=(now-g.start)/1000;
+      if(age<g.delay)continue;
+      const t=age-g.delay;
+      if(t>g.life){grains.splice(i,1);continue;}
+      const k=t/g.life;
+      const x=g.x+g.vx*t+Math.sin(t*4+g.phase)*2.5*k;
+      const y=g.y-g.speed*t-12*t*t;
+      ctx.globalAlpha=Math.min(1,t/.09)*Math.pow(1-k,1.35)*.87;
+      ctx.fillStyle=g.light?'#fff2c5':'#e6b457';
+      ctx.fillRect(x,y,g.sz,g.sz);
     }
     ctx.globalAlpha=1;
-    if(particles.length)raf=requestAnimationFrame(frame);
-    else{raf=0;canvas.remove();/* Stage4: canvas/contextを再利用し、次回の100連鎖エフェクトで再生成しない */}
+    if(glyphs.length||grains.length)raf=requestAnimationFrame(frame);
+    else{raf=0;canvas.remove();}
   }
-  function emit(r){
-    if(!taRunning||combo<100||!r||!r.width||!r.height||
-       (window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))return;
-    if(!canvas){canvas=document.createElement('canvas');
-      canvas.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:10016;pointer-events:none;';
-      ctx=canvas.getContext('2d');}
-    if(!canvas.isConnected){canvas.width=innerWidth;canvas.height=innerHeight;document.body.append(canvas);}
-    const n=mobile?3:5,cx=r.left+r.width/2,cy=r.top+r.height/2;
-    for(let i=0;i<n;i++){
-      const life=.68+Math.random()*.35;
-      const p=pool.pop()||{};
-      p.x=cx+(Math.random()-.5)*Math.min(44,r.width);
-      p.y=cy+(Math.random()-.5)*Math.min(22,r.height);
-      p.vx=(Math.random()-.5)*32;p.vy=-(42+Math.random()*58);
-      p.life=life;p.max=life;p.radius=.9+Math.random()*1.35;
-      p.phase=Math.random()*6.283;p.bright=Math.random()>.48;
-      particles.push(p);
+  function emit(r,word,style){
+    if(!taRunning||combo<100||!r||!r.width||!r.height||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    ensure();
+    const now=performance.now(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+    if(word){
+      const font=style?.font||'16px serif';
+      const tw=Math.min(220,Math.max(20,r.width-10)),th=Math.min(56,Math.max(20,r.height-4));
+      const texture=stamp(word,font,tw,th);
+      // The golden glyph is drawn separately from the ordinary silver frame.
+      // Tint cached alpha via a one-time source-in operation.
+      let tinted=texture.gold;
+      if(!tinted){tinted=document.createElement('canvas');tinted.width=texture.image.width;tinted.height=texture.image.height;
+        const c=tinted.getContext('2d');c.drawImage(texture.image,0,0);c.globalCompositeOperation='source-in';c.fillStyle='#ffdc8b';c.fillRect(0,0,tinted.width,tinted.height);texture.gold=tinted;}
+      glyphs.push({image:tinted,x:cx-tw/2,y:cy-th/2,w:tw,h:th,start:now});
+      if(glyphs.length>maxGlyphs)glyphs.splice(0,glyphs.length-maxGlyphs);
+      // Each speck starts from an actual opaque part of a letter. Staggering
+      // releases creates gradual erosion without any horizontal clipping edge.
+      const n=mobile?20:30,spots=texture.spots;
+      for(let i=0;i<n&&spots.length;i++){
+        const pt=spots[(Math.random()*spots.length)|0];
+        grains.push({x:cx-tw/2+pt[0],y:cy-th/2+pt[1],vx:(Math.random()-.5)*23,
+          speed:22+Math.random()*37,phase:Math.random()*6.28,
+          delay:.13+Math.random()*.30,life:.58+Math.random()*.36,
+          sz:.6+Math.random()*.95,light:i%5===0,start:now});
+      }
+    }else{
+      // Preserve time-stop collection behavior without adding another emitter.
+      for(let i=0;i<6;i++)grains.push({x:cx+(Math.random()-.5)*r.width*.5,y:cy+(Math.random()-.5)*r.height*.5,
+        vx:(Math.random()-.5)*20,speed:25+Math.random()*30,phase:Math.random()*6.28,
+        delay:Math.random()*.12,life:.6,sz:1,light:i%3===0,start:now});
     }
-    if(particles.length>max){const extra=particles.length-max;for(let j=0;j<extra;j++)recycle(particles[j]);particles.splice(0,extra);}
-    if(!raf){last=performance.now();raf=requestAnimationFrame(frame);}
+    if(grains.length>maxGrains)grains.splice(0,grains.length-maxGrains);
+    if(!raf){last=now;raf=requestAnimationFrame(frame);}
   }
   return {emit};
 })();
@@ -5244,7 +5324,30 @@ function spawnWord(opt = {}){
     // 言葉が霧になってほどける：文字は広がりながらぼやけ、周りに淡い靄が立ちのぼって消える
     // あふれる時間は、ぼかしと字間の変化（重い）を省き、拡大と透明化だけで軽くほどく
     const lite = flood || sakuraOn || combo>=100;   // 時止め・桜のあいだは、ぼかしを使わず軽くほどく
-    f.animate(lite ? [
+    // Ordinary pre-century pickup: a quick silver outline flash, then a soft inward
+    // contraction. Only transform/opacity animate; no new particles or blur filters.
+    const silverPickup=plainWord && combo<100 && !lite;
+    // 100+ only: gold glyph erodes from bottom upward while pooled sand rises.
+    const centuryEcho=combo>=100 && plainWord;
+    if(centuryEcho){
+      // Keep the word capsule's exit identical to the normal silver-frame exit.
+      // The gold lettering is rendered separately by the shared dust canvas.
+      f.style.setProperty('color','transparent','important');
+      f.style.setProperty('text-shadow','none','important');
+      f.style.borderColor='rgba(235,243,255,.82)';
+      f.style.boxShadow='0 0 8px rgba(224,238,255,.35)';
+    }
+    f.animate(centuryEcho ? [
+      {transform:"scale(1)",opacity:1,boxShadow:"0 0 4px 1px rgba(228,240,255,.2)"},
+      {transform:"scale(1.055)",opacity:.94,boxShadow:"0 0 11px 2px rgba(234,245,255,.62)",offset:.18},
+      {transform:"scale(.78) translateY(-5px)",opacity:.25,boxShadow:"0 0 4px rgba(234,245,255,.12)",offset:.66},
+      {transform:"scale(.58) translateY(-8px)",opacity:0,boxShadow:"0 0 0 transparent"}
+    ] : silverPickup ? [
+      {transform:"scale(1)",opacity:1,boxShadow:"0 0 4px 1px rgba(228,240,255,.2)"},
+      {transform:"scale(1.055)",opacity:.94,boxShadow:"0 0 11px 2px rgba(234,245,255,.62)",offset:.18},
+      {transform:"scale(.78) translateY(-5px)",opacity:.25,boxShadow:"0 0 4px rgba(234,245,255,.12)",offset:.66},
+      {transform:"scale(.58) translateY(-8px)",opacity:0,boxShadow:"0 0 0 transparent"}
+    ] : lite ? [
       {transform:"scale(1)", opacity:1},
       {transform:"scale(1.18) translateY(-6px)", opacity:.35, offset:.55},
       {transform:"scale(1.3) translateY(-10px)", opacity:0}
@@ -5252,10 +5355,10 @@ function spawnWord(opt = {}){
       {transform:"scale(1)", opacity:1, filter:"blur(0)", letterSpacing:"0.06em"},
       {transform:"scale(1.12) translateY(-4px)", opacity:.35, filter:"blur(5px)", letterSpacing:"0.3em", offset:.55},
       {transform:"scale(1.25) translateY(-10px)", opacity:0, filter:"blur(12px)", letterSpacing:"0.5em"}
-    ], {duration: lite ? 480 : 620, easing:"cubic-bezier(.2,.6,.3,1)", fill:"forwards"}).onfinish = () => f.remove();
+    ], {duration: centuryEcho ? 390 : silverPickup ? 390 : lite ? 480 : 620, easing:"cubic-bezier(.2,.6,.3,1)", fill:"forwards"}).onfinish = () => f.remove();
     if(combo>=100){
       // 文字の中心に金色の十字光を最初から表示し、広がらず中央へ収縮させて消す。
-      // 光は操作を妨げず、既存の舞い上がる金粉はそのまま残す。
+      // 光は操作を妨げず、金砂は単一Canvasに統合する。
       // Reuse the decorative 100-chain star instead of parsing SVG and allocating DOM on every tap.
       window.taOrbDiag.mark("100+ flash begin");
       const flash=taAcquireCenturyFlash();
@@ -5263,7 +5366,7 @@ function spawnWord(opt = {}){
       flash.style.top=(r.top+r.height/2)+'px';
       document.body.append(flash);
       setTimeout(()=>taReleaseCenturyFlash(flash),550); window.taOrbDiag.mark("100+ flash complete");
-      if(!window.matchMedia("(pointer:coarse)").matches || Math.random()>.5)setTimeout(()=>taCenturyDust.emit(r),95);
+      taCenturyDust.emit(r,centuryEcho?wordText:null,centuryEcho?getComputedStyle(f):null);
     }else mist(r, lite ? 2 : 7);
     if(isOdd){ const p = document.createElement("span"); p.className = "oddplus"; p.textContent = taPointPlus(ODD_PT); p.style.fontSize = plusSize(ODD_PT, 1.2);
       p.style.left = (r.left + r.width/2) + "px"; p.style.top = r.top + "px"; document.body.append(p);
