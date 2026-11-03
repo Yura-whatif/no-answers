@@ -4347,7 +4347,11 @@ function bumpCombo(){
     clearTimeout(bumpCombo.h);
     el.classList.add('paused');
   }
-  if(!comboPaused && !flood){ clearTimeout(bumpCombo.h); bumpCombo.h = setTimeout(expireCombo, COMBO_MS); }
+  if(!comboPaused && !flood){
+    // A successful normal tap must always clear the time-stop pause styling.
+    el.classList.remove("paused", "hold");
+    clearTimeout(bumpCombo.h); bumpCombo.h = setTimeout(expireCombo, COMBO_MS);
+  }
   // 90を超えたら、100に近づくほど光を強く速く
   const r = combo % 100;
   if(r > 90){ el.style.setProperty("--heat", ((r - 90) / 10).toFixed(2)); el.classList.add("heat"); }
@@ -4637,8 +4641,12 @@ function endFlood(){
     taFloodResumeTimer=setTimeout(()=>{
       taFloodResumeTimer=null;
       if(serial!==taFloodResumeSerial || flood || !taRunning || combo<1)return;
-      // If another mechanic is pausing the combo, let that mechanic resume it.
-      if(comboPaused)return;
+      // A stale reading pause must not permanently freeze the gauge after time stop.
+      // Preserve genuine reading/charging pauses, which their owners will release.
+      if(comboPaused){
+        if(open || charging)return;
+        comboPaused=false;
+      }
       comboEl.classList.remove("paused");
       comboEl.style.setProperty("--ct",comboWindowMs+"ms");
       comboEl.classList.remove("run");
