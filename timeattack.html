@@ -442,6 +442,10 @@ html[data-yura="black"].ta-meteor-lit #viewMain>.hero.ta-active-visual>picture.t
 /* On leaving 100 chains, skip the meteor image and return directly to night. */
 html.ta-meteor-skip #viewMain>.hero>picture.ta-bg-picture.ta-meteor50{opacity:0!important;transition-duration:0s!important;}
 
+/* 月閃：軽量な単一SVG演出。ゲームのヒットテストを妨げない。 */
+.ta-gessen-effect{position:fixed;z-index:2147482000;pointer-events:none;filter:drop-shadow(0 0 3px #26eaff) drop-shadow(0 0 5px #5acfff)}
+.ta-gessen-effect svg{display:block;width:100%;height:100%}
+.ta-gessen-label{position:fixed;z-index:2147482001;pointer-events:none;white-space:nowrap;font:600 15px serif;color:#e5f8ff;text-shadow:0 0 7px #258bff}
 </style>
 <script>
 /* 最初の描画より前に、前回の世界（白/黒）を決めておく。万一起動処理が止まっても4秒で必ず見せる */
@@ -6103,6 +6107,112 @@ function vortexRelease(){
   const field = $("drift");
   let active = false, pointer = null, points = [], collected = new Set(), started = 0, lastAward = 0;
   let lx = 0, ly = 0, flashed = false, flashedTier = 0, awardedBonus = 0;
+  let gessenHits=[],gessenAwarded=false,gessenStraight=false;
+  let gessenLastAt=0,gessenChainCount=0,gessenEffect=null,gessenEffectAnimation=null,gessenEffectTimer=null;
+  const GESSEN_CHAIN_DISTANCE=120,GESSEN_CHAIN_GRACE=550,GESSEN_CHAIN_MAX=5;
+  let issenTrail=null,issenTrailAnimation=null; // 同じスワイプの一閃線を月閃に引き継ぐ
+  // 月閃: 最初の2語を直線で回収し、方向を曲げた先で3語目を回収した場合のみ成立。
+  function gessenHit(x,y){
+    if(!taRunning || flood)return;
+    const now=performance.now();
+    if(gessenAwarded){
+      if(gessenChainCount>=GESSEN_CHAIN_MAX || now-gessenLastAt>GESSEN_CHAIN_GRACE)return;
+      const prev=gessenHits[gessenHits.length-1];
+      if(Math.hypot(x-prev.x,y-prev.y)>GESSEN_CHAIN_DISTANCE || Math.hypot(x-prev.x,y-prev.y)<12)return;
+      gessenHits.push({x,y});gessenLastAt=now;gessenChainCount++;
+      taAward(true,1,false,null,false,1);setComboSkillGrace('issen');
+      renderGessenTrail(x,y);
+      showGessenLabel(x,y,gessenRankName(gessenChainCount)+' +1秒');
+      return;
+    }
+    if(gessenHits.length>=3)return;
+    if(gessenHits.length===0){gessenHits.push({x,y});return;}
+    if(gessenHits.length===1){
+      const a=gessenHits[0],d=Math.hypot(x-a.x,y-a.y);
+      if(d<25)return;
+      // 2語目までの軌道が直線であることを確認（折り返し・蛇行は対象外）。
+      const start=points[0],dx=x-start.x,dy=y-start.y,len=Math.hypot(dx,dy);
+      let travel=0,deviation=0;
+      for(let i=1;i<points.length;i++){
+        const q=points[i],prev=points[i-1];travel+=Math.hypot(q.x-prev.x,q.y-prev.y);
+        if(len>0)deviation=Math.max(deviation,Math.abs(dx*(q.y-start.y)-dy*(q.x-start.x))/len);
+      }
+      if(len<35 || deviation>Math.max(18,len*.12) || travel>len*1.3)return;
+      gessenStraight=true;gessenHits.push({x,y});return;
+    }
+    if(!gessenStraight)return;
+    const a=gessenHits[0],b=gessenHits[1],v1x=b.x-a.x,v1y=b.y-a.y,v2x=x-b.x,v2y=y-b.y;
+    const l1=Math.hypot(v1x,v1y),l2=Math.hypot(v2x,v2y);
+    if(l2<24)return;
+    const angle=Math.acos(Math.max(-1,Math.min(1,(v1x*v2x+v1y*v2y)/(l1*l2))))*180/Math.PI;
+    if(angle<45 || angle>145)return; // 小さな揺れとUターンを除外
+    gessenHits.push({x,y});gessenAwarded=true;gessenLastAt=now;gessenChainCount=1;
+    // 一閃の直線は残さない。既存の斬撃を月閃の曲線へ引き継ぐ。
+    if(issenTrail){if(issenTrailAnimation)issenTrailAnimation.cancel();issenTrail.remove();issenTrail=null;issenTrailAnimation=null;}
+    // 角度による名称分岐は廃止し、連続回収数で段階表示する。
+    taAward(true,1,false,null,false,1);setComboSkillGrace('issen');
+    renderGessenTrail(x,y);
+    showGessenLabel(x,y,gessenRankName(gessenChainCount)+' +1秒');
+  }
+  const GESSEN_RANK_NAMES=['','二閃','三閃','四閃','五閃','六閃'];
+  function gessenRankName(count){return GESSEN_RANK_NAMES[Math.min(count,GESSEN_RANK_NAMES.length-1)];}
+  function showGessenLabel(x,y,message){
+    const name=document.createElement('span');name.className='ta-gessen-label';
+    name.style.left=x+'px';name.style.top=y+'px';name.textContent=message;
+    const intensity=Math.max(0,gessenChainCount-1);
+    name.style.color=intensity>=3?'#ffffff':'#e5faff';
+    name.style.textShadow='0 0 '+(7+intensity*3)+'px #27eaff, 0 0 '+(3+intensity*4)+'px #42aaff';
+    document.body.append(name);
+    name.animate([{opacity:0,transform:'translate(-50%,-30%)'},{opacity:1,transform:'translate(-50%,-75%)',offset:.25},{opacity:0,transform:'translate(-50%,-125%)'}],{duration:700,easing:'ease-out'}).onfinish=()=>name.remove();
+    setTimeout(()=>name.remove(),850);
+  }
+  function renderGessenTrail(x,y){
+    // One SVG for the entire chain: extend the existing path, never stack extra slashes.
+    const hits=gessenHits;
+    if(hits.length<3)return;
+    const curve=[];
+    for(let j=0;j<hits.length;j++){
+      const pt=hits[j],prev=hits[j-1],next=hits[j+1];
+      if(!prev || !next){curve.push({x:pt.x,y:pt.y});continue;}
+      const vx=pt.x-prev.x,vy=pt.y-prev.y,wx=next.x-pt.x,wy=next.y-pt.y;
+      const vl=Math.hypot(vx,vy)||1,wl=Math.hypot(wx,wy)||1;
+      const corner=Math.min(15,vl*.2,wl*.2);
+      const pre={x:pt.x-vx/vl*corner,y:pt.y-vy/vl*corner};
+      const post={x:pt.x+wx/wl*corner,y:pt.y+wy/wl*corner};
+      curve.push(pre);
+      for(let k=1;k<=5;k++){
+        const t=k/5,u=1-t;
+        curve.push({x:u*u*pre.x+2*u*t*pt.x+t*t*post.x,y:u*u*pre.y+2*u*t*pt.y+t*t*post.y});
+      }
+    }
+    const outer=[],inner=[];
+    for(let i=0;i<curve.length;i++){
+      const p=curve[i],before=curve[Math.max(0,i-1)],after=curve[Math.min(curve.length-1,i+1)];
+      const dx=after.x-before.x,dy=after.y-before.y,len=Math.hypot(dx,dy)||1;
+      const t=i/(curve.length-1),width=Math.sin(Math.PI*t)*5.5;
+      const nx=-dy/len,ny=dx/len;
+      outer.push([p.x+nx*width*.65,p.y+ny*width*.65]);
+      inner.push([p.x-nx*width*.22,p.y-ny*width*.22]);
+    }
+    const coords=outer.concat(inner.reverse());
+    const minX=Math.min(...coords.map(p=>p[0]))-12,maxX=Math.max(...coords.map(p=>p[0]))+12;
+    const minY=Math.min(...coords.map(p=>p[1]))-12,maxY=Math.max(...coords.map(p=>p[1]))+12;
+    const path='M'+coords.map(p=>(p[0]-minX).toFixed(1)+' '+(p[1]-minY).toFixed(1)).join(' L')+' Z';
+    const line='M'+curve.map(p=>(p.x-minX).toFixed(1)+' '+(p.y-minY).toFixed(1)).join(' L');
+    if(!gessenEffect){gessenEffect=document.createElement('div');gessenEffect.className='ta-gessen-effect';document.body.append(gessenEffect);}
+    const label=gessenEffect;
+    const intensity=Math.max(0,gessenChainCount-1);
+    // 連続段階に応じて発光を強くする。描画要素は増やさない。
+    label.style.filter='drop-shadow(0 0 '+(3+intensity*1.5)+'px #26eaff) drop-shadow(0 0 '+(5+intensity*2)+'px #5acfff)';
+    label.style.left=minX+'px';label.style.top=minY+'px';label.style.width=(maxX-minX)+'px';label.style.height=(maxY-minY)+'px';
+    label.innerHTML='<svg viewBox="0 0 '+(maxX-minX).toFixed(1)+' '+(maxY-minY).toFixed(1)+'" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="ta-gessen-grad" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f5ffff"/><stop offset=".48" stop-color="#85faff"/><stop offset="1" stop-color="#16bfff"/></linearGradient></defs><path d="'+path+'" fill="url(#ta-gessen-grad)" stroke="#35f3ff" stroke-width="'+(0.7+intensity*.18).toFixed(2)+'"/><path d="'+line+'" fill="none" stroke="#eaffff" stroke-opacity=".95" stroke-width="'+(0.75+intensity*.12).toFixed(2)+'"/></svg>';
+    if(gessenEffectAnimation)gessenEffectAnimation.cancel();
+    if(gessenEffectTimer)clearTimeout(gessenEffectTimer);
+    gessenEffectAnimation=label.animate([{opacity:1},{opacity:1,offset:.45},{opacity:0}],{duration:720,easing:'ease-out'});
+    gessenEffectAnimation.onfinish=()=>{if(gessenEffect===label){label.remove();gessenEffect=null;gessenEffectAnimation=null;}};
+    gessenEffectTimer=setTimeout(()=>{if(gessenEffect===label){label.remove();gessenEffect=null;gessenEffectAnimation=null;}},900);
+  }
+
   let swipeFastCandidate=null; // 1操作につき最初の神速対象だけを記録
   let shinsokuAwarded=false;
   function awardShinsoku(fast){
@@ -6145,7 +6255,7 @@ function vortexRelease(){
       }
       w.dataset.swiped='1';w.click();
       // 青い時間延長文字も通常得点文字と同様に一閃の採集数へ算入する。
-      if(!w.isConnected || w.classList.contains('got') || w.classList.contains('still'))collected.add(w);
+      if(!w.isConnected || w.classList.contains('got') || w.classList.contains('still')){collected.add(w);gessenHit(x,y);}
     }
   }
   function sweep(x,y){
@@ -6165,7 +6275,11 @@ function vortexRelease(){
     const length=Math.hypot(x2-x1,y2-y1),angle=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
     layer.style.left=x1+'px';layer.style.top=y1+'px';layer.style.width=length+'px';layer.style.transform=`rotate(${angle}deg)`;
     layer.classList.add(tier===3?'perfect':'clean');if(count===2)layer.classList.add('ta-issen-white'); field.append(layer);
-    layer.animate([{opacity:0,filter:'blur(2px)'},{opacity:1,filter:'blur(0px)',offset:.16},{opacity:.75,offset:.42},{opacity:0,filter:'blur(5px)'}],{duration:540,easing:'ease-out'}).onfinish=()=>layer.remove();
+    if(issenTrail && issenTrail!==layer){if(issenTrailAnimation)issenTrailAnimation.cancel();issenTrail.remove();}
+    issenTrail=layer;
+    const trailAnimation=layer.animate([{opacity:0,filter:'blur(2px)'},{opacity:1,filter:'blur(0px)',offset:.16},{opacity:.75,offset:.42},{opacity:0,filter:'blur(5px)'}],{duration:540,easing:'ease-out'});
+    issenTrailAnimation=trailAnimation;
+    trailAnimation.onfinish=()=>{layer.remove();if(issenTrail===layer){issenTrail=null;issenTrailAnimation=null;}};
     const label=document.createElement('div');label.className='ta-issen-label';label.textContent='一閃';label.classList.toggle('perfect',tier===3);if(count===2)label.classList.add('ta-issen-white');
     label.style.left=((x1+x2)/2)+'px';label.style.top=((y1+y2)/2-24)+'px';field.append(label);
     label.animate([{opacity:0,transform:'translate(-50%,4px) scale(.9)'},{opacity:1,transform:'translate(-50%,-9px) scale(1)',offset:.22},{opacity:0,transform:'translate(-50%,-26px) scale(1)'}],{duration:1350,easing:'ease-out'}).onfinish=()=>label.remove();
@@ -6201,11 +6315,11 @@ function vortexRelease(){
     if(awardReady){lastAward=now;if(bonus>0 && taRunning){taScore+=bonus;taScoreRefresh();taRender();}awardedBonus+=bonus;}
     flashed=true;flashedTier=tier;
     setComboSkillGrace("issen");
-    flash(first,last,tier,collected.size,bonus);
+    if(!gessenAwarded)flash(first,last,tier,collected.size,bonus);
   }
   function finish(){
     if(!active)return;
-    active=false;points=[];collected.clear();pointer=null;flashed=false;flashedTier=0;awardedBonus=0;shinsokuAwarded=false;
+    active=false;points=[];collected.clear();pointer=null;flashed=false;flashedTier=0;awardedBonus=0;shinsokuAwarded=false;gessenHits=[];gessenAwarded=false;gessenStraight=false;gessenLastAt=0;gessenChainCount=0;
   }
   // Center-tap bonus is evaluated on pointerup, since the swipe engine
   // programmatically collects the first word on pointerdown (click.detail=0).
@@ -6235,8 +6349,9 @@ function vortexRelease(){
         centerTapCandidate={id:e.pointerId,x:e.clientX,y:e.clientY,cx,cy,width:rr.width,height:rr.height,radius:getComputedStyle(cw).borderRadius};
     }
     swipeFastCandidate=null;shinsokuAwarded=false;
+    issenTrail=null;issenTrailAnimation=null;
     active=true;pointer=e.pointerId;started=performance.now();lx=e.clientX;ly=e.clientY;
-    points=[{x:lx,y:ly}];collected.clear();flashed=false;flashedTier=0;awardedBonus=0;
+    points=[{x:lx,y:ly}];collected.clear();flashed=false;flashedTier=0;awardedBonus=0;gessenHits=[];gessenAwarded=false;gessenStraight=false;gessenLastAt=0;gessenChainCount=0;
     try{field.setPointerCapture(e.pointerId)}catch(_){}hit(lx,ly);
   });
   field.addEventListener('pointermove',e=>{
