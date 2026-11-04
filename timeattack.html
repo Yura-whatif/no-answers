@@ -9563,6 +9563,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    '\n100+ peak ('+taPerfCentury.samples+' windows) gap '+fmt(taPerfCentury.gap)+'ms'+
    '\n100+ FX '+fmt(taPerfCentury.paint)+' cross '+fmt(taPerfCentury.cross)+' green '+fmt(taPerfCentury.green)+
    '\n100+ collect '+fmt(taPerfCentury.collect)+' spawn '+fmt(taPerfCentury.spawn)+' long '+fmt(taPerfCentury.long) +
+   '\nFX Scheduler RAF '+taFxSchedulerStats.rafScheduled+'/'+taFxSchedulerStats.rafExecuted+' pending '+Number(!!fxRafId)+' timer '+Number(!!fxIdleTimer)+' avoided '+taFxSchedulerStats.duplicateAvoided+' peak '+taFxSchedulerStats.peakPending+'\nFX Objects peak trace/particle/cross/green '+taFxSchedulerStats.peakTraces+'/'+taFxSchedulerStats.peakParticles+'/'+taFxSchedulerStats.peakCross+'/'+taFxSchedulerStats.peakGreen+' canvas '+taFxSchedulerStats.canvasPixels+
    '\nGoldSand '+(window.__taGoldDustStats ? ('emit '+window.__taGoldDustStats.emits+' frames '+window.__taGoldDustStats.frames+' skip '+window.__taGoldDustStats.skipped+' level '+window.__taGoldDustStats.level+' peak '+window.__taGoldDustStats.peak+' avg/max '+fmt(window.__taGoldDustStats.totalMs/Math.max(1,window.__taGoldDustStats.frames))+'/'+fmt(window.__taGoldDustStats.maxMs)+'ms') : 'n/a') + '\n--- STARTUP 0-15s ---' +
    taStartupDiag.bins.map((b,i)=>'\n'+(i*5)+'-'+((i+1)*5)+'s: frames '+b.frames+' slow '+b.slow+' gap '+fmt(b.maxGap)+'ms long '+b.longTasks+' max '+fmt(b.longMax)+'ms'+
     '\n  FX avg/max '+fmt(b.paintSum/Math.max(1,b.paintCount))+'/'+fmt(b.paintMax)+'ms'+
@@ -9847,19 +9848,34 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  };
  function fxPoint(seg,t){return{x:seg[0].x+(seg[1].x-seg[0].x)*t,y:seg[0].y+(seg[1].y-seg[0].y)*t}}
  let fxWasDrawing=false;
- // Sleep between idle polls instead of running a 60 Hz RAF loop for the
- // entire lifetime of the page. A new item gesture wakes the painter at once.
- let fxIdleTimer=0;
+ // Single-owner FX scheduler: at most one pending RAF or idle timer.
+ // Prevents overlapping paints when an idle wake races with another wake.
+ let fxIdleTimer=0, fxRafId=0;
+ const taFxSchedulerStats={rafScheduled:0,rafExecuted:0,wakeCalls:0,duplicateAvoided:0,peakPending:0,draws:0,peakTraces:0,peakParticles:0,peakCross:0,peakGreen:0,canvasPixels:0};
+ window.__taFxSchedulerStats=taFxSchedulerStats;
+ function queueFxFrame(){
+  if(fxRafId){taFxSchedulerStats.duplicateAvoided++;return;}
+  if(fxIdleTimer){clearTimeout(fxIdleTimer);fxIdleTimer=0;}
+  fxRafId=requestAnimationFrame(ts=>{fxRafId=0;taFxSchedulerStats.rafExecuted++;draw(ts);});
+  taFxSchedulerStats.rafScheduled++;
+  taFxSchedulerStats.peakPending=Math.max(taFxSchedulerStats.peakPending,Number(!!fxRafId)+Number(!!fxIdleTimer));
+ }
  function scheduleFxIdle(delay){
   if(fxIdleTimer)clearTimeout(fxIdleTimer);
-  fxIdleTimer=setTimeout(()=>{fxIdleTimer=0;requestAnimationFrame(draw);},delay);
+  if(fxRafId)return;
+  fxIdleTimer=setTimeout(()=>{fxIdleTimer=0;queueFxFrame();},delay);
+  taFxSchedulerStats.peakPending=Math.max(taFxSchedulerStats.peakPending,Number(!!fxRafId)+Number(!!fxIdleTimer));
  }
  function wakeFx(){
-  if(!fxIdleTimer)return; // An active RAF is already scheduled.
-  clearTimeout(fxIdleTimer);fxIdleTimer=0;
-  requestAnimationFrame(draw);
+  taFxSchedulerStats.wakeCalls++;
+  queueFxFrame();
  }
  function draw(now){
+  taFxSchedulerStats.draws++;
+  taFxSchedulerStats.peakTraces=Math.max(taFxSchedulerStats.peakTraces,traces.length);
+  taFxSchedulerStats.peakParticles=Math.max(taFxSchedulerStats.peakParticles,particles.length);
+  taFxSchedulerStats.peakCross=Math.max(taFxSchedulerStats.peakCross,crossBursts.length);
+  taFxSchedulerStats.peakGreen=Math.max(taFxSchedulerStats.peakGreen,summonBursts.length);
   // Keep the scheduler alive, but do not repaint two full-screen canvases
   // when there is no visible effect. This also reduces idle GPU heat buildup.
   const running=active();
@@ -9879,7 +9895,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(now-lastFxPaint<targetMs){scheduleFxIdle(Math.max(8,Math.ceil(targetMs-(now-lastFxPaint))));return;}
   lastFxPaint=now;fxWasDrawing=true;const taPaintStart=taPerfEnabled?performance.now():0;
   const dt=Math.min(.05,(now-last)/1000);last=now;
- const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,taMobileFx?1:2),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);drawCompletedClock(now);renderSummons(now);
+ const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,taMobileFx?1:2),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}taFxSchedulerStats.canvasPixels=cw*ch;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);drawCompletedClock(now);renderSummons(now);
  if(gesture&&performance.now()-gesture.started>=GESTURE_MAX_MS){const g=gesture;gesture=null;makeTrace(g)}
  const paused=false; // Elemental traces remain active during time-stop.
 
@@ -10096,7 +10112,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   ctx.restore();
  }
  if(taPerfEnabled)taPerfRecord(now,performance.now()-taPaintStart);
- requestAnimationFrame(draw)}requestAnimationFrame(draw);
+ queueFxFrame()}queueFxFrame();
  document.addEventListener('visibilitychange',()=>{if(document.hidden)clear()});
 })();
 </script>
