@@ -9300,7 +9300,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // Throttle dense sweeps to avoid excessive simultaneous audio voices.
   if(typeof sfx.touch==='function')sfx.touch();
  }
- function collect(w,type){if(!valid(w)||w.dataset.taElementClaim)return;const __d0=taPerfEnabled?performance.now():0;let __dFx=0,__dSpecial=0,__dIce=0,__dClick=0;try{w.dataset.taElementClaim='1';if(type==='ice')iceContactSound();if(type!=='ice'){const __t=taPerfEnabled?performance.now():0;wordFx(w,type);if(taPerfEnabled)__dFx+=performance.now()-__t;}
+ function collect(w,type){if(!valid(w)||w.dataset.taElementClaim)return;w.dataset.taElementClaim='1';if(type==='ice')iceContactSound();if(type!=='ice')wordFx(w,type);
  // During time-stop, stationary words use the original deferred award mechanism.
  // Elemental effects can collect them without bypassing the time-stop scoring rules.
  if(flood&&w.classList.contains('still')){
@@ -9309,7 +9309,6 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // endFlood delivers the queued orb and awards exactly once on arrival.
   stopTap(w);
   return;
- }finally{if(taPerfEnabled){const ms=performance.now()-__d0,d=taCollectDetail;d.total++;d.max=Math.max(d.max,ms);d.wordFx=Math.max(d.wordFx,__dFx);d.special=Math.max(d.special,__dSpecial);d.ice=Math.max(d.ice,__dIce);d.click=Math.max(d.click,__dClick);const other=Math.max(0,ms-__dFx-__dSpecial-__dIce-__dClick);d.other=Math.max(d.other,other);if(ms>=50){d.slow++;taDiagIncident('word collect',ms,'fx='+__dFx.toFixed(0)+' special='+__dSpecial.toFixed(0)+' ice='+__dIce.toFixed(0)+' click='+__dClick.toFixed(0)+' other='+other.toFixed(0));}}}
  }
  // Elemental contact activates the original special effect before destruction.
  // Keep the element available while its effect handler reads its position.
@@ -9491,7 +9490,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  function taStartupEvent(name){const b=taStartupBin();if(b)b.events[name]=(b.events[name]||0)+1;}
 
 
- // Diagnostic V2: bounded incident ring, captured only with ?perf=1.
+ // Diagnostic V2 repair: preserve RAF and FX incident monitoring.
  const taIncidentLog=[];
  const taCollectDetail={total:0,max:0,wordFx:0,special:0,ice:0,click:0,other:0,slow:0};
  let taIncidentLastFrame=0;
@@ -9577,7 +9576,6 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    '\n100+ FX '+fmt(taPerfCentury.paint)+' cross '+fmt(taPerfCentury.cross)+' green '+fmt(taPerfCentury.green)+
    '\n100+ collect '+fmt(taPerfCentury.collect)+' spawn '+fmt(taPerfCentury.spawn)+' long '+fmt(taPerfCentury.long) +
    '\nFX Scheduler RAF '+taFxSchedulerStats.rafScheduled+'/'+taFxSchedulerStats.rafExecuted+' pending '+Number(!!fxRafId)+' timer '+Number(!!fxIdleTimer)+' avoided '+taFxSchedulerStats.duplicateAvoided+' peak '+taFxSchedulerStats.peakPending+'\nFX Objects peak trace/particle/cross/green '+taFxSchedulerStats.peakTraces+'/'+taFxSchedulerStats.peakParticles+'/'+taFxSchedulerStats.peakCross+'/'+taFxSchedulerStats.peakGreen+' canvas '+taFxSchedulerStats.canvasPixels+
-   '\nCollect detail total/max '+taCollectDetail.total+'/'+fmt(taCollectDetail.max)+'ms fx/special/ice/click/other '+fmt(taCollectDetail.wordFx)+'/'+fmt(taCollectDetail.special)+'/'+fmt(taCollectDetail.ice)+'/'+fmt(taCollectDetail.click)+'/'+fmt(taCollectDetail.other)+'ms'+
    '\nINCIDENTS (last 8, >=50ms)'+(taIncidentLog.length?taIncidentLog.map(x=>'\n '+x.at+'s '+x.kind+' '+x.ms+'ms C'+x.combo+' '+x.detail).join(''):'\n none')+
    '\nGoldSand '+(window.__taGoldDustStats ? ('emit '+window.__taGoldDustStats.emits+' frames '+window.__taGoldDustStats.frames+' skip '+window.__taGoldDustStats.skipped+' level '+window.__taGoldDustStats.level+' peak '+window.__taGoldDustStats.peak+' avg/max '+fmt(window.__taGoldDustStats.totalMs/Math.max(1,window.__taGoldDustStats.frames))+'/'+fmt(window.__taGoldDustStats.maxMs)+'ms') : 'n/a') + '\n--- STARTUP 0-15s ---' +
    taStartupDiag.bins.map((b,i)=>'\n'+(i*5)+'-'+((i+1)*5)+'s: frames '+b.frames+' slow '+b.slow+' gap '+fmt(b.maxGap)+'ms long '+b.longTasks+' max '+fmt(b.longMax)+'ms'+
