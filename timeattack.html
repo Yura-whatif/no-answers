@@ -7995,6 +7995,23 @@ function taReplayCssAnimation(el,cls,keyframe){
   if(anim){anim.cancel();anim.play();}
 }
 function taFlashScoreFrame(){const frame=document.getElementById('taScoreBox');if(!frame)return;taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}
+// Cache HUD label coordinates briefly to avoid forced layout on every rapid pickup.
+// Refresh on viewport changes and periodically to preserve positions during HUD motion.
+const taPlusRectCache={taTime:null,taScore:null};
+let taPlusRectVersion=0;
+function taInvalidatePlusRects(){taPlusRectVersion++;taPlusRectCache.taTime=null;taPlusRectCache.taScore=null;}
+window.addEventListener('resize',taInvalidatePlusRects,{passive:true});
+window.addEventListener('orientationchange',taInvalidatePlusRects,{passive:true});
+window.addEventListener('scroll',taInvalidatePlusRects,{passive:true});
+if(window.visualViewport){visualViewport.addEventListener('resize',taInvalidatePlusRects,{passive:true});visualViewport.addEventListener('scroll',taInvalidatePlusRects,{passive:true});}
+function taPlusRect(el,id){
+  const now=performance.now(),cached=taPlusRectCache[id];
+  if(cached&&cached.el===el&&cached.version===taPlusRectVersion&&now-cached.at<200)return cached.rect;
+  const r=el.getBoundingClientRect();
+  const rect={left:r.left,top:r.top,width:r.width,height:r.height};
+  taPlusRectCache[id]={el,version:taPlusRectVersion,at:now,rect};
+  return rect;
+}
 let taPlusLastArrival=0,taPlusArrivalCount=0;
 // Score orbs retain the original artwork. Time orbs are blue regardless of the active effect.
 // Bonus orbs get an extra glow without changing their destination color.
@@ -8004,7 +8021,7 @@ function taStyleRewardOrb(orb,isTime,boosted=false){
   if(boosted)orb.classList.add('ta-reward-boost');
   return orb;
 }
-function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null){if(!taRunning)return;const id=isTime?'taTime':'taScore';const taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect)?2:1)):0;if(isTime)taSeconds+=taTimeGain;else {taScore+=pts;taScoreRefresh();}taRender();if(suppressPlus){return;}const el=document.getElementById(id);taReplayCssAnimation(el,'ta-pop','taPulse');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}const r=el.getBoundingClientRect(),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+taTimeGain+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
+function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null){if(!taRunning)return;const id=isTime?'taTime':'taScore';const taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect)?2:1)):0;if(isTime)taSeconds+=taTimeGain;else {taScore+=pts;taScoreRefresh();}taRender();if(suppressPlus){return;}const el=document.getElementById(id);taReplayCssAnimation(el,'ta-pop','taPulse');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}const r=taPlusRect(el,id),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+taTimeGain+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
 const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
@@ -8067,6 +8084,7 @@ function taRender(){
   if(!taScoreAnim){const el=document.getElementById('taScore');if(el){const t=taScoreFormat(taShownScore);if(el.textContent!==t)el.textContent=t;}}
 }
 function taSyncDemo(){
+  taInvalidatePlusRects();
   const hero=document.querySelector('#viewMain > .hero');
   if(hero)hero.classList.toggle('ta-active-visual',taRunning||taStarting||(!taRunning&&!taStarting));
   const slip=document.getElementById('slip');
