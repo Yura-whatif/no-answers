@@ -231,6 +231,48 @@ html[data-view="lib"] #taPlay{display:none!important}
 @keyframes taCountdownFrameBeat{0%,100%{border-color:rgba(240,78,88,.75);box-shadow:0 0 0 transparent,inset 0 0 0 transparent;background:rgba(255,255,255,.018)}35%{border-color:#ff535f;box-shadow:0 0 18px 3px rgba(245,46,64,.65),inset 0 0 13px rgba(245,46,64,.35);background:rgba(120,17,31,.17)}65%{border-color:#fa7d85;box-shadow:0 0 8px 1px rgba(245,46,64,.32),inset 0 0 6px rgba(245,46,64,.2)}}
 @media(prefers-reduced-motion:reduce){#taHud #taTimeBox.ta-countdown-frame-beat{animation:none}}
 
+/* Final-five-second urgency: two red flashes per second, aligned to
+   heartbeat-deep.wav's audible peaks at ~0.10s and ~0.30s each second.
+   Only the time box glows; no extra DOM nodes, canvases or RAF loops. */
+#taHud #taTimeBox.ta-countdown-frame{
+  position:relative;
+  border-color:rgba(255,88,99,.82);
+  animation:taFinalHeartbeatFrame 1s linear infinite!important;
+  will-change:auto;
+}
+#taHud #taTimeBox.ta-countdown-frame #taTime{
+  color:#ff747e!important;
+  animation:taFinalHeartbeatDigits 1s linear infinite!important;
+}
+@keyframes taFinalHeartbeatFrame{
+  0%,5%,20%,26%,43%,100%{
+    background-color:rgba(90,10,23,.055);
+    border-color:rgba(240,80,93,.75);
+    box-shadow:inset 0 0 5px rgba(235,40,55,.10),0 0 3px rgba(255,60,80,.08);
+  }
+  10%{
+    background-color:rgba(180,18,38,.38);
+    border-color:#ff9ba3;
+    box-shadow:inset 0 0 24px 4px rgba(255,43,62,.55),0 0 18px 2px rgba(255,57,76,.48);
+  }
+  30%{
+    background-color:rgba(165,16,36,.31);
+    border-color:#ff8993;
+    box-shadow:inset 0 0 21px 3px rgba(255,42,61,.46),0 0 14px 2px rgba(255,57,76,.38);
+  }
+}
+@keyframes taFinalHeartbeatDigits{
+  0%,5%,20%,26%,43%,100%{text-shadow:0 0 5px rgba(255,55,76,.26);filter:brightness(1)}
+  10%{text-shadow:0 0 16px rgba(255,92,110,.95);filter:brightness(1.55)}
+  30%{text-shadow:0 0 13px rgba(255,92,110,.78);filter:brightness(1.38)}
+}
+@media(prefers-reduced-motion:reduce){
+  #taHud #taTimeBox.ta-countdown-frame,
+  #taHud #taTimeBox.ta-countdown-frame #taTime{animation:none!important}
+  #taHud #taTimeBox.ta-countdown-frame{background-color:rgba(140,20,35,.22);box-shadow:inset 0 0 12px rgba(255,50,70,.24)}
+}
+
+
 /* Ice time orbs: bright crystalline core with a soft cyan halo. */
 .ta-ice-time-orb{position:fixed;z-index:110;pointer-events:none;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:radial-gradient(circle,#f9ffff 0%,#b9f2ff 24%,rgba(81,195,245,.8) 47%,transparent 72%);box-shadow:0 0 12px 4px rgba(94,215,255,.52);filter:blur(.6px);will-change:transform,opacity;}
 
@@ -8161,7 +8203,7 @@ if(!isTime){
 const taHeartbeatAudio = new Audio('audio/heartbeat-deep.wav');
 taHeartbeatAudio.preload = 'auto';
 taHeartbeatAudio.loop = false;
-taHeartbeatAudio.volume = 0.42;
+taHeartbeatAudio.volume = 0.82;
 let taHeartbeatActive = false;
 function taHeartbeatStop(){
   taHeartbeatActive = false;
