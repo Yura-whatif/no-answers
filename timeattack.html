@@ -5233,7 +5233,7 @@ function spawnLoop(){
     const target = taRunning ? (matchMedia("(pointer:coarse)").matches ? 5 : 6) : 4;
     const now = performance.now();
     // At <=1 remaining word, bring forward the next single spawn without clustering.
-    if(taRunning && count<=1 && nextNaturalSpawnAt>now+380)nextNaturalSpawnAt=now+180;
+    if(taRunning && count<=1 && nextNaturalSpawnAt>now+260)nextNaturalSpawnAt=now+110;
     // One word per cycle; even a sparse screen never produces a sudden cluster.
     if(now >= nextNaturalSpawnAt && count < target){
       const firstPos = naturalSpawnPosition();
@@ -5266,10 +5266,10 @@ function spawnLoop(){
           }, staggerMs);
         }
       }
-      nextNaturalSpawnAt = now + (taRunning ? (470+Math.random()*530)*(sakuraNatural ? 4/3 : 1) : 720+Math.random()*700);
+      nextNaturalSpawnAt = now + (taRunning ? (400+Math.random()*450)*(sakuraNatural ? 4/3 : 1) : 720+Math.random()*700);
     }
   }
-  setTimeout(spawnLoop, flood ? 430 : (taRunning ? 240+Math.random()*210 : 520+Math.random()*340));
+  setTimeout(spawnLoop, flood ? 430 : (taRunning ? 180+Math.random()*150 : 520+Math.random()*340));
 }
 
 // Shared across spawned words: dense-swipe detection must not reset for each word.
