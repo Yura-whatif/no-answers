@@ -3881,7 +3881,7 @@ function mist(r, n = 7){
 const taCenturyDust=(()=>{
   // 100連鎖以降の金粉は共用Canvas一枚で描画する（得点・オーブ処理とは独立）。
   let canvas=null,ctx=null,raf=0,last=0,grains=[];
-  const maxGrains=120;
+  const maxGrains=160;
   function ensure(){
     if(!canvas){
       canvas=document.createElement('canvas');
@@ -3905,13 +3905,21 @@ const taCenturyDust=(()=>{
       const k=age/g.life;
       const x=g.x+g.vx*age+Math.sin(age*5+g.phase)*2*k;
       const y=g.y-g.speed*age;
-      const alpha=Math.min(1,age/.07)*Math.pow(1-k,1.25);
+      const alpha=Math.min(1,age/.045)*Math.pow(1-k,0.95);
+      // 丸い光球ではなく、細かな不規則な砂片を描く。影・blur・円弧は使わない。
       ctx.globalAlpha=alpha;
-      ctx.fillStyle=g.light?'#fff8d7':'#ffcb55';
-      ctx.beginPath();ctx.arc(x,y,g.sz,0,Math.PI*2);ctx.fill();
-      // 光芯だけを重ねる。blurや影は使わない。
-      ctx.fillStyle='#fff9e8';
-      ctx.beginPath();ctx.arc(x,y,Math.max(.8,g.sz*.35),0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=g.light?'#fff8d5':'#ffd16a';
+      ctx.fillRect(Math.round(x),Math.round(y),g.w,g.h);
+      // 同じ砂片の周囲に極小の粉を散らし、少ない粒子数で砂煙の密度を表現する。
+      // 追加CanvasやDOMは作らず、描画中の乱数・ぼかしも使わない。
+      ctx.globalAlpha=alpha*.82;
+      ctx.fillStyle=g.light?'#fff1b8':'#efb94f';
+      ctx.fillRect(Math.round(x+g.dx),Math.round(y+g.dy),1,1);
+      if(g.spark){
+        ctx.globalAlpha=alpha*.66;
+        ctx.fillStyle='#fff9d8';
+        ctx.fillRect(Math.round(x-g.dx*.65),Math.round(y+g.dy*.7),1,1);
+      }
     }
     ctx.globalAlpha=1;
     if(grains.length)raf=requestAnimationFrame(frame);
@@ -3923,14 +3931,15 @@ const taCenturyDust=(()=>{
     if(!ctx)return;
     const now=performance.now(),bounds=textRect&&textRect.width>0?textRect:r;
     const cx=bounds.left+bounds.width/2,cy=bounds.top+bounds.height/2;
-    // 通常文字は8粒、時止めなどは6粒。回収直後に光り、上へ舞う。
-    const count=word?8:6;
+    // 通常文字は16片、時止めなどは10片。金色を明るくして砂の視認性を上げる。
+    const count=word?16:10;
     for(let i=0;i<count;i++){
       grains.push({x:cx+(Math.random()-.5)*bounds.width*.7,
         y:cy+(Math.random()-.5)*bounds.height*.5,
         vx:(Math.random()-.5)*42,speed:55+Math.random()*70,
         phase:Math.random()*6.28,life:.75+Math.random()*.35,
-        sz:2.8+Math.random()*1.7,light:i%3===0,start:now});
+        w:Math.random()<.75?1:2,h:Math.random()<.85?1:2,
+        spark:i%2===0,dx:(Math.random()-.5)*5,dy:(Math.random()-.5)*5,light:i%3===0,start:now});
     }
     if(grains.length>maxGrains)grains.splice(0,grains.length-maxGrains);
     if(!raf){last=now;raf=requestAnimationFrame(frame);}
