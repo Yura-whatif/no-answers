@@ -2067,6 +2067,16 @@ html:not(.ta-century-lit) #viewMain .drift .word:not(.got):not(.special):not(.mu
 /* Diagnostics disabled after the reference-error root cause was repaired. */
 window.taOrbDiag={mark(){},error(where,e){console.warn('Orb effect:',where,e)},report(){}};
 </script>
+
+<style id="ta-background-story-20-50-v1">
+/* Story backgrounds: 0 dark / 20 lamplight / 50 meteor-blue / 100 sunrise. Mobile images share the same composition. */
+html[data-yura="black"] #viewMain>.hero>picture.ta-bg-picture.ta-dark-start{opacity:1!important;transition:none!important;}
+html[data-yura="black"] #viewMain>.hero>picture.ta-bg-picture.ta-original-night{opacity:0!important;transition:opacity 2.2s ease-in-out!important;}
+html[data-yura="black"].ta-night-lit #viewMain>.hero>picture.ta-bg-picture.ta-original-night{opacity:1!important;}
+/* Keep DEMO free of any artificial darkening overlay. */
+#taDemoShade{display:none!important;}
+@media(prefers-reduced-motion:reduce){html[data-yura="black"] #viewMain>.hero>picture.ta-bg-picture.ta-original-night{transition-duration:0s!important;}}
+</style>
 </head>
 <body>
 <style>
@@ -2074,10 +2084,7 @@ window.taOrbDiag={mark(){},error(where,e){console.warn('Orb effect:',where,e)},r
 #taTitleScreen{opacity:1;transition:opacity 520ms ease-in-out}
 #taTitleScreen.ta-title-fading{opacity:0;pointer-events:none}
 @media(prefers-reduced-motion:reduce){#taTitleScreen{transition-duration:0ms}}
-/* DEMO collection-area dimmer: fades away smoothly on START. */
-#taDemoShade{position:absolute;inset:0;z-index:1;pointer-events:none;background:rgba(3,7,15,.58);opacity:1;transition:opacity 1800ms ease-in-out;will-change:opacity}
-#taDemoShade.ta-demo-bright{opacity:0}
-@media(prefers-reduced-motion:reduce){#taDemoShade{transition-duration:0ms}}
+
 </style>
 <div id="taTitleScreen" role="region" aria-label="No Answers タイトル画面"><div class="ta-title-art"><picture class="ta-title-picture"><source media="(max-aspect-ratio:3/4)" srcset="img/ta_title_mobile.jpg?v=clean1031"><img src="img/ta_title_no_petals.png?v=clean1031" alt="No Answers ―言葉の残響― タイトルイラスト"></picture><button type="button" class="ta-title-start" id="taTitleStart" aria-label="はじめる">はじめる</button><div class="ta-title-progress" id="taTitleProgress" hidden><div class="ta-title-progress-fill" id="taTitleProgressFill"></div></div></div></div>
 
@@ -2109,7 +2116,8 @@ window.taOrbDiag={mark(){},error(where,e){console.warn('Orb effect:',where,e)},r
 
   <figure class="hero">
     <img class="w" src="img/key-white.webp" alt="白ユラ：祈るように手を組む人物。The world is less in order than I expected.">
-    <picture class="ta-bg-picture b"><source media="(max-width:600px)" srcset="img/night_mobile.webp"><img src="img/night.webp" alt="夜の書斎と城下町"></picture>
+    <picture class="ta-bg-picture b ta-dark-start" aria-hidden="true"><source media="(max-width:600px)" srcset="img/night_dark_mobile.webp"><img src="img/night_dark.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-original-night"><source media="(max-width:600px)" srcset="img/night_mobile.webp"><img src="img/night.webp" alt="夜の書斎と城下町"></picture>
     <picture class="ta-bg-picture b ta-meteor50" aria-hidden="true"><source media="(max-width:600px)" srcset="img/meteor50_mobile.webp"><img src="img/meteor50.webp" alt="" decoding="async"></picture>
     <picture class="ta-bg-picture b castle-dim" aria-hidden="true"><source media="(max-width:600px)" srcset="img/day_mobile.webp"><img src="img/day.webp" alt=""></picture>
     <!-- 髪だけを、ゆるやかな揺らぎで重ねてなびかせる -->
@@ -2125,7 +2133,7 @@ window.taOrbDiag={mark(){},error(where,e){console.warn('Orb effect:',where,e)},r
       </filter>
     </svg>
     <figcaption id="cap" hidden>WHITE YURA</figcaption>
-    <div id="taDemoShade" aria-hidden="true"></div>
+    
     <div class="drift" id="drift" aria-label="漂う言葉"></div>
     <div id="taDemoPlay" hidden aria-hidden="true">DEMO PLAY</div>
     <div class="combo" id="combo" aria-hidden="true">連鎖 <b id="cbn">0</b><em id="cbx"></em><i></i><span class="cpause">一時停止</span></div>
@@ -4339,7 +4347,7 @@ function taSyncDriftingGlowWords(){
 var taMeteorHadCentury=false;
 function taMeteorReset(){
   const doc=document.documentElement;
-  doc.classList.remove('ta-meteor-lit');
+  doc.classList.remove('ta-meteor-lit','ta-night-lit');
   if(taMeteorHadCentury)doc.classList.add('ta-meteor-skip');
   taMeteorHadCentury=false;
 }
@@ -4348,7 +4356,7 @@ function expireCombo(){
   taMeteorReset();
   combo=0;comboWindowMs=COMBO_MS;
   taSyncDriftingGlowWords();
-  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit");
+  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit");
   const el=$("combo");el.classList.remove("on","x2","x3","run","heat","ta-skill-grace");
   el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();
 }
@@ -4377,6 +4385,7 @@ function bumpCombo(){
   el.style.setProperty("--ct", COMBO_MS + "ms");
   el.classList.toggle("on", combo >= 2); el.classList.toggle("x2", m === 2); el.classList.toggle("x3", m === 3); el.classList.toggle("hold", flood);
   comboRush(m === 3);
+  document.documentElement.classList.toggle("ta-night-lit",combo>=20);
   if(combo>=50){
     document.documentElement.classList.remove("ta-meteor-skip");
     document.documentElement.classList.add("ta-meteor-lit");
@@ -8060,7 +8069,7 @@ setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
 (function taPrewarmBackgrounds(){
   const run=()=>{
     const mobile=window.matchMedia&&window.matchMedia('(max-width: 700px)').matches;
-    const names=mobile?['night_mobile.webp','day_mobile.webp']:['night.webp','day.webp'];
+    const names=mobile?['night_dark_mobile.webp','night_mobile.webp','day_mobile.webp']:['night_dark.webp','night.webp','day.webp'];
     for(const name of names){
       const img=new Image();img.decoding='async';img.src='img/'+name;
       if(typeof img.decode==='function')img.decode().catch(()=>{});
@@ -8248,8 +8257,6 @@ function taSyncDemo(){
   if(slip){slip.classList.toggle('ta-demo-frame',!taRunning&&!taStarting);if(!taRunning&&!taStarting)slip.classList.remove('ta-game-frame');}
   const hud=document.getElementById('taHud');
   if(hud)hud.classList.toggle('ta-hud-demo',!taRunning&&!taStarting);
-  const shade=document.getElementById('taDemoShade');
-  if(shade)shade.classList.toggle('ta-demo-bright',taRunning||taStarting);
   const demo=document.getElementById('taDemoPlay');
   const result=document.getElementById('taLaunch');
   const library=document.getElementById('viewLib');
@@ -8338,7 +8345,7 @@ function taFinish(){
   taRunning=false;taStarting=false;
   taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;
   taFloodComboRemaining=null;
-  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit");
+  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit");
   const finishedComboEl=document.getElementById('combo');
   if(finishedComboEl){
     finishedComboEl.classList.remove('on','x2','x3','run','heat','hold','paused','hit','up','ta-skill-grace');
@@ -8417,7 +8424,7 @@ function taBeginReady(){
   taCenturyMusic.stop(true);
   taMeteorReset();
   // DEMOでの操作履歴をゲーム本番へ持ち越さない。
-  taCancelFloodResume();clearTimeout(bumpCombo.h);taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit");
+  taCancelFloodResume();clearTimeout(bumpCombo.h);taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit");
   const comboEl=document.getElementById("combo");
   if(comboEl){comboEl.classList.remove("on","x2","x3","run","heat","paused","hold","ta-skill-grace");comboEl.style.removeProperty("--heat");}
   document.getElementById("cbn").textContent="0";document.getElementById("cbx").textContent="";comboRush(false);
@@ -8523,7 +8530,7 @@ async function taBegin(prepareOnly=false){
     const viewport=mobile?'mobile':'desktop';
     progress(15,'夜と朝の景色を準備しています');
     if(taPreparedViewport!==viewport){
-      const names=mobile?['night_mobile.webp','day_mobile.webp']:['night.webp','day.webp'];
+      const names=mobile?['night_dark_mobile.webp','night_mobile.webp','day_mobile.webp']:['night_dark.webp','night.webp','day.webp'];
       await Promise.all(names.map(n=>taPreloadImage('img/'+n)));
       taPreparedViewport=viewport;
     }
@@ -10308,7 +10315,6 @@ body>.ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!importa
 
 <style id="ta-demo-background-only-orb-slow-spin-v1">
 /* DEMO: the darkening layer stays behind floating words and overlays. */
-#viewMain>.hero>#taDemoShade{z-index:1!important}
 #viewMain>.hero>.drift{z-index:2}
 /* Spin artwork, not the button or the selection ring; enabled inventory only. */
 #viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon){background-image:none!important}
