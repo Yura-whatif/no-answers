@@ -3882,6 +3882,12 @@ const taCenturyDust=(()=>{
   // 100連鎖以降の金粉は共用Canvas一枚で描画する（得点・オーブ処理とは独立）。
   let canvas=null,ctx=null,raf=0,last=0,grains=[];
   const maxGrains=160;
+  // Read-only counters are exposed only to the opt-in performance panel.
+  const dustStats={emits:0,frames:0,skipped:0,totalMs:0,maxMs:0,lastMs:0,peak:0,level:0};
+  window.__taGoldDustStats=dustStats;
+  let previousFrame=0,stress=0,drawParity=0;
+  const dustDiagnostic=()=>((location.hash||'').includes('test')||new URLSearchParams(location.search).has('perf'));
+
   function ensure(){
     if(!canvas){
       canvas=document.createElement('canvas');
@@ -3896,7 +3902,22 @@ const taCenturyDust=(()=>{
   function frame(now){
     raf=0;
     if(!canvas||!ctx)return;
-    const dt=Math.min(.04,Math.max(0,(now-last)/1000));last=now;
+    const frameGap=previousFrame?now-previousFrame:16.7;
+    previousFrame=now;
+    // Reduce only visual updates during sustained main-thread stalls. The
+    // simulation remains time-based; score, hit detection and orbs are untouched.
+    if(frameGap>46)stress=Math.min(8,stress+2);
+    else if(frameGap<28)stress=Math.max(0,stress-1);
+    const level=stress>=4?1:0;
+    dustStats.level=level;
+    if(level && (++drawParity%2===0)){
+      dustStats.skipped++;
+      raf=requestAnimationFrame(frame);
+      return;
+    }
+    const measure=dustDiagnostic();
+    const started=measure?performance.now():0;
+    last=now;
     ctx.clearRect(0,0,canvas.width,canvas.height);
     for(let i=grains.length-1;i>=0;i--){
       const g=grains[i],age=(now-g.start)/1000;
@@ -3922,13 +3943,20 @@ const taCenturyDust=(()=>{
       }
     }
     ctx.globalAlpha=1;
+    if(measure){
+      const ms=performance.now()-started;
+      dustStats.frames++;dustStats.totalMs+=ms;dustStats.lastMs=ms;
+      dustStats.maxMs=Math.max(dustStats.maxMs,ms);
+      dustStats.peak=Math.max(dustStats.peak,grains.length);
+    }
     if(grains.length)raf=requestAnimationFrame(frame);
-    else canvas.remove();
+    else {canvas.remove();previousFrame=0;stress=0;drawParity=0;}
   }
   function emit(r,word,style,textRect){
     if(!r||!r.width||!r.height||!taRunning||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
     ensure();
     if(!ctx)return;
+    if(dustDiagnostic())dustStats.emits++;
     const now=performance.now(),bounds=textRect&&textRect.width>0?textRect:r;
     const cx=bounds.left+bounds.width/2,cy=bounds.top+bounds.height/2;
     // 通常文字は16片、時止めなどは10片。金色を明るくして砂の視認性を上げる。
@@ -9401,7 +9429,8 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    '\nChain '+(typeof combo==='number'?combo:'?')+' /100 '+(typeof combo==='number'&&combo>=100?'ON':'OFF')+
    '\n100+ peak ('+taPerfCentury.samples+' windows) gap '+fmt(taPerfCentury.gap)+'ms'+
    '\n100+ FX '+fmt(taPerfCentury.paint)+' cross '+fmt(taPerfCentury.cross)+' green '+fmt(taPerfCentury.green)+
-   '\n100+ collect '+fmt(taPerfCentury.collect)+' spawn '+fmt(taPerfCentury.spawn)+' long '+fmt(taPerfCentury.long) + '\n--- STARTUP 0-15s ---' +
+   '\n100+ collect '+fmt(taPerfCentury.collect)+' spawn '+fmt(taPerfCentury.spawn)+' long '+fmt(taPerfCentury.long) +
+   '\nGoldSand '+(window.__taGoldDustStats ? ('emit '+window.__taGoldDustStats.emits+' frames '+window.__taGoldDustStats.frames+' skip '+window.__taGoldDustStats.skipped+' level '+window.__taGoldDustStats.level+' peak '+window.__taGoldDustStats.peak+' avg/max '+fmt(window.__taGoldDustStats.totalMs/Math.max(1,window.__taGoldDustStats.frames))+'/'+fmt(window.__taGoldDustStats.maxMs)+'ms') : 'n/a') + '\n--- STARTUP 0-15s ---' +
    taStartupDiag.bins.map((b,i)=>'\n'+(i*5)+'-'+((i+1)*5)+'s: frames '+b.frames+' slow '+b.slow+' gap '+fmt(b.maxGap)+'ms long '+b.longTasks+' max '+fmt(b.longMax)+'ms'+
     '\n  FX avg/max '+fmt(b.paintSum/Math.max(1,b.paintCount))+'/'+fmt(b.paintMax)+'ms'+
     ['collect','cross','green','spawn','read','orbs','logic','hud'].map(k=>{const c=b.costs[k];return c?'\n  '+k+' '+c.count+' avg/max '+fmt(c.sum/c.count)+'/'+fmt(c.max)+'ms':'';}).join('')+
