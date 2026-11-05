@@ -479,9 +479,19 @@ html[data-yura="black"].ta-century-lit #viewMain>.hero.ta-active-visual>picture.
 @media(prefers-reduced-motion:reduce){#taLoading .ta-loading-book{animation:none}}
 
 
-/* 300 chains: one static image layer; same crop and geometry as the 100-chain image. */
+/* 200 chains: existing golden sunrise artwork; files remain unchanged. */
 #viewMain>.hero>picture.ta-bg-picture.ta-day300{opacity:0!important;transition:opacity 4.5s ease-in-out;pointer-events:none;}
-html[data-yura="black"].ta-300-lit #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-day300{opacity:1!important;transition-duration:5s;}
+html[data-yura="black"].ta-200-lit #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-day300{opacity:1!important;transition-duration:5s;}
+
+/* 300 / 400 chains: static silver and floating-sky artwork, no animation loop. */
+#viewMain>.hero>picture.ta-bg-picture.ta-day-silver,
+#viewMain>.hero>picture.ta-bg-picture.ta-sky-ruins{opacity:0!important;transition:opacity 4.5s ease-in-out;pointer-events:none;}
+html[data-yura="black"].ta-300-lit #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-day-silver{opacity:1!important;transition-duration:5s;}
+html[data-yura="black"].ta-400-lit #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-sky-ruins{opacity:1!important;transition-duration:5s;}
+@media(prefers-reduced-motion:reduce){
+ #viewMain>.hero>picture.ta-bg-picture.ta-day-silver,
+ #viewMain>.hero>picture.ta-bg-picture.ta-sky-ruins{transition-duration:0s!important;}
+}
 
 /* 50-chain meteor background: between night and existing 100-chain scene. */
 #viewMain>.hero>picture.ta-bg-picture.ta-meteor50{opacity:0!important;transition:opacity 3s ease-in-out;pointer-events:none;}
@@ -2082,6 +2092,21 @@ html[data-yura="black"].ta-night-lit #viewMain>.hero>picture.ta-bg-picture.ta-or
 #taDemoShade{display:none!important;}
 @media(prefers-reduced-motion:reduce){html[data-yura="black"] #viewMain>.hero>picture.ta-bg-picture.ta-original-night{transition-duration:0s!important;}}
 </style>
+<style id="ta-seven-stage-exclusive-20261105">
+/* Seven-stage background: 1-7 images shared by PC and mobile; exactly one visible scene for each combo range.
+   All picture elements have identical geometry, avoiding movement on crossfade. */
+html[data-yura="black"] #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.b{opacity:0!important;}
+html[data-yura="black"] #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-dark-start{opacity:1!important;}
+html[data-yura="black"].ta-night-lit:not(.ta-meteor-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-original-night{opacity:1!important;}
+html[data-yura="black"].ta-meteor-lit:not(.ta-century-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-meteor50{opacity:1!important;}
+html[data-yura="black"].ta-century-lit:not(.ta-200-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.castle-dim{opacity:1!important;}
+html[data-yura="black"].ta-200-lit:not(.ta-300-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-day300{opacity:1!important;}
+html[data-yura="black"].ta-300-lit:not(.ta-400-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-day-silver{opacity:1!important;}
+html[data-yura="black"].ta-400-lit #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-sky-ruins{opacity:1!important;}
+/* Avoid an extra original-night layer on initial load; same viewport and cropping for every stage. */
+#viewMain>.hero>picture.ta-bg-picture>img{width:100%;height:100%;object-fit:cover!important;object-position:center center!important;}
+@media(max-width:600px){#viewMain>.hero>picture.ta-bg-picture>img{object-fit:cover!important;object-position:center center!important;}}
+</style>
 </head>
 <body>
 <style>
@@ -2121,11 +2146,13 @@ html[data-yura="black"].ta-night-lit #viewMain>.hero>picture.ta-bg-picture.ta-or
 
   <figure class="hero">
     <img class="w" src="img/key-white.webp" alt="白ユラ：祈るように手を組む人物。The world is less in order than I expected.">
-    <picture class="ta-bg-picture b ta-dark-start" aria-hidden="true"><source media="(max-width:600px)" srcset="img/night_dark_mobile.webp"><img src="img/night_dark.webp" alt="" decoding="async"></picture>
-    <picture class="ta-bg-picture b ta-original-night"><source media="(max-width:600px)" srcset="img/night_mobile.webp"><img src="img/night.webp" alt="夜の書斎と城下町"></picture>
-    <picture class="ta-bg-picture b ta-meteor50" aria-hidden="true"><source media="(max-width:600px)" srcset="img/meteor50_mobile.webp"><img src="img/meteor50.webp" alt="" decoding="async"></picture>
-    <picture class="ta-bg-picture b castle-dim" aria-hidden="true"><source media="(max-width:600px)" srcset="img/day_mobile.webp"><img src="img/day.webp" alt=""></picture>
-    <picture class="ta-bg-picture b ta-day300" aria-hidden="true"><source media="(max-width:600px)" srcset="img/day300_mobile.webp"><img src="img/day300.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-dark-start" aria-hidden="true"><img src="img/stage_01.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-original-night"><img src="img/stage_02.webp" alt="夜の書斎と城下町"></picture>
+    <picture class="ta-bg-picture b ta-meteor50" aria-hidden="true"><img src="img/stage_03.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b castle-dim" aria-hidden="true"><img src="img/stage_04.webp" alt=""></picture>
+    <picture class="ta-bg-picture b ta-day300" aria-hidden="true"><img src="img/stage_05.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-day-silver" aria-hidden="true"><img src="img/stage_06.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-sky-ruins" aria-hidden="true"><img src="img/stage_07.webp" alt="" decoding="async"></picture>
     <!-- 髪だけを、ゆるやかな揺らぎで重ねてなびかせる -->
     <img class="w hair hair-w" src="img/key-white.webp" alt="" aria-hidden="true">
     <svg class="fx" width="0" height="0" aria-hidden="true" focusable="false">
@@ -4370,7 +4397,7 @@ function taSyncDriftingGlowWords(){
 var taMeteorHadCentury=false;
 function taMeteorReset(){
   const doc=document.documentElement;
-  doc.classList.remove('ta-meteor-lit','ta-night-lit','ta-300-lit');
+  doc.classList.remove('ta-meteor-lit','ta-night-lit','ta-200-lit','ta-300-lit','ta-400-lit');
   if(taMeteorHadCentury)doc.classList.add('ta-meteor-skip');
   taMeteorHadCentury=false;
 }
@@ -4379,7 +4406,7 @@ function expireCombo(){
   taMeteorReset();
   combo=0;comboWindowMs=COMBO_MS;
   taSyncDriftingGlowWords();
-  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-300-lit");
+  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit");
   const el=$("combo");el.classList.remove("on","x2","x3","run","heat","ta-skill-grace");
   el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();
 }
@@ -4416,10 +4443,18 @@ function bumpCombo(){
     document.documentElement.classList.remove("ta-meteor-lit");
   }
   document.documentElement.classList.toggle("ta-century-lit", combo>=100);
+  document.documentElement.classList.toggle("ta-200-lit", combo>=200);
   document.documentElement.classList.toggle("ta-300-lit", combo>=300);
+  document.documentElement.classList.toggle("ta-400-lit", combo>=400);
   if(combo>=100)taMeteorHadCentury=true;
   if(combo===100 || combo===1) taSyncDriftingGlowWords();
   // Start the special BGM at 100 chains; stop it if the chain resets.
+  if(combo===100){
+    // Non-blocking image prewarm: these stages are far ahead; never stall collection.
+    const mobile=window.matchMedia&&window.matchMedia('(max-width:600px)').matches;
+    const names=mobile?['stage_06.webp','stage_07.webp']:['stage_06.webp','stage_07.webp'];
+    for(const name of names){const im=new Image();im.decoding='async';im.src='img/'+name;if(im.decode)im.decode().catch(()=>{});}
+  }
   if(combo===100)taCenturyMusic.start();
   else if(combo===1)taCenturyMusic.stop();
   // The previous offsetWidth read forced a full style/layout flush on EVERY
@@ -8093,7 +8128,7 @@ setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
 (function taPrewarmBackgrounds(){
   const run=()=>{
     const mobile=window.matchMedia&&window.matchMedia('(max-width: 700px)').matches;
-    const names=mobile?['night_dark_mobile.webp','night_mobile.webp','day_mobile.webp','day300_mobile.webp']:['night_dark.webp','night.webp','day.webp','day300.webp'];
+    const names=mobile?['stage_01.webp','stage_02.webp','stage_04.webp','stage_05.webp']:['stage_01.webp','stage_02.webp','stage_04.webp','stage_05.webp'];
     for(const name of names){
       const img=new Image();img.decoding='async';img.src='img/'+name;
       if(typeof img.decode==='function')img.decode().catch(()=>{});
@@ -8370,7 +8405,7 @@ function taFinish(){
   taRunning=false;taStarting=false;
   taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;
   taFloodComboRemaining=null;
-  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-300-lit");
+  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit");
   const finishedComboEl=document.getElementById('combo');
   if(finishedComboEl){
     finishedComboEl.classList.remove('on','x2','x3','run','heat','hold','paused','hit','up','ta-skill-grace');
@@ -8450,7 +8485,7 @@ function taBeginReady(){
   taCenturyMusic.stop(true);
   taMeteorReset();
   // DEMOでの操作履歴をゲーム本番へ持ち越さない。
-  taCancelFloodResume();clearTimeout(bumpCombo.h);taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-300-lit");
+  taCancelFloodResume();clearTimeout(bumpCombo.h);taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit");
   const comboEl=document.getElementById("combo");
   if(comboEl){comboEl.classList.remove("on","x2","x3","run","heat","paused","hold","ta-skill-grace");comboEl.style.removeProperty("--heat");}
   document.getElementById("cbn").textContent="0";document.getElementById("cbx").textContent="";comboRush(false);
@@ -8556,14 +8591,14 @@ async function taBegin(prepareOnly=false){
     const viewport=mobile?'mobile':'desktop';
     progress(15,'夜と朝の景色を準備しています');
     if(taPreparedViewport!==viewport){
-      const names=mobile?['night_dark_mobile.webp','night_mobile.webp','day_mobile.webp','day300_mobile.webp']:['night_dark.webp','night.webp','day.webp','day300.webp'];
+      const names=mobile?['stage_01.webp','stage_02.webp','stage_04.webp','stage_05.webp']:['stage_01.webp','stage_02.webp','stage_04.webp','stage_05.webp'];
       await Promise.all(names.map(n=>taPreloadImage('img/'+n)));
       taPreparedViewport=viewport;
     }
     // Stage 8: decode combo backgrounds before the first combo transition.
     // Failures remain nonfatal (same behavior as the other optional assets).
     await Promise.allSettled([
-      taPreloadImage(mobile?'img/meteor50_mobile.webp':'img/meteor50.webp')
+      taPreloadImage(mobile?'img/stage_03.webp':'img/stage_03.webp')
     ]);
     // Warm reward-orb CSS/paint once while the loading screen is visible.
     // Do not retain any active animations or change scoring behavior.
@@ -10526,7 +10561,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   const mobile=window.matchMedia('(max-width:600px)').matches;
   const img=new Image();
   img.decoding='async';
-  img.src=mobile?'img/meteor50_mobile.webp':'img/meteor50.webp';
+  img.src=mobile?'img/stage_03.webp':'img/stage_03.webp';
   if(img.decode)img.decode().catch(()=>{});
 })();
 </script>
