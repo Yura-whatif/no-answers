@@ -2087,7 +2087,7 @@ window.taOrbDiag={mark(){},error(where,e){console.warn('Orb effect:',where,e)},r
 /* Story backgrounds: 0 dark / 20 lamplight / 50 meteor-blue / 100 sunrise. Mobile images share the same composition. */
 html[data-yura="black"] #viewMain>.hero>picture.ta-bg-picture.ta-dark-start{opacity:1!important;transition:none!important;}
 html[data-yura="black"] #viewMain>.hero>picture.ta-bg-picture.ta-original-night{opacity:0!important;transition:opacity 2.2s ease-in-out!important;}
-html[data-yura="black"].ta-night-lit #viewMain>.hero>picture.ta-bg-picture.ta-original-night{opacity:1!important;}
+/* No persistent stage 02 at 20 chains. */
 /* Keep DEMO free of any artificial darkening overlay. */
 #taDemoShade{display:none!important;}
 @media(prefers-reduced-motion:reduce){html[data-yura="black"] #viewMain>.hero>picture.ta-bg-picture.ta-original-night{transition-duration:0s!important;}}
@@ -2097,7 +2097,7 @@ html[data-yura="black"].ta-night-lit #viewMain>.hero>picture.ta-bg-picture.ta-or
    All picture elements have identical geometry, avoiding movement on crossfade. */
 html[data-yura="black"] #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.b{opacity:0!important;}
 html[data-yura="black"] #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-dark-start{opacity:1!important;}
-html[data-yura="black"].ta-night-lit:not(.ta-meteor-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-original-night{opacity:1!important;}
+/* Stage 02 is now a brief pulse at 10/20/30/40; never a persistent background. */
 html[data-yura="black"].ta-meteor-lit:not(.ta-century-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-meteor50{opacity:1!important;}
 html[data-yura="black"].ta-century-lit:not(.ta-200-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.castle-dim{opacity:1!important;}
 html[data-yura="black"].ta-200-lit:not(.ta-300-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-day300{opacity:1!important;}
@@ -2106,6 +2106,15 @@ html[data-yura="black"].ta-400-lit #viewMain>.hero.ta-active-visual>picture.ta-b
 /* Avoid an extra original-night layer on initial load; same viewport and cropping for every stage. */
 #viewMain>.hero>picture.ta-bg-picture>img{width:100%;height:100%;object-fit:cover!important;object-position:center center!important;}
 @media(max-width:600px){#viewMain>.hero>picture.ta-bg-picture>img{object-fit:cover!important;object-position:center center!important;}}
+</style>
+<style id="ta-lamp-pulse-style">
+/* Overlay is geometrically identical to all story backgrounds; no mobile recrop or layout work. */
+#viewMain>.hero>picture.ta-bg-picture.ta-lamp-pulse{
+  opacity:0;z-index:2;pointer-events:none;transition:none;
+}
+#viewMain>.hero>picture.ta-bg-picture.ta-lamp-pulse>img{
+  width:100%;height:100%;object-fit:cover;object-position:center center;
+}
 </style>
 </head>
 <body>
@@ -2153,6 +2162,7 @@ html[data-yura="black"].ta-400-lit #viewMain>.hero.ta-active-visual>picture.ta-b
     <picture class="ta-bg-picture b ta-day300" aria-hidden="true"><img src="img/stage_05.webp" alt="" decoding="async"></picture>
     <picture class="ta-bg-picture b ta-day-silver" aria-hidden="true"><img src="img/stage_06.webp" alt="" decoding="async"></picture>
     <picture class="ta-bg-picture b ta-sky-ruins" aria-hidden="true"><img src="img/stage_07.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture ta-lamp-pulse" aria-hidden="true"><img src="img/stage_02.webp" alt="" decoding="async"></picture>
     <!-- 髪だけを、ゆるやかな揺らぎで重ねてなびかせる -->
     <img class="w hair hair-w" src="img/key-white.webp" alt="" aria-hidden="true">
     <svg class="fx" width="0" height="0" aria-hidden="true" focusable="false">
@@ -4396,12 +4406,32 @@ function taSyncDriftingGlowWords(){
 }
 var taMeteorHadCentury=false;
 function taMeteorReset(){
+  taCancelLampPulse();
   const doc=document.documentElement;
   doc.classList.remove('ta-meteor-lit','ta-night-lit','ta-200-lit','ta-300-lit','ta-400-lit');
   if(taMeteorHadCentury)doc.classList.add('ta-meteor-skip');
   taMeteorHadCentury=false;
 }
+/* 10/20/30/40 combo: light the room once for 3.9s (3.0s fade-out), then return to stage 01. */
+var taLampPulseAnimation=null;
+function taCancelLampPulse(){
+  if(taLampPulseAnimation){taLampPulseAnimation.cancel();taLampPulseAnimation=null;}
+}
+function taPlayLampPulse(){
+  const picture=document.querySelector('#viewMain>.hero>picture.ta-lamp-pulse');
+  if(!picture || mode!=='black')return;
+  taCancelLampPulse();
+  // Opacity-only compositing; smooth lighting without moving any furniture or artwork.
+  taLampPulseAnimation=picture.animate([
+    {opacity:0,offset:0},
+    {opacity:1,offset:400/3900},
+    {opacity:1,offset:900/3900},
+    {opacity:0,offset:1}
+  ],{duration:3900,easing:'ease-in-out',fill:'none'});
+  taLampPulseAnimation.onfinish=()=>{taLampPulseAnimation=null;};
+}
 function expireCombo(){
+  taCancelLampPulse();
   taCancelFloodResume();
   taMeteorReset();
   combo=0;comboWindowMs=COMBO_MS;
@@ -4435,7 +4465,9 @@ function bumpCombo(){
   el.style.setProperty("--ct", COMBO_MS + "ms");
   el.classList.toggle("on", combo >= 2); el.classList.toggle("x2", m === 2); el.classList.toggle("x3", m === 3); el.classList.toggle("hold", flood);
   comboRush(m === 3);
-  document.documentElement.classList.toggle("ta-night-lit",combo>=20);
+  document.documentElement.classList.toggle("ta-night-lit",false);
+  if(combo===10 || combo===20 || combo===30 || combo===40) taPlayLampPulse();
+  if(combo===50) taCancelLampPulse();
   if(combo>=50){
     document.documentElement.classList.remove("ta-meteor-skip");
     document.documentElement.classList.add("ta-meteor-lit");
