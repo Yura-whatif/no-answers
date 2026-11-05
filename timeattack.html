@@ -478,6 +478,11 @@ html[data-yura="black"].ta-century-lit #viewMain>.hero.ta-active-visual>picture.
 @keyframes taLoadingBreathe{50%{opacity:.65;transform:scale(1.045)}}
 @media(prefers-reduced-motion:reduce){#taLoading .ta-loading-book{animation:none}}
 
+
+/* 300 chains: one static image layer; same crop and geometry as the 100-chain image. */
+#viewMain>.hero>picture.ta-bg-picture.ta-day300{opacity:0!important;transition:opacity 4.5s ease-in-out;pointer-events:none;}
+html[data-yura="black"].ta-300-lit #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-day300{opacity:1!important;transition-duration:5s;}
+
 /* 50-chain meteor background: between night and existing 100-chain scene. */
 #viewMain>.hero>picture.ta-bg-picture.ta-meteor50{opacity:0!important;transition:opacity 3s ease-in-out;pointer-events:none;}
 html[data-yura="black"].ta-meteor-lit #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-meteor50{opacity:1!important;}
@@ -2120,6 +2125,7 @@ html[data-yura="black"].ta-night-lit #viewMain>.hero>picture.ta-bg-picture.ta-or
     <picture class="ta-bg-picture b ta-original-night"><source media="(max-width:600px)" srcset="img/night_mobile.webp"><img src="img/night.webp" alt="夜の書斎と城下町"></picture>
     <picture class="ta-bg-picture b ta-meteor50" aria-hidden="true"><source media="(max-width:600px)" srcset="img/meteor50_mobile.webp"><img src="img/meteor50.webp" alt="" decoding="async"></picture>
     <picture class="ta-bg-picture b castle-dim" aria-hidden="true"><source media="(max-width:600px)" srcset="img/day_mobile.webp"><img src="img/day.webp" alt=""></picture>
+    <picture class="ta-bg-picture b ta-day300" aria-hidden="true"><source media="(max-width:600px)" srcset="img/day300_mobile.webp"><img src="img/day300.webp" alt="" decoding="async"></picture>
     <!-- 髪だけを、ゆるやかな揺らぎで重ねてなびかせる -->
     <img class="w hair hair-w" src="img/key-white.webp" alt="" aria-hidden="true">
     <svg class="fx" width="0" height="0" aria-hidden="true" focusable="false">
@@ -4242,20 +4248,37 @@ const taCenturyMusic=(()=>{
   const src='audio/Upon_the_Silent_Threshold.mp3?v=20261102';
   let audio=null,active=false,stoppedForTime=false,fadeId=0,fadeTimer=0,serial=0;
   const volume=.38; // Lower level; preserve existing fade and timing
+  let heartbeatDuck=false,duckTimer=0;
+  function clearDuck(){if(duckTimer){clearInterval(duckTimer);duckTimer=0;}}
+  function fadeVolume(target,duration){
+    if(!audio)return;
+    clearDuck();const a=audio,from=a.volume,start=performance.now();
+    if(!duration){a.volume=target;return;}
+    duckTimer=setInterval(()=>{
+      const t=Math.min(1,(performance.now()-start)/duration);
+      a.volume=Math.max(0,Math.min(1,from+(target-from)*t));
+      if(t>=1)clearDuck();
+    },50);
+  }
+  function setHeartbeatDuck(on,restoreMs=1700){
+    if(heartbeatDuck===on)return;
+    heartbeatDuck=on;
+    if(audio && !audio.paused)fadeVolume(on?volume*.28:volume,on?350:restoreMs);
+  }
   function clearFade(){++fadeId;if(fadeTimer){cancelAnimationFrame(fadeTimer);fadeTimer=0;}}
   function ensure(){if(!audio){audio=new Audio(src);audio.loop=true;audio.preload='auto';audio.volume=0;}return audio;}
   function play(){
     if(!active||stoppedForTime||!taRunning||!sfx.on||document.hidden)return;
     const a=ensure();clearFade();
     // Start immediately at the target level; keep pause/resume and outro fades unchanged.
-    a.volume=volume;
+    a.volume=heartbeatDuck?volume*.28:volume;
     sfx.setCenturyMix(true);
     const ticket=serial;
     const promise=a.play();if(promise&&promise.catch)promise.catch(()=>{if(ticket===serial){/* Mobile autoplay restrictions: retry at next gesture. */}});
   }
   function start(){
     if(active)return;
-    active=true;stoppedForTime=!!flood;serial++;
+    active=true;heartbeatDuck=false;stoppedForTime=!!flood;serial++;
     const a=ensure();clearFade();try{a.currentTime=0;}catch(_){}
     if(!stoppedForTime)play();
   }
@@ -4263,7 +4286,7 @@ const taCenturyMusic=(()=>{
   function timeResume(){if(!active)return;stoppedForTime=false;play();}
   function stop(immediate=false,fadeMs=900){
     if(!active&&!audio)return;
-    active=false;stoppedForTime=false;serial++;clearFade();sfx.setCenturyMix(false);
+    active=false;heartbeatDuck=false;clearDuck();stoppedForTime=false;serial++;clearFade();sfx.setCenturyMix(false);
     if(!audio)return;
     const a=audio;
     if(immediate||a.paused){a.pause();try{a.currentTime=0;}catch(_){}a.volume=0;return;}
@@ -4281,7 +4304,7 @@ const taCenturyMusic=(()=>{
   // Hold for 20 seconds after the result appears, then fade out over 3 seconds.
   function resultOutro(delayMs=20000,fadeMs=3000){
     if(!active||!audio)return;
-    active=false;stoppedForTime=false;serial++;clearFade();
+    active=false;heartbeatDuck=false;clearDuck();stoppedForTime=false;serial++;clearFade();
     const a=audio;
     if(a.paused && sfx.on){a.play().catch(()=>{});}
     const ticket=fadeId;
@@ -4300,7 +4323,7 @@ const taCenturyMusic=(()=>{
   }
   function isActive(){return active;}
   function retry(){if(active&&!stoppedForTime&&audio&&audio.paused)play();}
-  return {start,stop,timeStop,timeResume,retry,resultOutro,isActive};
+  return {start,stop,timeStop,timeResume,retry,resultOutro,isActive,setHeartbeatDuck};
 })();
 // 連鎖100以降（Lv3）は背景の変化と同期して採集エリアを点灯し、連鎖が切れたらゆっくり戻す
 function comboRush(on){ const hero = document.querySelector(".hero"); if(hero) hero.classList.toggle("rush", !!on); }
@@ -4347,7 +4370,7 @@ function taSyncDriftingGlowWords(){
 var taMeteorHadCentury=false;
 function taMeteorReset(){
   const doc=document.documentElement;
-  doc.classList.remove('ta-meteor-lit','ta-night-lit');
+  doc.classList.remove('ta-meteor-lit','ta-night-lit','ta-300-lit');
   if(taMeteorHadCentury)doc.classList.add('ta-meteor-skip');
   taMeteorHadCentury=false;
 }
@@ -4356,7 +4379,7 @@ function expireCombo(){
   taMeteorReset();
   combo=0;comboWindowMs=COMBO_MS;
   taSyncDriftingGlowWords();
-  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit");
+  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-300-lit");
   const el=$("combo");el.classList.remove("on","x2","x3","run","heat","ta-skill-grace");
   el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();
 }
@@ -4393,6 +4416,7 @@ function bumpCombo(){
     document.documentElement.classList.remove("ta-meteor-lit");
   }
   document.documentElement.classList.toggle("ta-century-lit", combo>=100);
+  document.documentElement.classList.toggle("ta-300-lit", combo>=300);
   if(combo>=100)taMeteorHadCentury=true;
   if(combo===100 || combo===1) taSyncDriftingGlowWords();
   // Start the special BGM at 100 chains; stop it if the chain resets.
@@ -8069,7 +8093,7 @@ setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
 (function taPrewarmBackgrounds(){
   const run=()=>{
     const mobile=window.matchMedia&&window.matchMedia('(max-width: 700px)').matches;
-    const names=mobile?['night_dark_mobile.webp','night_mobile.webp','day_mobile.webp']:['night_dark.webp','night.webp','day.webp'];
+    const names=mobile?['night_dark_mobile.webp','night_mobile.webp','day_mobile.webp','day300_mobile.webp']:['night_dark.webp','night.webp','day.webp','day300.webp'];
     for(const name of names){
       const img=new Image();img.decoding='async';img.src='img/'+name;
       if(typeof img.decode==='function')img.decode().catch(()=>{});
@@ -8232,6 +8256,7 @@ function taRender(){
   const timeEl=document.getElementById('taTime');
   const seconds=Math.max(0,taSeconds);
   const countdown=taRunning && seconds>0 && seconds<=5;
+  taCenturyMusic.setHeartbeatDuck(taRunning && seconds>0 && seconds<=3);
   const count=countdown?Math.ceil(seconds):null;
   const nextTimeText=seconds.toFixed(1);
   if(timeEl.textContent!==nextTimeText)timeEl.textContent=nextTimeText;
@@ -8345,7 +8370,7 @@ function taFinish(){
   taRunning=false;taStarting=false;
   taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;
   taFloodComboRemaining=null;
-  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit");
+  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-300-lit");
   const finishedComboEl=document.getElementById('combo');
   if(finishedComboEl){
     finishedComboEl.classList.remove('on','x2','x3','run','heat','hold','paused','hit','up','ta-skill-grace');
@@ -8362,6 +8387,7 @@ function taFinish(){
   document.documentElement.classList.add('ta-result-locked');
   if(!document.getElementById('taTimeOverInputShield')){const shield=document.createElement('div');shield.id='taTimeOverInputShield';shield.setAttribute('aria-hidden','true');document.body.appendChild(shield);}
   taHeartbeatStop();
+  taCenturyMusic.setHeartbeatDuck(false,1800);
   document.querySelectorAll("#drift .word:not(.got)").forEach(w=>{
     if([...w.classList].some(c=>!["word","fast","ta-blue"].includes(c))) w.remove();
   });
@@ -8424,7 +8450,7 @@ function taBeginReady(){
   taCenturyMusic.stop(true);
   taMeteorReset();
   // DEMOでの操作履歴をゲーム本番へ持ち越さない。
-  taCancelFloodResume();clearTimeout(bumpCombo.h);taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit");
+  taCancelFloodResume();clearTimeout(bumpCombo.h);taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-300-lit");
   const comboEl=document.getElementById("combo");
   if(comboEl){comboEl.classList.remove("on","x2","x3","run","heat","paused","hold","ta-skill-grace");comboEl.style.removeProperty("--heat");}
   document.getElementById("cbn").textContent="0";document.getElementById("cbx").textContent="";comboRush(false);
@@ -8530,7 +8556,7 @@ async function taBegin(prepareOnly=false){
     const viewport=mobile?'mobile':'desktop';
     progress(15,'夜と朝の景色を準備しています');
     if(taPreparedViewport!==viewport){
-      const names=mobile?['night_dark_mobile.webp','night_mobile.webp','day_mobile.webp']:['night_dark.webp','night.webp','day.webp'];
+      const names=mobile?['night_dark_mobile.webp','night_mobile.webp','day_mobile.webp','day300_mobile.webp']:['night_dark.webp','night.webp','day.webp','day300.webp'];
       await Promise.all(names.map(n=>taPreloadImage('img/'+n)));
       taPreparedViewport=viewport;
     }
