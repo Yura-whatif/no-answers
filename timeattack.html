@@ -9822,16 +9822,24 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const get=id=>{const el=document.getElementById(id);if(!el)return null;const r=el.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};};
   return [get('taScore'),get('taTime')];
  }
- // Mobile visual-only budget: preserve the first visible orbs and sample
- // later overlapping flights. Awards and hit detection never use this budget.
- let taCrossOrbVisualCount=0;
+ // Cross reward flights have their own visual budget; word flames and awards are untouched.
+ const TA_CROSS_FLIGHT_WINDOW_MS=300;
+ const TA_CROSS_FLIGHT_MS=550;
+ const TA_CROSS_MAX_ACTIVE_ORBS=48; // DOM/animation cap, including consecutive cross pulses.
+ let taCrossFlightWindowStart=-Infinity;
+ let taCrossFlightActive=0;
+ let taCrossVisualSequence=0;
  function crossRewardOrbs(w,position){
-  if(taMobileFx){
-   const n=taCrossOrbVisualCount++;
-   // 10 complete two-orb flights, then one pair out of every four hits.
-   // This avoids a sudden empty field while bounding concurrent DOM animations.
-   if(n>=10 && (n-10)%4!==0)return;
+  const now=performance.now();
+  // A new burst window starts only after the previous window expires.
+  // Flights from consecutive pulses share the same concurrent cap.
+  if(now-taCrossFlightWindowStart>=TA_CROSS_FLIGHT_WINDOW_MS){
+   taCrossFlightWindowStart=now;
+   taCrossVisualSequence=0;
   }
+  const n=taCrossVisualSequence++;
+  // Deterministic 60% sampling: six visual pairs out of every ten hits.
+  if((n%10)>=6 || taCrossFlightActive+2>TA_CROSS_MAX_ACTIVE_ORBS)return;
   const wr=position?null:w.getBoundingClientRect(),sx=position?position.x:wr.left+wr.width/2,sy=position?position.y:wr.top+wr.height/2;
   const targets=taCrossTargets();
   for(let i=0;i<2;i++){
@@ -9841,15 +9849,18 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    orb.style.position='fixed';orb.style.left=sx+'px';orb.style.top=sy+'px';
    orb.style.pointerEvents='none';orb.style.zIndex='120';
    document.body.append(orb);
+   taCrossFlightActive++;
    const dx=target.x-sx,dy=target.y-sy,bend=isTime?-23:23;
+   let cleaned=false;
+   const cleanup=()=>{if(cleaned)return;cleaned=true;taCrossFlightActive=Math.max(0,taCrossFlightActive-1);taReturnCrossOrb(orb);};
    const a=orb.animate([
     {transform:'translate(-50%,-50%) scale(.5)',opacity:0},
     {transform:'translate(-50%,-50%) scale(1.35)',opacity:1,offset:.17},
     {transform:`translate(calc(-50% + ${dx*.48+bend}px),calc(-50% + ${dy*.48-35}px)) scale(1.05)`,opacity:1,offset:.55},
     {transform:`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(.45)`,opacity:0}
-   ],{duration:850,easing:'ease-in-out',fill:'forwards'});
-   a.onfinish=()=>taReturnCrossOrb(orb);
-   a.oncancel=()=>{if(orb.isConnected)taReturnCrossOrb(orb);};
+   ],{duration:TA_CROSS_FLIGHT_MS,easing:'ease-in-out',fill:'forwards'});
+   a.onfinish=cleanup;
+   a.oncancel=cleanup;
   }
  }
  function pulseCollect(b,radius){
@@ -9870,7 +9881,6 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   }
   if(taPerfEnabled)taPerfCost('read',performance.now()-phaseReadStart);
   taCrossRewardTargets=taCrossTargets();
-  taCrossOrbVisualCount=0;
   taCrossHeroRect=hr;
   for(const hit of hits){
    const w=hit.w;
