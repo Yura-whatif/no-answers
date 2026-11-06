@@ -4754,48 +4754,62 @@ function taClearChainSceneReturn(){
 }
 function taFadeChainScene(){
   const root=document.documentElement;
-  if(root.classList.contains('ta-500-lit'))return; // Preserve dedicated 3.5s void return.
   const hero=document.querySelector('#viewMain>.hero');
   if(!hero || root.dataset.yura!=='black')return;
-  const stageClasses=['ta-400-lit','ta-300-lit','ta-200-lit','ta-century-lit','ta-meteor-lit'];
+  const stageClasses=['ta-500-lit','ta-400-lit','ta-300-lit','ta-200-lit','ta-century-lit','ta-meteor-lit'];
   if(!stageClasses.some(cls=>root.classList.contains(cls)))return;
-  // Capture computed opacity before removing milestone classes, not the target
-  // opacity (1) of a still-running CSS transition.
-  const layers=Array.from(hero.querySelectorAll(':scope > picture.ta-bg-picture'));
-  const samples=layers.map(layer=>({layer,opacity:getComputedStyle(layer).opacity}));
+
+  // Sample the *current* on-screen blend before expireCombo clears stage flags.
+  // Construct independent image layers instead of cloning picture elements:
+  // clones inherit competing milestone CSS and sometimes disappear instantly.
+  const sources=Array.from(hero.querySelectorAll(':scope > picture.ta-bg-picture.b'));
+  const frames=sources.map(source=>{
+    const img=source.querySelector('img');
+    if(!img)return null;
+    const style=getComputedStyle(source);
+    const imageStyle=getComputedStyle(img);
+    return {src:img.currentSrc||img.src,opacity:Math.max(0,Math.min(1,parseFloat(style.opacity)||0)),
+      imageOpacity:Math.max(0,Math.min(1,parseFloat(imageStyle.opacity)||0)),
+      objectPosition:imageStyle.objectPosition||'center center'};
+  }).filter(Boolean);
+  const voidOpacity=root.classList.contains('ta-500-lit')
+    ? Math.max(0,Math.min(1,parseFloat(getComputedStyle(hero.querySelector('.ta-stage9-void')).opacity)||0)) : 0;
   taClearChainSceneReturn();
   const token=taChainSceneReturnToken;
   const snapshot=document.createElement('div');
   snapshot.className='ta-chain-scene-snapshot';
   snapshot.setAttribute('aria-hidden','true');
-  Object.assign(snapshot.style,{position:'absolute',inset:'0',overflow:'hidden',pointerEvents:'none',zIndex:'20',opacity:'1',transition:'none',isolation:'isolate'});
-  samples.forEach(({layer,opacity})=>{
-    const copy=layer.cloneNode(true);
-    copy.classList.remove('ta-chain-return-picture','ta-chain-return-fading');
-    Object.assign(copy.style,{position:'absolute',inset:'0',width:'100%',height:'100%',display:'block',opacity,transition:'none',pointerEvents:'none'});
-    copy.style.setProperty('opacity',opacity,'important');
-    // Clones are nested in the snapshot, so the original direct-child CSS
-    // (#viewMain>.hero>picture...) no longer sizes their images. Explicitly
-    // preserve the original full-bleed cover layout, or the fade appears instant.
-    const image=copy.querySelector('img');
-    if(image){
-      Object.assign(image.style,{display:'block',width:'100%',height:'100%',objectFit:'cover',objectPosition:getComputedStyle(layer.querySelector('img')).objectPosition,opacity:'1',transform:'none',filter:'none'});
-    }
-    snapshot.appendChild(copy);
+  Object.assign(snapshot.style,{position:'absolute',inset:'0',overflow:'hidden',pointerEvents:'none',zIndex:'20',opacity:'1',isolation:'isolate'});
+  frames.forEach(frame=>{
+    if(frame.opacity<=0.001)return;
+    const layer=document.createElement('img');
+    layer.src=frame.src;
+    Object.assign(layer.style,{position:'absolute',inset:'0',width:'100%',height:'100%',display:'block',
+      objectFit:'cover',objectPosition:frame.objectPosition,opacity:String(frame.opacity*frame.imageOpacity),
+      transition:'none',animation:'none',transform:'none',filter:'none',pointerEvents:'none'});
+    snapshot.appendChild(layer);
   });
+  if(voidOpacity>0.001){
+    const black=document.createElement('div');
+    Object.assign(black.style,{position:'absolute',inset:'0',background:'#000',opacity:String(voidOpacity)});
+    snapshot.appendChild(black);
+  }
   hero.appendChild(snapshot);
-  // The frozen blend stays visually identical on the first paint. Fade the
-  // entire blend over stage 01, without completing an intermediate stage.
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    if(token!==taChainSceneReturnToken || !snapshot.isConnected)return;
-    snapshot.style.transition='opacity 2.6s ease-in-out';
-    snapshot.style.opacity='0';
-  }));
-  setTimeout(()=>{if(token===taChainSceneReturnToken)snapshot.remove();},2850);
+  const duration=root.classList.contains('ta-500-lit')?3500:2600;
+  // WAAPI starts at the sampled state and avoids CSS transitions being reset
+  // by milestone classes in the same frame. Cleanup is tied to this token.
+  const animation=snapshot.animate([{opacity:1},{opacity:0}],{duration,easing:'ease-in-out',fill:'forwards'});
+  animation.onfinish=()=>{if(token===taChainSceneReturnToken)snapshot.remove();};
+  animation.oncancel=()=>{snapshot.remove();};
+  // A fallback cleanup in case the tab was suspended during the transition.
+  setTimeout(()=>{if(token===taChainSceneReturnToken)snapshot.remove();},duration+800);
 }
+
 function expireCombo(){
   taFadeChainScene();
-  taBeginVoidReturn();
+  // The snapshot handles the 500+ return too; do not run a second, competing
+  // void fade on the original layers.
+  taCancelVoidReturn();
   taSilverDust.sync(false);taSilverMusic.stop();
   taCancelLampPulse();
   taCancelFloodResume();
