@@ -1307,8 +1307,6 @@ header > .hdr-r{grid-column:3;grid-row:1}
 [data-yura="black"] .pen .body{fill:color-mix(in srgb,var(--ink) 75%,transparent)}
 @keyframes penIdle{0%,100%{transform:rotate(0)}50%{transform:rotate(-6deg) translateY(-1px)}}
 @keyframes penWrite{0%,100%{transform:rotate(-2deg) translateY(0)}50%{transform:rotate(3deg) translateY(-2px)}}
-.ikan .pour{display:none;font-size:.62rem;letter-spacing:.1em;color:var(--accent)}
-.ikan.pouring .pour{display:inline}
 .ln.locked p{visibility:hidden}
 .ln.locked:not(.next)::before{content:"";position:absolute;left:0;right:30%;top:50%;height:1px;background:repeating-linear-gradient(to right,var(--line) 0 6px,transparent 6px 11px)}
 .ln .cover{z-index:2}
@@ -2338,7 +2336,7 @@ html.ta-void-return:not(.ta-500-lit) #viewMain>.hero>.ta-stage9-void{
     <div class="ta-ultimate-labels" id="taUltimateLabels" aria-live="off"></div>
     <div class="floodbar glowbar" id="glowbar" hidden><span>陽だまり</span><i></i></div>
     <div class="floodbar glowbar sakurabar" id="sakurabar" hidden><span>花の記憶</span><i></i></div>
-    <div class="ikan" id="ikan" aria-live="polite">違和感 <b id="iv">0</b><span class="tm" id="tm"></span><span class="pour" id="pour">ペンに注いでいます</span></div>
+    <div class="ikan" id="ikan" aria-live="polite">違和感 <b id="iv">0</b><span class="tm" id="tm"></span></div>
     <div class="rtray" id="rtray" hidden aria-label="読了特典のストック"></div>
   </figure>
 
@@ -3896,7 +3894,7 @@ function markLines(d){
   $("ln1").classList.toggle("blank", disp <= L0);
 }
 const penActive = () => { if(open || libOpen) return false; const d = curPiece(); return !!d && (prog[d.id] || 0) < 2; };
-function updatePour(){ $("ikan").classList.toggle("pouring", penActive()); }
+function updatePour(){} // Legacy UI removed; retained as a no-op for existing callers.
 function placePen(){
   const pen = $("pen"), lines = $("lines"), d = curPiece();
   if(!d || open || disp >= targetChars(d) && (prog[d.id]||0) >= 2){ pen.classList.add("away"); return; }
@@ -3915,7 +3913,7 @@ function placePen(){
 function kickPen(){ if(!writing){ writing = true; setTimeout(writeStep, 120); } }
 function writeStep(){
   const d = curPiece(), pen = $("pen");
-  if(!d || d.id !== dispId || libOpen){ writing = false; pen.classList.remove("moving"); return; }
+  if(!d || d.id !== dispId || libOpen){ writing = false; pen.classList.remove("moving"); updatePour(); return; }
   const tgt = targetChars(d), L0 = [...d.l[0]].length, L1 = [...d.l[1]].length;
   if(disp >= tgt){
     writing = false; pen.classList.remove("moving");
@@ -4483,7 +4481,7 @@ const taCenturyMusic=(()=>{
     const a=ensure();clearFade();try{a.currentTime=0;}catch(_){}
     if(!stoppedForTime)play();
   }
-  function timeStop(){if(!active)return;stoppedForTime=true;clearFade();sfx.setCenturyMix(false);if(audio)audio.pause();}
+  function timeStop(){if(!active)return;stoppedForTime=true;clearFade();clearDuck();sfx.setCenturyMix(false);if(audio)audio.pause();}
   function timeResume(){if(!active)return;stoppedForTime=false;if(taSilverMusic.isActive())return;play();}
   function stop(immediate=false,fadeMs=900){
     if(!active&&!audio)return;
@@ -4529,56 +4527,114 @@ const taCenturyMusic=(()=>{
 })();
 // 300-chain music: fade out century over 4s, hold 1s silence, then start new track at full volume.
 const taSilverMusic=(()=>{
-  let audio=null,active=false,pausedForTime=false,fadeTimer=0,fadeTicket=0,outroTimer=0,transitionTimer=0,transitionPending=false;
+  let audio=null,active=false,pausedForTime=false,fadeTimer=0,fadeTicket=0,outroTimer=0;
+  let transitionTimer=0,transitionGeneration=0,phase='idle',phaseStarted=0,phaseRemaining=0;
   const volume=.38;
   let heartbeatDuck=false;
   function ensure(){if(!audio){audio=new Audio('audio/Sora_Vatum.mp3');audio.loop=true;audio.preload='auto';audio.volume=0;}return audio;}
-  function cancelFade(){if(transitionTimer){clearTimeout(transitionTimer);transitionTimer=0;}++fadeTicket;if(fadeTimer){cancelAnimationFrame(fadeTimer);fadeTimer=0;}if(outroTimer){clearTimeout(outroTimer);outroTimer=0;}}
-  function fadeTo(target,ms){if(!audio)return;const a=audio,from=a.volume,ticket=++fadeTicket,start=performance.now();
+  function cancelTransition(){
+    ++transitionGeneration;
+    if(transitionTimer){clearTimeout(transitionTimer);transitionTimer=0;}
+  }
+  function cancelFade(){
+    cancelTransition();++fadeTicket;
+    if(fadeTimer){cancelAnimationFrame(fadeTimer);fadeTimer=0;}
+    if(outroTimer){clearTimeout(outroTimer);outroTimer=0;}
+  }
+  function fadeTo(target,ms){
+    if(!audio)return;
+    const a=audio,from=a.volume,ticket=++fadeTicket,start=performance.now();
+    if(fadeTimer){cancelAnimationFrame(fadeTimer);fadeTimer=0;}
+    if(ms<=0){a.volume=target;return;}
     const step=now=>{if(ticket!==fadeTicket)return;const t=Math.min(1,(now-start)/ms);a.volume=Math.max(0,Math.min(1,from+(target-from)*(t*t*(3-2*t))));if(t<1)fadeTimer=requestAnimationFrame(step);else fadeTimer=0;};
-    if(ms<=0){a.volume=target;return;}fadeTimer=requestAnimationFrame(step);
+    fadeTimer=requestAnimationFrame(step);
   }
   function setHeartbeatDuck(on,restoreMs=1700){
     if(heartbeatDuck===on)return;
     heartbeatDuck=on;
-    if(active&&audio&&!audio.paused)fadeTo(on?volume*.28:volume,on?350:restoreMs);
+    if(active&&phase==='playing'&&audio&&!audio.paused)fadeTo(on?volume*.28:volume,on?350:restoreMs);
   }
-  function play(){if(!active||pausedForTime||!sfx.on||document.hidden)return;const a=ensure();a.play().catch(()=>{});}
+  function play(){
+    if(!active||pausedForTime||!sfx.on||document.hidden)return;
+    const a=ensure();a.play().catch(()=>{});
+  }
   function beginNewTrack(){
-    if(!active)return;
-    transitionTimer=0;
-    if(pausedForTime){transitionPending=true;return;}
-    transitionPending=false;
+    if(!active||pausedForTime)return;
+    phase='playing';phaseRemaining=0;transitionTimer=0;
     document.documentElement.classList.remove('ta-300-gold-fading');
     document.documentElement.classList.add('ta-silver-music-started');
     const a=ensure();a.volume=heartbeatDuck?volume*.28:volume;
-    play(); // No fade-in: begin at normal playback level.
+    play(); // The new track starts at full target volume, without fade-in.
+  }
+  function schedulePhase(ms){
+    cancelTransition();
+    if(!active||pausedForTime)return;
+    phaseRemaining=Math.max(0,ms);phaseStarted=performance.now();
+    const ticket=transitionGeneration;
+    transitionTimer=setTimeout(()=>{
+      if(ticket!==transitionGeneration||!active||pausedForTime)return;
+      transitionTimer=0;
+      if(phase==='fading'){
+        taCenturyMusic.stop(true);
+        phase='silence';schedulePhase(1000);
+      }else if(phase==='silence')beginNewTrack();
+    },phaseRemaining);
+  }
+  function startFade(ms){
+    if(!active||pausedForTime)return;
+    phase='fading';
+    taCenturyMusic.fadeTo(0,ms);
+    schedulePhase(ms);
   }
   function start(){
     if(active)return;
-    active=true;heartbeatDuck=false;pausedForTime=!!flood;cancelFade();transitionPending=true;
+    active=true;heartbeatDuck=false;pausedForTime=!!flood;
+    cancelFade();phase='fading';phaseRemaining=4000;
     document.documentElement.classList.remove('ta-silver-music-started');
     document.documentElement.classList.add('ta-300-gold-fading');
     const a=ensure();a.pause();try{a.currentTime=0;}catch(_){}a.volume=volume;
-    // Only the 100-chain music fades. The next 1s is completely silent.
-    taCenturyMusic.fadeTo(0,4000);
-    transitionTimer=setTimeout(()=>{
-      if(!active)return;
-      taCenturyMusic.stop(true);
-      transitionTimer=setTimeout(beginNewTrack,1000);
-    },4000);
+    if(!pausedForTime)startFade(4000);
   }
-  function timeStop(){if(!active)return;pausedForTime=true;if(audio)audio.pause();}
-  function timeResume(){if(!active)return;pausedForTime=false;if(transitionPending)return;play();if(audio)audio.volume=heartbeatDuck?volume*.28:volume;}
-  function stop(immediate=false,ms=900){active=false;heartbeatDuck=false;pausedForTime=false;transitionPending=false;document.documentElement.classList.remove('ta-silver-music-started','ta-300-gold-fading');cancelFade();if(!audio)return;const a=audio;
+  function timeStop(){
+    if(!active||pausedForTime)return;
+    pausedForTime=true;
+    if(phase==='fading'||phase==='silence'){
+      phaseRemaining=Math.max(0,phaseRemaining-(performance.now()-phaseStarted));
+      cancelTransition();
+    }
+    if(audio)audio.pause();
+  }
+  function timeResume(){
+    if(!active||!pausedForTime)return;
+    pausedForTime=false;
+    if(phase==='fading'){
+      taCenturyMusic.timeResume();
+      startFade(phaseRemaining);
+    }else if(phase==='silence')schedulePhase(phaseRemaining);
+    else if(phase==='playing'){
+      play();if(audio)audio.volume=heartbeatDuck?volume*.28:volume;
+    }
+  }
+  function stop(immediate=false,ms=900){
+    active=false;heartbeatDuck=false;pausedForTime=false;phase='idle';phaseRemaining=0;
+    document.documentElement.classList.remove('ta-silver-music-started','ta-300-gold-fading');
+    cancelFade();if(!audio)return;const a=audio;
     if(immediate||a.paused){a.pause();a.volume=0;try{a.currentTime=0;}catch(_){}return;}
-    fadeTo(0,ms);const ticket=fadeTicket;setTimeout(()=>{if(ticket!==fadeTicket)return;a.pause();try{a.currentTime=0;}catch(_){}},ms+50);
+    fadeTo(0,ms);const ticket=fadeTicket;
+    setTimeout(()=>{if(ticket!==fadeTicket)return;a.pause();try{a.currentTime=0;}catch(_){}},ms+50);
   }
-  function resultOutro(delayMs=20000,fadeMs=3000){if(!active||!audio)return;active=false;heartbeatDuck=false;pausedForTime=false;transitionPending=false;document.documentElement.classList.remove('ta-silver-music-started','ta-300-gold-fading');cancelFade();const a=audio;
+  function resultOutro(delayMs=20000,fadeMs=3000){
+    if(!active||!audio)return;
+    active=false;heartbeatDuck=false;pausedForTime=false;phase='idle';phaseRemaining=0;
+    document.documentElement.classList.remove('ta-silver-music-started','ta-300-gold-fading');
+    cancelFade();const a=audio;
     if(a.paused&&sfx.on)a.play().catch(()=>{});
-    outroTimer=setTimeout(()=>{outroTimer=0;fadeTo(0,fadeMs);const ticket=fadeTicket;setTimeout(()=>{if(ticket===fadeTicket){a.pause();try{a.currentTime=0;}catch(_){}}},fadeMs+50);},delayMs);
+    outroTimer=setTimeout(()=>{
+      outroTimer=0;fadeTo(0,fadeMs);const ticket=fadeTicket;
+      setTimeout(()=>{if(ticket===fadeTicket){a.pause();try{a.currentTime=0;}catch(_){}}},fadeMs+50);
+    },delayMs);
   }
-  function retry(){if(active&&!pausedForTime&&!transitionPending){play();if(audio&&audio.volume===0)audio.volume=heartbeatDuck?volume*.28:volume;}}
+  function retry(){if(active&&!pausedForTime&&phase==='playing'){play();if(audio&&audio.volume===0)audio.volume=heartbeatDuck?volume*.28:volume;}}
   return {start,stop,timeStop,timeResume,resultOutro,retry,setHeartbeatDuck,isActive:()=>active};
 })();
 // Sparse, independent silver motes: CSS animations only; no animation-frame loop.
@@ -4712,7 +4768,7 @@ function taFadeChainScene(){
   const snapshot=document.createElement('div');
   snapshot.className='ta-chain-scene-snapshot';
   snapshot.setAttribute('aria-hidden','true');
-  Object.assign(snapshot.style,{position:'absolute',inset:'0',overflow:'hidden',pointerEvents:'none',zIndex:'3',opacity:'1',transition:'none',isolation:'isolate'});
+  Object.assign(snapshot.style,{position:'absolute',inset:'0',overflow:'hidden',pointerEvents:'none',zIndex:'20',opacity:'1',transition:'none',isolation:'isolate'});
   samples.forEach(({layer,opacity})=>{
     const copy=layer.cloneNode(true);
     copy.classList.remove('ta-chain-return-picture','ta-chain-return-fading');
@@ -4727,7 +4783,7 @@ function taFadeChainScene(){
     }
     snapshot.appendChild(copy);
   });
-  hero.insertBefore(snapshot,hero.querySelector('.ta-stage9-void'));
+  hero.appendChild(snapshot);
   // The frozen blend stays visually identical on the first paint. Fade the
   // entire blend over stage 01, without completing an intermediate stage.
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
@@ -4808,8 +4864,8 @@ function bumpCombo(){
     const names=mobile?['stage_06.webp','stage_07.webp']:['stage_06.webp','stage_07.webp'];
     for(const name of names){const im=new Image();im.decoding='async';im.src='img/'+name;if(im.decode)im.decode().catch(()=>{});}
   }
-  if(combo===100)taCenturyMusic.start();
-  if(combo===300)taSilverMusic.start();
+  if(combo>=100 && !taCenturyMusic.isActive() && !taSilverMusic.isActive())taCenturyMusic.start();
+  if(combo>=300 && !taSilverMusic.isActive())taSilverMusic.start();
   else if(combo===1){taSilverMusic.stop();taCenturyMusic.stop();}
   // The previous offsetWidth read forced a full style/layout flush on EVERY
   // collection, especially expensive while multiple skills animate.
@@ -5112,7 +5168,7 @@ function startFlood(gem){
 }
 function endFlood(){
   clearTimeout(startFlood.h);
-  flood = false; document.documentElement.classList.remove("ta-sakura-time-frozen"); taCenturyMusic.timeResume(); taSilverMusic.timeResume();
+  flood = false; document.documentElement.classList.remove("ta-sakura-time-frozen"); if(!taSilverMusic.isActive())taCenturyMusic.timeResume(); taSilverMusic.timeResume();
   // Apply the final stage once, without replaying intermediate milestones.
   taApplyComboBackground(combo,true); clearTimeout(startFlood.tickDelay); clearInterval(startFlood.tk);
   // The transition back to normal rendering can take over a second on slower
