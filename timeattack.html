@@ -4125,7 +4125,7 @@ const taCenturyDust=(()=>{
   return {emit};
 })();
 // あふれる時間：ときどき明滅する言葉が現れ、触れると短いあいだ言葉が大量にあふれ出す
-const FLOOD_MS = 8000;   // 時間が止まっている長さ
+const FLOOD_MS = 7000;   // 時間が止まっている長さ
 let flood = false, nextSpecialAt = Date.now() + 60000, forceSpecial = false;
 let nextOddAt = Date.now() + 30000, forceOdd = false;
 let nextMultiAt = Date.now() + 15000, forceMulti = false;
@@ -4971,27 +4971,34 @@ function endFlood(){
   const flightCount = pend.length;
   // Even distribution, rather than random omission, preserves the visible flow.
   const visibleCount = Math.round(flightCount * flightKeepRate);
+  // Time-stop release: launch all selected decorative orbs within 300ms.
+  // Each flight lasts 550ms; rewards retain their original arrival schedule.
+  const TA_RELEASE_LAUNCH_WINDOW_MS = 300;
+  const TA_RELEASE_FLIGHT_MS = 550;
+  const TA_RELEASE_ORIGINAL_FLIGHT_MS = 850;
+  const TA_RELEASE_ORIGINAL_STAGGER_MS = 55;
+  const TA_RELEASE_BASE_DELAY_MS = 380;
   pend.forEach(({x, y, taTime, taPoints}, i) => {
     const cx = fr.left + x, cy = fr.top + y;
     const shouldDraw = flightKeepRate === 1 ||
       Math.floor((i + 1) * visibleCount / flightCount) > Math.floor(i * visibleCount / flightCount);
-    const arrivalDelay = 380 + i * 55 + 850;
-    const award = (boosted) => {
+    // Award timing is intentionally unchanged, even when visual arrival is earlier.
+    const arrivalDelay = TA_RELEASE_BASE_DELAY_MS + i * TA_RELEASE_ORIGINAL_STAGGER_MS + TA_RELEASE_ORIGINAL_FLIGHT_MS;
+    const boostedAtRelease = glowRemain > 0;
+    const award = () => {
       if(awardSession !== taFinishToken || !taRunning)return;
       if(i % 4 === 0)sfx.arrive();
-      taAward(taTime, taTime ? 1 : taPoints, false, boosted && mode === 'black');
+      taAward(taTime, taTime ? 1 : taPoints, false, boostedAtRelease && mode === 'black');
     };
-    if(!shouldDraw){
-      // No DOM node or animation for the skipped decorative orb.
-      // The +1 / +score presentation and reward are NOT skipped.
-      setTimeout(()=>award(glowRemain>0),arrivalDelay);
-      return;
-    }
+    setTimeout(award, arrivalDelay);
+    if(!shouldDraw)return;
+    const launchDelay = flightCount <= 1 ? 0 : Math.round(i * TA_RELEASE_LAUNCH_WINDOW_MS / (flightCount - 1));
     setTimeout(()=>{
       if(awardSession !== taFinishToken || !taRunning)return;
       const o = document.createElement("span"); o.className = "orb";
-      taStyleRewardOrb(o,taTime,glowRemain>0);
+      taStyleRewardOrb(o,taTime,boostedAtRelease);
       o.style.left = cx + "px"; o.style.top = cy + "px";
+      o.style.pointerEvents = 'none';
       document.body.append(o);
       const dx = (taTime ? timeX : scoreX) - cx;
       const dy = (taTime ? timeY : scoreY) - cy;
@@ -5001,13 +5008,12 @@ function endFlood(){
         {transform:"translate(0,-4px) scale(1.6)",opacity:1,offset:.2},
         {transform:`translate(${dx*.3+sway}px,${dy*.3-40}px) scale(1.1)`,opacity:.95,offset:.5},
         {transform:`translate(${dx}px,${dy}px) scale(.45)`,opacity:.5}
-      ],{duration:850,easing:"cubic-bezier(.45,0,.6,1)",fill:"forwards"});
-      animation.onfinish=()=>{
-        const boosted=o.classList.contains('ta-reward-boost');
-        o.remove();
-        award(boosted);
-      };
-    },380+i*55);
+      ],{duration:TA_RELEASE_FLIGHT_MS,easing:"cubic-bezier(.45,0,.6,1)",fill:"forwards"});
+      animation.onfinish=()=>o.remove();
+      animation.oncancel=()=>o.remove();
+      // Hard visual deadline; does not affect score, time, or combo logic.
+      setTimeout(()=>{if(o.isConnected){animation.cancel();o.remove();}},TA_RELEASE_FLIGHT_MS+30);
+    },launchDelay);
   });
   const cb = $("combo"); cb.classList.remove("hold");
   if(combo >= 50){ cb.classList.remove("revive"); void cb.offsetWidth; cb.classList.add("revive"); setTimeout(()=>cb.classList.remove("revive"), 1500); if(!flood)sfx.line(0); }
