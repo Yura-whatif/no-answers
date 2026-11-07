@@ -4770,6 +4770,9 @@ function taFadeChainScene(){
   const ctx=canvas.getContext('2d',{alpha:true});
   if(!ctx)return;
   ctx.scale(canvas.width/rect.width,canvas.height/rect.height);
+  // Make the captured composite opaque to prevent the reset stage from bleeding through
+  // partially transparent pixels and briefly brightening the return.
+  ctx.fillStyle='#080b12';ctx.fillRect(0,0,rect.width,rect.height);
   // The hero's underlying stage background remains visible during return.
   const pictures=hero.querySelectorAll(':scope > picture.ta-bg-picture:not(.ta-lamp-pulse)');
   let captured=false;
@@ -8918,6 +8921,8 @@ function taPickResultHint(){
  try{sessionStorage.setItem('taResultHintRecent',JSON.stringify([...recent,index].slice(-3)))}catch(_e){}
 }
 function taFinish(){
+  // Clear legacy void-only counter before Time Over; never expose '違和感 0' in results.
+  document.querySelectorAll('.void-pts').forEach(el=>el.remove());
   if(window.taOrbDiag)setTimeout(()=>window.taOrbDiag.report(),2100);
   if(!taRunning&&!taStarting)return;
   // Preserve the century track only when the finished score enters the top 20.
@@ -9766,7 +9771,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
 
  // One neutral collectible orb appears every 28-42 seconds of active game time.
  // The spawn timer and its lifetime pause during stopped time and while hidden.
- let rewardOrb=null, rewardElapsed=0, rewardNext=35+Math.random()*15;
+ let rewardOrb=null, rewardElapsed=0, rewardNext=32+Math.random()*14;
  let rewardVisibleElapsed=0, rewardLast=performance.now(), rewardLoopId=0;
  const rewardStyle=document.createElement('style');rewardStyle.textContent=`
  /* A soft, unfocused ember: no glass highlight or hard circular outline. */
@@ -9859,7 +9864,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  function collectRewardOrb(){
   if(!rewardOrb||!active())return;
   const r=rewardOrb.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
-  removeRewardOrb();rewardElapsed=0;rewardNext=35+Math.random()*15;
+  removeRewardOrb();rewardElapsed=0;rewardNext=32+Math.random()*14;
   rewardOrbBurst(x,y);
   try{sfx.boon();sfx.pickupShimmer();}catch(_){}
   // A full inventory still allows collecting and bursting the field orb,
@@ -9876,14 +9881,14 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(!active()&&rewardOrb)removeRewardOrb();
   if(active()&&!flood&&!comboPaused){
    if(rewardOrb){rewardVisibleElapsed+=dt;if(rewardVisibleElapsed>=6)removeRewardOrb(true);else rewardOrb.classList.toggle('expiring',rewardVisibleElapsed>5);}
-   else{rewardElapsed+=dt;if(rewardElapsed>=rewardNext){rewardElapsed=0;rewardNext=35+Math.random()*15;spawnRewardOrb();}}
+   else{rewardElapsed+=dt;if(rewardElapsed>=rewardNext){rewardElapsed=0;rewardNext=32+Math.random()*14;spawnRewardOrb();}}
   }
   rewardLoopId=requestAnimationFrame(rewardTick);
  }
  rewardLoopId=requestAnimationFrame(rewardTick);
- document.addEventListener('ta-item-reset',()=>{removeRewardOrb();rewardElapsed=0;rewardNext=35+Math.random()*15;rewardLast=performance.now();});
+ document.addEventListener('ta-item-reset',()=>{removeRewardOrb();rewardElapsed=0;rewardNext=32+Math.random()*14;rewardLast=performance.now();});
  document.addEventListener('ta-reward-spawn-test',()=>{if(!spawnRewardOrb(true))toast('玉を出現できません（表示中・ゲーム停止中）');});
- document.addEventListener('ta-item-state-change',()=>{if(!active()){selected=null;cancelStartup();removeRewardOrb();rewardElapsed=0;rewardNext=35+Math.random()*15;}sync();});
+ document.addEventListener('ta-item-state-change',()=>{if(!active()){selected=null;cancelStartup();removeRewardOrb();rewardElapsed=0;rewardNext=32+Math.random()*14;}sync();});
  document.addEventListener('visibilitychange',()=>{if(!active()){selected=null;removeRewardOrb();}sync();});
  sync();
  // Stage 3/4: 装飾粒子を再利用し、バースト中の大量生成と配列切り詰めを抑制。
