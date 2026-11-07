@@ -4756,68 +4756,71 @@ function taFadeChainScene(){
   const root=document.documentElement;
   const hero=document.querySelector('#viewMain>.hero');
   if(!hero || root.dataset.yura!=='black')return;
-  const stageClasses=['ta-500-lit','ta-400-lit','ta-300-lit','ta-200-lit','ta-century-lit','ta-meteor-lit'];
-  if(!stageClasses.some(cls=>root.classList.contains(cls)))return;
+  const stages=['ta-500-lit','ta-400-lit','ta-300-lit','ta-200-lit','ta-century-lit','ta-meteor-lit'];
+  if(!stages.some(cls=>root.classList.contains(cls)))return;
 
-  // Sample the *current* on-screen blend before expireCombo clears stage flags.
-  // Construct independent image layers instead of cloning picture elements:
-  // clones inherit competing milestone CSS and sometimes disappear instantly.
-  const sources=Array.from(hero.querySelectorAll(':scope > picture.ta-bg-picture:not(.ta-chain-return-picture)'));
-  const frames=sources.map(source=>{
-    const img=source.querySelector('img');
-    if(!img)return null;
-    const style=getComputedStyle(source);
-    const imageStyle=getComputedStyle(img);
-    return {src:img.currentSrc||img.src,opacity:Math.max(0,Math.min(1,parseFloat(style.opacity)||0)),
-      imageOpacity:Math.max(0,Math.min(1,parseFloat(imageStyle.opacity)||0)),
-      objectPosition:imageStyle.objectPosition||'center center',zIndex:style.zIndex==='auto'?0:(parseInt(style.zIndex,10)||0)};
-  }).filter(Boolean);
-  const voidOpacity=root.classList.contains('ta-500-lit')
-    ? Math.max(0,Math.min(1,parseFloat(getComputedStyle(hero.querySelector('.ta-stage9-void')).opacity)||0)) : 0;
+  // Capture the *painted* blend synchronously. Creating new <img> elements
+  // caused intermittent blank frames while their image data was decoding.
+  const rect=hero.getBoundingClientRect();
+  if(rect.width<1 || rect.height<1)return;
+  const scale=Math.min(window.devicePixelRatio||1,1.5);
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.max(1,Math.round(rect.width*scale));
+  canvas.height=Math.max(1,Math.round(rect.height*scale));
+  const ctx=canvas.getContext('2d',{alpha:true});
+  if(!ctx)return;
+  ctx.scale(canvas.width/rect.width,canvas.height/rect.height);
+  // The hero's underlying stage background remains visible during return.
+  const pictures=hero.querySelectorAll(':scope > picture.ta-bg-picture:not(.ta-lamp-pulse)');
+  let captured=false;
+  for(const picture of pictures){
+    const img=picture.querySelector('img');
+    if(!img || !img.complete || !img.naturalWidth)continue;
+    const opacity=parseFloat(getComputedStyle(picture).opacity);
+    if(!Number.isFinite(opacity) || opacity<=0.001)continue;
+    const imageOpacity=parseFloat(getComputedStyle(img).opacity);
+    const alpha=opacity*(Number.isFinite(imageOpacity)?imageOpacity:1);
+    if(alpha<=0.001)continue;
+    const fit=getComputedStyle(img).objectFit;
+    const iw=img.naturalWidth, ih=img.naturalHeight;
+    const factor=fit==='contain'?Math.min(rect.width/iw,rect.height/ih):Math.max(rect.width/iw,rect.height/ih);
+    const w=iw*factor,h=ih*factor;
+    ctx.globalAlpha=Math.min(1,alpha);
+    try{ctx.drawImage(img,(rect.width-w)/2,(rect.height-h)/2,w,h);captured=true;}catch(_e){}
+  }
+  const voidLayer=hero.querySelector(':scope > .ta-stage9-void');
+  if(voidLayer){
+    const alpha=parseFloat(getComputedStyle(voidLayer).opacity);
+    if(Number.isFinite(alpha) && alpha>0.001){
+      ctx.globalAlpha=Math.min(1,alpha);ctx.fillStyle='#000';ctx.fillRect(0,0,rect.width,rect.height);captured=true;
+    }
+  }
+  if(!captured)return;
+  ctx.globalAlpha=1;
   taClearChainSceneReturn();
   const token=taChainSceneReturnToken;
-  const snapshot=document.createElement('div');
-  snapshot.className='ta-chain-scene-snapshot';
-  snapshot.setAttribute('aria-hidden','true');
-  Object.assign(snapshot.style,{position:'absolute',inset:'0',overflow:'hidden',pointerEvents:'none',zIndex:'20',opacity:'1',isolation:'isolate',contain:'paint'});
-  frames.forEach(frame=>{
-    if(frame.opacity<=0.001)return;
-    const layer=document.createElement('img');
-    layer.src=frame.src;
-    Object.assign(layer.style,{position:'absolute',inset:'0',width:'100%',height:'100%',display:'block',
-      objectFit:'cover',objectPosition:frame.objectPosition,zIndex:String(frame.zIndex),opacity:String(frame.opacity*frame.imageOpacity),
-      transition:'none',animation:'none',transform:'none',filter:'none',pointerEvents:'none'});
-    snapshot.appendChild(layer);
-  });
-  if(voidOpacity>0.001){
-    const black=document.createElement('div');
-    Object.assign(black.style,{position:'absolute',inset:'0',background:'#000',opacity:String(voidOpacity)});
-    snapshot.appendChild(black);
-  }
-  hero.appendChild(snapshot);
   const duration=root.classList.contains('ta-500-lit')?3500:2600;
-  // WAAPI starts at the sampled state and avoids CSS transitions being reset
-  // by milestone classes in the same frame. Cleanup is tied to this token.
-  // Paint the captured scene before starting the fade. Starting WAAPI in the
-  // same task as the milestone reset could skip the initial composited frame.
-  // The snapshot is independent of all stage classes, including stage 07.
-  let started=false;
+  canvas.className='ta-chain-scene-snapshot';
+  canvas.setAttribute('aria-hidden','true');
+  Object.assign(canvas.style,{position:'absolute',inset:'0',width:'100%',height:'100%',
+    pointerEvents:'none',zIndex:'20',opacity:'1',transition:'none'});
+  hero.appendChild(canvas);
+  // Force the initial composited frame before resetting stage classes.
+  // WAAPI animates only the retained bitmap, not the stage DOM/CSS.
   const begin=()=>{
-    if(token!==taChainSceneReturnToken || !snapshot.isConnected)return;
-    started=true;
+    if(token!==taChainSceneReturnToken || !canvas.isConnected)return;
     try{
-      const animation=snapshot.animate([{opacity:1},{opacity:0}],
+      const animation=canvas.animate([{opacity:1},{opacity:0}],
         {duration,easing:'ease-in-out',fill:'forwards'});
-      animation.onfinish=()=>{if(token===taChainSceneReturnToken)snapshot.remove();};
-      animation.oncancel=()=>{if(token===taChainSceneReturnToken)snapshot.remove();};
+      animation.onfinish=()=>{if(token===taChainSceneReturnToken)canvas.remove();};
     }catch(_e){
-      snapshot.style.transition=`opacity ${duration}ms ease-in-out`;
-      snapshot.style.opacity='0';
+      canvas.style.transition=`opacity ${duration}ms ease-in-out`;
+      void canvas.offsetWidth;
+      canvas.style.opacity='0';
     }
   };
-  // The browser must have one opportunity to paint the fully opaque snapshot.
   requestAnimationFrame(()=>requestAnimationFrame(begin));
-  setTimeout(()=>{if(token===taChainSceneReturnToken)snapshot.remove();},duration+1200);
+  setTimeout(()=>{if(token===taChainSceneReturnToken)canvas.remove();},duration+1500);
 }
 
 function expireCombo(){
