@@ -6652,7 +6652,7 @@ function vortexRelease(){
   let lx = 0, ly = 0, flashed = false, flashedTier = 0, awardedBonus = 0;
   let gessenHits=[],gessenAwarded=false,gessenStraight=false;
   let gessenLastAt=0,gessenChainCount=0,gessenEffect=null,gessenEffectAnimation=null,gessenEffectTimer=null;
-  const GESSEN_CHAIN_DISTANCE=120,GESSEN_CHAIN_GRACE=550,GESSEN_CHAIN_MAX=5;
+  const GESSEN_CHAIN_DISTANCE=160,GESSEN_CHAIN_GRACE=750,GESSEN_CHAIN_MAX=5;
   let issenTrail=null,issenTrailAnimation=null; // 同じスワイプの一閃線を月閃に引き継ぐ
   // 月閃: 最初の2語を直線で回収し、方向を曲げた先で3語目を回収した場合のみ成立。
   function gessenHit(x,y){
