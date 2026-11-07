@@ -2256,6 +2256,14 @@ html.ta-void-return:not(.ta-500-lit) #viewMain>.hero>.ta-stage9-void{
   html.ta-void-return #viewMain>.hero>.ta-stage9-void{transition-duration:0s!important;}
 }
 </style>
+<style id="ta-no-legacy-ikan-timeover-20261107">
+/* Legacy index.html counter must never appear over the time-attack results. */
+body.ta-timeover-finished #ikan,
+body.ta-timeover-finished .void-pts,
+body.ta-timeover-finished .riser:has([data-rid="iv"]),
+body:has(#taLaunch:not([hidden])) #ikan,
+body:has(#taLaunch:not([hidden])) .void-pts{display:none!important;}
+</style>
 <style id="ta-chain-soft-return-20261106">
 /* The previous milestone is a temporary top layer, faded over stage 01.
    No stage 07 is introduced when leaving the 500+ void. */
@@ -4772,11 +4780,22 @@ function taFadeChainScene(){
   ctx.scale(canvas.width/rect.width,canvas.height/rect.height);
   // Make the captured composite opaque to prevent the reset stage from bleeding through
   // partially transparent pixels and briefly brightening the return.
-  ctx.fillStyle='#080b12';ctx.fillRect(0,0,rect.width,rect.height);
+  // Start from the same stage_01 image that is behind the milestone layers.
+  // A solid dark fill was not the actual rendered base and could cause a luminance jump.
+  const base=hero.querySelector(':scope > picture.ta-dark-start img');
+  if(base && base.complete && base.naturalWidth){
+    const bw=base.naturalWidth,bh=base.naturalHeight;
+    const k=Math.max(rect.width/bw,rect.height/bh);
+    ctx.drawImage(base,(rect.width-bw*k)/2,(rect.height-bh*k)/2,bw*k,bh*k);
+  }else{
+    // If the background is not decoded, do not display an inaccurate snapshot.
+    return;
+  }
   // The hero's underlying stage background remains visible during return.
   const pictures=hero.querySelectorAll(':scope > picture.ta-bg-picture:not(.ta-lamp-pulse)');
-  let captured=false;
+  let captured=true; // stage_01 has already been captured.
   for(const picture of pictures){
+    if(picture.classList.contains('ta-dark-start'))continue;
     const img=picture.querySelector('img');
     if(!img || !img.complete || !img.naturalWidth)continue;
     const opacity=parseFloat(getComputedStyle(picture).opacity);
@@ -8852,6 +8871,7 @@ function taSyncDemo(){
   if(play)play.classList.toggle('ta-demo-pulse',!taRunning&&!taStarting&&!(result&&!result.hidden)&&!(library&&!library.hidden));
 }
 function taUpdatePlay(){
+  if(taRunning||taStarting)document.body.classList.remove('ta-timeover-finished');
   const btn=document.getElementById('taPlay');
   const active=taRunning||taStarting;
   btn.classList.toggle('ta-is-running',active);
@@ -8921,6 +8941,7 @@ function taPickResultHint(){
  try{sessionStorage.setItem('taResultHintRecent',JSON.stringify([...recent,index].slice(-3)))}catch(_e){}
 }
 function taFinish(){
+  document.body.classList.add('ta-timeover-finished');
   // Clear legacy void-only counter before Time Over; never expose '違和感 0' in results.
   document.querySelectorAll('.void-pts').forEach(el=>el.remove());
   if(window.taOrbDiag)setTimeout(()=>window.taOrbDiag.report(),2100);
@@ -9029,6 +9050,7 @@ function taBeginReady(){
   const comboEl=document.getElementById("combo");
   if(comboEl){comboEl.classList.remove("on","x2","x3","run","heat","paused","hold","ta-skill-grace");comboEl.style.removeProperty("--heat");}
   document.getElementById("cbn").textContent="0";document.getElementById("cbx").textContent="";comboRush(false);
+  document.body.classList.remove('ta-timeover-finished');
   taStarting=true;++taFinishToken;
   // Keep DEMO styling until reveal classes are ready, avoiding a one-frame flash.
   // Keep the existing START text fade; softly illuminate only the manuscript frame.
