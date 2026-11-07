@@ -2278,9 +2278,10 @@ body:has(#taLaunch:not([hidden])) .void-pts{display:none!important;}
 </style>
 <style id="ta-chain-return-guard-20261107">
 #viewMain>.hero>.ta-chain-scene-snapshot>.ta-return-layer{position:absolute!important;inset:0!important;display:block!important;transition:none!important;pointer-events:none!important}
-#viewMain>.hero>.ta-chain-scene-snapshot>.ta-return-layer>img{width:100%!important;height:100%!important;object-fit:cover!important;opacity:1!important;filter:none!important}
+#viewMain>.hero>.ta-chain-scene-snapshot>.ta-return-layer>img{display:block}
 #viewMain #ikan{display:none!important}
 </style>
+<style id="ta-legacy-counter-permanent-hide">#ikan,.ikan,.void-pts{display:none!important;visibility:hidden!important}</style>
 </head>
 <body>
 <style>
@@ -2350,7 +2351,7 @@ body:has(#taLaunch:not([hidden])) .void-pts{display:none!important;}
     <div class="ta-ultimate-labels" id="taUltimateLabels" aria-live="off"></div>
     <div class="floodbar glowbar" id="glowbar" hidden><span>陽だまり</span><i></i></div>
     <div class="floodbar glowbar sakurabar" id="sakurabar" hidden><span>花の記憶</span><i></i></div>
-    <div class="ikan" id="ikan" aria-live="polite">違和感 <b id="iv">0</b><span class="tm" id="tm"></span></div>
+    <div class="ikan" id="ikan" aria-hidden="true" style="display:none!important" ><b id="iv">0</b><span class="tm" id="tm"></span></div>
     <div class="rtray" id="rtray" hidden aria-label="読了特典のストック"></div>
   </figure>
 
@@ -4781,20 +4782,32 @@ function taFadeChainScene(){
   wrapper.setAttribute('aria-hidden','true');
   Object.assign(wrapper.style,{position:'absolute',inset:'0',zIndex:'20',
     overflow:'hidden',pointerEvents:'none',opacity:'1',isolation:'isolate'});
+  // Preserve the exact rendered geometry of each source picture. Earlier
+  // snapshots replaced the source CSS with object-fit:cover and discarded
+  // source dimensions/position, which produced a visible one-frame zoom.
   const pictures=hero.querySelectorAll(':scope > picture.ta-bg-picture:not(.ta-lamp-pulse)');
   for(const original of pictures){
-    const opacity=getComputedStyle(original).opacity;
-    const value=parseFloat(opacity);
-    if(!Number.isFinite(value)||value<0.001)continue;
-    const copy=original.cloneNode(true);
-    copy.removeAttribute('id');
+    const pc=getComputedStyle(original);
+    const alpha=Number.parseFloat(pc.opacity);
+    if(!Number.isFinite(alpha)||alpha<0.001)continue;
+    const sourceImg=original.querySelector('img');
+    if(!sourceImg)continue;
+    const ic=getComputedStyle(sourceImg);
+    const copy=document.createElement('div');
     copy.className='ta-return-layer';
-    Object.assign(copy.style,{position:'absolute',inset:'0',width:'100%',height:'100%',
-      display:'block',opacity:String(value),transition:'none',pointerEvents:'none'});
-    const img=copy.querySelector('img');
-    if(img)Object.assign(img.style,{display:'block',width:'100%',height:'100%',
-      objectFit:getComputedStyle(original.querySelector('img')||original).objectFit||'cover',
-      objectPosition:'center center',opacity:'1',filter:'none'});
+    Object.assign(copy.style,{position:'absolute',left:pc.left,top:pc.top,
+      width:pc.width,height:pc.height,margin:pc.margin,overflow:pc.overflow,
+      opacity:String(alpha),transform:pc.transform,transformOrigin:pc.transformOrigin,
+      transition:'none',pointerEvents:'none',display:'block'});
+    const img=document.createElement('img');
+    img.src=sourceImg.currentSrc||sourceImg.src;
+    img.alt='';img.decoding='sync';
+    Object.assign(img.style,{display:ic.display,width:ic.width,height:ic.height,
+      maxWidth:ic.maxWidth,maxHeight:ic.maxHeight,objectFit:ic.objectFit,
+      objectPosition:ic.objectPosition,transform:ic.transform,transformOrigin:ic.transformOrigin,
+      filter:ic.filter,opacity:ic.opacity,position:ic.position,
+      left:ic.left,top:ic.top,margin:ic.margin});
+    copy.appendChild(img);
     wrapper.appendChild(copy);
   }
   const black=hero.querySelector(':scope > .ta-stage9-void');
@@ -5521,7 +5534,7 @@ const VOID_MS = 12000;
 // 違和感ポイントの表示：一行が消える直前にフェードインし、一行のオーブもタップのオーブもここへ集まる
 function makeVoidPoints(){
   const r = $("ikan").getBoundingClientRect();
-  const el = document.createElement("div"); el.className = "void-pts"; el.innerHTML = '違和感 <b class="vpv">0</b>';
+  const el = document.createElement("div"); el.className = "void-pts"; el.innerHTML = '<b class="vpv">0</b>'; el.style.display='none';
   el.style.left = (r.left + r.width/2) + "px"; el.style.top = (r.top + r.height/2) + "px"; document.body.append(el);
   const vp = { el, score: 0, base: ikan,
     rect(){ return el.getBoundingClientRect(); },
