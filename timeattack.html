@@ -4762,7 +4762,7 @@ function taFadeChainScene(){
   // Sample the *current* on-screen blend before expireCombo clears stage flags.
   // Construct independent image layers instead of cloning picture elements:
   // clones inherit competing milestone CSS and sometimes disappear instantly.
-  const sources=Array.from(hero.querySelectorAll(':scope > picture.ta-bg-picture.b'));
+  const sources=Array.from(hero.querySelectorAll(':scope > picture.ta-bg-picture:not(.ta-chain-return-picture)'));
   const frames=sources.map(source=>{
     const img=source.querySelector('img');
     if(!img)return null;
@@ -4770,7 +4770,7 @@ function taFadeChainScene(){
     const imageStyle=getComputedStyle(img);
     return {src:img.currentSrc||img.src,opacity:Math.max(0,Math.min(1,parseFloat(style.opacity)||0)),
       imageOpacity:Math.max(0,Math.min(1,parseFloat(imageStyle.opacity)||0)),
-      objectPosition:imageStyle.objectPosition||'center center'};
+      objectPosition:imageStyle.objectPosition||'center center',zIndex:style.zIndex==='auto'?0:(parseInt(style.zIndex,10)||0)};
   }).filter(Boolean);
   const voidOpacity=root.classList.contains('ta-500-lit')
     ? Math.max(0,Math.min(1,parseFloat(getComputedStyle(hero.querySelector('.ta-stage9-void')).opacity)||0)) : 0;
@@ -4785,7 +4785,7 @@ function taFadeChainScene(){
     const layer=document.createElement('img');
     layer.src=frame.src;
     Object.assign(layer.style,{position:'absolute',inset:'0',width:'100%',height:'100%',display:'block',
-      objectFit:'cover',objectPosition:frame.objectPosition,opacity:String(frame.opacity*frame.imageOpacity),
+      objectFit:'cover',objectPosition:frame.objectPosition,zIndex:String(frame.zIndex),opacity:String(frame.opacity*frame.imageOpacity),
       transition:'none',animation:'none',transform:'none',filter:'none',pointerEvents:'none'});
     snapshot.appendChild(layer);
   });
@@ -8660,11 +8660,11 @@ function taScoreDraw(now){
   if(Math.abs(taScore-taShownScore)>.001)taScoreAnim=requestAnimationFrame(taScoreDraw);
 }
 
-// Reward supply: independent of combos. Each 100,000 points grants one charge.
+// Reward supply: independent of combos. Each 200,000 points grants one charge.
 let taRewardScoreMilestone=0;
 function taCheckScoreItemRewards(){
   if(!taRunning)return;
-  const reached=Math.floor(Math.max(0,taScore*TA_SCORE_UNIT)/100000);
+  const reached=Math.floor(Math.max(0,taScore*TA_SCORE_UNIT)/200000);
   while(taRewardScoreMilestone<reached){
     taRewardScoreMilestone++;
     document.dispatchEvent(new CustomEvent('ta-item-score-recharge',{detail:{milestone:taRewardScoreMilestone}}));
@@ -10033,7 +10033,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   let length=0;for(let i=1;i<pts.length;i++)length+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
   const tap=length<22;
   const dualActive=crossBursts.length>0||performance.now()-taLastDualFinisher<taDualGreenWindowMs;
-  const n=dualActive?5:(tap?6:9); // Only dual-element skill + green is capped; never chain-count based.
+  const n=dualActive?5:(tap?6:8); // Swipe summons one fewer word; tap and dual-element counts stay unchanged.
   const fw=field.clientWidth||1,fh=field.clientHeight||1;
   const centers=[];
   for(let i=0;i<n;i++){
