@@ -2275,6 +2275,26 @@ html.ta-native-return-50 #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.
   transition-timing-function:ease-in-out!important;
 }
 </style>
+<style id="ta-all-native-fade-20261107">
+/* On expiry, fade actual background elements, never a cloned composite.
+   Preserve the drifting word layer above all background artwork. */
+html.ta-native-return-all #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-meteor50,
+html.ta-native-return-all #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.castle-dim,
+html.ta-native-return-all #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-day300,
+html.ta-native-return-all #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-day-silver,
+html.ta-native-return-all #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-sky-ruins{
+  opacity:0!important;
+  transition-property:opacity!important;
+  transition-duration:2.6s!important;
+  transition-timing-function:ease-in-out!important;
+}
+html.ta-native-return-all.ta-native-return-500 #viewMain>.hero>.ta-stage9-void{
+  opacity:0!important;
+  transition-property:opacity!important;
+  transition-duration:3.5s!important;
+  transition-timing-function:ease-in-out!important;
+}
+</style>
 <style id="ta-chain-soft-return-20261106">
 /* The previous milestone is a temporary top layer, faded over stage 01.
    No stage 07 is introduced when leaving the 500+ void. */
@@ -4846,17 +4866,19 @@ function taFadeChainScene(){
 
 function expireCombo(){
   const taRoot50=document.documentElement;
-  // 50-99 chains: retain the existing stage_03 DOM element and fade it
-  // directly. Snapshotting its semi-transparent layers over stage_01
-  // caused a perceptible brightening during the return.
-  const taNative50=taRoot50.classList.contains('ta-meteor-lit') &&
-    !['ta-century-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit'].some(c=>taRoot50.classList.contains(c));
-  if(taNative50){
+  const had500=taRoot50.classList.contains('ta-500-lit');
+  const hadMilestone=['ta-meteor-lit','ta-century-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit']
+    .some(c=>taRoot50.classList.contains(c));
+  // Native element transitions avoid the brightness change caused by a
+  // composited snapshot. All active milestones use the proven stage-50 path.
+  if(hadMilestone){
     taClearChainSceneReturn();
-    taRoot50.classList.add('ta-native-return-50');
-    setTimeout(()=>taRoot50.classList.remove('ta-native-return-50'),2750);
-  }else{
-    taFadeChainScene();
+    taRoot50.classList.add('ta-native-return-all');
+    if(had500)taRoot50.classList.add('ta-native-return-500');
+    const delay=had500?3650:2750;
+    setTimeout(()=>{
+      taRoot50.classList.remove('ta-native-return-all','ta-native-return-500');
+    },delay);
   }
   // The snapshot handles the 500+ return too; do not run a second, competing
   // void fade on the original layers.
@@ -4875,7 +4897,7 @@ function expireCombo(){
 // final chain milestone; stage_02 pulses at most once for 10-49 chains.
 function taApplyComboBackground(finalCombo, resumeFromStop=false){
   const root=document.documentElement;
-  if(finalCombo>=50)root.classList.remove('ta-native-return-50');
+  if(finalCombo>=50)root.classList.remove('ta-native-return-50','ta-native-return-all','ta-native-return-500');
   if(resumeFromStop && finalCombo>=10 && finalCombo<50)taPlayLampPulse();
   else if(finalCombo>=50)taCancelLampPulse();
   if(finalCombo>=1 && document.querySelector('#viewMain>.hero>.ta-chain-scene-snapshot'))taClearChainSceneReturn();
