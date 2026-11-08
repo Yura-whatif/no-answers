@@ -551,6 +551,22 @@ html.ta-800-lit #viewMain>.hero.rush{
   box-shadow:0 0 8px rgba(220,229,245,.13)!important;
 }
 @media(prefers-reduced-motion:reduce){#viewMain>.hero::before{transition:none!important;}}
+
+/* Star progression: compact stage table, separate from achievements. */
+.ta-star-next-upgrade{margin:12px 0;padding:11px 13px;border:1px solid #cbb98e;border-radius:10px;background:rgba(186,143,70,.09);color:#685337;font-size:13px}
+.ta-star-next-upgrade strong{display:block;font-size:12px;color:#8e713d;margin-bottom:5px}
+.ta-star-upgrades{margin:10px 0 18px;border:1px solid #d3c1a2;border-radius:10px;overflow:hidden;color:#64543e}
+.ta-star-upgrades summary{cursor:pointer;padding:12px 13px;font-weight:700;font-size:13px;user-select:none}
+.ta-star-upgrades-content{overflow-x:auto;padding:0 8px 10px}
+.ta-star-upgrades-table{border-collapse:collapse;width:100%;min-width:360px;font-size:12px;text-align:center}
+.ta-star-upgrades-table th,.ta-star-upgrades-table td{padding:9px 5px;border-bottom:1px solid rgba(139,108,64,.18)}
+.ta-star-upgrades-table thead th{font-size:11px;color:#77664c;white-space:nowrap}
+.ta-star-upgrades-table tbody th{text-align:left;white-space:nowrap;color:#5e4c36}
+.ta-star-upgrades-table td span{display:block;font-weight:700;white-space:nowrap}
+.ta-star-upgrades-table td small{display:block;font-size:10px;color:#8f806a;margin-top:3px}
+.ta-star-upgrades-table td.is-unlocked span{color:#a37a32}
+.ta-star-upgrades-table td.is-locked span{color:#a9a197}
+
 </style>
 <script>
 /* 最初の描画より前に、前回の世界（白/黒）を決めておく。万一起動処理が止まっても4秒で必ず見せる */
@@ -2411,6 +2427,75 @@ html.ta-native-return-all.ta-native-return-800 #viewMain>.hero.ta-active-visual>
  #viewMain>.hero>picture.ta-bg-picture.ta-stage10{transition-duration:0s!important;}
 }
 </style>
+
+<style id="ta-result-hint-group-fix">
+/* Result layout: score and star rewards first, illustration + matching hint last. */
+#taLaunch .ta-card{max-height:calc(100dvh - 24px)!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;scrollbar-width:thin;}
+#taLaunch .ta-result-hint-group{margin:14px 2px 0;border:1px solid rgba(208,169,111,.48);border-radius:9px;background:linear-gradient(160deg,rgba(62,49,41,.32),rgba(12,16,25,.65));overflow:hidden;box-shadow:0 0 13px rgba(226,175,94,.09);}
+#taLaunch .ta-result-hint-group .ta-book-scene,#taLaunch .ta-result-hint-group .ta-special-hint-art{width:100%;max-width:none;height:116px;margin:0;border:0;border-radius:0;}
+#taLaunch .ta-result-hint-group .ta-book-photo{object-fit:cover;}
+#taLaunch .ta-result-hint-group .ta-tip-box{margin:0!important;border:0!important;border-top:1px solid rgba(208,169,111,.25)!important;border-radius:0!important;min-height:0!important;padding:10px 12px!important;box-shadow:none!important;background:transparent!important;}
+#taLaunch #taStarResult:not([hidden]){display:block!important;visibility:visible!important;flex-shrink:0;}
+#taLaunch #taStarResult[hidden]{display:none!important;}
+@media(max-width:380px){#taLaunch .ta-result-hint-group .ta-book-scene,#taLaunch .ta-result-hint-group .ta-special-hint-art{height:98px;}}
+</style>
+
+<style id="ta-result-compact-20261108">
+/* No internal scrollbar: result card fits viewport, with hint illustration attached to its text. */
+#taLaunch{padding:8px!important;box-sizing:border-box!important;overflow:hidden!important;}
+#taLaunch .ta-card{width:min(390px,calc(100vw - 18px))!important;max-height:calc(100dvh - 16px)!important;overflow:hidden!important;box-sizing:border-box!important;padding:clamp(12px,2.1vh,18px) clamp(14px,3vw,22px) clamp(13px,2vh,18px)!important;display:flex!important;flex-direction:column!important;gap:0!important;}
+#taLaunch #taResultHeading{margin:0 0 clamp(4px,.9vh,8px)!important;font-size:.91rem!important;line-height:1.3!important;}
+#taLaunch .ta-result-score{margin:0 0 clamp(3px,.7vh,7px)!important;gap:5px!important;}
+#taLaunch .ta-result-score strong{font-size:clamp(1.8rem,5.6vh,2.35rem)!important;line-height:1.08!important;}
+#taLaunch .ta-result-rank{margin:0 auto clamp(7px,1.3vh,12px)!important;padding:5px 10px!important;font-size:.77rem!important;}
+#taLaunch .ta-result-rank strong{font-size:1.02rem!important;}
+#taLaunch .ta-result-stats>.ta-stat-row{min-height:clamp(33px,5.8vh,43px)!important;padding:4px 4px!important;}
+#taLaunch .ta-result-stats>.ta-stat-row>strong{font-size:1.23rem!important;}
+#taLaunch #taStarResult:not([hidden]){display:block!important;min-height:0!important;margin:clamp(5px,.9vh,9px) 1px!important;padding:clamp(6px,1vh,9px)!important;font-size:12px!important;line-height:1.35!important;}
+#taLaunch #taStarResult .ta-star-unlock-heading{font-size:clamp(13px,2.3vh,16px)!important;margin:5px 0 4px!important;padding:4px 2px!important;}
+#taLaunch #taStarResult .ta-star-unlock{font-size:clamp(12px,2.1vh,15px)!important;margin:3px 0!important;padding:5px!important;}
+#taLaunch .ta-result-hint-group{margin:clamp(5px,.9vh,9px) 1px 0!important;flex-shrink:1!important;min-height:0!important;}
+#taLaunch .ta-result-hint-group .ta-book-scene,#taLaunch .ta-result-hint-group .ta-special-hint-art{height:clamp(55px,13vh,95px)!important;min-height:0!important;}
+#taLaunch .ta-result-hint-group .ta-special-hint-art img{height:100%!important;max-height:95px!important;}
+#taLaunch .ta-result-hint-group .ta-tip-box{padding:clamp(5px,.9vh,9px) 9px!important;min-height:0!important;gap:0!important;}
+#taLaunch .ta-result-hint-group .ta-tip-text{font-size:clamp(.68rem,1.9vh,.79rem)!important;line-height:1.5!important;letter-spacing:.015em!important;text-align:center!important;}
+#taLaunch .ta-tip-icon{display:none!important;}
+@media(max-height:650px){#taLaunch .ta-card{zoom:1!important;}#taLaunch .ta-result-hint-group .ta-book-scene,#taLaunch .ta-result-hint-group .ta-special-hint-art{height:clamp(45px,10vh,75px)!important;}#taLaunch .ta-result-hint-group .ta-tip-text{font-size:.69rem!important;line-height:1.35!important;}}
+@media(max-height:510px){#taLaunch .ta-card{zoom:.83!important;max-height:calc(100dvh / .83 - 14px)!important;}}
+</style>
+
+<style id="ta-result-illustration-uncropped-20261108">
+/* Show the entire source artwork without cropping, stretching or scrolling. */
+#taLaunch .ta-result-hint-group .ta-book-photo{object-fit:contain!important;object-position:center!important;}
+#taLaunch .ta-result-hint-group .ta-special-hint-art img{object-fit:contain!important;object-position:center!important;}
+#taLaunch .ta-result-hint-group .ta-book-scene,#taLaunch .ta-result-hint-group .ta-special-hint-art{background:#050608!important;}
+</style>
+
+<style id="ta-result-image-fullwidth-20261108">
+/* Match the artwork frame to the source image (820 x 471), without crop or black side bars. */
+#taLaunch .ta-result-hint-group .ta-book-scene{height:auto!important;aspect-ratio:820 / 471!important;background:transparent!important;overflow:hidden!important;}
+#taLaunch .ta-result-hint-group .ta-book-photo{display:block!important;width:100%!important;height:100%!important;object-fit:fill!important;object-position:center!important;}
+/* Alternate hint illustrations: retain their original proportions and use available width. */
+#taLaunch .ta-result-hint-group .ta-special-hint-art{height:auto!important;min-height:0!important;background:transparent!important;}
+#taLaunch .ta-result-hint-group .ta-special-hint-art img{display:block!important;width:100%!important;height:auto!important;max-height:none!important;object-fit:contain!important;}
+</style>
+
+<style id="ta-star-separate-outcome-style">
+/* The collection record is compact again: its star summary now has a separate dialog. */
+#taLaunch .ta-card{max-height:calc(100dvh - 16px)!important;overflow:hidden!important;}
+#taLaunch .ta-result-hint-group .ta-book-scene{height:clamp(90px,22vh,180px)!important;aspect-ratio:auto!important;}
+#taLaunch .ta-result-hint-group .ta-book-photo{width:100%!important;height:100%!important;object-fit:cover!important;}
+#taStarOutcome[hidden]{display:none!important;}
+#taStarOutcome{position:fixed;inset:0;z-index:10010;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(3,5,12,.75);box-sizing:border-box;}
+#taStarOutcome .ta-star-outcome-card{position:relative;width:min(360px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:hidden;box-sizing:border-box;padding:28px 17px 18px;border:1px solid rgba(216,169,91,.75);border-radius:13px;background:linear-gradient(160deg,#22222c,#12151f);box-shadow:0 12px 50px #0009;color:#f2dfb8;text-align:center;}
+#taStarOutcome h2{margin:0 30px 12px;font:normal 1.1rem/1.4 serif;letter-spacing:.1em;color:#f3d59e;}
+#taStarOutcomeClose{position:absolute;right:10px;top:6px;border:0;background:transparent;color:#ead5af;font-size:29px;cursor:pointer;line-height:1.2;padding:4px 8px;}
+#taStarOutcome #taStarResult{margin:0!important;padding:14px 8px!important;display:block!important;min-height:0!important;}
+#taStarOutcome #taStarResult[hidden]{display:none!important;}
+#taStarOutcome .ta-star-result-summary{font-size:15px;}
+#taStarOutcome .ta-star-unlock-heading{display:block;margin:14px 0 8px;padding:8px 3px;font-size:19px;color:#ffe4a5;text-shadow:0 0 12px #e2ad6188;}
+#taStarOutcome .ta-star-unlock{margin:7px 0;padding:10px 6px;font-size:16px;font-weight:bold;border:1px solid #b28b56;border-radius:8px;background:#8d683524;color:#ffe3a2;}
+</style>
 </head>
 <body>
 <style>
@@ -2576,8 +2661,8 @@ html.ta-native-return-all.ta-native-return-800 #viewMain>.hero.ta-active-visual>
     <div class="pane" id="paneRank" hidden>
       <nav class="ta-guide-tabs" aria-label="タイムアタックの記録と手引き">
         <button type="button" class="is-current" id="taGuideTabRank" aria-pressed="true">得点ランキング</button>
-        <button type="button" id="taGuideTabTime" aria-pressed="false">延長時間ランキング</button>
-        <button type="button" id="taGuideTabGuide" aria-pressed="false">言葉の手引き</button>
+        <button type="button" id="taGuideTabStars" aria-pressed="false">星の軌跡</button>
+        <button type="button" id="taGuideTabGuide" aria-pressed="false">説明書</button>
       </nav>
       <div id="taGuideRankingPanel">
         <div class="bookhead ta-rank-head"><span class="count" id="taRankCount"></span></div>
@@ -2590,20 +2675,21 @@ html.ta-native-return-all.ta-native-return-800 #viewMain>.hero.ta-active-visual>
         </div></div>
         <p class="ta-record-note">記録はこのブラウザに保存されます。別の端末やブラウザとは共有されません。</p>
       </div>
-      <div id="taGuideTimePanel" hidden>
-        <div class="bookhead ta-rank-head"><span class="count" id="taTimeRankCount"></span></div>
+      <div id="taGuideStarsPanel" hidden>
         <div class="bookcover ta-record-cover"><div class="spread one ta-record-spread"><section class="page solo ta-record-page">
-          <div class="pg-head"><span>NO ANSWERS</span><span>TIME EXTENSION</span></div>
-          <div class="ta-ranking-heading"><h3>延長時間ランキング</h3><p>獲得した延長時間の合計順に、挑戦の記録を綴ります。</p></div>
-          <div id="taTimeRanking" class="ta-record-list" aria-label="延長時間ランキング"></div>
+          <div class="pg-head"><span>NO ANSWERS</span><span>STAR MEMORIES</span></div>
+          <div class="ta-ranking-heading"><h3>星の軌跡</h3><p>集めた星が、次の挑戦で新たな力になります。</p></div>
+          <div class="ta-star-total" id="taStarTotal">★ 0 / 30</div>
+          <div id="taStarNextUpgrade" class="ta-star-next-upgrade"></div>
+          <details class="ta-star-upgrades"><summary>取得済みの強化</summary><div class="ta-star-upgrades-content"><table class="ta-star-upgrades-table"><thead><tr><th scope="col">スキル</th><th scope="col">第一段階</th><th scope="col">第二段階</th><th scope="col">第三段階</th></tr></thead><tbody id="taStarUpgradeRows"></tbody></table></div></details>
+          <div id="taStarAchievements" class="ta-star-achievements"></div>
         </section></div></div>
-        <p class="ta-record-note">延長時間は今回獲得した加算時間の合計です。過去の記録には延長時間が保存されていません。</p>
       </div>
       <div id="taGuideHelpPanel" hidden>
         <div class="bookcover ta-record-cover"><div class="spread one ta-record-spread">
           <section class="page solo ta-record-page ta-guide-page">
             <div class="pg-head"><span>NO ANSWERS</span><span>FIELD GUIDE</span></div>
-            <div class="ta-ranking-heading"><h3>言葉の手引き</h3><p>夜を越えるための、小さな攻略書。</p></div>
+            <div class="ta-ranking-heading"><h3>説明書</h3><p>特殊効果と連鎖の仕組みを知るための案内書。</p></div>
             <p class="ta-guide-intro">夜、ユラは本を開く。浮かぶ言葉に触れ、忘れたいことや置き忘れたものと向き合いながら、朝を迎える。<br>言葉をつなぎ、できるだけ長く時を紡いでください。</p>
             <nav class="ta-guide-index" aria-label="手引きの目次"><a href="#taGuideBasics">基本</a><a href="#taGuideOrbs">玉と補充</a><a href="#taGuideSkills">奥義</a><a href="#taGuideDaybreak">夜明け</a><a href="#taGuideTips">攻略</a></nav>
             <section class="ta-guide-section" id="taGuideBasics"><h4><span>01</span> 遊び方と連鎖</h4>
@@ -4381,7 +4467,8 @@ const taCenturyDust=(()=>{
   return {emit};
 })();
 // あふれる時間：ときどき明滅する言葉が現れ、触れると短いあいだ言葉が大量にあふれ出す
-const FLOOD_MS = 6000;   // 時間が止まっている長さ
+const FLOOD_MS = 6000;   // legacy default; duration is determined by ★ at play start
+function taFloodDurationMs(){return (typeof taStarRunValue==='function'?taStarRunValue('stop'):6)*1000;}
 let flood = false, nextSpecialAt = Date.now() + 60000, forceSpecial = false;
 let nextOddAt = Date.now() + 30000, forceOdd = false;
 let nextMultiAt = Date.now() + 15000, forceMulti = false;
@@ -5053,6 +5140,7 @@ function bumpCombo(){
   $("combo").classList.remove("ta-skill-grace");
   if(combo===1 && taMeteorHadCentury)taMeteorReset();
   if(combo>taSessionMaxCombo) taSessionMaxCombo=combo;
+  if(window.taStars){window.taStars.track('words');window.taStars.check();}
   if(combo > maxCombo){ maxCombo = combo; store.set("ta-yura-maxcombo", maxCombo); }
   const m = comboMult(combo), el = $("combo"), prevX = el.classList.contains("x3") ? 3 : el.classList.contains("x2") ? 2 : 1;
   $("cbn").textContent = combo; $("cbx").textContent = "";
@@ -5320,7 +5408,7 @@ function startFlood(gem){
     }
     stopVeil(true,gem);
     const bar=$('floodbar');
-    bar.style.setProperty('--ta-stop-duration',FLOOD_MS+'ms');
+    bar.style.setProperty('--ta-stop-duration',taFloodDurationMs()+'ms');
     bar.hidden=false;bar.classList.remove('run');void bar.offsetWidth;bar.classList.add('run');
     clearTimeout(startFlood.h);
     clearTimeout(startFlood.tickDelay);clearInterval(startFlood.tk);
@@ -5330,7 +5418,7 @@ function startFlood(gem){
       let count=0;sfx.clockTick(count++);
       startFlood.tk=setInterval(()=>{if(!flood)return clearInterval(startFlood.tk);sfx.clockTick(count++);},1000);
     },700);
-    startFlood.h=setTimeout(endFlood,FLOOD_MS);
+    startFlood.h=setTimeout(endFlood,taFloodDurationMs());
     layoutBars();taUltimateLayout();
     return;
   }
@@ -5364,7 +5452,7 @@ function startFlood(gem){
   $("drift").querySelectorAll(".word:not(.special):not(.vortex):not(.sk-fall)").forEach(w => { w.classList.add("got"); w.animate([{opacity:1},{opacity:0}], {duration:300, fill:"forwards"}).onfinish = () => w.remove(); });
   const cells = STOP_CELLS.map((_, i) => i).sort(() => Math.random() - .5).slice(0, STOP_WORDS);
   cells.forEach((c, i) => setTimeout(()=>{ if(flood) placeStill(c); }, 200 + i * 45));
-  const bar = $("floodbar"); bar.style.setProperty('--ta-stop-duration',FLOOD_MS+'ms'); bar.hidden = false; bar.classList.remove("run"); void bar.offsetWidth; bar.classList.add("run"); layoutBars(); taUltimateLayout();
+  const bar = $("floodbar"); bar.style.setProperty('--ta-stop-duration',taFloodDurationMs()+'ms'); bar.hidden = false; bar.classList.remove("run"); void bar.offsetWidth; bar.classList.add("run"); layoutBars(); taUltimateLayout();
   clearTimeout(startFlood.h);
   // 止まった時間の中で、懐中時計の秒針だけが「チク、チク」と刻む
   // 逆再生の時止め導入音（約0.65秒）が終わってから秒針を鳴らす。
@@ -7078,7 +7166,8 @@ function vortexRelease(){
     setComboSkillGrace("issen");
     if(!gessenAwarded)flash(first,last,tier,collected.size,bonus);
   }
-  function finish(){
+  function checkFinishPlayGoals(){goals.filter(g=>g.kind==='plays'&&state.plays>=g.goal).forEach(award);}
+ function finish(){
     if(!active)return;
     active=false;points=[];collected.clear();pointer=null;flashed=false;flashedTier=0;awardedBonus=0;shinsokuAwarded=false;gessenHits=[];gessenAwarded=false;gessenStraight=false;gessenLastAt=0;gessenChainCount=0;
   }
@@ -8742,27 +8831,27 @@ $("t-glow").onclick=()=>{ forceGlow = true; toast("まもなく、「降る記�
 $("t-reward-orb").onclick=()=>document.dispatchEvent(new Event("ta-reward-spawn-test"));
 $("t-c100").onclick=()=>{ combo += 8; comboAt = Date.now(); bumpCombo(); toast("連鎖を9増やしました"); };
 $("t-all").onclick=()=>{
-  if(!confirm("得点ランキングの全記録を削除しますか？"))return;
+  if(!confirm("得点ランキングと星の記憶をすべて初期化しますか？"))return;
   try{localStorage.removeItem('ta-time-attack-records-v1');}catch(e){}
+  window.taStars?.reset();
   taRenderRecords();
-  toast("ランキングを初期化しました");
+  toast("ランキングと星の記憶を初期化しました");
 };
 
 /* タイムアタックでは初回案内を使用しない。元コードの呼び出し先だけ保持。 */
 const tut = {start(){}, on(){}, reset(){}};
 
 // テスト用ボタンは、URL の最後に #test を付けて開いたときだけ出す
-if(location.hash === "#test") $("testbar").hidden = false;
+if(location.hash === "#test"){
+ $("testbar").hidden = false;
+ const b=document.createElement('button');b.type='button';b.textContent='★試作テスト';b.onclick=()=>window.taStars?.testAward();$("testbar").append(b);
+}
 boot();
 setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
 </script>
 <div id="taLaunch" hidden role="dialog" aria-modal="true" aria-labelledby="taResultHeading">
   <div class="ta-card" role="document">
     <button type="button" id="taResultClose" aria-label="結果画面を閉じる" title="閉じる">×</button>
-    <div class="ta-book-scene" role="img" aria-label="夜桜の城都に佇む、光を帯びた古書">
-      <img class="ta-book-photo" src="img/timeattack-result-book.webp" alt="" aria-hidden="true">
-    </div>
-    <div id="taSpecialHintArt" class="ta-special-hint-art" hidden aria-label="特殊技のヒント画像"></div>
     <h2 id="taResultHeading">採集の記録</h2>
     <p class="ta-result-score"><strong id="taEndDetail">0</strong><span>点</span></p>
     <p class="ta-result-rank"><span class="ta-rank-crown" id="taRankCrown" hidden aria-hidden="true">♛</span><span>今回の順位</span><strong id="taEndRank">—</strong></p>
@@ -8770,9 +8859,21 @@ setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
       <div class="ta-stat-row"><span class="ta-stat-label"><span class="ta-stat-icon" aria-hidden="true">♧</span>最大連鎖</span><strong><span id="taEndCombo">0</span><small>連鎖</small></strong></div>
       <div class="ta-stat-row"><span class="ta-stat-label"><span class="ta-stat-icon" aria-hidden="true">◷</span>獲得した延長時間</span><strong><span id="taEndTime">+0</span><small>秒</small></strong></div>
     </div>
-    <div class="ta-tip-box" aria-label="ゲームのヒント"><span class="ta-tip-icon" aria-hidden="true">✦</span><p id="taResultTip" class="ta-tip-text">言葉の重なりに、次の発見が隠れているかもしれません。</p></div>
+    <div class="ta-result-hint-group" aria-label="今回のヒント">
+      <div class="ta-book-scene" role="img" aria-label="夜桜の城都に佇む、光を帯びた古書">
+        <img class="ta-book-photo" src="img/timeattack-result-book.webp" alt="" aria-hidden="true">
+      </div>
+      <div id="taSpecialHintArt" class="ta-special-hint-art" hidden aria-label="特殊技のヒント画像"></div>
+      <div class="ta-tip-box" aria-label="ゲームのヒント"><p id="taResultTip" class="ta-tip-text">言葉の重なりに、次の発見が隠れているかもしれません。</p></div>
+    </div>
 
   </div>
+</div><div id="taStarOutcome" hidden role="dialog" aria-modal="true" aria-labelledby="taStarOutcomeTitle">
+ <div class="ta-star-outcome-card" role="document">
+  <button type="button" id="taStarOutcomeClose" aria-label="星の取得結果を閉じる">×</button>
+  <h2 id="taStarOutcomeTitle">星の取得結果</h2>
+  <div id="taStarResult" class="ta-star-result" hidden></div>
+ </div>
 </div><div id="taLoading" hidden role="status" aria-live="polite" aria-label="プレイの準備中"><div class="ta-loading-panel"><img class="ta-loading-logo" src="img/ta_loading_logo.webp" alt="No Answers ―言葉の残響―" decoding="async"><p class="ta-loading-caption" id="taLoadingCaption">夜の頁をひらいています</p><div class="ta-loading-track"><div class="ta-loading-fill" id="taLoadingFill"></div></div><div class="ta-loading-percent" id="taLoadingPercent">0%</div></div></div><div id="taStartFlash" hidden aria-live="polite">START</div>
 <script>
 /* Low-priority background decode: avoid a first-use hitch on the night/day crossfade.
@@ -8793,6 +8894,194 @@ setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
 let taRunning=false,taSeconds=60,taScore=0,taLast=0,taRaf=0,taFinishToken=0;
 let taSessionMaxCombo=0,taSessionTimeGain=0;
 const TA_RECORD_KEY = 'ta-time-attack-records-v1';
+/* Star upgrades: one immutable snapshot per run; existing saved achievements remain valid. */
+const taStarUpgradeTable=[
+ {key:'white',name:'開始時の白銀玉',unit:'個',steps:[[0,1],[2,2],[12,3],[22,4]]},
+ {key:'fire',name:'赤玉の効果時間',unit:'秒',steps:[[0,2],[4,3],[14,4],[24,5]]},
+ {key:'ice',name:'青玉の効果時間',unit:'秒',steps:[[0,2],[6,3],[16,4],[26,5]]},
+ {key:'green',name:'緑玉の発生言霊',unit:'個',steps:[[0,-2],[8,-1],[18,0],[28,2]]},
+ {key:'stop',name:'時間停止',unit:'秒',steps:[[0,3],[10,4],[20,5],[30,7]]}
+];
+function taStarValue(key,count){const item=taStarUpgradeTable.find(x=>x.key===key);if(!item)return 0;let value=item.steps[0][1];for(const [threshold,next] of item.steps)if(count>=threshold)value=next;return value;}
+let taStarRunLevel=0;
+let taStarTestLevel=null;
+function taStarRunValue(key){return taStarValue(key,taStarRunLevel);}
+function taStarUpcoming(oldCount,newCount){return taStarUpgradeTable.flatMap(item=>item.steps.slice(1).filter(step=>step[0]>oldCount&&step[0]<=newCount).map(step=>({at:step[0],name:item.name,delta:step[1]-taStarValue(item.key,step[0]-1),unit:item.unit,after:step[1]}))).sort((a,b)=>a.at-b.at);}
+/* Star memory prototype. Isolated from existing score/ranking and skill logic. */
+const taStars=(()=>{
+ const KEY='ta-star-memories-prototype-v1';
+ const goals=[
+  {id:'chain30',title:'連鎖の芽 I',kind:'chain',goal:30,unit:'連鎖'},
+  {id:'chain100',title:'連鎖の芽 II',kind:'chain',goal:100,unit:'連鎖'},
+  {id:'chain300',title:'連鎖の芽 III',kind:'chain',goal:300,unit:'連鎖'},
+  // Keep stable IDs so previously earned stars are never revoked by threshold changes.
+  {id:'score1000',title:'得点の記憶 I',kind:'score',goal:500000,unit:'点'},
+  {id:'score10000',title:'得点の記憶 II',kind:'score',goal:1500000,unit:'点'},
+  {id:'score50000',title:'得点の記憶 III',kind:'score',goal:5000000,unit:'点'},
+  {id:'plays3',title:'挑戦の足跡 I',kind:'plays',goal:3,unit:'回'},
+  {id:'plays10',title:'挑戦の足跡 II',kind:'plays',goal:10,unit:'回'},
+  {id:'plays30',title:'挑戦の足跡 III',kind:'plays',goal:30,unit:'回'},
+  {id:'time30',title:'時のかけら I',kind:'time',goal:30,unit:'秒'},
+  {id:'time60',title:'時のかけら II',kind:'time',goal:60,unit:'秒'},
+  {id:'time120',title:'時のかけら III',kind:'time',goal:120,unit:'秒'},
+  {id:'fire3',title:'紅の残響 I',kind:'fire',goal:3,unit:'回'},
+  {id:'fire15',title:'紅の残響 II',kind:'fire',goal:15,unit:'回'},
+  {id:'fire50',title:'紅の残響 III',kind:'fire',goal:50,unit:'回'},
+  {id:'ice3',title:'蒼の静寂 I',kind:'ice',goal:3,unit:'回'},
+  {id:'ice15',title:'蒼の静寂 II',kind:'ice',goal:15,unit:'回'},
+  {id:'ice50',title:'蒼の静寂 III',kind:'ice',goal:50,unit:'回'},
+  {id:'green3',title:'翠の息吹 I',kind:'green',goal:3,unit:'回'},
+  {id:'green15',title:'翠の息吹 II',kind:'green',goal:15,unit:'回'},
+  {id:'green50',title:'翠の息吹 III',kind:'green',goal:50,unit:'回'},
+  {id:'silver1',title:'白銀の導き I',kind:'silver',goal:1,unit:'個'},
+  {id:'silver10',title:'白銀の導き II',kind:'silver',goal:10,unit:'個'},
+  {id:'silver30',title:'白銀の導き III',kind:'silver',goal:30,unit:'個'},
+  {id:'tricolor1',title:'言葉の交響 I',kind:'tricolor',goal:1,unit:'回'},
+  {id:'tricolor2',title:'言葉の交響 II',kind:'tricolor',goal:2,unit:'回'},
+  {id:'tricolor3',title:'言葉の交響 III',kind:'tricolor',goal:3,unit:'回'},
+  {id:'words500',title:'言葉の旅路 I',kind:'words',goal:500,unit:'個'},
+  {id:'words3000',title:'言葉の旅路 II',kind:'words',goal:3000,unit:'個'},
+  {id:'words10000',title:'言葉の旅路 III',kind:'words',goal:10000,unit:'個'}
+ ];
+ let state={earned:[],plays:0,bestChain:0,bestScore:0,fire:0,ice:0,green:0,silver:0,words:0},session=[],queue=[],busy=false,sessionStartStars=0;
+ let runColors={fire:0,ice:0,green:0};
+ try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved&&typeof saved==='object'){
+  state.earned=Array.isArray(saved.earned)?saved.earned.filter(x=>goals.some(g=>g.id===x)):[];
+  state.plays=Math.max(0,Number(saved.plays)||0);state.bestChain=Math.max(0,Number(saved.bestChain)||0);state.bestScore=Math.max(0,Number(saved.bestScore)||0);
+  for(const key of ['fire','ice','green','silver','words'])state[key]=Math.max(0,Math.floor(Number(saved[key])||0));
+ }}catch(_e){}
+ const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state));}catch(_e){}};
+ const tray=()=>document.getElementById('taStarTray');
+ function draw(){const el=tray();if(!el)return;el.replaceChildren();session.forEach(()=>{const star=document.createElement('span');star.className='ta-star-glyph';star.textContent='★';el.append(star);});}
+ let sequenceToken=0;
+ const DISPLAY_MS=3100; // Read the achievement before the star starts moving.
+ const FLIGHT_MS=1050;
+ // Award sound: play when the achievement toast appears, not on landing.
+ const starAwardAudio=new Audio('audio/star-award.mp3');
+ starAwardAudio.preload='auto';
+ starAwardAudio.volume=0.55;
+ function playAwardSound(){
+  try{
+   // Follow the game's global sound setting when it is exposed.
+   if(typeof window.taSoundEnabled==='boolean'&&!window.taSoundEnabled)return;
+   starAwardAudio.pause();starAwardAudio.currentTime=0;
+   const playing=starAwardAudio.play();if(playing&&playing.catch)playing.catch(()=>{});
+  }catch(_e){}
+ }
+ function clearEffects(){sequenceToken++;queue=[];busy=false;document.querySelectorAll('.ta-star-toast,.ta-star-fly').forEach(e=>e.remove());}
+ function notify(){
+  if(busy||!queue.length)return;
+  busy=true;
+  const token=sequenceToken,g=queue.shift();
+  const toast=document.createElement('div');toast.className='ta-star-toast';
+  toast.textContent=g.goal.toLocaleString('ja-JP')+g.unit+'達成';
+  const detail=document.createElement('small');detail.textContent='「'+g.title.replace(/\s+(?:I|II|III)$/,'')+'」を獲得しました。';
+  toast.append(detail);document.body.append(toast);playAwardSound();
+  // Keep the full message visible first, then launch the star.
+  setTimeout(()=>{
+   if(token!==sequenceToken)return;
+   const dest=tray();
+   if(dest){
+    const a=toast.getBoundingClientRect(),b=dest.getBoundingClientRect();
+    const fly=document.createElement('div');fly.className='ta-star-fly';fly.textContent='★';
+    const x=a.left+a.width/2-12,y=a.bottom-5;
+    fly.style.left=x+'px';fly.style.top=y+'px';document.body.append(fly);
+    const dx=b.right-20-x,dy=b.bottom-25-y;
+    const anim=fly.animate([
+     {transform:'translate(0,0) scale(1.25)',opacity:1},
+     {transform:`translate(${dx*.45}px,${dy*.35-24}px) scale(1.5)`,opacity:1,offset:.45},
+     {transform:`translate(${dx}px,${dy}px) scale(.5)`,opacity:.5}
+    ],{duration:FLIGHT_MS,easing:'ease-in-out'});
+    anim.finished.catch(()=>{}).then(()=>{
+     fly.remove();if(token!==sequenceToken)return;
+     draw();busy=false;notify();
+    });
+   }else{draw();busy=false;notify();}
+   toast.remove();
+  },DISPLAY_MS);
+ }
+ function award(g){if(state.earned.includes(g.id))return;state.earned.push(g.id);session.push(g.id);save();queue.push(g);notify();render();}
+ function check(){if(!taRunning||taScore<=0)return;
+  state.bestChain=Math.max(state.bestChain,taSessionMaxCombo);state.bestScore=Math.max(state.bestScore,taScore);
+  goals.forEach(g=>{
+   let v=0;
+   if(g.kind==='chain')v=state.bestChain;
+   else if(g.kind==='score')v=state.bestScore;
+   else if(g.kind==='time')v=taSessionTimeGain;
+   else if(g.kind==='tricolor')v=(runColors.fire>=3&&runColors.ice>=3&&runColors.green>=3)?3:(runColors.fire>0&&runColors.ice>0&&runColors.green>0)?2:(runColors.fire>0&&runColors.ice>0)?1:0;
+   else v=state[g.kind]||0;
+   if(v>=g.goal)award(g);
+  });
+ }
+ function track(kind){
+  if(!taRunning||!['fire','ice','green','silver','words'].includes(kind))return;
+  state[kind]++;
+  if(kind==='fire'||kind==='ice'||kind==='green')runColors[kind]++;
+  // Save incremental progress even when a run ends early.
+  if(kind!=='words'||state.words%25===0)save();
+  if(kind!=='words'||state.words%25===0)check();
+ }
+ function start(){clearEffects();session=[];runColors={fire:0,ice:0,green:0};draw();sessionStartStars=state.earned.length;taStarRunLevel=taStarTestLevel===null?sessionStartStars:taStarTestLevel;save();}
+ function finish(){
+  // Count only scored runs. A zero-point exit never advances play-count achievements.
+  if(taScore>0){state.plays++;goals.filter(g=>g.kind==='plays'&&state.plays>=g.goal).forEach(award);}
+  save();const el=document.getElementById('taStarResult');if(!el)return;
+  el.hidden=false;el.replaceChildren();
+  const summary=document.createElement('div');summary.className='ta-star-result-summary';summary.textContent=session.length?`今回獲得　${'★'.repeat(session.length)}（＋${session.length}）`:'今回の★獲得なし';el.append(summary);
+  const upgrades=taStarUpcoming(sessionStartStars,state.earned.length);
+  if(upgrades.length){const heading=document.createElement('strong');heading.textContent='新しい力が目覚めました';heading.className='ta-star-unlock-heading';el.append(heading);
+   upgrades.forEach(u=>{const row=document.createElement('div');row.className='ta-star-unlock';row.textContent=`${u.name} ＋${Number(u.delta.toFixed(2))}${u.unit}`;el.append(row);});
+  }else if(session.length){const hint=document.createElement('small');hint.textContent='次の強化に向けて星を集めましょう';el.append(hint);}
+ }
+ function render(){const total=document.getElementById('taStarTotal'),box=document.getElementById('taStarAchievements');if(!total||!box)return;
+  total.textContent=`★ ${state.earned.length} / 30`;
+  const earnedCount=state.earned.length;
+  const allUpgrades=taStarUpgradeTable.flatMap(item=>item.steps.slice(1).map(step=>({at:step[0],name:item.name,delta:step[1]-taStarValue(item.key,step[0]-1),unit:item.unit}))).sort((x,y)=>x.at-y.at);
+  const nextUpgrade=allUpgrades.find(u=>u.at>earnedCount);
+  const nextBox=document.getElementById('taStarNextUpgrade');
+  if(nextBox){
+   nextBox.replaceChildren();
+   const heading=document.createElement('strong');heading.textContent='次の強化';nextBox.append(heading);
+   const detail=document.createElement('div');
+   detail.textContent=nextUpgrade?`★${nextUpgrade.at}（あと${nextUpgrade.at-earnedCount}個） ${nextUpgrade.name} ＋${nextUpgrade.delta}${nextUpgrade.unit}`:'すべての強化を獲得しました';
+   nextBox.append(detail);
+  }
+  const rows=document.getElementById('taStarUpgradeRows');
+  if(rows){
+   rows.replaceChildren();
+   const shortNames={white:'白銀玉',fire:'赤玉',ice:'青玉',green:'緑玉',stop:'時間停止'};
+   for(const item of taStarUpgradeTable){
+    const tr=document.createElement('tr');
+    const th=document.createElement('th');th.scope='row';th.textContent=shortNames[item.key]||item.name;tr.append(th);
+    item.steps.slice(1).forEach(step=>{
+     const td=document.createElement('td');
+     const amount=step[1]-taStarValue(item.key,step[0]-1);
+     const value=document.createElement('span');
+     if(earnedCount>=step[0]){value.textContent=`＋${amount}${item.unit}`;td.className='is-unlocked';}
+     else{value.textContent='—';td.className='is-locked';}
+     const threshold=document.createElement('small');threshold.textContent=`★${step[0]}`;
+     td.append(value,threshold);tr.append(td);
+    });
+    rows.append(tr);
+   }
+  }
+  box.replaceChildren();goals.forEach(g=>{
+   const achieved=state.earned.includes(g.id);
+   const row=document.createElement('div');row.className='ta-star-achievement'+(achieved?' is-earned':'');
+   const left=document.createElement('span');left.textContent=g.title;
+   const small=document.createElement('small');small.textContent=g.goal.toLocaleString('ja-JP')+g.unit+' 達成';left.append(small);
+   const mark=document.createElement('b');mark.textContent=achieved?'★ 獲得済':'☆ 未達成';
+   row.append(left,mark);box.append(row);
+  });
+ }
+ function testAward(){const next=goals.find(g=>!state.earned.includes(g.id));if(next)award(next);}
+ function demo(){clearEffects();session=[];draw();}
+ function reset(){clearEffects();state={earned:[],plays:0,bestChain:0,bestScore:0,fire:0,ice:0,green:0,silver:0,words:0};runColors={fire:0,ice:0,green:0};session=[];sessionStartStars=0;taStarRunLevel=0;try{localStorage.removeItem(KEY);}catch(_e){}draw();render();const result=document.getElementById('taStarResult');if(result){result.hidden=true;result.textContent='';}}
+ return{check,track,start,finish,render,testAward,demo,reset,playAwardSound,hasSessionAwards:()=>session.length>0};
+})();
+window.taStars=taStars;
+(()=>{const hero=document.querySelector('#viewMain>.hero');if(hero&&!document.getElementById('taStarTray')){const t=document.createElement('div');t.id='taStarTray';t.className='ta-star-tray';t.setAttribute('aria-label','今回獲得した星');hero.append(t);}})();
+
 let taSessionRecordAt=null;
 function taGetRecords(){
   try {const records=JSON.parse(localStorage.getItem(TA_RECORD_KEY)||'[]');
@@ -8813,7 +9102,7 @@ function taRenderRecords(){
   const ranked=records.slice().sort((a,b)=>b.score-a.score||a.at-b.at);
   const rankBox=document.getElementById('taRanking');
   if(!rankBox)return;
-  taRenderTimeRecords(records);
+  // Time-extension ranking tab retired; retain stored record data. 
   document.getElementById('taRankCount').textContent='挑戦回数　'+records.length+'回';
   rankBox.replaceChildren();
   if(!ranked.length){const empty=document.createElement('p');empty.className='ta-record-empty';empty.textContent='まだ記録がありません。';rankBox.append(empty);return}
@@ -8957,6 +9246,7 @@ function taHeartbeatStart(){
 }
 let taLastCountdownNumber=null;
 function taRender(){
+  if(taRunning && window.taStars)window.taStars.check();
   const timeEl=document.getElementById('taTime');
   const seconds=Math.max(0,taSeconds);
   const countdown=taRunning && seconds>0 && seconds<=5;
@@ -9006,11 +9296,15 @@ function taCancelDemoReturn(){
 }
 function taFadeCollectionAtTimeOver(){
   const hero=document.querySelector('#viewMain > .hero');
-  if(!hero)return;
+  const view=document.getElementById('viewMain');
+  if(!hero||!view)return;
   document.querySelectorAll('.ta-timeover-scene-ghost').forEach(el=>el.remove());
-  const rect=hero.getBoundingClientRect();
   const ghost=hero.cloneNode(true);
-  // Freeze the visible background layers before the chain classes are cleared.
+  // The ghost is a background-only crossfade. Never duplicate words, controls,
+  // result panels, star effects or any interactive part of the collection field.
+  [...ghost.children].forEach(el=>{
+    if(!el.matches('picture.ta-bg-picture, .ta-stage9-void, .ta-chain-scene-snapshot'))el.remove();
+  });
   const originalLayers=hero.querySelectorAll('picture.ta-bg-picture, .ta-stage9-void');
   const clonedLayers=ghost.querySelectorAll('picture.ta-bg-picture, .ta-stage9-void');
   originalLayers.forEach((layer,i)=>{
@@ -9019,11 +9313,19 @@ function taFadeCollectionAtTimeOver(){
   ghost.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
   ghost.removeAttribute('id');
   ghost.classList.add('ta-timeover-scene-ghost');
-  Object.assign(ghost.style,{position:'fixed',left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px',margin:'0',zIndex:'100',pointerEvents:'none',opacity:'1',transition:'opacity 2.2s ease-in-out'});
-  document.getElementById('viewMain').appendChild(ghost);
+  // The parent view is scaled/transformed by the PC layout. A fixed-position
+  // child is therefore offset by that transform. Use the hero's actual local
+  // layout coordinates so the fade stays exactly on top of the original.
+  if(getComputedStyle(view).position==='static')view.style.position='relative';
+  Object.assign(ghost.style,{
+    position:'absolute',left:hero.offsetLeft+'px',top:hero.offsetTop+'px',
+    width:hero.offsetWidth+'px',height:hero.offsetHeight+'px',margin:'0',
+    zIndex:'100',pointerEvents:'none',opacity:'1',
+    transition:'opacity 2.2s ease-in-out'
+  });
+  view.appendChild(ghost);
   setTimeout(()=>{if(ghost.isConnected)ghost.style.opacity='0';},500);
   setTimeout(()=>ghost.remove(),2850);
-  // DEMO PLAY appears one second after the collection-area transition finishes.
   const ticket=++taDemoReturnTicket;
   taDemoLabelPending=true;
   document.getElementById('taDemoPlay').hidden=true;
@@ -9034,6 +9336,7 @@ function taFadeCollectionAtTimeOver(){
   },3700);
 }
 function taSyncDemo(){
+  if(!taRunning&&!taStarting&&document.getElementById('taStarOutcome')?.hidden&&document.getElementById('taLaunch')?.hidden&&!document.documentElement.classList.contains('ta-result-locked')&&!window.taResultPending)window.taStars?.demo();
   taInvalidatePlusRects();
   const hero=document.querySelector('#viewMain > .hero');
   if(hero)hero.classList.toggle('ta-active-visual',taRunning||taStarting||(!taRunning&&!taStarting));
@@ -9044,9 +9347,9 @@ function taSyncDemo(){
   const demo=document.getElementById('taDemoPlay');
   const result=document.getElementById('taLaunch');
   const library=document.getElementById('viewLib');
-  if(demo)demo.hidden=taDemoLabelPending||taRunning||taStarting||(result&&!result.hidden)||(library&&!library.hidden);
+  if(demo)demo.hidden=taDemoLabelPending||taRunning||taStarting||(result&&!result.hidden)||!document.getElementById('taStarOutcome')?.hidden||(library&&!library.hidden);
   const play=document.getElementById('taPlay');
-  if(play)play.classList.toggle('ta-demo-pulse',!taRunning&&!taStarting&&!(result&&!result.hidden)&&!(library&&!library.hidden));
+  if(play)play.classList.toggle('ta-demo-pulse',!taRunning&&!taStarting&&!(result&&!result.hidden)&&document.getElementById('taStarOutcome')?.hidden&&!(library&&!library.hidden));
 }
 function taUpdatePlay(){
   if(taRunning||taStarting)document.body.classList.remove('ta-timeover-finished');
@@ -9118,7 +9421,7 @@ function taPickResultHint(){
  taShowResultHint(index);
  try{sessionStorage.setItem('taResultHintRecent',JSON.stringify([...recent,index].slice(-3)))}catch(_e){}
 }
-function taFinish(){
+function taFinish(manualExit=false){
   document.body.classList.add('ta-timeover-finished');
   // Clear legacy void-only counter before Time Over; never expose '違和感 0' in results.
   document.querySelectorAll('.void-pts').forEach(el=>el.remove());
@@ -9128,10 +9431,14 @@ function taFinish(){
   const wasSilver=combo>=600 && taSilverMusic.isActive();
   const wasCentury=combo>=100 && taCenturyMusic.isActive();
   clearTimeout(bumpCombo.h);
-  taFadeCollectionAtTimeOver();
-  taBeginVoidReturn();
-  taSilverDust.sync(false);
-  taMeteorReset();
+  // Visual cleanup is best-effort. A failed animation must never cancel
+  // the Time Over title, outro audio or collection result.
+  for(const [label,fn] of [
+    ['collection fade',()=>taFadeCollectionAtTimeOver()],
+    ['void return',()=>taBeginVoidReturn()],
+    ['silver dust',()=>taSilverDust.sync(false)],
+    ['meteor reset',()=>taMeteorReset()]
+  ]){try{fn();}catch(e){console.error('Time Over '+label,e);}}
   // End the visual/gameplay century state immediately. The ranked-outro BGM
   // is deliberately managed separately by taCenturyMusic below.
   taRunning=false;taStarting=false;
@@ -9151,24 +9458,36 @@ function taFinish(){
   }
   comboRush(false);
   taSyncDriftingGlowWords();
-  document.documentElement.classList.add('ta-result-locked');
-  if(!document.getElementById('taTimeOverInputShield')){const shield=document.createElement('div');shield.id='taTimeOverInputShield';shield.setAttribute('aria-hidden','true');document.body.appendChild(shield);}
+  // Do not lock the whole page while ending a run: manual X must remain responsive.
+  document.documentElement.classList.remove('ta-result-locked');
+  document.getElementById('taTimeOverInputShield')?.remove();
   taHeartbeatStop();
   taCenturyMusic.setHeartbeatDuck(false,1800);
   taSilverMusic.setHeartbeatDuck(false,1800);
   document.querySelectorAll("#drift .word:not(.got)").forEach(w=>{
     if([...w.classList].some(c=>!["word","fast","ta-blue"].includes(c))) w.remove();
   });
+  window.taResultPending=true;
   const token=++taFinishToken;
   cancelAnimationFrame(taRaf);
   const flash=document.getElementById('taStartFlash');
   // 曲を先に開始し、0.5秒後にTime Overの文字を表示する。
   flash.hidden=true;flash.classList.remove('ta-start-active','ta-end-active');
   // Decide ranking before selecting Time Over music.
-  taSaveRecord();taUpdatePlay();
+  // Record and rank evaluation must not be blocked by optional UI updates.
+  try{taSaveRecord();}catch(e){console.error('Time Over record save',e);}
+  // Finalize this run's stars BEFORE taUpdatePlay calls taSyncDemo,
+  // which otherwise clears the session and makes earned stars appear as zero.
+  try{taStars.finish();}catch(e){console.error('Time Over star finish',e);}
+  try{taUpdatePlay();}catch(e){console.error('Time Over play button',e);}
   const finishedRanked=taGetRecords().slice().sort((a,b)=>b.score-a.score||a.at-b.at);
+  // Use the current run's record ID; do not treat a previous identical score
+  // as the result of this run.
   const finishedPosition=finishedRanked.findIndex(r=>r.at===taSessionRecordAt&&r.score===taScore);
   const finishedQualified=taScore>0 && finishedPosition>=0 && finishedPosition<20;
+  // Show the collection record only for a qualifying ranking entry,
+  // regardless of whether the run ended naturally or via X.
+  const showResult=finishedQualified;
   const silverRanked=wasSilver && finishedQualified;
   const centuryRanked=!silverRanked && wasCentury && finishedQualified;
   if(!silverRanked&&!centuryRanked){taSilverMusic.stop(true);taCenturyMusic.stop(true);sfx.resultStart();}
@@ -9181,7 +9500,7 @@ function taFinish(){
   document.getElementById('taHud').classList.remove('ta-hud-reveal');
   taSeconds=Math.max(0,taSeconds);taRender();
   // For unranked runs use the original Time Over music and its original fade.
-  if(!finishedQualified)setTimeout(()=>{if(token===taFinishToken)sfx.resultStop(false,1600);},2000);
+  if(!showResult)setTimeout(()=>{if(token===taFinishToken)sfx.resultStop(false,1600);},2000);
   setTimeout(()=>{
     if(token!==taFinishToken)return;
     flash.hidden=true;flash.classList.remove('ta-end-active');
@@ -9190,11 +9509,12 @@ function taFinish(){
     document.getElementById('taEndTime').textContent='+'+taFormatTimeGain(taSessionTimeGain);
     document.getElementById('taEndRank').textContent=finishedPosition>=0?(finishedPosition+1)+'位':'—';
     document.getElementById('taRankCrown').hidden=finishedPosition!==0;
-    if(finishedQualified)taPickResultHint();
-    const qualified=finishedQualified;
+    if(showResult)taPickResultHint();
+    const qualified=showResult;
     document.getElementById('taLaunch').hidden=!qualified;
-    // Unranked runs skip the record screen; BGM fades after a 2-second delay.
+    // Unranked runs go straight to the independent star outcome dialog.
     if(!qualified){
+      taShowStarOutcome();
       document.documentElement.classList.remove('ta-result-locked');
       document.getElementById('taTimeOverInputShield')?.remove();
     }
@@ -9202,6 +9522,7 @@ function taFinish(){
     taSyncDemo();
     if(centuryRanked)taCenturyMusic.resultOutro(20000,3000);
     if(silverRanked)taSilverMusic.resultOutro(20000,3000);
+    window.taResultPending=false;
     if(qualified)document.getElementById('taResultClose').focus();
   },2450);
 }
@@ -9218,6 +9539,7 @@ function taBeginReady(){
   document.documentElement.classList.remove('ta-result-locked');
   document.getElementById('taTimeOverInputShield')?.remove();
   document.getElementById('taLaunch').hidden=true;
+  document.getElementById('taStarOutcome').hidden=true;
   sfx.resultStop(true);
   taCenturyMusic.stop(true);taSilverMusic.stop(true);taSilverDust.sync(false);
   taCancelDemoReturn();
@@ -9258,6 +9580,7 @@ function taBeginReady(){
   document.getElementById('taLaunch').hidden=true;
   if(!document.getElementById('viewLib').hidden)document.getElementById('libbtn').click();
   taSeconds=60;taScore=0;taScoreReset();taSessionMaxCombo=0;taSessionTimeGain=0;taSessionRecordAt=null;
+  taStars.start();document.getElementById("taStarResult").hidden=true;
   document.dispatchEvent(new Event('ta-item-reset'));
   document.querySelectorAll('#drift .word').forEach(w=>w.remove());
   taRender();cancelAnimationFrame(taRaf);
@@ -9431,13 +9754,45 @@ document.getElementById('taPlay').addEventListener('click',()=>{
   if(taRunning||taStarting){
     // The X button must end an active time stop immediately, not leave
     // its countdown, ticking sound, frozen animations or veil running.
-    if(typeof flood!=='undefined' && flood && typeof endFlood==='function')endFlood();
-    taFinish();
+    try{if(typeof flood!=='undefined' && flood && typeof endFlood==='function')endFlood();}catch(e){console.warn('Time-stop cleanup',e);}
+    taFinish(true);
   }else if(taTitlePrepared){taBeginReady();}
   else taBegin();
 });
-document.getElementById('taResultClose').addEventListener('click',()=>{taCancelDemoReturn();(()=>{document.getElementById('taLaunch').hidden=true;document.documentElement.classList.remove('ta-result-locked');document.getElementById('taTimeOverInputShield')?.remove();sfx.resultStop(true);taCenturyMusic.stop(false,1800);taSilverMusic.stop(false,1800);taReleaseMediaSession();taSyncDemo();})();});
-document.getElementById('taLaunch').addEventListener('click',e=>{if(e.target.id==='taLaunch'){taCancelDemoReturn();(()=>{e.currentTarget.hidden=true;document.documentElement.classList.remove('ta-result-locked');document.getElementById('taTimeOverInputShield')?.remove();sfx.resultStop(true);taCenturyMusic.stop(false,1800);taSilverMusic.stop(false,1800);taReleaseMediaSession();taSyncDemo();})();}});
+function taShowStarOutcome(){
+  const panel=document.getElementById('taStarOutcome');
+  const content=document.getElementById('taStarResult');
+  if(!panel||!content)return;
+  // A run without newly earned stars must not open the outcome dialog or play its sound.
+  if(!window.taStars?.hasSessionAwards?.())return;
+  content.hidden=false;
+  panel.hidden=false;
+  // The same acquisition sound is played when the separate outcome appears.
+  try{window.taStars?.playAwardSound?.();}catch(e){console.warn('Star outcome sound',e);}
+  document.getElementById('taStarOutcomeClose')?.focus();
+}
+function taCloseStarOutcome(){
+  document.getElementById('taStarOutcome').hidden=true;
+  taSyncDemo();
+}
+document.getElementById('taStarOutcomeClose').addEventListener('click',taCloseStarOutcome);
+function taCloseResultSafely(){
+  const showStarAfterClose=!document.getElementById('taLaunch').hidden;
+  // Restore input first; cleanup must not be skipped if audio teardown fails.
+  document.getElementById('taLaunch').hidden=true;
+  document.documentElement.classList.remove('ta-result-locked');
+  document.getElementById('taTimeOverInputShield')?.remove();
+  taCancelDemoReturn();
+  try{sfx.resultStop(true);}catch(e){console.warn('result audio cleanup',e);}
+  try{taCenturyMusic.stop(false,1800);}catch(e){console.warn('century audio cleanup',e);}
+  try{taSilverMusic.stop(false,1800);}catch(e){console.warn('silver audio cleanup',e);}
+  try{taReleaseMediaSession();}catch(e){console.warn('media session cleanup',e);}
+  if(showStarAfterClose)taShowStarOutcome();
+  taSyncDemo();
+}
+document.getElementById('taResultClose').addEventListener('click',taCloseResultSafely);
+new MutationObserver(()=>{if(!document.documentElement.classList.contains('ta-result-locked'))document.getElementById('taTimeOverInputShield')?.remove();}).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
+document.getElementById('taLaunch').addEventListener('click',e=>{if(e.target.id==='taLaunch')taCloseResultSafely();});
 taSyncDemo();
 new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{attributes:true,attributeFilter:['hidden']});
 </script>
@@ -9889,7 +10244,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   ui.classList.add('ta-items-revealing');
   const generation=startupGeneration;
   // Fill each pip individually after the START overlay has completed.
-  for(let i=1;i<=3;i++){
+  for(let i=1;i<=Math.min(MAX_USES,(typeof taStarRunValue==='function'?taStarRunValue('white'):3));i++){
    startupTimers.push(setTimeout(()=>{
     if(generation!==startupGeneration||!active())return;
     usesLeft=i;sync();
@@ -9897,7 +10252,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
     pip.addEventListener('animationend',()=>pip.classList.remove('ta-item-pip-recharged'),{once:true});
    },220+(i-1)*155));
   }
-  startupTimers.push(setTimeout(()=>{if(generation===startupGeneration)ui.classList.remove('ta-items-revealing');},850));
+  startupTimers.push(setTimeout(()=>{if(generation===startupGeneration)ui.classList.remove('ta-items-revealing');},1000));
  });
  // Reserve rewards immediately, but display and credit each one only after its ring contracts.
  const rechargeAnimations=new Set();
@@ -10065,6 +10420,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(!rewardOrb||!active())return;
   const r=rewardOrb.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
   removeRewardOrb();rewardElapsed=0;rewardNext=32+Math.random()*14;
+  window.taStars?.track('silver');
   rewardOrbBurst(x,y);
   try{sfx.boon();sfx.pickupShimmer();}catch(_){}
   // A full inventory still allows collecting and bursting the field orb,
@@ -10241,7 +10597,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   let length=0;for(let i=1;i<pts.length;i++)length+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
   const tap=length<22;
   const dualActive=crossBursts.length>0||performance.now()-taLastDualFinisher<taDualGreenWindowMs;
-  const n=dualActive?5:(tap?6:8); // Swipe summons one fewer word; tap and dual-element counts stay unchanged.
+  const baseCount=dualActive?5:(tap?6:8);
+  const n=Math.max(1,baseCount+(typeof taStarRunValue==='function'?taStarRunValue('green'):0)); // ★ changes generated words, not the special effect type.
+  window.taStars?.track('green');
   const fw=field.clientWidth||1,fh=field.clientHeight||1;
   const centers=[];
   for(let i=0;i<n;i++){
@@ -10697,7 +11055,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  }else if(isTap&&(!clockDial||clockDial.type!==g.type)){clockDialFx(pts[0],g.type)}
  const segs=[];if(isTap){const c=pts[0];segs.push([c,{x:c.x+.01,y:c.y},94]);}
  else for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(Math.hypot(b.x-a.x,b.y-a.y)>1)segs.push([a,b,23]);}
- if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:(completed||eclipseTap)?.30:3.1,total:3.1,age:0,resonated:false,clockDissolve:completed||eclipseTap};traces.push(trace);if(traces.length>2){for(const older of traces.slice(0,-2)){if(!older.clockDissolve){older.left=Math.min(older.left,1.85);older.total=3.1;older.retiring=true;}}}if(traces.length>6)traces.splice(0,traces.length-6);for(const other of traces){if(!completed&&!eclipseTap&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed&&!eclipseTap)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
+ if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:(completed||eclipseTap)?.30:(typeof taStarRunValue==='function'?taStarRunValue(g.type):3.1),total:(typeof taStarRunValue==='function'?taStarRunValue(g.type):3.1),age:0,resonated:false,clockDissolve:completed||eclipseTap};traces.push(trace);if(!completed&&!eclipseTap&&(g.type==='fire'||g.type==='ice'))window.taStars?.track(g.type);if(traces.length>2){for(const older of traces.slice(0,-2)){if(!older.clockDissolve){older.left=Math.min(older.left,1.85);older.total=3.1;older.retiring=true;}}}if(traces.length>6)traces.splice(0,traces.length-6);for(const other of traces){if(!completed&&!eclipseTap&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed&&!eclipseTap)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
  checkWords();}
  // Capture the armed gesture before the normal word/tap collectors can consume it.
  field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<=0||gesture||consumedPointer!==null)return;playElementSound(selected);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
@@ -11106,25 +11464,48 @@ body>.ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!importa
 /* The lightweight fluorescent portal boundary is drawn above the suction core. */
 .ta-element-layer.ta-eclipse-rim-front{z-index:160!important;}
 </style>
+<style id="ta-star-phase2-style">
+.ta-star-skills{border:1px solid #a9885440;border-radius:12px;padding:12px;margin:10px 0 15px;background:#a988540d}
+.ta-star-skills h4{font-size:14px;margin:0 0 10px;color:#e6c786}
+.ta-star-skill{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #a9885426;font-size:12px}
+.ta-star-skill b{color:#dfc489;text-align:right}
+.ta-star-unlock-heading{display:block;color:#ffe2a0;margin:16px 0 9px;padding:9px 7px;font-size:clamp(15px,2.5vw,19px);font-weight:800;letter-spacing:.075em;text-align:center;text-shadow:0 0 9px #f5b65b88,0 0 19px #f4b55344;border-top:1px solid #e9bc6966;border-bottom:1px solid #e9bc6966;background:linear-gradient(90deg,transparent,#e5ac2c19,transparent)}
+.ta-star-unlock{padding:10px 8px;margin:6px 0;border:1px solid #d6ac6480;border-radius:9px;background:linear-gradient(110deg,#e5bd6930,#e5bd6909);box-shadow:inset 0 0 12px #e7b95815,0 0 10px #d4a85a20;color:#ffe4aa;font-weight:800;font-size:clamp(14px,2.3vw,17px);text-align:center;letter-spacing:.025em;text-shadow:0 0 8px #f3c76d55}
+.ta-star-result-summary{font-size:13px;color:#efcc88;text-align:center;letter-spacing:.025em}
+</style>
+<style id="ta-star-prototype-style">
+#viewMain>.hero .ta-star-tray{position:absolute;right:12px;bottom:12px;z-index:185;display:flex;flex-wrap:wrap-reverse;flex-direction:row-reverse;align-content:flex-start;gap:3px;width:min(164px,38%);pointer-events:none;min-height:20px}
+.ta-star-glyph{display:block;font-size:clamp(16px,2.6vw,23px);line-height:1;color:#ffe4a0;text-shadow:0 0 4px #fff4d0,0 0 12px #ffca65,0 0 20px #edaa46;filter:drop-shadow(0 1px 2px #1b1024);animation:ta-star-settle .55s ease-out both}
+@keyframes ta-star-settle{from{transform:scale(1.8) rotate(-25deg);opacity:.3}to{transform:scale(1);opacity:1}}
+.ta-star-toast{position:fixed;top:clamp(70px,12vh,125px);left:50%;transform:translateX(-50%);z-index:100020;pointer-events:none;max-width:min(90vw,360px);width:max-content;padding:11px 22px;border:1px solid #ddbd78a6;border-radius:13px;background:linear-gradient(120deg,#151a29f2,#393023ed);box-shadow:0 8px 32px #0009,0 0 25px #f4cf6920;color:#fbe7b7;text-align:center;font-size:14px;letter-spacing:.06em;animation:ta-star-toast-in .3s ease-out}
+.ta-star-toast small{display:block;margin-top:4px;color:#e0d4bc;font-size:12px}
+@keyframes ta-star-toast-in{from{opacity:0;transform:translate(-50%,-12px)}to{opacity:1;transform:translate(-50%,0)}}
+.ta-star-fly{position:fixed;z-index:100021;pointer-events:none;font-size:26px;color:#ffe8a3;text-shadow:0 0 13px #ffc75c,0 0 25px #ffbb4e;will-change:transform,opacity}
+.ta-star-total{font-size:25px;text-align:center;color:#dfb969;margin:12px auto}
+.ta-star-note{font-size:12px;opacity:.8;line-height:1.7}
+.ta-star-achievements{display:grid;gap:9px;margin-top:15px}
+.ta-star-achievement{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;border:1px solid #9e85584f;border-radius:10px;background:#a9885411}
+.ta-star-achievement span{font-size:13px}.ta-star-achievement small{display:block;font-size:11px;opacity:.75;margin-top:4px}.ta-star-achievement b{color:#c4b9a6;white-space:nowrap}
+.ta-star-achievement.is-earned b{color:#e6bd65}
+.ta-star-result{margin:12px 7px;padding:11px;border:1px solid #d4b16b77;border-radius:10px;text-align:center;color:#f4dca0;background:#d4a04d14;font-size:13px;line-height:1.8}
+@media(prefers-reduced-motion:reduce){.ta-star-glyph,.ta-star-toast{animation:none!important}}
+</style>
 <script>
 /* Guide switch is independent from the game's ranking/storage code. */
 (function(){
-  const rank=document.getElementById('taGuideTabRank');
-  const guide=document.getElementById('taGuideTabGuide');
-  const time=document.getElementById('taGuideTabTime');
-  const timePanel=document.getElementById('taGuideTimePanel');
-  const rankingPanel=document.getElementById('taGuideRankingPanel');
-  const helpPanel=document.getElementById('taGuideHelpPanel');
-  if(!rank||!guide||!time||!rankingPanel||!timePanel||!helpPanel)return;
-  function showTab(which){
-    rankingPanel.hidden=which!=='score';timePanel.hidden=which!=='time';helpPanel.hidden=which!=='guide';
-    for(const [button,key] of [[rank,'score'],[time,'time'],[guide,'guide']]){
-      const active=which===key;button.classList.toggle('is-current',active);button.setAttribute('aria-pressed',String(active));
-    }
-  }
-  rank.addEventListener('click',()=>showTab('score'));
-  time.addEventListener('click',()=>showTab('time'));
-  guide.addEventListener('click',()=>showTab('guide'));
+ const rank=document.getElementById('taGuideTabRank');
+ const stars=document.getElementById('taGuideTabStars');
+ const guide=document.getElementById('taGuideTabGuide');
+ const panels=[document.getElementById('taGuideRankingPanel'),document.getElementById('taGuideStarsPanel'),document.getElementById('taGuideHelpPanel')];
+ if(!rank||!stars||!guide||panels.some(p=>!p))return;
+ function showTab(which){
+  panels.forEach((p,i)=>p.hidden=which!==['score','stars','guide'][i]);
+  [[rank,'score'],[stars,'stars'],[guide,'guide']].forEach(([b,k])=>{b.classList.toggle('is-current',which===k);b.setAttribute('aria-pressed',String(which===k));});
+  if(which==='stars')window.taStars?.render();
+ }
+ rank.addEventListener('click',()=>showTab('score'));
+ stars.addEventListener('click',()=>showTab('stars'));
+ guide.addEventListener('click',()=>showTab('guide'));
 })();
 </script>
 
@@ -11408,9 +11789,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 #viewMain>.ta-items .ta-orb[aria-pressed="true"]::after{opacity:1!important;animation:taOrbBreathe .75s ease-in-out infinite!important}
 @media(pointer:coarse){#viewMain>.ta-items .ta-orb{width:52px!important;height:52px!important;min-width:52px!important;min-height:52px!important;flex-basis:52px!important}}
 /* Time-over transition: block all controls behind the result until explicitly closed. */
-html.ta-result-locked #viewMain,html.ta-result-locked header,html.ta-result-locked nav{pointer-events:none!important}
+/* No global pointer-event lock: the result modal handles its own interactions. */
 html.ta-result-locked #taLaunch{pointer-events:auto!important}
-#taTimeOverInputShield{position:fixed;inset:0;z-index:9990;background:transparent;touch-action:none;pointer-events:auto}
+#taTimeOverInputShield{position:fixed;inset:0;z-index:9990;background:transparent;touch-action:none;pointer-events:none}
+html.ta-result-locked #taTimeOverInputShield{pointer-events:none!important}
 #taLaunch:not([hidden]){z-index:9995!important}
 </style>
 
@@ -11632,4 +12014,9 @@ html.ta-result-locked #taLaunch{pointer-events:auto!important}
 
 <style id="ta-orb-inner-emblem-override">
 #viewMain>.ta-items .ta-orb canvas.ta-sphere-surface{filter:drop-shadow(0 0 3px rgba(var(--energy-rgb),.55))!important;opacity:1!important;mask-image:none!important;-webkit-mask-image:none!important}
+</style>
+
+<style>
+.ta-star-achievement-upgrade{font-size:12px!important;color:#a78335!important;opacity:1!important;font-weight:600;margin-top:7px!important}
+.ta-star-achievement:not(.is-earned) .ta-star-achievement-upgrade{color:#8d7553!important}
 </style>
