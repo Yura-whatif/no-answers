@@ -510,6 +510,47 @@ html.ta-meteor-skip #viewMain>.hero>picture.ta-bg-picture.ta-meteor50{opacity:0!
 .ta-silver-dust i{position:absolute;bottom:-4%;width:var(--sz,2px);height:var(--sz,2px);border-radius:50%;background:#e5ecf7;box-shadow:0 0 5px 1px rgba(218,231,255,.5);opacity:0;animation:taSilverRise var(--d,11s) linear var(--delay,0s) infinite;will-change:transform,opacity}
 @keyframes taSilverRise{0%{transform:translate3d(0,0,0);opacity:0}18%{opacity:.65}72%{opacity:.48}100%{transform:translate3d(var(--dx,0px),-110vh,0);opacity:0}}
 @media(prefers-reduced-motion:reduce){.ta-silver-dust i{animation-duration:22s;box-shadow:none}}
+
+/* Stage-linked collection frame glow. This is visual-only: no background,
+   word, combo or audio elements are changed. All stage colors are selected
+   from the existing root milestone classes. */
+#viewMain>.hero{
+  --ta-stage-edge:#E9C58B;
+  --ta-stage-strength:0;
+  --ta-stage-soft:0px;
+}
+html.ta-century-lit #viewMain>.hero{--ta-stage-edge:#E9C58B;--ta-stage-strength:.40;--ta-stage-soft:9px;}
+html.ta-200-lit #viewMain>.hero{--ta-stage-edge:#FFB347;--ta-stage-strength:.46;--ta-stage-soft:11px;}
+html.ta-300-lit #viewMain>.hero{--ta-stage-edge:#D94A62;--ta-stage-strength:.54;--ta-stage-soft:13px;}
+html.ta-400-lit #viewMain>.hero{--ta-stage-edge:#73D6A0;--ta-stage-strength:.57;--ta-stage-soft:14px;}
+html.ta-500-lit #viewMain>.hero{--ta-stage-edge:#44D9F5;--ta-stage-strength:.62;--ta-stage-soft:16px;}
+html.ta-600-lit #viewMain>.hero{--ta-stage-edge:#DCE5F5;--ta-stage-strength:.70;--ta-stage-soft:18px;}
+html.ta-700-lit #viewMain>.hero{--ta-stage-edge:#A7C9FF;--ta-stage-strength:.72;--ta-stage-soft:19px;}
+html.ta-800-lit #viewMain>.hero{--ta-stage-edge:#DCE5F5;--ta-stage-strength:.27;--ta-stage-soft:8px;}
+/* The dedicated pseudo-element is always above scenery but cannot intercept
+   pointer events or obscure the drifting words. No geometry is changed. */
+#viewMain>.hero::before{
+  content:"";position:absolute;inset:0;z-index:205;pointer-events:none;
+  border:2px solid var(--ta-stage-edge);border-radius:inherit;
+  box-shadow:inset 0 0 var(--ta-stage-soft) 1px var(--ta-stage-edge),
+             inset 0 0 2px var(--ta-stage-edge);
+  opacity:var(--ta-stage-strength);
+  transition:opacity 2.6s ease-in-out,border-color 2.6s ease-in-out,
+             box-shadow 2.6s ease-in-out;
+}
+/* Retain the existing outer frame shape, but stage colors govern its edge.
+   Previous gold/silver frame rules are superseded only at 100+ chains. */
+html.ta-century-lit #viewMain>.hero.rush{
+  border-color:var(--ta-stage-edge)!important;
+  box-shadow:0 0 var(--ta-stage-soft) 1px color-mix(in srgb,var(--ta-stage-edge) 45%,transparent),
+             0 30px 60px -30px color-mix(in srgb,var(--ink) 45%,transparent)!important;
+  transition:border-color 2.6s ease-in-out,box-shadow 2.6s ease-in-out!important;
+}
+html.ta-800-lit #viewMain>.hero.rush{
+  border-color:rgba(220,229,245,.27)!important;
+  box-shadow:0 0 8px rgba(220,229,245,.13)!important;
+}
+@media(prefers-reduced-motion:reduce){#viewMain>.hero::before{transition:none!important;}}
 </style>
 <script>
 /* 最初の描画より前に、前回の世界（白/黒）を決めておく。万一起動処理が止まっても4秒で必ず見せる */
@@ -2107,27 +2148,27 @@ html[data-yura="black"].ta-meteor-lit:not(.ta-century-lit) #viewMain>.hero.ta-ac
 html[data-yura="black"].ta-century-lit:not(.ta-200-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.castle-dim{opacity:1!important;}
 html[data-yura="black"].ta-200-lit:not(.ta-300-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-day300{opacity:1!important;}
 html[data-yura="black"].ta-300-lit:not(.ta-400-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-day-silver{opacity:1!important;}
-html[data-yura="black"].ta-400-lit #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-sky-ruins{opacity:1!important;}
+html[data-yura="black"].ta-400-lit:not(.ta-500-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-sky-ruins{opacity:1!important;}
 /* Avoid an extra original-night layer on initial load; same viewport and cropping for every stage. */
 #viewMain>.hero>picture.ta-bg-picture>img{width:100%;height:100%;object-fit:cover!important;object-position:center center!important;}
 @media(max-width:600px){#viewMain>.hero>picture.ta-bg-picture>img{object-fit:cover!important;object-position:center center!important;}}
 </style>
 <style id="ta-chain-collection-frame-300-500">
 /* Collection-area frame only: silver at 300-499 chains; lights out at 500+. */
-html.ta-silver-music-started:not(.ta-500-lit) #viewMain>.hero.rush{
+html.ta-silver-music-started:not(.ta-800-lit) #viewMain>.hero.rush{
   border-color:#e6f3ff;
   box-shadow:0 0 22px 2px rgba(194,224,255,.62),0 30px 60px -30px rgba(160,195,225,.38);
 }
-html.ta-silver-music-started:not(.ta-500-lit) #viewMain>.hero.rush .drift::after{
+html.ta-silver-music-started:not(.ta-800-lit) #viewMain>.hero.rush .drift::after{
   box-shadow:inset 0 0 0 1.5px rgba(236,247,255,.94),inset 0 0 34px rgba(184,216,245,.5);
 }
 /* At 500 chains extinguish both outer and inner glow, not the game content. */
-html.ta-500-lit #viewMain>.hero.rush{
+html.ta-800-lit #viewMain>.hero.rush{
   border-color:transparent;
   box-shadow:none;
   transition:border-color 4.5s ease-in-out,box-shadow 4.5s ease-in-out;
 }
-html.ta-500-lit #viewMain>.hero .drift::after{
+html.ta-800-lit #viewMain>.hero .drift::after{
   opacity:0!important;
 }
 </style>
@@ -2158,14 +2199,14 @@ html.ta-300-gold-fading:not(.ta-silver-music-started) #viewMain>.hero.rush .drif
  opacity:0;transition:opacity 4s ease-in-out;
 }
 /* Silver collection halo fades in with the inventory and the single outer HUD frame. */
-html.ta-silver-music-started:not(.ta-500-lit) #viewMain>.hero.rush{
+html.ta-silver-music-started:not(.ta-800-lit) #viewMain>.hero.rush{
  transition:border-color 1.35s ease-in-out,box-shadow 1.35s ease-in-out;
 }
-html.ta-silver-music-started:not(.ta-500-lit) #viewMain>.hero.rush .drift::after{
+html.ta-silver-music-started:not(.ta-800-lit) #viewMain>.hero.rush .drift::after{
  opacity:1;transition:opacity 1.35s ease-in-out,box-shadow 1.35s ease-in-out;
 }
 /* The existing 500-chain rule still extinguishes the collection frame only. */
-html.ta-500-lit #viewMain>.hero.rush{border-color:transparent;box-shadow:none}
+html.ta-800-lit #viewMain>.hero.rush{border-color:transparent;box-shadow:none}
 </style>
 <style id="ta-stage9-void-style">
 /* 500+ chains: pure black void, no image fetch or continuous animation. */
@@ -2174,7 +2215,7 @@ html.ta-500-lit #viewMain>.hero.rush{border-color:transparent;box-shadow:none}
   opacity:0;pointer-events:none;z-index:2;
   transition:opacity 5s ease-in-out;
 }
-html[data-yura="black"].ta-500-lit #viewMain>.hero.ta-active-visual>.ta-stage9-void{opacity:1;}
+html[data-yura="black"].ta-800-lit #viewMain>.hero.ta-active-visual>.ta-stage9-void{opacity:1;}
 @media(prefers-reduced-motion:reduce){#viewMain>.hero>.ta-stage9-void{transition-duration:0s;}}
 </style>
 <style id="ta-lamp-pulse-style">
@@ -2240,7 +2281,7 @@ html:not(.ta-300-lit) #viewMain>.hero>picture.ta-bg-picture.ta-day-silver,
 html:not(.ta-400-lit) #viewMain>.hero>picture.ta-bg-picture.ta-sky-ruins{
   opacity:0!important;transition-duration:0s!important;
 }
-html:not(.ta-500-lit) #viewMain>.hero>.ta-stage9-void{
+html:not(.ta-800-lit) #viewMain>.hero>.ta-stage9-void{
   opacity:0!important;transition-duration:0s!important;
 }
 </style>
@@ -2248,7 +2289,7 @@ html:not(.ta-500-lit) #viewMain>.hero>.ta-stage9-void{
 /* Fade the black void directly into stage_01. All intermediate backgrounds
    are removed instantly, so stage_07 can never flash during the return. */
 html.ta-void-return #viewMain>.hero>.ta-stage9-void,
-html.ta-void-return:not(.ta-500-lit) #viewMain>.hero>.ta-stage9-void{
+html.ta-void-return:not(.ta-800-lit) #viewMain>.hero>.ta-stage9-void{
   opacity:0!important;
   transition:opacity 3.5s ease-in-out!important;
 }
@@ -2288,7 +2329,7 @@ html.ta-native-return-all #viewMain>.hero.ta-active-visual>picture.ta-bg-picture
   transition-duration:2.6s!important;
   transition-timing-function:ease-in-out!important;
 }
-html.ta-native-return-all.ta-native-return-500 #viewMain>.hero>.ta-stage9-void{
+html.ta-native-return-all.ta-native-return-800 #viewMain>.hero>.ta-stage9-void{
   opacity:0!important;
   transition-property:opacity!important;
   transition-duration:3.5s!important;
@@ -2312,6 +2353,42 @@ html.ta-native-return-all.ta-native-return-500 #viewMain>.hero>.ta-stage9-void{
 #viewMain #ikan{display:none!important}
 </style>
 <style id="ta-legacy-counter-permanent-hide">#ikan,.ikan,.void-pts{display:none!important;visibility:hidden!important}</style>
+
+<style id="ta-ten-stage-native-fade-20261108">
+/* 500/600/700 are image stages; 800+ alone uses the black void.
+   Exactly one stage image is visible at a time, at the original picture geometry.
+   No cloned composite, canvas or image transform (past brightness/zoom regressions). */
+#viewMain>.hero>picture.ta-bg-picture.ta-stage08,
+#viewMain>.hero>picture.ta-bg-picture.ta-stage09,
+#viewMain>.hero>picture.ta-bg-picture.ta-stage10{
+ opacity:0!important;transition:opacity 5s ease-in-out!important;pointer-events:none;
+}
+html[data-yura="black"].ta-500-lit:not(.ta-600-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-stage08,
+html[data-yura="black"].ta-600-lit:not(.ta-700-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-stage09,
+html[data-yura="black"].ta-700-lit #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-stage10{
+ opacity:1!important;
+}
+/* 800+ is black, over stage10. Black is not displayed before 800. */
+html[data-yura="black"].ta-800-lit #viewMain>.hero.ta-active-visual>.ta-stage9-void{opacity:1!important;}
+/* Retain the proven 50+ native fade: fade the ACTUAL image, never an overlay
+   that can brighten or cover the word layer. */
+html.ta-native-return-all #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-stage08,
+html.ta-native-return-all #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-stage09,
+html.ta-native-return-all #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-stage10{
+ opacity:0!important;transition:opacity 2.6s ease-in-out!important;
+}
+html.ta-native-return-800 #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-stage10{
+ opacity:0!important;transition-duration:0s!important;
+}
+html.ta-native-return-all.ta-native-return-800 #viewMain>.hero.ta-active-visual>.ta-stage9-void{
+ opacity:0!important;transition:opacity 3.5s ease-in-out!important;
+}
+@media(prefers-reduced-motion:reduce){
+ #viewMain>.hero>picture.ta-bg-picture.ta-stage08,
+ #viewMain>.hero>picture.ta-bg-picture.ta-stage09,
+ #viewMain>.hero>picture.ta-bg-picture.ta-stage10{transition-duration:0s!important;}
+}
+</style>
 </head>
 <body>
 <style>
@@ -2358,6 +2435,9 @@ html.ta-native-return-all.ta-native-return-500 #viewMain>.hero>.ta-stage9-void{
     <picture class="ta-bg-picture b ta-day300" aria-hidden="true"><img src="img/stage_05.webp" alt="" decoding="async"></picture>
     <picture class="ta-bg-picture b ta-day-silver" aria-hidden="true"><img src="img/stage_06.webp" alt="" decoding="async"></picture>
     <picture class="ta-bg-picture b ta-sky-ruins" aria-hidden="true"><img src="img/stage_07.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-stage08" aria-hidden="true"><img src="img/stage_08.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-stage09" aria-hidden="true"><img src="img/stage_09.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-stage10" aria-hidden="true"><img src="img/stage_10.webp" alt="" decoding="async"></picture>
     <div class="ta-stage9-void" aria-hidden="true"></div>
     <picture class="ta-bg-picture ta-lamp-pulse" aria-hidden="true"><img src="img/stage_02.webp" alt="" decoding="async"></picture>
     <!-- 髪だけを、ゆるやかな揺らぎで重ねてなびかせる -->
@@ -4747,7 +4827,7 @@ var taMeteorHadCentury=false;
 function taMeteorReset(){
   taCancelLampPulse();
   const doc=document.documentElement;
-  doc.classList.remove('ta-meteor-lit','ta-night-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit');
+  doc.classList.remove('ta-meteor-lit','ta-night-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit');
   if(taMeteorHadCentury)doc.classList.add('ta-meteor-skip');
   taMeteorHadCentury=false;
 }
@@ -4773,7 +4853,7 @@ let taVoidReturnTimer=null;
 function taBeginVoidReturn(){
   const root=document.documentElement;
   if(taVoidReturnTimer){clearTimeout(taVoidReturnTimer);taVoidReturnTimer=null;}
-  if(!root.classList.contains('ta-500-lit')){
+  if(!root.classList.contains('ta-800-lit')){
     root.classList.remove('ta-void-return');
     return;
   }
@@ -4801,7 +4881,7 @@ function taFadeChainScene(){
   const root=document.documentElement;
   const hero=document.querySelector('#viewMain>.hero');
   if(!hero || root.dataset.yura!=='black')return;
-  const stages=['ta-500-lit','ta-400-lit','ta-300-lit','ta-200-lit','ta-century-lit','ta-meteor-lit'];
+  const stages=['ta-800-lit','ta-700-lit','ta-600-lit','ta-500-lit','ta-400-lit','ta-300-lit','ta-200-lit','ta-century-lit','ta-meteor-lit'];
   if(!stages.some(cls=>root.classList.contains(cls)))return;
   const rect=hero.getBoundingClientRect();
   if(rect.width<1 || rect.height<1)return;
@@ -4852,7 +4932,7 @@ function taFadeChainScene(){
   if(!wrapper.childElementCount)return;
   taClearChainSceneReturn();
   const token=taChainSceneReturnToken;
-  const duration=root.classList.contains('ta-500-lit')?3500:2600;
+  const duration=root.classList.contains('ta-800-lit')?3500:2600;
   hero.appendChild(wrapper);
   // First paint the retained state. Only then begin fading its opacity.
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
@@ -4866,18 +4946,18 @@ function taFadeChainScene(){
 
 function expireCombo(){
   const taRoot50=document.documentElement;
-  const had500=taRoot50.classList.contains('ta-500-lit');
-  const hadMilestone=['ta-meteor-lit','ta-century-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit']
+  const had800=taRoot50.classList.contains('ta-800-lit');
+  const hadMilestone=['ta-meteor-lit','ta-century-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit']
     .some(c=>taRoot50.classList.contains(c));
   // Native element transitions avoid the brightness change caused by a
   // composited snapshot. All active milestones use the proven stage-50 path.
   if(hadMilestone){
     taClearChainSceneReturn();
     taRoot50.classList.add('ta-native-return-all');
-    if(had500)taRoot50.classList.add('ta-native-return-500');
-    const delay=had500?3650:2750;
+    if(had800)taRoot50.classList.add('ta-native-return-800');
+    const delay=had800?3650:2750;
     setTimeout(()=>{
-      taRoot50.classList.remove('ta-native-return-all','ta-native-return-500');
+      taRoot50.classList.remove('ta-native-return-all','ta-native-return-800');
     },delay);
   }
   // The snapshot handles the 500+ return too; do not run a second, competing
@@ -4889,7 +4969,7 @@ function expireCombo(){
   taMeteorReset();
   combo=0;comboWindowMs=COMBO_MS;
   taSyncDriftingGlowWords();
-  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-word-300");
+  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-600-lit","ta-700-lit","ta-800-lit","ta-word-300");
   const el=$("combo");el.classList.remove("on","x2","x3","run","heat","ta-skill-grace");
   el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();
 }
@@ -4897,7 +4977,7 @@ function expireCombo(){
 // final chain milestone; stage_02 pulses at most once for 10-49 chains.
 function taApplyComboBackground(finalCombo, resumeFromStop=false){
   const root=document.documentElement;
-  if(finalCombo>=50)root.classList.remove('ta-native-return-50','ta-native-return-all','ta-native-return-500');
+  if(finalCombo>=50)root.classList.remove('ta-native-return-50','ta-native-return-all','ta-native-return-800');
   if(resumeFromStop && finalCombo>=10 && finalCombo<50)taPlayLampPulse();
   else if(finalCombo>=50)taCancelLampPulse();
   if(finalCombo>=1 && document.querySelector('#viewMain>.hero>.ta-chain-scene-snapshot'))taClearChainSceneReturn();
@@ -4906,11 +4986,14 @@ function taApplyComboBackground(finalCombo, resumeFromStop=false){
   root.classList.toggle("ta-century-lit",finalCombo>=100);
   root.classList.toggle("ta-200-lit",finalCombo>=200);
   root.classList.toggle("ta-300-lit",finalCombo>=300);
-  root.classList.toggle("ta-word-300",finalCombo>=300);
-  taSilverDust.sync(finalCombo>=300);
+  root.classList.toggle("ta-word-300",finalCombo>=600);
+  taSilverDust.sync(finalCombo>=600);
   root.classList.toggle("ta-400-lit",finalCombo>=400);
-  if(finalCombo>=500)taCancelVoidReturn();
+  if(finalCombo>=800)taCancelVoidReturn();
   root.classList.toggle("ta-500-lit",finalCombo>=500);
+  root.classList.toggle("ta-600-lit",finalCombo>=600);
+  root.classList.toggle("ta-700-lit",finalCombo>=700);
+  root.classList.toggle("ta-800-lit",finalCombo>=800);
   if(finalCombo>=50)root.classList.remove("ta-meteor-skip");
   if(finalCombo>=100)taMeteorHadCentury=true;
 }
@@ -4949,11 +5032,11 @@ function bumpCombo(){
   if(combo===100){
     // Non-blocking image prewarm: these stages are far ahead; never stall collection.
     const mobile=window.matchMedia&&window.matchMedia('(max-width:600px)').matches;
-    const names=mobile?['stage_06.webp','stage_07.webp']:['stage_06.webp','stage_07.webp'];
+    const names=mobile?['stage_06.webp','stage_07.webp','stage_08.webp','stage_09.webp','stage_10.webp']:['stage_06.webp','stage_07.webp','stage_08.webp','stage_09.webp','stage_10.webp'];
     for(const name of names){const im=new Image();im.decoding='async';im.src='img/'+name;if(im.decode)im.decode().catch(()=>{});}
   }
   if(combo>=100 && !taCenturyMusic.isActive() && !taSilverMusic.isActive())taCenturyMusic.start();
-  if(combo>=300 && !taSilverMusic.isActive())taSilverMusic.start();
+  if(combo>=600 && !taSilverMusic.isActive())taSilverMusic.start();
   else if(combo===1){taSilverMusic.stop();taCenturyMusic.stop();}
   // The previous offsetWidth read forced a full style/layout flush on EVERY
   // collection, especially expensive while multiple skills animate.
@@ -5049,7 +5132,7 @@ function stopTap(w){
   bumpCombo(); // Time-stop word taps are intentionally silent.
   const g = yieldNow(), word = w.dataset.word || w.textContent, field = $("drift").getBoundingClientRect(), r = w.getBoundingClientRect();
   const cx = r.left + r.width/2 - field.left, cy = r.top + r.height/2 - field.top;
-  if(combo>=300)taCenturyDust.emit(r);
+  if(combo>=600)taCenturyDust.emit(r);
   // Time-stop: two halves are pulled in opposite random directions, stretched and torn apart.
   // Keep the effect centered on the tapped word; do not alter audio or scoring.
   const angle = Math.random() * Math.PI * 2;
@@ -5963,7 +6046,7 @@ function spawnWord(opt = {}){
     // Keep early hits expressive; omit overlapping effects after the fifth hit.
     const taDenseSwipe=taCoarse && combo<99 && !!w.dataset.swiped && taSwipeBurstCount>2; // 100+ always shows reward orbs
     // Do not start a separate oscillator for every word in a rapid swipe.
-    if(taRunning && combo>=300 && !flood){if(taNow-taSwipeLastTouch>95){sfx.goldTap();taSwipeLastTouch=taNow;}}else if(!taDenseSwipe || taNow-taSwipeLastTouch>210){sfx.touch();taSwipeLastTouch=taNow;}
+    if(taRunning && combo>=600 && !flood){if(taNow-taSwipeLastTouch>95){sfx.goldTap();taSwipeLastTouch=taNow;}}else if(!taDenseSwipe || taNow-taSwipeLastTouch>210){sfx.touch();taSwipeLastTouch=taNow;}
     // 300連鎖以降は専用のクリスタルSE。連鎖終了後は通常音へ戻る。
     const isOdd = w.classList.contains("odd"); if(isOdd) track("odd", "逆さまの言葉");
     if(w.classList.contains("pull")){ const rr = w.getBoundingClientRect(); pullAll(rr.left + rr.width/2, rr.top + rr.height/2, w); }
@@ -5999,7 +6082,7 @@ function spawnWord(opt = {}){
     const r = w.getBoundingClientRect(), t = (taTime ? $("taTime") : $("taScore")).getBoundingClientRect();
     // Capture the real glyph bounds before removing the original word.
     let centuryTextRect=null;
-    if(combo>=300 && plainWord){
+    if(combo>=600 && plainWord){
       const range=document.createRange();range.selectNodeContents(w);
       const tr=range.getBoundingClientRect();
       if(tr.width>0&&tr.height>0)centuryTextRect={left:tr.left,top:tr.top,width:tr.width,height:tr.height};
@@ -6011,12 +6094,12 @@ function spawnWord(opt = {}){
     if(isGem){ f.getAnimations().forEach(x=>x.cancel()); gemBurst(r, f); } else {
     // 言葉が霧になってほどける：文字は広がりながらぼやけ、周りに淡い靄が立ちのぼって消える
     // あふれる時間は、ぼかしと字間の変化（重い）を省き、拡大と透明化だけで軽くほどく
-    const lite = flood || sakuraOn || combo>=300;   // 時止め・桜のあいだは、ぼかしを使わず軽くほどく
+    const lite = flood || sakuraOn || combo>=600;   // 時止め・桜のあいだは、ぼかしを使わず軽くほどく
     // Ordinary pre-century pickup: a quick silver outline flash, then a soft inward
     // contraction. Only transform/opacity animate; no new particles or blur filters.
-    const silverPickup=plainWord && combo<300 && !lite;
+    const silverPickup=plainWord && combo<600 && !lite;
     // 300+ only: gold glyph erodes from bottom upward while pooled sand rises.
-    const centuryEcho=combo>=300 && plainWord;
+    const centuryEcho=combo>=600 && plainWord;
     if(centuryEcho){
       // 300連鎖以降は移動せずフェードアウト。金砂は共用Canvasで描画する。
       f.style.borderColor='rgba(235,243,255,.82)';
@@ -6040,7 +6123,7 @@ function spawnWord(opt = {}){
       {transform:"scale(1.12) translateY(-4px)", opacity:.35, filter:"blur(5px)", letterSpacing:"0.3em", offset:.55},
       {transform:"scale(1.25) translateY(-10px)", opacity:0, filter:"blur(12px)", letterSpacing:"0.5em"}
     ], {duration: centuryEcho ? 520 : silverPickup ? 390 : lite ? 480 : 620, easing:"cubic-bezier(.2,.6,.3,1)", fill:"forwards"}).onfinish = () => f.remove();
-    if(combo>=300){
+    if(combo>=600){
       // 300+ pickup: omit the per-word cross flash; retain pooled gold sand.
       // Decorative particles must never interrupt orb flight or scoring.
       try { taCenturyDust.emit(r,centuryEcho?wordText:null,null,centuryTextRect); }
@@ -8981,7 +9064,7 @@ function taFinish(){
   if(window.taOrbDiag)setTimeout(()=>window.taOrbDiag.report(),2100);
   if(!taRunning&&!taStarting)return;
   // Preserve the century track only when the finished score enters the top 20.
-  const wasSilver=combo>=300 && taSilverMusic.isActive();
+  const wasSilver=combo>=600 && taSilverMusic.isActive();
   const wasCentury=combo>=100 && taCenturyMusic.isActive();
   clearTimeout(bumpCombo.h);
   taFadeCollectionAtTimeOver();
@@ -8993,7 +9076,7 @@ function taFinish(){
   taRunning=false;taStarting=false;
   taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;
   taFloodComboRemaining=null;
-  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-word-300");
+  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-600-lit","ta-700-lit","ta-800-lit","ta-word-300");
   const finishedComboEl=document.getElementById('combo');
   if(finishedComboEl){
     finishedComboEl.classList.remove('on','x2','x3','run','heat','hold','paused','hit','up','ta-skill-grace');
@@ -9080,7 +9163,7 @@ function taBeginReady(){
   taCancelVoidReturn();
   taMeteorReset();
   // DEMOでの操作履歴をゲーム本番へ持ち越さない。
-  taCancelFloodResume();clearTimeout(bumpCombo.h);taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-word-300");
+  taCancelFloodResume();clearTimeout(bumpCombo.h);taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-600-lit","ta-700-lit","ta-800-lit","ta-word-300");
   const comboEl=document.getElementById("combo");
   if(comboEl){comboEl.classList.remove("on","x2","x3","run","heat","paused","hold","ta-skill-grace");comboEl.style.removeProperty("--heat");}
   document.getElementById("cbn").textContent="0";document.getElementById("cbx").textContent="";comboRush(false);
