@@ -728,11 +728,11 @@ html,body{overscroll-behavior-y:none;}
 @keyframes resoWave{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--reso) 50%,transparent),0 0 10px color-mix(in srgb,var(--reso) 30%,transparent)}100%{box-shadow:0 0 0 10px transparent,0 0 10px color-mix(in srgb,var(--reso) 30%,transparent)}}
 .reso-lines{position:fixed;inset:0;width:100vw;height:100vh;z-index:19;pointer-events:none;overflow:visible}
 .reso-lines line{stroke:var(--reso);stroke-width:1.6;stroke-linecap:round;stroke-dasharray:1;filter:drop-shadow(0 0 3px var(--reso)) drop-shadow(0 0 6px color-mix(in srgb,var(--reso) 60%,transparent))}
-/* 陽だまり・月明かり（まれ）：やわらかく光る言葉。触れると絵がほのかに照らされ、違和感が2倍 */
+/* 降る記憶・昇る想い（まれ）：やわらかく光る言葉。触れると絵がほのかに照らされ、違和感が2倍 */
 .word.glow{color:var(--glowc);border-color:color-mix(in srgb,var(--glowc) 55%,transparent);background:color-mix(in srgb,var(--glowc) 14%,var(--paper) 76%);font-weight:600;letter-spacing:.14em;
   text-shadow:0 0 8px color-mix(in srgb,var(--glowc) 55%,transparent);box-shadow:0 0 16px color-mix(in srgb,var(--glowc) 45%,transparent);animation:drift 9s linear forwards,glowPulse 2.2s ease-in-out infinite}
 @keyframes glowPulse{0%,100%{box-shadow:0 0 10px color-mix(in srgb,var(--glowc) 30%,transparent)}50%{box-shadow:0 0 24px 2px color-mix(in srgb,var(--glowc) 60%,transparent)}}
-/* 陽だまり・月明かりの空気：絵の上に重ねる光（言葉より奥） */
+/* 降る記憶・昇る想いの空気：絵の上に重ねる光（言葉より奥） */
 .glow-fx{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;animation:fbIn .8s ease both}
 .glow-fx.sun{background:radial-gradient(ellipse 90% 78% at 72% 8%,rgba(255,228,150,.46),rgba(255,214,130,.15) 48%,transparent 76%),radial-gradient(ellipse 128% 102% at 50% 46%,transparent 48%,rgba(138,80,16,.24) 100%),linear-gradient(200deg,rgba(255,214,140,.14),transparent 55%)}
 .glow-fx.sun .ray{position:absolute;top:-30%;height:170%;transform-origin:50% 0;transform:rotate(28deg);
@@ -749,6 +749,28 @@ html,body{overscroll-behavior-y:none;}
   scale:var(--s,1);animation:moteFall 7s linear infinite}
 @keyframes moteFall{0%{transform:translate(0,0);opacity:0}12%{opacity:.95}85%{opacity:.8}100%{transform:translate(var(--dx,0),var(--fall,300px));opacity:0}}
 .glow-fx.paused,.glow-fx.paused *{animation-play-state:paused !important}
+
+/* Falling Memory / Rising Feelings: stage-aware, independent from background
+   transitions and collection-frame glow. All colors affect this FX only. */
+.glow-fx.moon{
+ background:radial-gradient(ellipse 80% 70% at 22% 8%,var(--memory-haze),transparent 80%);
+}
+.glow-fx.moon .mote{
+ background:radial-gradient(circle,#fff 0%,var(--glow-particle) 46%,transparent 100%);
+ box-shadow:0 0 7px 1px var(--glow-halo);
+}
+.glow-fx.sun{
+ background:radial-gradient(ellipse 90% 78% at 72% 8%,var(--feeling-haze),transparent 78%),linear-gradient(200deg,var(--feeling-wash),transparent 60%);
+}
+.glow-fx.sun .ray{
+ background:linear-gradient(180deg,var(--feeling-ray),var(--feeling-wash) 48%,transparent 86%);
+}
+.glow-fx.sun .smote{
+ background:radial-gradient(circle,#fff 0%,var(--glow-particle) 53%,transparent 100%);
+ box-shadow:0 0 7px 1px var(--glow-halo);
+}
+.glowbar.glowbar.moon,.glowbar.glowbar.sun{border-color:var(--glow-particle,#b9d7ff)}
+.glowbar.glowbar.moon i,.glowbar.glowbar.sun i{background:linear-gradient(90deg,#fff,var(--glow-particle,#b9d7ff))}
 /* 桜吹雪（白）／夜桜（黒）：絵の空気を変え、奥の花びら（言葉より奥）と、手前をよぎる大きなぼけ花びら（言葉より手前・触れない）を舞わせる */
 .sakura-fx{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;opacity:0}
 .sakura-fx.sun{background:radial-gradient(ellipse 85% 70% at 78% 6%,rgba(255,232,220,.55),rgba(255,204,218,.18) 50%,transparent 78%),radial-gradient(ellipse 130% 100% at 50% 50%,transparent 52%,rgba(238,160,184,.2))}
@@ -2459,7 +2481,7 @@ html.ta-native-return-all.ta-native-return-800 #viewMain>.hero.ta-active-visual>
     <div class="combo" id="combo" aria-hidden="true">連鎖 <b id="cbn">0</b><em id="cbx"></em><i></i><span class="cpause">一時停止</span></div>
     <div class="floodbar" id="floodbar" hidden><span>あの日のままで</span><i></i></div>
     <div class="ta-ultimate-labels" id="taUltimateLabels" aria-live="off"></div>
-    <div class="floodbar glowbar" id="glowbar" hidden><span>陽だまり</span><i></i></div>
+    <div class="floodbar glowbar" id="glowbar" hidden><span>昇る想い</span><i></i></div>
     <div class="floodbar glowbar sakurabar" id="sakurabar" hidden><span>花の記憶</span><i></i></div>
     <div class="ikan" id="ikan" aria-hidden="true" style="display:none!important" ><b id="iv">0</b><span class="tm" id="tm"></span></div>
     <div class="rtray" id="rtray" hidden aria-label="読了特典のストック"></div>
@@ -2502,7 +2524,7 @@ html.ta-native-return-all.ta-native-return-800 #viewMain>.hero.ta-active-visual>
       <button type="button" id="t-all">ランキング初期化</button>
       <button type="button" id="t-c100">連鎖 +9</button>
       <button type="button" id="t-reward-orb">玉出現</button>
-      <button type="button" id="t-glow">陽だまり・月明かりを呼ぶ</button>
+      <button type="button" id="t-glow">降る記憶・昇る想いを呼ぶ</button>
       <button type="button" id="t-petal">桜の花びらを呼ぶ</button>
     </div>
   </div>
@@ -2604,7 +2626,7 @@ html.ta-native-return-all.ta-native-return-800 #viewMain>.hero.ta-active-visual>
               <div class="ta-guide-tip"><b>ひと工夫</b><p>奥義は「使える瞬間にすぐ使う」だけが正解ではありません。言葉が多い場面や、時間が厳しい場面まで温存する戦い方もあります。</p></div>
             </section>
             <section class="ta-guide-section" id="taGuideDaybreak"><h4><span>04</span> 夜から朝へ</h4>
-              <div class="ta-guide-phases"><div><span>夜 ／ 0〜99連鎖</span><strong>花の忘却 ・ 月明かり</strong><p>夜の記憶が漂う時間。</p></div><div><span>朝 ／ 100連鎖以降</span><strong>花の記憶 ・ 陽だまり</strong><p>朝の光とともに、新たな効果が現れます。</p></div></div>
+              <div class="ta-guide-phases"><div><span>夜 ／ 0〜99連鎖</span><strong>花の忘却 ・ 降る記憶／昇る想い</strong><p>夜の記憶が漂う時間。</p></div><div><span>朝 ／ 100連鎖以降</span><strong>花の記憶 ・ 降る記憶／昇る想い</strong><p>朝の光とともに、新たな効果が現れます。</p></div></div>
               <p>100連鎖に到達すると背景が徐々に朝へ変わります。連鎖が途切れると、景色はゆっくり夜に戻ります。</p>
             </section>
             <section class="ta-guide-section" id="taGuideTips"><h4><span>05</span> 連鎖をつなぐ技術</h4>
@@ -4122,7 +4144,7 @@ let ikanTotal = store.get("ta-yura-total", null);
 function addTotal(g){ if(g > 0){ ikanTotal = (ikanTotal || 0) + g; store.set("ta-yura-total", ikanTotal); } }
 const isDay = () => { const h = new Date().getHours(); return h >= 6 && h < 18; };
 // 違和感の倍率：「陽だまり」「月明かり」に触れたあいだだけ2倍（時間帯による倍率はなし）
-let glowUntil = 0, glowRemain = 0;   // glowRemain：陽だまり・月明かりの残り（ms）。時が止まっているあいだは減らない
+let glowUntil = 0, glowRemain = 0;   // glowRemain：降る記憶・昇る想いの残り（ms）。時が止まっているあいだは減らない
 const yieldNow = () => glowRemain > 0 ? 2 : 1;
 // 1行ずつ違和感で開く。最後の一行はいちばん重く、読んだ数に応じて少しずつ増える
 const lineCost = k => { const n = read.length; return k===0 ? 10 + n : k===1 ? 14 + Math.floor(n*1.5) : 24 + n*2; };
@@ -4166,9 +4188,9 @@ function updateIkan(bump){
   const boost = yieldNow() > 1;
   const ik = $("ikan"), wasBoost = ik.classList.contains("boost");
   ik.classList.toggle("boost", boost);
-  // 陽だまり・月明かりが始まった瞬間：「×2」が大きく光ってから収まり、枠もひととき光る（ボーナスタイムの合図）
+  // 降る記憶・昇る想いが始まった瞬間：「×2」が大きく光ってから収まり、枠もひととき光る（ボーナスタイムの合図）
   if(boost && !wasBoost){ ik.classList.remove("tm-in"); void ik.offsetWidth; ik.classList.add("tm-in"); clearTimeout(updateIkan.tmT); updateIkan.tmT = setTimeout(()=>ik.classList.remove("tm-in"), 1400); }
-  $("ikan").title = boost ? (mode==="white" ? "陽だまりのあいだは、違和感が2倍集まります" : "月明かりのあいだは、違和感が2倍集まります") : "";
+  $("ikan").title = boost ? "降る記憶・昇る想いの効果中は、違和感が2倍集まります" : "";
   $("tm").textContent = boost ? "×2" : "";
 }
 function updateCover(){
@@ -4366,6 +4388,36 @@ let nextMultiAt = Date.now() + 15000, forceMulti = false;
 let nextPullAt = Date.now() + 30000, forcePull = false;
 let nextResoAt = Date.now() + 30000, forceReso = false;     // 「共鳴」（出たあとは45秒あける）     // 「引き寄せ」（出たあとは50秒あける）
 let nextGlowAt = Date.now() + 70000, forceGlow = false;
+const GLOW_POST_COOLDOWN = 3000;
+let glowLastKind = 'feeling';
+let glowSpawnBlockUntil=0;
+function nextGlowKind(){
+  // Alternate when possible, without tying either effect to a stage.
+  const kind = Math.random() < .5 ? 'memory' : 'feeling';
+  glowLastKind = kind;
+  return kind;
+}
+function glowName(kind){return kind === 'memory' ? '降る記憶' : '昇る想い';}
+function glowStagePalette(){
+  const n=combo>=800?11:combo>=700?10:combo>=600?9:combo>=500?8:combo>=400?7:combo>=300?6:combo>=200?5:combo>=100?4:1;
+  const colors={
+    1:['#C7DCFF','#FFD9A8'],4:['#B9D7FF','#FFE6C7'],5:['#C6B8FF','#FFF0C9'],
+    6:['#8DDFFF','#FFC2D3'],7:['#E5D0FF','#FFE1A6'],8:['#E9C5FF','#FFD6A0'],
+    9:['#B9A4FF','#FFD5B8'],10:['#F1CAFF','#FFE7AD'],11:['#A9B8FF','#FFD9B8']
+  };
+  return colors[n];
+}
+function glowRgb(hex){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)).join(',');}
+function glowSetPalette(el,hex,kind){
+  const rgb=glowRgb(hex), memory=kind==='memory';
+  el.style.setProperty('--glow-particle',hex);
+  el.style.setProperty('--glow-halo',`rgba(${rgb},.70)`);
+  el.style.setProperty('--memory-haze',`rgba(${rgb},.20)`);
+  el.style.setProperty('--feeling-haze',`rgba(${rgb},.19)`);
+  el.style.setProperty('--feeling-wash',`rgba(${rgb},.08)`);
+  el.style.setProperty('--feeling-ray',`rgba(${rgb},.28)`);
+}
+
 // 桜吹雪・夜桜のきっかけ「ひとひらの花びら」：最初は3分後から、出たあとは4分あける（判定3%）→平均およそ4分40秒に1回
 const SAKURA_CD = 150000, SAKURA_P = .06;
 let nextSakuraAt = Date.now() + 75000, forceSakura = false, sakuraOn = false;     // 「陽だまり」「月明かり」（出たあとは90秒あける）   // 「芽生え」はときどき（出たあとは40秒あける）
@@ -4813,16 +4865,9 @@ function setComboSkillGrace(skill){
 // Keep only uncollected, drifting glow words synchronized with the chain's day/night state.
 // Already activated glow effects retain their original element and duration.
 function taSyncDriftingGlowWords(){
-  const label = (mode === "black" && combo < 100) ? "月明かり" : "陽だまり";
-  const field = document.getElementById("drift");
-  if(!field) return;
-  field.querySelectorAll(".word.glow:not(.got)").forEach(w=>{
-    if(w.dataset.word === label && w.textContent === label) return;
-    w.textContent = label;
-    w.dataset.word = label;
-    w.setAttribute("aria-label",label + "（触れると、しばらく違和感が2倍）");
-  });
+  // Each spawned word keeps its assigned identity across stage changes.
 }
+
 var taMeteorHadCentury=false;
 function taMeteorReset(){
   taCancelLampPulse();
@@ -5891,7 +5936,7 @@ function shatter(src){
           voidEl.animate([{opacity:1},{opacity:0}], {duration:FADE, easing:"ease", fill:"forwards"});
           shattering = false; document.documentElement.classList.remove("shattering"); nextCrackAt = Date.now() + 720000;
           sfx.bgmStop();   // 元の世界に戻るのでBGMを止める
-          setTimeout(()=>{ if(!flood && !glowRemain && !shattering) startGlow(); }, 80);   // 虚無のあと、月明かり/陽だまりから始める
+          setTimeout(()=>{ if(!flood && !glowRemain && !shattering) startGlow(); }, 80);   // 虚無のあと、降る記憶/昇る想いから始める
           // 集めた違和感を反映。暗転解除時に合計は表示しない（二重加算の誤解を避けるため、違和感ポイントは先に消す）
           const total = vp.score, vr = vp.rect();
           vp.el.remove();
@@ -5997,11 +6042,20 @@ function spawnWord(opt = {}){
   if(pull){ w.textContent = "引き寄せ"; w.dataset.word = "引き寄せ"; w.classList.add("pull"); forcePull = false; nextPullAt = Date.now() + 45000; w.setAttribute("aria-label", "引き寄せ（触れると言葉を吸い寄せる）");
     for(let i=0;i<3;i++) setTimeout(()=>{ if(!flood && !shattering && !libOpen) spawnWord({force:true, plain:true}); }, 120 + i*160 + Math.random()*150); }   // 引き寄せと一緒に、吸い寄せる言葉を数個まいておく
   // 陽だまり（白）・月明かり（黒）：触れると、しばらく違和感が2倍
-  // 懐中時計が近いとき（現れる20秒前から、漂っているあいだ）は、陽だまり・月明かりが来やすい（待ち時間も短く）
+  // 懐中時計が近いとき（現れる20秒前から、漂っているあいだ）は、降る記憶・昇る想いが来やすい（待ち時間も短く）
   const preStop = Date.now() > nextSpecialAt - 20000 || !!field.querySelector(".word.special:not(.got)");
-  const glowW = !opt.plain && !special && !odd && !multi && !pull && !flood && !glowRemain && !sakuraOn && !field.querySelector(".word.petal:not(.got)") && (forceGlow || (Date.now() > nextGlowAt - (preStop ? 45000 : 0) && Math.random() < (preStop ? .08 : .03)));
-  if(glowW){ const nm = mode === "black" && combo < 100 ? "月明かり" : "陽だまり"; w.textContent = nm; w.dataset.word = nm; w.classList.add("glow"); forceGlow = false; nextGlowAt = Date.now() + 120000; w.setAttribute("aria-label", nm + "（触れると、しばらく違和感が2倍）"); }
-  // ひとひらの花びら：触れると桜吹雪（白）／夜桜（黒）。陽だまり・月明かりとは同時に出さない
+  const glowW = !opt.plain && !special && !odd && !multi && !pull && !flood && !glowRemain && !sakuraOn
+    && !field.querySelector(".word.glow:not(.got),.word.petal:not(.got)")
+    && Date.now()>glowSpawnBlockUntil
+    && (forceGlow || (Date.now() > nextGlowAt - (preStop ? 45000 : 0) && Math.random() < (preStop ? .08 : .03)));
+  if(glowW){
+    const kind=nextGlowKind(), nm=glowName(kind);
+    w.textContent=nm;w.dataset.word=nm;w.dataset.glowKind=kind;w.classList.add("glow");
+    w.style.setProperty("--glowc",glowStagePalette()[kind==="memory"?0:1]);
+    forceGlow=false;nextGlowAt=Date.now()+120000;
+    w.setAttribute("aria-label",nm+"（触れると10秒間、違和感が2倍）");
+  }
+  // ひとひらの花びら：触れると桜吹雪（白）／夜桜（黒）。降る記憶・昇る想いとは同時に出さない
   const petalW = !opt.plain && !special && !odd && !multi && !pull && !glowW && !flood && !glowRemain && !sakuraOn && !field.querySelector(".word.glow:not(.got),.word.petal:not(.got)") && (forceSakura || (Date.now() > nextSakuraAt && Math.random() < SAKURA_P));
   if(petalW){ w.textContent = ""; w.dataset.word = "花びら"; w.innerHTML = '<span class="pt"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="skpg" x1="32" y1="60" x2="32" y2="6" gradientUnits="userSpaceOnUse"><stop offset="0" style="stop-color:var(--pb)"/><stop offset=".6" style="stop-color:var(--pt)"/></linearGradient></defs><path d="' + SK_PETAL_D + '" fill="url(#skpg)" stroke="rgba(255,255,255,.7)" stroke-width="1.2"/></svg></span>';
     w.classList.add("petal"); setTimeout(()=>sfx.prepSakura(), 300); forceSakura = false; nextSakuraAt = Date.now() + SAKURA_CD; w.setAttribute("aria-label", combo < 100 ? "花びら（触れると花の忘却）" : "花びら（触れると花の記憶）"); }
@@ -6400,12 +6454,15 @@ const GLOW_MS = 10000;
 function startGlow(silent, collectedName){
   const hero = document.querySelector(".hero"); if(!hero) return;
   // An already spawned moonlight word stays moonlight after reaching 100 chains.
-  const moon = collectedName ? collectedName.trim() === "月明かり" : (mode === "black" && combo < 100);
-  track("glow/" + mode, moon ? "月明かり" : "陽だまり");
+  const moon = collectedName ? collectedName.trim() === "降る記憶" : nextGlowKind() === "memory";
+  track("glow/" + mode, moon ? "降る記憶" : "昇る想い");
   glowRemain = GLOW_MS; glowUntil = 1;
+  document.querySelectorAll('#drift .word.glow:not(.got)').forEach(w=>{w.classList.add('got');w.remove();});
   // 絵の空気を変える：陽だまりは斜めに差し込む光の筋、月明かりは青く沈んだ空気に舞い降りる光の粒
   let fx = hero.querySelector(".glow-fx"); if(fx) fx.remove();
   fx = document.createElement("div"); fx.className = "glow-fx " + (moon ? "moon" : "sun");
+  const color=glowStagePalette()[moon?0:1];
+  glowSetPalette(fx,color,moon?'memory':'feeling');
   if(moon) for(let i=0;i<22;i++){ const d = document.createElement("i"); d.className = "mote";
       d.style.left = (Math.random() * 100).toFixed(1) + "%"; d.style.animationDelay = (-Math.random() * 6).toFixed(2) + "s"; d.style.animationDuration = (5 + Math.random() * 4).toFixed(2) + "s";
       d.style.setProperty("--s", (.6 + Math.random() * 1.2).toFixed(2)); d.style.setProperty("--dx", ((Math.random() - .5) * 40).toFixed(0) + "px"); fx.append(d); }
@@ -6420,7 +6477,7 @@ function startGlow(silent, collectedName){
   fx.style.setProperty("--fall", Math.round(hero.clientHeight * 1.1) + "px");
   hero.insertBefore(fx, $("drift"));
   // 残り時間のバー（時止めのバーと並ぶときは、その下の段へ）
-  const bar = $("glowbar"); bar.className = "floodbar glowbar " + (moon ? "moon" : "sun"); bar.querySelector("span").textContent = moon ? "月明かり" : "陽だまり"; bar.hidden = false;
+  const bar = $("glowbar"); bar.className = "floodbar glowbar " + (moon ? "moon" : "sun"); bar.querySelector("span").textContent = moon ? "降る記憶" : "昇る想い"; glowSetPalette(bar,color,moon?'memory':'feeling'); bar.getAnimations().forEach(a=>a.cancel()); bar.style.opacity=""; bar.hidden = false;
   layoutBars();
   document.documentElement.classList.remove("glow-sun", "glow-moon"); document.documentElement.classList.add(moon ? "glow-moon" : "glow-sun");
   if(!silent) sfx.glow(moon);
@@ -6445,11 +6502,15 @@ function endGlow(){
   cancelAnimationFrame(startGlow.raf); glowRemain = 0; glowUntil = 0;
   const hero = document.querySelector(".hero"), fx = hero && hero.querySelector(".glow-fx");
   if(fx) fx.animate([{opacity:getComputedStyle(fx).opacity},{opacity:0}], {duration:400, fill:"forwards"}).onfinish = () => fx.remove();
-  const bar = $("glowbar"); if(bar && !bar.hidden){ bar.animate([{opacity:1},{opacity:0, transform:"translateY(-4px)"}], {duration:300}).onfinish = () => { bar.hidden = true; layoutBars(); }; }
+  const bar = $("glowbar"); if(bar && !bar.hidden){
+    const animation=bar.animate([{opacity:1},{opacity:0, transform:"translateY(-4px)"}], {duration:300});
+    animation.onfinish=()=>{if(glowRemain<=0){bar.hidden=true;layoutBars();}};
+  }
+  glowSpawnBlockUntil=Date.now()+GLOW_POST_COOLDOWN;
   document.documentElement.classList.remove("glow-sun", "glow-moon");
   updateIkan(false);
 }
-// 左上のバーの段組み：時止めのバーがあるときは、陽だまり・月明かりのバーをその下へ
+// 左上のバーの段組み：時止めのバーがあるときは、降る記憶・昇る想いのバーをその下へ
 function layoutBars(){
   const fb = $("floodbar"), gb = $("glowbar"); if(!gb) return;
   gb.style.top = (!fb.hidden ? 10 + fb.offsetHeight + 6 : 10) + "px";
@@ -6458,7 +6519,7 @@ function layoutBars(){
 // ---------- 桜吹雪（白）／夜桜（黒） ----------
 // 漂うひとひらの花びらに触れると、絵いっぱいに花びらが舞い、花びらと一緒に違和感の文字が降る（なぞって集める）。
 // 増える→ピーク→減る、の約12.5秒。降る文字は下に落ちきる前に消える。1文字＝1×連鎖倍率（光の×2はかからない）。
-// 陽だまり・月明かりとは同時に起きない。白黒で数・単価・頻度は同じ（期待値をそろえる）。
+// 降る記憶・昇る想いとは同時に起きない。白黒で数・単価・頻度は同じ（期待値をそろえる）。
 const SAKURA_MS = 12500, SK_RISE = 3000, SK_PEAK_END = 8000, SK_EMIT_END = 11000, SK_WORD_END = 9200, SK_WORD_RATE = 1.65;
 function skEnv(t){
   if(t < SK_RISE){ const u = t / SK_RISE; return u * u * (3 - 2 * u); }
@@ -8677,7 +8738,7 @@ window.addEventListener("resize", ()=>{ if(libOpen && !turning) renderShelf(); }
 
 // テスト用
 $("t-petal").onclick=()=>{ forceSakura = true; toast("まもなく、ひとひらの花びらが現れます"); };
-$("t-glow").onclick=()=>{ forceGlow = true; toast(mode === "black" ? "まもなく、「月明かり」が現れます" : "まもなく、「陽だまり」が現れます"); };
+$("t-glow").onclick=()=>{ forceGlow = true; toast("まもなく、「降る記憶」または「昇る想い」が現れます"); };
 $("t-reward-orb").onclick=()=>document.dispatchEvent(new Event("ta-reward-spawn-test"));
 $("t-c100").onclick=()=>{ combo += 8; comboAt = Date.now(); bumpCombo(); toast("連鎖を9増やしました"); };
 $("t-all").onclick=()=>{
@@ -10107,7 +10168,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(w.classList.contains('special')){startFlood(w);sfx.special();sfx.timeStop();}
   else if(w.classList.contains('petal'))sakuraBloom(w);
   else if(w.classList.contains('pull'))pullAll(cx,cy,w);
-  else if(w.classList.contains('glow'))startGlow();
+  else if(w.classList.contains('glow'))startGlow(false,w.dataset.word||w.textContent);
   else if(w.classList.contains('reso'))resonate(cx,cy,w);
   else if(w.classList.contains('multi')){const fr=field.getBoundingClientRect();multiply(cx-fr.left,cy-fr.top,{boon:w.classList.contains('boon')});}
   else if(w.classList.contains('vortex'))pullAll(cx,cy,w);
