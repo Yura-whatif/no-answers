@@ -567,6 +567,9 @@ html.ta-800-lit #viewMain>.hero.rush{
 .ta-star-upgrades-table td.is-unlocked span{color:#a37a32}
 .ta-star-upgrades-table td.is-locked span{color:#a9a197}
 
+
+/* Challenge count belongs to the ranking heading, not the shared tab header. */
+#paneRank .ta-ranking-heading .ta-rank-count-inline{display:flex;justify-content:flex-end;align-items:center;margin-top:12px;min-height:22px;text-align:right;font-family:var(--mincho);font-size:.8rem;letter-spacing:.04em;color:var(--mute)}
 </style>
 <script>
 /* 最初の描画より前に、前回の世界（白/黒）を決めておく。万一起動処理が止まっても4秒で必ず見せる */
@@ -2665,11 +2668,11 @@ html.ta-native-return-all.ta-native-return-800 #viewMain>.hero.ta-active-visual>
         <button type="button" id="taGuideTabGuide" aria-pressed="false">説明書</button>
       </nav>
       <div id="taGuideRankingPanel">
-        <div class="bookhead ta-rank-head"><span class="count" id="taRankCount"></span></div>
+        
         <div class="bookcover ta-record-cover"><div class="spread one ta-record-spread">
           <section class="page solo ta-record-page">
             <div class="pg-head"><span>NO ANSWERS</span><span>TIME ATTACK</span></div>
-            <div class="ta-ranking-heading"><h3>得点ランキング</h3><p>高得点順に、挑戦の記録を綴ります。</p></div>
+            <div class="ta-ranking-heading"><h3>得点ランキング</h3><p>高得点順に、挑戦の記録を綴ります。</p><div class="ta-rank-count-inline"><span class="count" id="taRankCount"></span></div></div>
             <div id="taRanking" class="ta-record-list" aria-label="得点ランキング"></div>
           </section>
         </div></div>
