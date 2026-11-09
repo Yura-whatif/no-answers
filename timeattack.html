@@ -2499,6 +2499,21 @@ html.ta-native-return-all.ta-native-return-800 #viewMain>.hero.ta-active-visual>
 #taStarOutcome .ta-star-unlock-heading{display:block;margin:14px 0 8px;padding:8px 3px;font-size:19px;color:#ffe4a5;text-shadow:0 0 12px #e2ad6188;}
 #taStarOutcome .ta-star-unlock{margin:7px 0;padding:10px 6px;font-size:16px;font-weight:bold;border:1px solid #b28b56;border-radius:8px;background:#8d683524;color:#ffe3a2;}
 </style>
+<style id="ta-direct-stage01-return-20261109">
+/* Stage_01 is always the base. Do not animate any intermediate stage while
+   the retained outgoing stage is fading above it. Keep words above z-index:1. */
+html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-picture:not(.ta-dark-start){
+  opacity:0!important;transition:none!important;
+}
+html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>.ta-stage9-void{
+  opacity:0!important;transition:none!important;
+}
+html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-dark-start{
+  opacity:1!important;transition:none!important;
+}
+#viewMain>.hero>.ta-chain-scene-snapshot>picture{position:absolute!important;inset:0!important;display:block!important;opacity:1!important;transition:none!important}
+#viewMain>.hero>.ta-chain-scene-snapshot>picture>img{display:block!important;width:100%!important;height:100%!important;object-fit:cover!important;object-position:center center!important;transform:none!important;filter:none!important}
+</style>
 </head>
 <body>
 <style>
@@ -5007,76 +5022,54 @@ function taCancelVoidReturn(){
 // Freeze the ACTUAL on-screen composite, including partially faded milestones.
 // This avoids a one-frame flash of a fully completed stage when a combo expires.
 let taChainSceneReturnToken=0;
+let taChainReturnLayers=[];
+let taChainReturnTimer=null;
 function taClearChainSceneReturn(){
   ++taChainSceneReturnToken;
-  document.querySelectorAll('#viewMain>.hero>.ta-chain-scene-snapshot').forEach(el=>el.remove());
-  document.querySelectorAll('#viewMain>.hero>picture.ta-chain-return-picture').forEach(el=>el.remove());
+  if(taChainReturnTimer){clearTimeout(taChainReturnTimer);taChainReturnTimer=null;}
+  for(const el of taChainReturnLayers){
+    for(const p of ['opacity','transition','transition-property','transition-duration','transition-timing-function','visibility'])el.style.removeProperty(p);
+  }
+  taChainReturnLayers=[];
+  document.querySelectorAll('#viewMain>.hero>.ta-chain-scene-snapshot,#viewMain>.hero>.ta-native-composite-return').forEach(el=>el.remove());
+  document.documentElement.classList.remove('ta-direct-stage01-return');
 }
 function taFadeChainScene(){
   const root=document.documentElement;
   const hero=document.querySelector('#viewMain>.hero');
-  if(!hero || root.dataset.yura!=='black')return;
-  const stages=['ta-800-lit','ta-700-lit','ta-600-lit','ta-500-lit','ta-400-lit','ta-300-lit','ta-200-lit','ta-century-lit','ta-meteor-lit'];
-  if(!stages.some(cls=>root.classList.contains(cls)))return;
-  const rect=hero.getBoundingClientRect();
-  if(rect.width<1 || rect.height<1)return;
-  // Preserve the browser's actual, already-decoded image layers. Repainting
-  // them into a canvas changes blending/brightness and can flash at reset.
-  const wrapper=document.createElement('div');
-  wrapper.className='ta-chain-scene-snapshot';
-  wrapper.setAttribute('aria-hidden','true');
-  Object.assign(wrapper.style,{position:'absolute',inset:'0',zIndex:'1',
-    overflow:'hidden',pointerEvents:'none',opacity:'1',isolation:'isolate'});
-  // Preserve the exact rendered geometry of each source picture. Earlier
-  // snapshots replaced the source CSS with object-fit:cover and discarded
-  // source dimensions/position, which produced a visible one-frame zoom.
-  const pictures=hero.querySelectorAll(':scope > picture.ta-bg-picture:not(.ta-lamp-pulse)');
-  for(const original of pictures){
-    const pc=getComputedStyle(original);
-    const alpha=Number.parseFloat(pc.opacity);
-    if(!Number.isFinite(alpha)||alpha<0.001)continue;
-    const sourceImg=original.querySelector('img');
-    if(!sourceImg)continue;
-    const ic=getComputedStyle(sourceImg);
-    const copy=document.createElement('div');
-    copy.className='ta-return-layer';
-    Object.assign(copy.style,{position:'absolute',left:pc.left,top:pc.top,
-      width:pc.width,height:pc.height,margin:pc.margin,overflow:pc.overflow,
-      opacity:String(alpha),transform:pc.transform,transformOrigin:pc.transformOrigin,
-      transition:'none',pointerEvents:'none',display:'block'});
-    const img=document.createElement('img');
-    img.src=sourceImg.currentSrc||sourceImg.src;
-    img.alt='';img.decoding='sync';
-    Object.assign(img.style,{display:ic.display,width:ic.width,height:ic.height,
-      maxWidth:ic.maxWidth,maxHeight:ic.maxHeight,objectFit:ic.objectFit,
-      objectPosition:ic.objectPosition,transform:ic.transform,transformOrigin:ic.transformOrigin,
-      filter:ic.filter,opacity:ic.opacity,position:ic.position,
-      left:ic.left,top:ic.top,margin:ic.margin});
-    copy.appendChild(img);
-    wrapper.appendChild(copy);
-  }
-  const black=hero.querySelector(':scope > .ta-stage9-void');
-  if(black){
-    const alpha=parseFloat(getComputedStyle(black).opacity);
-    if(Number.isFinite(alpha)&&alpha>0.001){
-      const layer=document.createElement('div');
-      Object.assign(layer.style,{position:'absolute',inset:'0',background:'#000',opacity:String(alpha)});
-      wrapper.appendChild(layer);
-    }
-  }
-  if(!wrapper.childElementCount)return;
+  if(!hero||root.dataset.yura!=='black')return;
   taClearChainSceneReturn();
   const token=taChainSceneReturnToken;
   const duration=root.classList.contains('ta-800-lit')?3500:2600;
-  hero.appendChild(wrapper);
-  // First paint the retained state. Only then begin fading its opacity.
+  const layers=Array.from(hero.querySelectorAll(':scope > picture.ta-bg-picture:not(.ta-dark-start):not(.ta-lamp-pulse), :scope > .ta-stage9-void'));
+  const active=layers.map(el=>({el,opacity:parseFloat(getComputedStyle(el).opacity)}))
+    .filter(item=>Number.isFinite(item.opacity)&&item.opacity>0.01&&getComputedStyle(item.el).display!=='none');
+  if(!active.length)return;
+  // Preserve the existing DOM and computed visual state. Reparenting and
+  // inserting an additional copy made the scene brighter for one frame.
+  // A single topmost stage is sufficient for an opaque full-screen stage.
+  const outgoing=active[active.length-1].el;
+  const opacity=active[active.length-1].opacity;
+  taChainReturnLayers=layers;
+  // Lock the outgoing layer BEFORE milestone classes are removed. The original
+  // geometry, image and stacking context are untouched.
+  outgoing.style.setProperty('transition','none','important');
+  outgoing.style.setProperty('opacity',String(opacity),'important');
+  for(const layer of layers){
+    if(layer===outgoing)continue;
+    layer.style.setProperty('transition','none','important');
+    layer.style.setProperty('opacity','0','important');
+  }
+  // The next frame sees exactly the same outgoing picture in the same place.
+  // expireCombo clears milestone classes synchronously after this call.
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    if(token!==taChainSceneReturnToken||!wrapper.isConnected)return;
-    const animation=wrapper.animate([{opacity:1},{opacity:0}],
-      {duration,easing:'ease-in-out',fill:'forwards'});
-    animation.onfinish=()=>{if(token===taChainSceneReturnToken)wrapper.remove();};
+    if(token!==taChainSceneReturnToken)return;
+    outgoing.style.setProperty('transition',`opacity ${duration}ms ease-in-out`,'important');
+    outgoing.style.setProperty('opacity','0','important');
   }));
-  setTimeout(()=>{if(token===taChainSceneReturnToken)wrapper.remove();},duration+1500);
+  taChainReturnTimer=setTimeout(()=>{
+    if(token===taChainSceneReturnToken)taClearChainSceneReturn();
+  },duration+180);
 }
 
 function expireCombo(){
@@ -5084,16 +5077,12 @@ function expireCombo(){
   const had800=taRoot50.classList.contains('ta-800-lit');
   const hadMilestone=['ta-meteor-lit','ta-century-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit']
     .some(c=>taRoot50.classList.contains(c));
-  // Native element transitions avoid the brightness change caused by a
-  // composited snapshot. All active milestones use the proven stage-50 path.
+  // Return straight to stage_01 through one retained outgoing layer.
+  // Disable all intermediate-stage native transitions BEFORE removing milestone
+  // classes, otherwise the browser briefly paints a previous stage.
   if(hadMilestone){
-    taClearChainSceneReturn();
-    taRoot50.classList.add('ta-native-return-all');
-    if(had800)taRoot50.classList.add('ta-native-return-800');
-    const delay=had800?3650:2750;
-    setTimeout(()=>{
-      taRoot50.classList.remove('ta-native-return-all','ta-native-return-800');
-    },delay);
+    taFadeChainScene();
+    taRoot50.classList.remove('ta-native-return-all','ta-native-return-800');
   }
   // The snapshot handles the 500+ return too; do not run a second, competing
   // void fade on the original layers.
@@ -5104,7 +5093,14 @@ function expireCombo(){
   taMeteorReset();
   combo=0;comboWindowMs=COMBO_MS;
   taSyncDriftingGlowWords();
-  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-600-lit","ta-700-lit","ta-800-lit","ta-word-300");
+  // Keep the old native stage visible until the snapshot has been painted.
+  // Then switch the native background to stage_01 underneath the snapshot,
+  // without showing any intermediate stage or altering the words/orbs.
+  const clearMilestones=()=>document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-600-lit","ta-700-lit","ta-800-lit","ta-word-300");
+  if(hadMilestone){
+    // The opaque snapshot keeps the outgoing image while stage_01 is exposed.
+  }
+  clearMilestones();
   const el=$("combo");el.classList.remove("on","x2","x3","run","heat","ta-skill-grace");
   el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();
 }
@@ -5112,10 +5108,10 @@ function expireCombo(){
 // final chain milestone; stage_02 pulses at most once for 10-49 chains.
 function taApplyComboBackground(finalCombo, resumeFromStop=false){
   const root=document.documentElement;
-  if(finalCombo>=50)root.classList.remove('ta-native-return-50','ta-native-return-all','ta-native-return-800');
+  if(finalCombo>=50){taClearChainSceneReturn();root.classList.remove('ta-native-return-50','ta-native-return-all','ta-native-return-800','ta-direct-stage01-return');}
   if(resumeFromStop && finalCombo>=10 && finalCombo<50)taPlayLampPulse();
   else if(finalCombo>=50)taCancelLampPulse();
-  if(finalCombo>=1 && document.querySelector('#viewMain>.hero>.ta-chain-scene-snapshot'))taClearChainSceneReturn();
+  if(finalCombo>=1 && document.querySelector('#viewMain>.hero>.ta-chain-scene-snapshot')){taClearChainSceneReturn();root.classList.remove('ta-direct-stage01-return');}
   root.classList.toggle("ta-night-lit",false);
   root.classList.toggle("ta-meteor-lit",finalCombo>=50);
   root.classList.toggle("ta-century-lit",finalCombo>=100);
@@ -9298,37 +9294,21 @@ function taCancelDemoReturn(){
   document.querySelectorAll('.ta-timeover-scene-ghost').forEach(el=>el.remove());
 }
 function taFadeCollectionAtTimeOver(){
+  // Use the SAME native background fade as combo expiry. A cloned scene
+  // previously disappeared as soon as milestone classes were cleared,
+  // causing an immediate jump to stage_01 at Time Over.
   const hero=document.querySelector('#viewMain > .hero');
-  const view=document.getElementById('viewMain');
-  if(!hero||!view)return;
+  if(!hero)return;
   document.querySelectorAll('.ta-timeover-scene-ghost').forEach(el=>el.remove());
-  const ghost=hero.cloneNode(true);
-  // The ghost is a background-only crossfade. Never duplicate words, controls,
-  // result panels, star effects or any interactive part of the collection field.
-  [...ghost.children].forEach(el=>{
-    if(!el.matches('picture.ta-bg-picture, .ta-stage9-void, .ta-chain-scene-snapshot'))el.remove();
-  });
-  const originalLayers=hero.querySelectorAll('picture.ta-bg-picture, .ta-stage9-void');
-  const clonedLayers=ghost.querySelectorAll('picture.ta-bg-picture, .ta-stage9-void');
-  originalLayers.forEach((layer,i)=>{
-    if(clonedLayers[i])clonedLayers[i].style.setProperty('opacity',getComputedStyle(layer).opacity,'important');
-  });
-  ghost.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
-  ghost.removeAttribute('id');
-  ghost.classList.add('ta-timeover-scene-ghost');
-  // The parent view is scaled/transformed by the PC layout. A fixed-position
-  // child is therefore offset by that transform. Use the hero's actual local
-  // layout coordinates so the fade stays exactly on top of the original.
-  if(getComputedStyle(view).position==='static')view.style.position='relative';
-  Object.assign(ghost.style,{
-    position:'absolute',left:hero.offsetLeft+'px',top:hero.offsetTop+'px',
-    width:hero.offsetWidth+'px',height:hero.offsetHeight+'px',margin:'0',
-    zIndex:'100',pointerEvents:'none',opacity:'1',
-    transition:'opacity 2.2s ease-in-out'
-  });
-  view.appendChild(ghost);
-  setTimeout(()=>{if(ghost.isConnected)ghost.style.opacity='0';},500);
-  setTimeout(()=>ghost.remove(),2850);
+  const root=document.documentElement;
+  const hasMilestone=['ta-meteor-lit','ta-century-lit','ta-200-lit','ta-300-lit',
+    'ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit']
+    .some(cls=>root.classList.contains(cls));
+  // Do not restart a running combo-expiry fade: that would jump back to the
+  // original opacity and cause a brightness flash.
+  if(hasMilestone && !taChainReturnTimer){
+    taFadeChainScene();
+  }
   const ticket=++taDemoReturnTicket;
   taDemoLabelPending=true;
   document.getElementById('taDemoPlay').hidden=true;
@@ -9338,6 +9318,7 @@ function taFadeCollectionAtTimeOver(){
     taDemoLabelPending=false;taSyncDemo();
   },3700);
 }
+
 function taSyncDemo(){
   if(!taRunning&&!taStarting&&document.getElementById('taStarOutcome')?.hidden&&document.getElementById('taLaunch')?.hidden&&!document.documentElement.classList.contains('ta-result-locked')&&!window.taResultPending)window.taStars?.demo();
   taInvalidatePlusRects();
@@ -9438,7 +9419,7 @@ function taFinish(manualExit=false){
   // the Time Over title, outro audio or collection result.
   for(const [label,fn] of [
     ['collection fade',()=>taFadeCollectionAtTimeOver()],
-    ['void return',()=>taBeginVoidReturn()],
+    ['void return',()=>taCancelVoidReturn()],
     ['silver dust',()=>taSilverDust.sync(false)],
     ['meteor reset',()=>taMeteorReset()]
   ]){try{fn();}catch(e){console.error('Time Over '+label,e);}}
