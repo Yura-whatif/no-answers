@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <!-- 公開を伏せているあいだは検索エンジンに載せない。公表するときはこの1行を消す -->
 <meta name="description" content="違和感を集め、ユラの3行思考を一行ずつ言葉にしていく、静かなブラウザゲーム。">
-<meta name="theme-color" content="#eeebe4">
+<meta name="theme-color" content="#060817">
 <!-- SNSで共有したときの表示（公開後、URL の「USERNAME」を自分の GitHub ユーザー名に書き換えてください） -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="No Answers ー違和感採集ー">
@@ -15,10 +15,14 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="img/favicon-32.png" sizes="32x32">
-<link rel="icon" href="img/favicon-16.png" sizes="16x16">
-<link rel="icon" href="img/favicon-48.png" sizes="48x48">
-<link rel="apple-touch-icon" href="img/icon3-180.png">
+
+
+
+
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="img/na-icon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="img/na-icon-48.png">
+<link rel="apple-touch-icon" sizes="180x180" href="img/na-icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1153,6 +1157,10 @@ body > .dcut{position:fixed;top:0;left:0;right:0;bottom:auto;margin:0 auto;width
 // ゲーム内の出来事を数える（解析が読み込まれていないときは何もしない）
 function track(name, title){ try{ if(window.goatcounter && window.goatcounter.count) window.goatcounter.count({path:name, title:title || name, event:true}); }catch(_){} }
 </script>
+<style id="na-install-splash-css">
+#na-install-splash{position:fixed;inset:0;z-index:2147483647;background:#060817;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:22px;opacity:1;transition:opacity .38s ease;pointer-events:none}#na-install-splash img{width:min(43vw,190px);height:auto;filter:drop-shadow(0 0 22px rgba(119,113,232,.28))}#na-install-splash span{font-family:Georgia,serif;letter-spacing:.23em;color:#d8d7ef;font-size:clamp(14px,4vw,22px)}#na-install-splash.na-hide{opacity:0}
+</style>
+<script id="na-install-splash-js">(function(){try{if(!window.matchMedia('(display-mode: standalone)').matches&&!window.navigator.standalone)return;var d=document.createElement('div');d.id='na-install-splash';d.innerHTML='<img src="img/na-icon-512.png" alt=""><span>No Answers</span>';var add=function(){if(!document.body)return;document.body.appendChild(d);setTimeout(function(){d.classList.add('na-hide');setTimeout(function(){d.remove()},420)},1200)};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',add,{once:true});else add()}catch(e){}})();</script>
 </head>
 <body>
 
