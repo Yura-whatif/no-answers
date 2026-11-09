@@ -561,8 +561,8 @@ html.ta-800-lit #viewMain>.hero.rush{
 .ta-star-next-upgrade strong{display:block;font-size:12px;color:#8e713d;margin-bottom:5px}
 .ta-star-upgrades{margin:10px 0 18px;border:1px solid #d3c1a2;border-radius:10px;overflow:hidden;color:#64543e}
 .ta-star-upgrades summary{cursor:pointer;padding:12px 13px;font-weight:700;font-size:13px;user-select:none}
-.ta-star-upgrades-content{overflow-x:auto;padding:0 8px 10px}
-.ta-star-upgrades-table{border-collapse:collapse;width:100%;min-width:360px;font-size:12px;text-align:center}
+.ta-star-upgrades-content{overflow-x:hidden;padding:0 5px 10px}
+.ta-star-upgrades-table{border-collapse:collapse;width:100%;min-width:0;table-layout:fixed;font-size:11px;text-align:center}
 .ta-star-upgrades-table th,.ta-star-upgrades-table td{padding:9px 5px;border-bottom:1px solid rgba(139,108,64,.18)}
 .ta-star-upgrades-table thead th{font-size:11px;color:#77664c;white-space:nowrap}
 .ta-star-upgrades-table tbody th{text-align:left;white-space:nowrap;color:#5e4c36}
@@ -571,6 +571,20 @@ html.ta-800-lit #viewMain>.hero.rush{
 .ta-star-upgrades-table td.is-unlocked span{color:#a37a32}
 .ta-star-upgrades-table td.is-locked span{color:#a9a197}
 
+
+/* Fit all three upgrade stages on narrow phone screens without horizontal scrolling. */
+.ta-star-upgrades-table th,.ta-star-upgrades-table td{overflow-wrap:anywhere}
+.ta-star-upgrades-table thead th:first-child{width:26%}
+.ta-star-upgrades-table thead th:not(:first-child){width:24.666%}
+@media(max-width:480px){
+ .ta-star-upgrades-content{padding:0 3px 8px}
+ .ta-star-upgrades-table{font-size:10px}
+ .ta-star-upgrades-table th,.ta-star-upgrades-table td{padding:7px 1px}
+ .ta-star-upgrades-table thead th{font-size:9px;letter-spacing:-.04em}
+ .ta-star-upgrades-table tbody th{white-space:normal;line-height:1.35}
+ .ta-star-upgrades-table td span{font-size:10px;white-space:normal}
+ .ta-star-upgrades-table td small{font-size:9px}
+}
 
 /* Challenge count belongs to the ranking heading, not the shared tab header. */
 #paneRank .ta-ranking-heading .ta-rank-count-inline{display:flex;justify-content:flex-end;align-items:center;margin-top:12px;min-height:22px;text-align:right;font-family:var(--mincho);font-size:.8rem;letter-spacing:.04em;color:var(--mute)}
@@ -9076,7 +9090,21 @@ const taStars=(()=>{
    const achieved=state.earned.includes(g.id);
    const row=document.createElement('div');row.className='ta-star-achievement'+(achieved?' is-earned':'');
    const left=document.createElement('span');left.textContent=g.title;
-   const small=document.createElement('small');small.textContent=g.goal.toLocaleString('ja-JP')+g.unit+' 達成';left.append(small);
+   const small=document.createElement('small');
+   const n=g.goal.toLocaleString('ja-JP');
+   const descriptions={
+    chain:`【1プレイ】最大連鎖数が${n}連鎖に到達する`,
+    score:`【1プレイ】獲得得点が${n}点に到達する`,
+    plays:`【累計】${n}回プレイする`,
+    time:`【1プレイ】プレイ中に獲得した延長時間の合計が＋${n}秒に到達する`,
+    fire:`【累計】赤玉の効果を${n}回発動する`,
+    ice:`【累計】青玉の効果を${n}回発動する`,
+    green:`【累計】緑玉の効果を${n}回発動する`,
+    silver:`【累計】プレイ中に出現した白銀玉を${n}個回収する（開始時の配布分は対象外）`,
+    words:`【累計】言霊を${n}個採集する`,
+    tricolor:g.goal===1?'【1プレイ】赤玉と青玉を両方発動する':g.goal===2?'【1プレイ】赤玉・青玉・緑玉をすべて発動する':'【1プレイ】赤玉・青玉・緑玉をそれぞれ3回以上発動する'
+   };
+   small.textContent=descriptions[g.kind]||`${n}${g.unit} 達成`;left.append(small);
    const mark=document.createElement('b');mark.textContent=achieved?'★ 獲得済':'☆ 未達成';
    row.append(left,mark);box.append(row);
   });
