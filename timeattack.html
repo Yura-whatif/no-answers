@@ -574,8 +574,8 @@ html.ta-800-lit #viewMain>.hero.rush{
 
 /* Fit all three upgrade stages on narrow phone screens without horizontal scrolling. */
 .ta-star-upgrades-table th,.ta-star-upgrades-table td{overflow-wrap:anywhere}
-.ta-star-upgrades-table thead th:first-child{width:26%}
-.ta-star-upgrades-table thead th:not(:first-child){width:24.666%}
+.ta-star-upgrades-table thead th:first-child{width:34%}
+.ta-star-upgrades-table thead th:not(:first-child){width:22%}
 @media(max-width:480px){
  .ta-star-upgrades-content{padding:0 3px 8px}
  .ta-star-upgrades-table{font-size:10px}
@@ -2700,11 +2700,11 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
     </div>
     <div class="pane" id="paneRank" hidden>
       <nav class="ta-guide-tabs" aria-label="タイムアタックの記録と手引き">
-        <button type="button" class="is-current" id="taGuideTabRank" aria-pressed="true">得点ランキング</button>
-        <button type="button" id="taGuideTabStars" aria-pressed="false">星の軌跡</button>
+        <button type="button" class="is-current" id="taGuideTabStars" aria-pressed="true">星の軌跡</button>
+        <button type="button" id="taGuideTabRank" aria-pressed="false">得点ランキング</button>
         <button type="button" id="taGuideTabGuide" aria-pressed="false">説明書</button>
       </nav>
-      <div id="taGuideRankingPanel">
+      <div id="taGuideRankingPanel" hidden>
         
         <div class="bookcover ta-record-cover"><div class="spread one ta-record-spread">
           <section class="page solo ta-record-page">
@@ -2715,7 +2715,7 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
         </div></div>
         <p class="ta-record-note">記録はこのブラウザに保存されます。別の端末やブラウザとは共有されません。</p>
       </div>
-      <div id="taGuideStarsPanel" hidden>
+      <div id="taGuideStarsPanel">
         <div class="bookcover ta-record-cover"><div class="spread one ta-record-spread"><section class="page solo ta-record-page">
           <div class="pg-head"><span>NO ANSWERS</span><span>STAR MEMORIES</span></div>
           <div class="ta-ranking-heading"><h3>星の軌跡</h3><p>集めた星が、次の挑戦で新たな力になります。</p></div>
@@ -5260,15 +5260,17 @@ function taMixedWord(){
   const white = WORDS.white || [], black = WORDS.black || [];
   const total = white.length + black.length;
   if(!total) return "違和感";
-  const n = Math.floor(Math.random() * total);
-  return n < white.length ? white[n] : black[n - white.length];
+  // ★50: weight the white dictionary without changing the available words.
+  const whiteWeight=white.length*(typeof taStarRunValue==='function'?taStarRunValue('whiteRate')/100:1);
+  const n=Math.random()*(whiteWeight+black.length);
+  return n<whiteWeight ? white[Math.floor(n/Math.max(.001,whiteWeight)*white.length)] : black[Math.floor(n-whiteWeight)];
 }
 function placeStill(cell){
   const w = document.createElement("button");
   w.type = "button"; w.className = "word still"; w.textContent = taMixedWord();
   w.dataset.cell = cell;
   // 時止め中の時間延長文字の出現率は35%。
-  if(Math.random() < .25){ w.dataset.taTime = "1"; w.classList.add("ta-blue"); }
+  if(Math.random() < .25*(typeof taStarRunValue==='function'?taStarRunValue('blueRate')/100:1)){ w.dataset.taTime = "1"; w.classList.add("ta-blue"); }
   const [x, y] = STOP_CELLS[cell];
   w.style.setProperty("--x", (x + Math.random()*6).toFixed(1) + "%"); w.style.setProperty("--y", (y + Math.random()*4 - 2).toFixed(1) + "%");
   w.addEventListener("click", e => { e.stopPropagation(); if(flood && w.classList.contains("still")) stopTap(w); });
@@ -5443,7 +5445,7 @@ function startFlood(gem){
     layoutBars();taUltimateLayout();
     return;
   }
-  flood = true; stopPend = []; taCenturyMusic.timeStop(); taSilverMusic.timeStop(); track("timestop", "時止め");
+  flood = true; window.taStars?.track("ultimateStop"); window.taStars?.track("stop20",taFloodDurationMs()/1000); stopPend = []; taCenturyMusic.timeStop(); taSilverMusic.timeStop(); track("timestop", "時止め");
   taCancelLampPulse();
   // Freeze the actual combo-expiry timer and its visual countdown together.
   taFloodComboRemaining = null;
@@ -6137,7 +6139,7 @@ function spawnWord(opt = {}){
   if(shattering || (!opt.force && field.querySelectorAll(".word:not(.got)").length >= max) || document.hidden || libOpen) return;
   const w = document.createElement("button");
   w.type = "button"; w.className = "word" + (flood ? " fast" : ""); w.textContent = taMixedWord();
-  if(Math.random()<(flood ? .25 : .10)){w.dataset.taTime="1";w.classList.add("ta-blue");}
+  if(Math.random()<(flood ? .25 : .10)*(typeof taStarRunValue==='function'?taStarRunValue('blueRate')/100:1)){w.dataset.taTime="1";w.classList.add("ta-blue");}
   const special = false; // Pocket watch retired: time stop is now the fire/ice clock technique.
   if(special){ w.dataset.word = w.textContent; w.innerHTML = '<span class="sw"><i class="ch"></i><span class="pd"><i class="k"></i>' + [-2.4,-2,-1.6,-1.2,-.8,-.4,0,.4,.8,1.2,1.6,2,2.4].map(z=>'<i class="r" style="--z:'+z+'px"></i>').join("") + '<i class="f"></i></span></span>'; w.classList.add("special"); forceSpecial = false; nextSpecialAt = Date.now() + 180000; w.setAttribute("aria-label", "古びたペンダント（触れると言葉があふれる）"); w.title = "触れると言葉があふれる";
     setTimeout(()=>{sfx.prepStop();sfx.prepClockTick();}, 400); }   // 時が止まる音は、時計が現れたときに先に作っておく
@@ -6297,7 +6299,10 @@ function spawnWord(opt = {}){
       p.animate([{opacity:0, transform:"translate(-50%,-30%) rotate(180deg) scale(.8)"},{opacity:1, transform:"translate(-50%,-110%) rotate(0deg) scale(1.1)", offset:.25},{opacity:1, transform:"translate(-50%,-150%) rotate(0deg) scale(1)", offset:.7},{opacity:0, transform:"translate(-50%,-200%) rotate(0deg) scale(1)"}],
         {duration:1700, easing:"ease-out", fill:"forwards"}).onfinish = () => p.remove(); }
     }
-    const cx = r.left + r.width/2, cy = r.top + r.height/2;
+    const fieldRect=field.getBoundingClientRect();
+    const cxRaw=r.left+r.width/2,cyRaw=r.top+r.height/2;
+    const cx=fieldRect.width>24?Math.min(Math.max(cxRaw,fieldRect.left+12),fieldRect.right-12):cxRaw;
+    const cy=fieldRect.height>24?Math.min(Math.max(cyRaw,fieldRect.top+12),fieldRect.bottom-12):cyRaw;
     if(!flood || Date.now() - (sfx.lastFly || 0) > 260){ sfx.lastFly = Date.now(); sfx.fly(flood ? .62 : .9); }
     const o = document.createElement("span"); o.className = "orb"; taStyleRewardOrb(o,taTime,glowRemain>0 || fireScore);
     o.style.left = cx + "px"; o.style.top = cy + "px"; document.body.append(o); if(combo>=100)window.taOrbDiag.mark("orb appended");
@@ -6364,6 +6369,7 @@ function pullAll(x, y, self, eclipse=false, eclipseElement=null){
   const eclipseIce=eclipse && eclipseElement==='ice';
   const eclipseFire=eclipse && eclipseElement==='fire';
   const ultimateId=eclipse?taUltimateShow("eclipse","置き忘れたもの"):null;
+  if(eclipse)window.taStars?.track("ultimateEclipse");
   const R = Math.max(115, Math.min(185, fw * .42)) * (eclipse ? 1.7 : 1);
   const core = document.createElement("span"); core.className = "pull-core" + (eclipse ? " ta-eclipse-core ta-eclipse-"+eclipseElement : ""); core.innerHTML = vortexSVG(); if(eclipse)core.classList.add("ta-eclipse-session-fx"); core.style.left = x + "px"; core.style.top = y + "px"; document.body.append(core);
   core.animate([{scale:"0", opacity:0},{scale:"1.25", opacity:1, offset:.6},{scale:"1", opacity:1}], {duration:380, easing:"cubic-bezier(.3,1.3,.5,1)", fill:"forwards"});
@@ -6990,6 +6996,7 @@ function vortexRelease(){
       const prev=gessenHits[gessenHits.length-1];
       if(Math.hypot(x-prev.x,y-prev.y)>GESSEN_CHAIN_DISTANCE || Math.hypot(x-prev.x,y-prev.y)<12)return;
       gessenHits.push({x,y});gessenLastAt=now;gessenChainCount++;
+      if(gessenChainCount>=3&&gessenChainCount<=5)window.taStars?.track("gessen"+gessenChainCount);
       taAward(true,1,false,null,false,1);setComboSkillGrace('issen');
       renderGessenTrail(x,y);
       showGessenLabel(x,y,gessenRankName(gessenChainCount)+' +1秒');
@@ -7641,6 +7648,7 @@ function setTab(t){
   $("paneStatus").hidden = true;
   $("paneRank").hidden = false;
   if(typeof taRenderRecords === "function") taRenderRecords();
+  if(typeof window.taShowGuideTab === "function") window.taShowGuideTab('stars');
 }
 
 // ステータス：やりこみ具合を数字でまとめる
@@ -8917,11 +8925,15 @@ let taSessionMaxCombo=0,taSessionTimeGain=0;
 const TA_RECORD_KEY = 'ta-time-attack-records-v1';
 /* Star upgrades: one immutable snapshot per run; existing saved achievements remain valid. */
 const taStarUpgradeTable=[
- {key:'white',name:'開始時の白銀玉',unit:'個',steps:[[0,1],[2,2],[12,3],[22,4]]},
- {key:'fire',name:'赤玉の効果時間',unit:'秒',steps:[[0,2],[4,3],[14,4],[24,5]]},
- {key:'ice',name:'青玉の効果時間',unit:'秒',steps:[[0,2],[6,3],[16,4],[26,5]]},
- {key:'green',name:'緑玉の発生言霊',unit:'個',steps:[[0,-2],[8,-1],[18,0],[28,2]]},
- {key:'stop',name:'時間停止',unit:'秒',steps:[[0,3],[10,4],[20,5],[30,7]]}
+ {key:'white',name:'開始時の白銀玉',unit:'個',steps:[[0,1],[3,2],[21,3],[41,4]]},
+ {key:'fire',name:'赤玉の効果時間',unit:'秒',steps:[[0,1.1],[5,2.1],[23,3.1],[42,4.1]]},
+ {key:'ice',name:'青玉の効果時間',unit:'秒',steps:[[0,1.1],[7,2.1],[25,3.1],[43,4.1]]},
+ {key:'green',name:'緑玉の発生言霊数',unit:'個',steps:[[0,-3],[9,-2],[27,-1],[44,0]]},
+ {key:'stop',name:'時間停止',unit:'秒',steps:[[0,4],[11,5],[29,6],[45,7]]},
+ {key:'swipe',name:'赤・青玉のスワイプ距離',unit:'%',steps:[[0,70],[13,80],[35,90],[46,100]]},
+ {key:'whiteRate',name:'白言霊の出現率',unit:'%',steps:[[0,95],[15,100],[36,103],[47,106]]},
+ {key:'blueRate',name:'青言霊の出現率',unit:'%',steps:[[0,95],[17,100],[37,103],[48,106]]},
+ {key:'silverRate',name:'白銀玉の出現間隔',unit:'%',steps:[[0,100],[31,95],[39,90],[50,85]]}
 ];
 function taStarValue(key,count){const item=taStarUpgradeTable.find(x=>x.key===key);if(!item)return 0;let value=item.steps[0][1];for(const [threshold,next] of item.steps)if(count>=threshold)value=next;return value;}
 let taStarRunLevel=0;
@@ -8930,50 +8942,61 @@ function taStarRunValue(key){return taStarValue(key,taStarRunLevel);}
 function taStarUpcoming(oldCount,newCount){return taStarUpgradeTable.flatMap(item=>item.steps.slice(1).filter(step=>step[0]>oldCount&&step[0]<=newCount).map(step=>({at:step[0],name:item.name,delta:step[1]-taStarValue(item.key,step[0]-1),unit:item.unit,after:step[1]}))).sort((a,b)=>a.at-b.at);}
 /* Star memory prototype. Isolated from existing score/ranking and skill logic. */
 const taStars=(()=>{
- const KEY='ta-star-memories-prototype-v1';
+ const KEY='ta-star-memories-v2-50';
  const goals=[
-  {id:'chain30',title:'連鎖の芽 I',kind:'chain',goal:30,unit:'連鎖'},
-  {id:'chain100',title:'連鎖の芽 II',kind:'chain',goal:100,unit:'連鎖'},
-  {id:'chain300',title:'連鎖の芽 III',kind:'chain',goal:300,unit:'連鎖'},
-  // Keep stable IDs so previously earned stars are never revoked by threshold changes.
-  {id:'score1000',title:'得点の記憶 I',kind:'score',goal:500000,unit:'点'},
-  {id:'score10000',title:'得点の記憶 II',kind:'score',goal:1500000,unit:'点'},
-  {id:'score50000',title:'得点の記憶 III',kind:'score',goal:5000000,unit:'点'},
-  {id:'plays3',title:'挑戦の足跡 I',kind:'plays',goal:3,unit:'回'},
-  {id:'plays10',title:'挑戦の足跡 II',kind:'plays',goal:10,unit:'回'},
-  {id:'plays30',title:'挑戦の足跡 III',kind:'plays',goal:30,unit:'回'},
-  {id:'time30',title:'時のかけら I',kind:'time',goal:30,unit:'秒'},
-  {id:'time60',title:'時のかけら II',kind:'time',goal:60,unit:'秒'},
-  {id:'time120',title:'時のかけら III',kind:'time',goal:120,unit:'秒'},
-  {id:'fire3',title:'紅の残響 I',kind:'fire',goal:3,unit:'回'},
-  {id:'fire15',title:'紅の残響 II',kind:'fire',goal:15,unit:'回'},
-  {id:'fire50',title:'紅の残響 III',kind:'fire',goal:50,unit:'回'},
-  {id:'ice3',title:'蒼の静寂 I',kind:'ice',goal:3,unit:'回'},
-  {id:'ice15',title:'蒼の静寂 II',kind:'ice',goal:15,unit:'回'},
-  {id:'ice50',title:'蒼の静寂 III',kind:'ice',goal:50,unit:'回'},
-  {id:'green3',title:'翠の息吹 I',kind:'green',goal:3,unit:'回'},
-  {id:'green15',title:'翠の息吹 II',kind:'green',goal:15,unit:'回'},
-  {id:'green50',title:'翠の息吹 III',kind:'green',goal:50,unit:'回'},
-  {id:'silver1',title:'白銀の導き I',kind:'silver',goal:1,unit:'個'},
-  {id:'silver10',title:'白銀の導き II',kind:'silver',goal:10,unit:'個'},
-  {id:'silver30',title:'白銀の導き III',kind:'silver',goal:30,unit:'個'},
-  {id:'tricolor1',title:'言葉の交響 I',kind:'tricolor',goal:1,unit:'回'},
-  {id:'tricolor2',title:'言葉の交響 II',kind:'tricolor',goal:2,unit:'回'},
-  {id:'tricolor3',title:'言葉の交響 III',kind:'tricolor',goal:3,unit:'回'},
-  {id:'words500',title:'言葉の旅路 I',kind:'words',goal:500,unit:'個'},
-  {id:'words3000',title:'言葉の旅路 II',kind:'words',goal:3000,unit:'個'},
-  {id:'words10000',title:'言葉の旅路 III',kind:'words',goal:10000,unit:'個'}
+  {id:'chain30',title:'連鎖の芽 I',kind:'chain',goal:30,stars:1,unit:'連鎖'},
+  {id:'chain100',title:'連鎖の芽 II',kind:'chain',goal:100,stars:1,unit:'連鎖'},
+  {id:'chain300',title:'連鎖の芽 III',kind:'chain',goal:300,stars:1,unit:'連鎖'},
+  {id:'chain500',title:'連鎖の芽 IV',kind:'chain',goal:500,stars:1,unit:'連鎖'},
+  {id:'chain700',title:'連鎖の芽 V',kind:'chain',goal:700,stars:2,unit:'連鎖'},
+  {id:'chain800',title:'連鎖の芽 VI',kind:'chain',goal:800,stars:2,unit:'連鎖'},
+  {id:'score1000',title:'得点の記憶 I',kind:'score',goal:500000,stars:1,unit:'点'},
+  {id:'score10000',title:'得点の記憶 II',kind:'score',goal:1500000,stars:1,unit:'点'},
+  {id:'score50000',title:'得点の記憶 III',kind:'score',goal:5000000,stars:1,unit:'点'},
+  {id:'score10m',title:'得点の記憶 IV',kind:'score',goal:10000000,stars:2,unit:'点'},
+  {id:'score20m',title:'得点の記憶 V',kind:'score',goal:20000000,stars:2,unit:'点'},
+  {id:'time30',title:'時のかけら I',kind:'time',goal:30,stars:1,unit:'秒'},
+  {id:'time60',title:'時のかけら II',kind:'time',goal:60,stars:1,unit:'秒'},
+  {id:'time120',title:'時のかけら III',kind:'time',goal:120,stars:2,unit:'秒'},
+  {id:'time180',title:'時のかけら IV',kind:'time',goal:180,stars:2,unit:'秒'},
+  {id:'fire3',title:'紅の残響 I',kind:'fire',goal:5,stars:1,unit:'回'},
+  {id:'fire15',title:'紅の残響 II',kind:'fire',goal:20,stars:1,unit:'回'},
+  {id:'ice3',title:'蒼の残響 I',kind:'ice',goal:5,stars:1,unit:'回'},
+  {id:'ice15',title:'蒼の残響 II',kind:'ice',goal:20,stars:1,unit:'回'},
+  {id:'green3',title:'翠の残響 I',kind:'green',goal:5,stars:1,unit:'回'},
+  {id:'green15',title:'翠の残響 II',kind:'green',goal:20,stars:1,unit:'回'},
+  {id:'silver1',title:'白銀の導き I',kind:'silver',goal:5,stars:1,unit:'個'},
+  {id:'silver10',title:'白銀の導き II',kind:'silver',goal:30,stars:1,unit:'個'},
+  {id:'words500',title:'言葉の記憶 I',kind:'words',goal:500,stars:1,unit:'個'},
+  {id:'words3000',title:'言葉の記憶 II',kind:'words',goal:3000,stars:1,unit:'個'},
+  {id:'words10000',title:'言葉の記憶 III',kind:'words',goal:10000,stars:2,unit:'個'},
+  {id:'plays3',title:'挑戦の足跡 I',kind:'plays',goal:3,stars:1,unit:'回'},
+  {id:'plays10',title:'挑戦の足跡 II',kind:'plays',goal:10,stars:1,unit:'回'},
+  {id:'plays30',title:'挑戦の足跡 III',kind:'plays',goal:30,stars:1,unit:'回'},
+  {id:'plays100',title:'挑戦の足跡 IV',kind:'plays',goal:100,stars:2,unit:'回'},
+  {id:'tricolor1',title:'言葉の交響 I',kind:'tricolor',goal:1,stars:1,unit:'回'},
+  {id:'tricolor3',title:'言葉の交響 II',kind:'tricolor',goal:3,stars:1,unit:'回'},
+  {id:'ultimateCross',title:'消された記憶',kind:'ultimateCross',goal:1,stars:1,unit:'回'},
+  {id:'ultimateEclipse',title:'忘却の片隅',kind:'ultimateEclipse',goal:1,stars:1,unit:'回'},
+  {id:'ultimateStop',title:'止まった日々',kind:'ultimateStop',goal:1,stars:1,unit:'回'},
+  {id:'gessen3',title:'三つの閃光',kind:'gessen3',goal:1,stars:1,unit:'回'},
+  {id:'gessen4',title:'四つの閃光',kind:'gessen4',goal:1,stars:1,unit:'回'},
+  {id:'gessen5',title:'五つの閃光',kind:'gessen5',goal:1,stars:2,unit:'回'},
+  {id:'stop20',title:'時を抱く者',kind:'stop20',goal:20,stars:1,unit:'秒'},
+  {id:'nightEnd',title:'夜を越えた者',kind:'nightEnd',goal:1,stars:2,unit:'回'}
  ];
  let state={earned:[],plays:0,bestChain:0,bestScore:0,fire:0,ice:0,green:0,silver:0,words:0},session=[],queue=[],busy=false,sessionStartStars=0;
- let runColors={fire:0,ice:0,green:0};
+ let runColors={fire:0,ice:0,green:0},runSpecial={ultimateCross:0,ultimateEclipse:0,ultimateStop:0,gessen3:0,gessen4:0,gessen5:0,stop20:0};
  try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved&&typeof saved==='object'){
   state.earned=Array.isArray(saved.earned)?saved.earned.filter(x=>goals.some(g=>g.id===x)):[];
   state.plays=Math.max(0,Number(saved.plays)||0);state.bestChain=Math.max(0,Number(saved.bestChain)||0);state.bestScore=Math.max(0,Number(saved.bestScore)||0);
   for(const key of ['fire','ice','green','silver','words'])state[key]=Math.max(0,Math.floor(Number(saved[key])||0));
  }}catch(_e){}
+ const starTotal=()=>state.earned.reduce((sum,id)=>sum+(goals.find(g=>g.id===id)?.stars||0),0);
+ const sessionStarTotal=()=>session.reduce((sum,id)=>sum+(goals.find(g=>g.id===id)?.stars||0),0);
  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state));}catch(_e){}};
  const tray=()=>document.getElementById('taStarTray');
- function draw(){const el=tray();if(!el)return;el.replaceChildren();session.forEach(()=>{const star=document.createElement('span');star.className='ta-star-glyph';star.textContent='★';el.append(star);});}
+ function draw(){const el=tray();if(!el)return;el.replaceChildren();session.forEach(id=>{const count=goals.find(g=>g.id===id)?.stars||1;for(let i=0;i<count;i++){const star=document.createElement('span');star.className='ta-star-glyph';star.textContent='★';el.append(star);}});}
  let sequenceToken=0;
  const DISPLAY_MS=3100; // Read the achievement before the star starts moving.
  const FLIGHT_MS=1050;
@@ -8995,8 +9018,8 @@ const taStars=(()=>{
   busy=true;
   const token=sequenceToken,g=queue.shift();
   const toast=document.createElement('div');toast.className='ta-star-toast';
-  toast.textContent=g.goal.toLocaleString('ja-JP')+g.unit+'達成';
-  const detail=document.createElement('small');detail.textContent='「'+g.title.replace(/\s+(?:I|II|III)$/,'')+'」を獲得しました。';
+  toast.textContent=(g.kind.startsWith('ultimate')||g.kind.startsWith('gessen')||g.kind==='nightEnd')?'特殊効果を発動':g.goal.toLocaleString('ja-JP')+g.unit+'達成';
+  const detail=document.createElement('small');detail.textContent='「'+g.title.replace(/\s+(?:I|II|III|IV|V|VI)$/,'')+'」を獲得しました。';
   toast.append(detail);document.body.append(toast);playAwardSound();
   // Keep the full message visible first, then launch the star.
   setTimeout(()=>{
@@ -9026,37 +9049,41 @@ const taStars=(()=>{
   state.bestChain=Math.max(state.bestChain,taSessionMaxCombo);state.bestScore=Math.max(state.bestScore,taScore);
   goals.forEach(g=>{
    let v=0;
-   if(g.kind==='chain')v=state.bestChain;
-   else if(g.kind==='score')v=state.bestScore;
+   if(g.kind==='chain')v=taSessionMaxCombo;
+   else if(g.kind==='score')v=Math.round(taScore*TA_SCORE_UNIT);
    else if(g.kind==='time')v=taSessionTimeGain;
-   else if(g.kind==='tricolor')v=(runColors.fire>=3&&runColors.ice>=3&&runColors.green>=3)?3:(runColors.fire>0&&runColors.ice>0&&runColors.green>0)?2:(runColors.fire>0&&runColors.ice>0)?1:0;
+   else if(g.kind==='tricolor')v=(runColors.fire>=3&&runColors.ice>=3&&runColors.green>=3)?3:(runColors.fire>0&&runColors.ice>0&&runColors.green>0)?1:0;
+   else if(g.kind==='nightEnd')v=(taSessionMaxCombo>=800&&taScore*TA_SCORE_UNIT>=5000000)?1:0;
+   else if(Object.hasOwn(runSpecial,g.kind))v=runSpecial[g.kind];
    else v=state[g.kind]||0;
    if(v>=g.goal)award(g);
   });
  }
  function track(kind){
-  if(!taRunning||!['fire','ice','green','silver','words'].includes(kind))return;
+  if(!taRunning)return;
+  if(Object.hasOwn(runSpecial,kind)){runSpecial[kind]+=amount;check();return;}
+  if(!['fire','ice','green','silver','words'].includes(kind))return;
   state[kind]++;
   if(kind==='fire'||kind==='ice'||kind==='green')runColors[kind]++;
   // Save incremental progress even when a run ends early.
   if(kind!=='words'||state.words%25===0)save();
   if(kind!=='words'||state.words%25===0)check();
  }
- function start(){clearEffects();session=[];runColors={fire:0,ice:0,green:0};draw();sessionStartStars=state.earned.length;taStarRunLevel=taStarTestLevel===null?sessionStartStars:taStarTestLevel;save();}
+ function start(){clearEffects();session=[];runColors={fire:0,ice:0,green:0};runSpecial={ultimateCross:0,ultimateEclipse:0,ultimateStop:0,gessen3:0,gessen4:0,gessen5:0,stop20:0};draw();sessionStartStars=starTotal();taStarRunLevel=taStarTestLevel===null?sessionStartStars:taStarTestLevel;save();}
  function finish(){
   // Count only scored runs. A zero-point exit never advances play-count achievements.
   if(taScore>0){state.plays++;goals.filter(g=>g.kind==='plays'&&state.plays>=g.goal).forEach(award);}
   save();const el=document.getElementById('taStarResult');if(!el)return;
   el.hidden=false;el.replaceChildren();
-  const summary=document.createElement('div');summary.className='ta-star-result-summary';summary.textContent=session.length?`今回獲得　${'★'.repeat(session.length)}（＋${session.length}）`:'今回の★獲得なし';el.append(summary);
-  const upgrades=taStarUpcoming(sessionStartStars,state.earned.length);
+  const summary=document.createElement('div');summary.className='ta-star-result-summary';summary.textContent=sessionStarTotal()?`今回獲得　${'★'.repeat(sessionStarTotal())}（＋${sessionStarTotal()}）`:'今回の★獲得なし';el.append(summary);
+  const upgrades=taStarUpcoming(sessionStartStars,starTotal());
   if(upgrades.length){const heading=document.createElement('strong');heading.textContent='新しい力が目覚めました';heading.className='ta-star-unlock-heading';el.append(heading);
    upgrades.forEach(u=>{const row=document.createElement('div');row.className='ta-star-unlock';row.textContent=`${u.name} ＋${Number(u.delta.toFixed(2))}${u.unit}`;el.append(row);});
-  }else if(session.length){const hint=document.createElement('small');hint.textContent='次の強化に向けて星を集めましょう';el.append(hint);}
+  }else if(sessionStarTotal()){const hint=document.createElement('small');hint.textContent='次の強化に向けて星を集めましょう';el.append(hint);}
  }
  function render(){const total=document.getElementById('taStarTotal'),box=document.getElementById('taStarAchievements');if(!total||!box)return;
-  total.textContent=`★ ${state.earned.length} / 30`;
-  const earnedCount=state.earned.length;
+  total.textContent=`★ ${starTotal()} / 50`;
+  const earnedCount=starTotal();
   const allUpgrades=taStarUpgradeTable.flatMap(item=>item.steps.slice(1).map(step=>({at:step[0],name:item.name,delta:step[1]-taStarValue(item.key,step[0]-1),unit:item.unit}))).sort((x,y)=>x.at-y.at);
   const nextUpgrade=allUpgrades.find(u=>u.at>earnedCount);
   const nextBox=document.getElementById('taStarNextUpgrade');
@@ -9070,15 +9097,16 @@ const taStars=(()=>{
   const rows=document.getElementById('taStarUpgradeRows');
   if(rows){
    rows.replaceChildren();
-   const shortNames={white:'白銀玉',fire:'赤玉',ice:'青玉',green:'緑玉',stop:'時間停止'};
+   const shortNames={white:'開始時の白銀玉',fire:'赤玉の効果時間',ice:'青玉の効果時間',green:'緑玉の発生言霊数',stop:'時間停止',swipe:'赤・青玉のスワイプ距離',whiteRate:'白言霊の出現率',blueRate:'青言霊の出現率',silverRate:'白銀玉の出現間隔'};
    for(const item of taStarUpgradeTable){
     const tr=document.createElement('tr');
     const th=document.createElement('th');th.scope='row';th.textContent=shortNames[item.key]||item.name;tr.append(th);
     item.steps.slice(1).forEach(step=>{
      const td=document.createElement('td');
      const amount=step[1]-taStarValue(item.key,step[0]-1);
+     const displayAmount=item.key==='silverRate'?`−${Math.abs(amount)}%`: `＋${amount}${item.unit}`;
      const value=document.createElement('span');
-     if(earnedCount>=step[0]){value.textContent=`＋${amount}${item.unit}`;td.className='is-unlocked';}
+     if(earnedCount>=step[0]){value.textContent=displayAmount;td.className='is-unlocked';}
      else{value.textContent='—';td.className='is-locked';}
      const threshold=document.createElement('small');threshold.textContent=`★${step[0]}`;
      td.append(value,threshold);tr.append(td);
@@ -9093,6 +9121,12 @@ const taStars=(()=>{
    const small=document.createElement('small');
    const n=g.goal.toLocaleString('ja-JP');
    const descriptions={
+    ultimateCross:'【累計】「全部なかったことに」を1回発動する',
+    ultimateEclipse:'【累計】「置き忘れたもの」を1回発動する',
+    ultimateStop:'【累計】「あの日のままで」を1回発動する',
+    gessen3:'【累計】三閃を1回発動する',gessen4:'【累計】四閃を1回発動する',gessen5:'【累計】五閃を1回発動する',
+    stop20:'【1プレイ】時間停止を合計20秒発動する',
+    nightEnd:'【1プレイ】800連鎖と500万点を達成する', 
     chain:`【1プレイ】最大連鎖数が${n}連鎖に到達する`,
     score:`【1プレイ】獲得得点が${n}点に到達する`,
     plays:`【累計】${n}回プレイする`,
@@ -9102,17 +9136,17 @@ const taStars=(()=>{
     green:`【累計】緑玉の効果を${n}回発動する`,
     silver:`【累計】プレイ中に出現した白銀玉を${n}個回収する（開始時の配布分は対象外）`,
     words:`【累計】言霊を${n}個採集する`,
-    tricolor:g.goal===1?'【1プレイ】赤玉と青玉を両方発動する':g.goal===2?'【1プレイ】赤玉・青玉・緑玉をすべて発動する':'【1プレイ】赤玉・青玉・緑玉をそれぞれ3回以上発動する'
+    tricolor:g.goal===1?'【1プレイ】赤玉・青玉・緑玉をすべて発動する':'【1プレイ】赤玉・青玉・緑玉をそれぞれ3回以上発動する'
    };
    small.textContent=descriptions[g.kind]||`${n}${g.unit} 達成`;left.append(small);
-   const mark=document.createElement('b');mark.textContent=achieved?'★ 獲得済':'☆ 未達成';
+   const mark=document.createElement('b');mark.textContent=achieved?`${'★'.repeat(g.stars)} 獲得済`:`☆ 未達成（★${g.stars}）`;
    row.append(left,mark);box.append(row);
   });
  }
  function testAward(){const next=goals.find(g=>!state.earned.includes(g.id));if(next)award(next);}
  function demo(){clearEffects();session=[];draw();}
- function reset(){clearEffects();state={earned:[],plays:0,bestChain:0,bestScore:0,fire:0,ice:0,green:0,silver:0,words:0};runColors={fire:0,ice:0,green:0};session=[];sessionStartStars=0;taStarRunLevel=0;try{localStorage.removeItem(KEY);}catch(_e){}draw();render();const result=document.getElementById('taStarResult');if(result){result.hidden=true;result.textContent='';}}
- return{check,track,start,finish,render,testAward,demo,reset,playAwardSound,hasSessionAwards:()=>session.length>0};
+ function reset(){clearEffects();state={earned:[],plays:0,bestChain:0,bestScore:0,fire:0,ice:0,green:0,silver:0,words:0};runColors={fire:0,ice:0,green:0};runSpecial={ultimateCross:0,ultimateEclipse:0,ultimateStop:0,gessen3:0,gessen4:0,gessen5:0,stop20:0};session=[];sessionStartStars=0;taStarRunLevel=0;try{localStorage.removeItem(KEY);}catch(_e){}draw();render();const result=document.getElementById('taStarResult');if(result){result.hidden=true;result.textContent='';}}
+ return{check,track,start,finish,render,testAward,demo,reset,playAwardSound,hasSessionAwards:()=>sessionStarTotal()>0};
 })();
 window.taStars=taStars;
 (()=>{const hero=document.querySelector('#viewMain>.hero');if(hero&&!document.getElementById('taStarTray')){const t=document.createElement('div');t.id='taStarTray';t.className='ta-star-tray';t.setAttribute('aria-label','今回獲得した星');hero.append(t);}})();
@@ -10170,6 +10204,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  let lastFxPaint=0;
  let usesLeft=0; const MAX_USES=5; let previousPips=0; let pipFlashTimer=null; let startupTimers=[]; let startupGeneration=0;
  const GESTURE_MAX_MS=750, GESTURE_MAX_PX=560;
+ const taGestureMaxDistance=()=>GESTURE_MAX_PX*(typeof taStarRunValue==='function'?taStarRunValue('swipe')/100:1);
  const elementalSounds={fire:new Audio('audio/element-fire-cast.wav'),ice:new Audio('audio/element-ice-cast.wav'),cross:new Audio('audio/element-cross-burst.wav'),summon:new Audio('audio/element-summon-cast.wav')};
  Object.values(elementalSounds).forEach(a=>{a.preload='none';a.volume=.48;});
  // Stage 5.5: report readiness of the same audio elements used during play.
@@ -10231,6 +10266,29 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  // Suppress the synthetic click following that pointerdown to avoid toggling selection off.
  let lastOrbPointerAt=-Infinity;
  function selectOrb(b){if(!b||!active()||usesLeft<=0)return;selected=selected===b.dataset.orb?null:b.dataset.orb;sync();}
+ // PC-only elemental orb shortcuts. Reuse the pointer selection path so
+ // toggling, visual feedback, and automatic deselection after use stay identical.
+ document.addEventListener('keydown',e=>{
+  if(e.repeat||e.altKey||e.ctrlKey||e.metaKey||e.isComposing)return;
+  // Do not steal keys from text fields, buttons, dialogs or the library.
+  const target=e.target;
+  if(target instanceof Element && target.closest('input,textarea,select,[contenteditable="true"],[role="dialog"],button,a'))return;
+  if(!window.matchMedia('(hover: hover) and (pointer: fine)').matches)return;
+  if(!active()||usesLeft<=0)return;
+  if(document.getElementById('viewLib')?.hidden===false ||
+     document.getElementById('taStarOutcome')?.hidden===false ||
+     document.documentElement.classList.contains('ta-result-locked'))return;
+  if(e.key==='Escape'){
+   if(selected!==null){selected=null;sync();e.preventDefault();}
+   return;
+  }
+  const type=({Digit1:'fire',Digit2:'ice',Digit3:'summon',Numpad1:'fire',Numpad2:'ice',Numpad3:'summon'})[e.code];
+  if(!type)return;
+  const button=ui.querySelector('[data-orb="'+type+'"]');
+  if(!button)return;
+  selectOrb(button); // Pressing the same key again toggles it off.
+  e.preventDefault();
+ });
  ui.addEventListener('pointerdown',e=>{
   const b=e.target.closest('[data-orb]');if(!b||e.button!==0)return;
   if(!active()||usesLeft<=0)return;
@@ -10346,7 +10404,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
 
  // One neutral collectible orb appears every 28-42 seconds of active game time.
  // The spawn timer and its lifetime pause during stopped time and while hidden.
- let rewardOrb=null, rewardElapsed=0, rewardNext=32+Math.random()*14;
+ let rewardOrb=null, rewardElapsed=0, rewardNext=(32+Math.random()*14)*(typeof taStarRunValue==='function'?taStarRunValue('silverRate')/100:1);
  let rewardVisibleElapsed=0, rewardLast=performance.now(), rewardLoopId=0;
  const rewardStyle=document.createElement('style');rewardStyle.textContent=`
  /* A soft, unfocused ember: no glass highlight or hard circular outline. */
@@ -10439,7 +10497,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  function collectRewardOrb(){
   if(!rewardOrb||!active())return;
   const r=rewardOrb.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
-  removeRewardOrb();rewardElapsed=0;rewardNext=32+Math.random()*14;
+  removeRewardOrb();rewardElapsed=0;rewardNext=(32+Math.random()*14)*(typeof taStarRunValue==='function'?taStarRunValue('silverRate')/100:1);
   window.taStars?.track('silver');
   rewardOrbBurst(x,y);
   try{sfx.boon();sfx.pickupShimmer();}catch(_){}
@@ -10457,14 +10515,14 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(!active()&&rewardOrb)removeRewardOrb();
   if(active()&&!flood&&!comboPaused){
    if(rewardOrb){rewardVisibleElapsed+=dt;if(rewardVisibleElapsed>=6)removeRewardOrb(true);else rewardOrb.classList.toggle('expiring',rewardVisibleElapsed>5);}
-   else{rewardElapsed+=dt;if(rewardElapsed>=rewardNext){rewardElapsed=0;rewardNext=32+Math.random()*14;spawnRewardOrb();}}
+   else{rewardElapsed+=dt;if(rewardElapsed>=rewardNext){rewardElapsed=0;rewardNext=(32+Math.random()*14)*(typeof taStarRunValue==='function'?taStarRunValue('silverRate')/100:1);spawnRewardOrb();}}
   }
   rewardLoopId=requestAnimationFrame(rewardTick);
  }
  rewardLoopId=requestAnimationFrame(rewardTick);
- document.addEventListener('ta-item-reset',()=>{removeRewardOrb();rewardElapsed=0;rewardNext=32+Math.random()*14;rewardLast=performance.now();});
+ document.addEventListener('ta-item-reset',()=>{removeRewardOrb();rewardElapsed=0;rewardNext=(32+Math.random()*14)*(typeof taStarRunValue==='function'?taStarRunValue('silverRate')/100:1);rewardLast=performance.now();});
  document.addEventListener('ta-reward-spawn-test',()=>{if(!spawnRewardOrb(true))toast('玉を出現できません（表示中・ゲーム停止中）');});
- document.addEventListener('ta-item-state-change',()=>{if(!active()){selected=null;cancelStartup();removeRewardOrb();rewardElapsed=0;rewardNext=32+Math.random()*14;}sync();});
+ document.addEventListener('ta-item-state-change',()=>{if(!active()){selected=null;cancelStartup();removeRewardOrb();rewardElapsed=0;rewardNext=(32+Math.random()*14)*(typeof taStarRunValue==='function'?taStarRunValue('silverRate')/100:1);}sync();});
  document.addEventListener('visibilitychange',()=>{if(!active()){selected=null;removeRewardOrb();}sync();});
  sync();
  // Stage 3/4: 装飾粒子を再利用し、バースト中の大量生成と配列切り詰めを抑制。
@@ -10963,6 +11021,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const now=performance.now();
   taLastDualFinisher=now;
   const ultimateId=taUltimateShow("cross","全部なかったことに");
+  window.taStars?.track("ultimateCross");
   crossBursts.push({ultimateId,x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({points:taCrossBladePoints(f.path)})),rain:Array.from({length:taCompoundFxLevel()===2?12:(taMobileFx?18:105)},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taCompoundFxLevel()===2?9:(taMobileFx?12:30)},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?12:30)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
   spark(hit.x,hit.y,'fire',taMobileFx?5:10);spark(hit.x,hit.y,'ice',taMobileFx?5:10);
   playElementSound('cross');
@@ -11079,7 +11138,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  checkWords();}
  // Capture the armed gesture before the normal word/tap collectors can consume it.
  field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<=0||gesture||consumedPointer!==null)return;playElementSound(selected);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
- field.addEventListener('pointermove',e=>{if(!gesture||e.pointerId!==gesture.id)return;const pt=loc(e),prev=gesture.points.at(-1);const d=Math.hypot(pt.x-prev.x,pt.y-prev.y),n=Math.max(1,Math.ceil(d/10));for(let i=1;i<=n;i++)gesture.points.push({x:prev.x+(pt.x-prev.x)*i/n,y:prev.y+(pt.y-prev.y)*i/n});gesture.distance+=d;if(performance.now()-gesture.started>=GESTURE_MAX_MS||gesture.distance>=GESTURE_MAX_PX){const g=gesture;gesture=null;makeTrace(g);/* Keep capture until pointerup so the next gesture is never locked out. */}e.stopImmediatePropagation();e.preventDefault();},true);
+ field.addEventListener('pointermove',e=>{if(!gesture||e.pointerId!==gesture.id)return;const pt=loc(e),prev=gesture.points.at(-1);const d=Math.hypot(pt.x-prev.x,pt.y-prev.y),n=Math.max(1,Math.ceil(d/10));for(let i=1;i<=n;i++)gesture.points.push({x:prev.x+(pt.x-prev.x)*i/n,y:prev.y+(pt.y-prev.y)*i/n});gesture.distance+=d;if(performance.now()-gesture.started>=GESTURE_MAX_MS||gesture.distance>=taGestureMaxDistance()){const g=gesture;gesture=null;makeTrace(g);/* Keep capture until pointerup so the next gesture is never locked out. */}e.stopImmediatePropagation();e.preventDefault();},true);
  function finish(e){if(e.pointerId!==consumedPointer)return;consumedPointer=null;if(gesture&&e.pointerId===gesture.id){const g=gesture;gesture=null;if(active()){g.points.push(loc(e));makeTrace(g)}}e.stopImmediatePropagation();e.preventDefault();}
  field.addEventListener('pointerup',finish,true);field.addEventListener('lostpointercapture',e=>{if(e.pointerId===consumedPointer){consumedPointer=null;gesture=null;}},true);field.addEventListener('pointercancel',e=>{if(e.pointerId===consumedPointer)consumedPointer=null;if(gesture&&e.pointerId===gesture.id)gesture=null},true);
  field.addEventListener('pointermove',e=>{if(e.pointerId===consumedPointer){e.stopImmediatePropagation();e.preventDefault()}},false);
@@ -11523,6 +11582,8 @@ body>.ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!importa
   [[rank,'score'],[stars,'stars'],[guide,'guide']].forEach(([b,k])=>{b.classList.toggle('is-current',which===k);b.setAttribute('aria-pressed',String(which===k));});
   if(which==='stars')window.taStars?.render();
  }
+ window.taShowGuideTab=showTab;
+ showTab('stars');
  rank.addEventListener('click',()=>showTab('score'));
  stars.addEventListener('click',()=>showTab('stars'));
  guide.addEventListener('click',()=>showTab('guide'));
