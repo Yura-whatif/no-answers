@@ -787,6 +787,14 @@ html,body{overscroll-behavior-y:none;}
 @keyframes moteFall{0%{transform:translate(0,0);opacity:0}12%{opacity:.95}85%{opacity:.8}100%{transform:translate(var(--dx,0),var(--fall,300px));opacity:0}}
 .glow-fx.paused,.glow-fx.paused *{animation-play-state:paused !important}
 
+
+/* A few near-camera motes pass IN FRONT of words; the original ambient field
+   remains behind them. Visual only: never intercept collection gestures. */
+.glow-fx.glow-fx-front{z-index:3;background:none!important;opacity:1;isolation:isolate;}
+.glow-fx-front .mote,.glow-fx-front .smote{width:6px;height:6px;filter:blur(.7px);box-shadow:0 0 12px 3px var(--glow-halo);}
+.glow-fx-front.moon .mote{animation-duration:var(--d,7s);}
+.glow-fx-front.sun .smote{animation-duration:var(--d,8s),1.6s;}
+
 /* Falling Memory / Rising Feelings: stage-aware, independent from background
    transitions and collection-frame glow. All colors affect this FX only. */
 .glow-fx.moon{
@@ -5491,7 +5499,7 @@ function startFlood(gem){
       sfx.clockTick(clockTickCount++);
     }, 1000);
   }, 700);
-  startFlood.h = setTimeout(endFlood, FLOOD_MS);
+  startFlood.h = setTimeout(endFlood, taFloodDurationMs());
 }
 function endFlood(){
   clearTimeout(startFlood.h);
@@ -6574,7 +6582,8 @@ function startGlow(silent, collectedName){
   glowRemain = GLOW_MS; glowUntil = 1;
   document.querySelectorAll('#drift .word.glow:not(.got)').forEach(w=>{w.classList.add('got');w.remove();});
   // 絵の空気を変える：陽だまりは斜めに差し込む光の筋、月明かりは青く沈んだ空気に舞い降りる光の粒
-  let fx = hero.querySelector(".glow-fx"); if(fx) fx.remove();
+  hero.querySelectorAll(".glow-fx").forEach(layer=>layer.remove());
+  let fx;
   fx = document.createElement("div"); fx.className = "glow-fx " + (moon ? "moon" : "sun");
   const color=glowStagePalette()[moon?0:1];
   glowSetPalette(fx,color,moon?'memory':'feeling');
@@ -6591,6 +6600,25 @@ function startGlow(silent, collectedName){
     fx.style.setProperty("--rise", "-" + Math.round(hero.clientHeight * 1.15) + "px"); }
   fx.style.setProperty("--fall", Math.round(hero.clientHeight * 1.1) + "px");
   hero.insertBefore(fx, $("drift"));
+  // Foreground depth layer: only a few, slightly larger motes cross in front
+  // of the words. The glow itself and the majority of motes stay behind.
+  const front=document.createElement("div");
+  front.className="glow-fx glow-fx-front " + (moon ? "moon" : "sun");
+  glowSetPalette(front,color,moon?'memory':'feeling');
+  const frontCount=moon?8:9;
+  for(let i=0;i<frontCount;i++){
+    const d=document.createElement("i");
+    d.className=moon?"mote":"smote";
+    d.style.left=(5+Math.random()*90).toFixed(1)+"%";
+    d.style.setProperty("--s",(1.05+Math.random()*.9).toFixed(2));
+    d.style.setProperty("--dx",((Math.random()-.5)*90).toFixed(0)+"px");
+    d.style.setProperty("--d",(6.5+Math.random()*4).toFixed(2)+"s");
+    d.style.animationDelay=(-Math.random()*8).toFixed(2)+"s";
+    front.append(d);
+  }
+  front.style.setProperty("--rise","-"+Math.round(hero.clientHeight*1.15)+"px");
+  front.style.setProperty("--fall",Math.round(hero.clientHeight*1.1)+"px");
+  hero.append(front);
   // 残り時間のバー（時止めのバーと並ぶときは、その下の段へ）
   const bar = $("glowbar"); bar.className = "floodbar glowbar " + (moon ? "moon" : "sun"); bar.querySelector("span").textContent = moon ? "降る記憶" : "昇る想い"; glowSetPalette(bar,color,moon?'memory':'feeling'); bar.getAnimations().forEach(a=>a.cancel()); bar.style.opacity=""; bar.hidden = false;
   layoutBars();
@@ -6604,10 +6632,12 @@ function startGlow(silent, collectedName){
     // 時が止まっているあいだ（本棚を開いている・画面を離れているあいだも）は、残り時間を減らさない
     const paused = flood || libOpen || document.hidden;
     fx.classList.toggle("paused", paused);
+    front.classList.toggle("paused", paused);
     if(!paused) glowRemain -= dt;
     const k = Math.max(0, glowRemain / GLOW_MS);
     bar.querySelector("i").style.transform = `scaleX(${k.toFixed(4)})`;
     fx.style.opacity = Math.min(1, glowRemain / 2000).toFixed(3);   // 終わりの2秒で光が弱まっていく
+    front.style.opacity=fx.style.opacity;
     if(glowRemain <= 0) return endGlow();
     startGlow.raf = requestAnimationFrame(tick);
   };
@@ -6616,7 +6646,9 @@ function startGlow(silent, collectedName){
 function endGlow(){
   cancelAnimationFrame(startGlow.raf); glowRemain = 0; glowUntil = 0;
   const hero = document.querySelector(".hero"), fx = hero && hero.querySelector(".glow-fx");
-  if(fx) fx.animate([{opacity:getComputedStyle(fx).opacity},{opacity:0}], {duration:400, fill:"forwards"}).onfinish = () => fx.remove();
+  hero?.querySelectorAll(".glow-fx").forEach(layer=>{
+    layer.animate([{opacity:getComputedStyle(layer).opacity},{opacity:0}],{duration:400,fill:"forwards"}).onfinish=()=>layer.remove();
+  });
   const bar = $("glowbar"); if(bar && !bar.hidden){
     const animation=bar.animate([{opacity:1},{opacity:0, transform:"translateY(-4px)"}], {duration:300});
     animation.onfinish=()=>{if(glowRemain<=0){bar.hidden=true;layoutBars();}};
@@ -8925,15 +8957,15 @@ let taSessionMaxCombo=0,taSessionTimeGain=0;
 const TA_RECORD_KEY = 'ta-time-attack-records-v1';
 /* Star upgrades: one immutable snapshot per run; existing saved achievements remain valid. */
 const taStarUpgradeTable=[
- {key:'white',name:'開始時の白銀玉',unit:'個',steps:[[0,1],[3,2],[21,3],[41,4]]},
- {key:'fire',name:'赤玉の効果時間',unit:'秒',steps:[[0,1.1],[5,2.1],[23,3.1],[42,4.1]]},
- {key:'ice',name:'青玉の効果時間',unit:'秒',steps:[[0,1.1],[7,2.1],[25,3.1],[43,4.1]]},
- {key:'green',name:'緑玉の発生言霊数',unit:'個',steps:[[0,-3],[9,-2],[27,-1],[44,0]]},
- {key:'stop',name:'時間停止',unit:'秒',steps:[[0,4],[11,5],[29,6],[45,7]]},
- {key:'swipe',name:'赤・青玉のスワイプ距離',unit:'%',steps:[[0,70],[13,80],[35,90],[46,100]]},
- {key:'whiteRate',name:'白言霊の出現率',unit:'%',steps:[[0,95],[15,100],[36,103],[47,106]]},
- {key:'blueRate',name:'青言霊の出現率',unit:'%',steps:[[0,95],[17,100],[37,103],[48,106]]},
- {key:'silverRate',name:'白銀玉の出現間隔',unit:'%',steps:[[0,100],[31,95],[39,90],[50,85]]}
+ {key:'white',name:'開始時の白銀玉',unit:'個',steps:[[0,1],[3,2],[24,3],[43,4]]},
+ {key:'fire',name:'赤玉の効果時間',unit:'秒',steps:[[0,1.1],[10,2.1],[26,3.1],[45,4.1]]},
+ {key:'ice',name:'青玉の効果時間',unit:'秒',steps:[[0,1.1],[12,2.1],[28,3.1],[46,4.1]]},
+ {key:'green',name:'緑玉の発生言霊数',unit:'個',steps:[[0,-3],[16,-2],[30,-1],[47,0]]},
+ {key:'stop',name:'時間停止',unit:'秒',steps:[[0,4],[20,5],[34,6],[49,7]]},
+ {key:'swipe',name:'赤・青玉のスワイプ距離',unit:'%',steps:[[0,70],[7,80],[22,90],[42,100]]},
+ {key:'whiteRate',name:'白言霊の出現率',unit:'%',steps:[[0,95],[14,100],[32,103],[38,106]]},
+ {key:'blueRate',name:'青言霊の出現率',unit:'%',steps:[[0,95],[18,100],[36,103],[40,106]]},
+ {key:'silverRate',name:'白銀玉の出現間隔',unit:'%',steps:[[0,100],[29,95],[39,90],[50,85]]}
 ];
 function taStarValue(key,count){const item=taStarUpgradeTable.find(x=>x.key===key);if(!item)return 0;let value=item.steps[0][1];for(const [threshold,next] of item.steps)if(count>=threshold)value=next;return value;}
 let taStarRunLevel=0;
@@ -9012,7 +9044,7 @@ const taStars=(()=>{
    const playing=starAwardAudio.play();if(playing&&playing.catch)playing.catch(()=>{});
   }catch(_e){}
  }
- function clearEffects(){sequenceToken++;queue=[];busy=false;document.querySelectorAll('.ta-star-toast,.ta-star-fly').forEach(e=>e.remove());}
+ function clearEffects(){sequenceToken++;queue=[];busy=false;document.querySelectorAll('.ta-star-toast,.ta-star-fly,.ta-star-trail').forEach(e=>e.remove());}
  function notify(){
   if(busy||!queue.length)return;
   busy=true;
@@ -9020,28 +9052,45 @@ const taStars=(()=>{
   const toast=document.createElement('div');toast.className='ta-star-toast';
   toast.textContent=(g.kind.startsWith('ultimate')||g.kind.startsWith('gessen')||g.kind==='nightEnd')?'特殊効果を発動':g.goal.toLocaleString('ja-JP')+g.unit+'達成';
   const detail=document.createElement('small');detail.textContent='「'+g.title.replace(/\s+(?:I|II|III|IV|V|VI)$/,'')+'」を獲得しました。';
-  toast.append(detail);document.body.append(toast);playAwardSound();
+  const emblem=document.createElement('span');emblem.className='ta-star-toast-emblem';emblem.textContent='★';emblem.setAttribute('aria-hidden','true');
+  toast.append(emblem,detail);document.body.append(toast);playAwardSound();
   // Keep the full message visible first, then launch the star.
   setTimeout(()=>{
    if(token!==sequenceToken)return;
    const dest=tray();
    if(dest){
     const a=toast.getBoundingClientRect(),b=dest.getBoundingClientRect();
+    const emblemRect=emblem.getBoundingClientRect();
+    const x=emblemRect.left+emblemRect.width/2,y=emblemRect.top+emblemRect.height/2;
+    const target=b.right-18, targetY=b.bottom-14;
+    const dx=target-x,dy=targetY-y;
+    // Launch as a recognizable star, then turn into a narrow comet-like line.
     const fly=document.createElement('div');fly.className='ta-star-fly';fly.textContent='★';
-    const x=a.left+a.width/2-12,y=a.bottom-5;
     fly.style.left=x+'px';fly.style.top=y+'px';document.body.append(fly);
-    const dx=b.right-20-x,dy=b.bottom-25-y;
-    const anim=fly.animate([
-     {transform:'translate(0,0) scale(1.25)',opacity:1},
-     {transform:`translate(${dx*.45}px,${dy*.35-24}px) scale(1.5)`,opacity:1,offset:.45},
-     {transform:`translate(${dx}px,${dy}px) scale(.5)`,opacity:.5}
-    ],{duration:FLIGHT_MS,easing:'ease-in-out'});
-    anim.finished.catch(()=>{}).then(()=>{
-     fly.remove();if(token!==sequenceToken)return;
+    const trail=document.createElement('div');trail.className='ta-star-trail';
+    trail.style.left=x+'px';trail.style.top=y+'px';document.body.append(trail);
+    const arcX=dx*.48,arcY=dy*.38-30;
+    const angle=Math.atan2(dy,dx)*180/Math.PI;
+    const flight=fly.animate([
+     {transform:'translate(-50%,-50%) translate(0px,0px) scale(1)',opacity:1,offset:0},
+     {transform:`translate(-50%,-50%) translate(${dx*.12}px,${dy*.08-9}px) scale(.48)`,opacity:.9,offset:.16},
+     {transform:`translate(-50%,-50%) translate(${arcX}px,${arcY}px) scale(.12)`,opacity:0,offset:.48},
+     {transform:`translate(-50%,-50%) translate(${dx}px,${dy}px) scale(.05)`,opacity:0,offset:1}
+    ],{duration:FLIGHT_MS,easing:'ease-in-out',fill:'forwards'});
+    const streak=trail.animate([
+     {transform:`translate(-50%,-50%) translate(0px,0px) rotate(${angle}deg) scaleX(.15)`,opacity:0,offset:0},
+     {transform:`translate(-50%,-50%) translate(${dx*.12}px,${dy*.08-9}px) rotate(${angle}deg) scaleX(.8)`,opacity:1,offset:.16},
+     {transform:`translate(-50%,-50%) translate(${arcX}px,${arcY}px) rotate(${angle}deg) scaleX(1.4)`,opacity:.95,offset:.48},
+     {transform:`translate(-50%,-50%) translate(${dx}px,${dy}px) rotate(${angle}deg) scaleX(.12)`,opacity:0,offset:1}
+    ],{duration:FLIGHT_MS,easing:'ease-in-out',fill:'forwards'});
+    Promise.allSettled([flight.finished,streak.finished]).then(()=>{
+     fly.remove();trail.remove();if(token!==sequenceToken)return;
      draw();busy=false;notify();
     });
    }else{draw();busy=false;notify();}
-   toast.remove();
+   // Slide the notification back upward while the star travels separately.
+   toast.classList.add('ta-star-toast-out');
+   setTimeout(()=>toast.remove(),380);
   },DISPLAY_MS);
  }
  function award(g){if(state.earned.includes(g.id))return;state.earned.push(g.id);session.push(g.id);save();queue.push(g);notify();render();}
@@ -9059,9 +9108,9 @@ const taStars=(()=>{
    if(v>=g.goal)award(g);
   });
  }
- function track(kind){
+ function track(kind, amount=1){
   if(!taRunning)return;
-  if(Object.hasOwn(runSpecial,kind)){runSpecial[kind]+=amount;check();return;}
+  if(Object.hasOwn(runSpecial,kind)){runSpecial[kind]+=Number.isFinite(amount)?amount:1;check();return;}
   if(!['fire','ice','green','silver','words'].includes(kind))return;
   state[kind]++;
   if(kind==='fire'||kind==='ice'||kind==='green')runColors[kind]++;
@@ -9104,7 +9153,7 @@ const taStars=(()=>{
     item.steps.slice(1).forEach(step=>{
      const td=document.createElement('td');
      const amount=step[1]-taStarValue(item.key,step[0]-1);
-     const displayAmount=item.key==='silverRate'?`−${Math.abs(amount)}%`: `＋${amount}${item.unit}`;
+     const displayAmount=item.key==='silverRate'?`−${100-step[1]}%`:item.key==='swipe'?`＋${step[1]-item.steps[0][1]}%`:`＋${amount}${item.unit}`;
      const value=document.createElement('span');
      if(earnedCount>=step[0]){value.textContent=displayAmount;td.className='is-unlocked';}
      else{value.textContent='—';td.className='is-locked';}
@@ -10204,7 +10253,21 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  let lastFxPaint=0;
  let usesLeft=0; const MAX_USES=5; let previousPips=0; let pipFlashTimer=null; let startupTimers=[]; let startupGeneration=0;
  const GESTURE_MAX_MS=750, GESTURE_MAX_PX=560;
- const taGestureMaxDistance=()=>GESTURE_MAX_PX*(typeof taStarRunValue==='function'?taStarRunValue('swipe')/100:1);
+ const taGestureMaxDistance=()=>{const f=field.getBoundingClientRect();const base=Math.min(GESTURE_MAX_PX,Math.max(1,Math.min(f.width,f.height)*.95));return base*(typeof taStarRunValue==='function'?taStarRunValue('swipe')/100:1);};
+ // Both the painted elemental trail and its hit path use the same distance budget.
+ // Keep the budget in hero/field coordinates; do not scale it a second time for mobile.
+ function taAppendGesturePoint(g,point){
+  const last=g.points[g.points.length-1];
+  const dx=point.x-last.x,dy=point.y-last.y,dist=Math.hypot(dx,dy);
+  const available=Math.max(0,taGestureMaxDistance()-g.distance);
+  if(dist<.001||available<=0)return;
+  const used=Math.min(dist,available),ratio=used/dist;
+  const end={x:last.x+dx*ratio,y:last.y+dy*ratio};
+  const steps=Math.max(1,Math.ceil(used/10));
+  for(let i=1;i<=steps;i++)g.points.push({x:last.x+(end.x-last.x)*i/steps,y:last.y+(end.y-last.y)*i/steps});
+  g.distance+=used;
+ }
+
  const elementalSounds={fire:new Audio('audio/element-fire-cast.wav'),ice:new Audio('audio/element-ice-cast.wav'),cross:new Audio('audio/element-cross-burst.wav'),summon:new Audio('audio/element-summon-cast.wav')};
  Object.values(elementalSounds).forEach(a=>{a.preload='none';a.volume=.48;});
  // Stage 5.5: report readiness of the same audio elements used during play.
@@ -11138,8 +11201,36 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  checkWords();}
  // Capture the armed gesture before the normal word/tap collectors can consume it.
  field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<=0||gesture||consumedPointer!==null)return;playElementSound(selected);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
- field.addEventListener('pointermove',e=>{if(!gesture||e.pointerId!==gesture.id)return;const pt=loc(e),prev=gesture.points.at(-1);const d=Math.hypot(pt.x-prev.x,pt.y-prev.y),n=Math.max(1,Math.ceil(d/10));for(let i=1;i<=n;i++)gesture.points.push({x:prev.x+(pt.x-prev.x)*i/n,y:prev.y+(pt.y-prev.y)*i/n});gesture.distance+=d;if(performance.now()-gesture.started>=GESTURE_MAX_MS||gesture.distance>=taGestureMaxDistance()){const g=gesture;gesture=null;makeTrace(g);/* Keep capture until pointerup so the next gesture is never locked out. */}e.stopImmediatePropagation();e.preventDefault();},true);
- function finish(e){if(e.pointerId!==consumedPointer)return;consumedPointer=null;if(gesture&&e.pointerId===gesture.id){const g=gesture;gesture=null;if(active()){g.points.push(loc(e));makeTrace(g)}}e.stopImmediatePropagation();e.preventDefault();}
+ // Once the elemental stroke reaches its range/time budget, the same held
+ // pointer continues as an ordinary word-collection swipe. The special trace
+ // remains clipped to its range, so its visuals and elemental hits stay aligned.
+ function taHandoffToNormalSwipe(e){
+  if(consumedPointer!==e.pointerId)return;
+  consumedPointer=null;
+  // The ordinary collector starts on pointerdown. Re-enter that collector at
+  // the last elemental endpoint, then let real subsequent moves/up flow through.
+  const r=hero.getBoundingClientRect();
+  const end=gestureEndForHandoff;
+  const cx=r.left+end.x,cy=r.top+end.y;
+  const down=new PointerEvent('pointerdown',{bubbles:true,cancelable:true,composed:true,
+   pointerId:e.pointerId,pointerType:e.pointerType||'touch',isPrimary:true,
+   clientX:cx,clientY:cy,screenX:e.screenX,screenY:e.screenY,
+   button:0,buttons:1,pressure:e.pressure||.5});
+  field.dispatchEvent(down);
+ }
+ let gestureEndForHandoff=null;
+ field.addEventListener('pointermove',e=>{
+  if(!gesture||e.pointerId!==gesture.id)return;
+  taAppendGesturePoint(gesture,loc(e));
+  if(performance.now()-gesture.started>=GESTURE_MAX_MS||gesture.distance>=taGestureMaxDistance()){
+   const g=gesture;gesture=null;
+   gestureEndForHandoff=g.points[g.points.length-1];
+   makeTrace(g);
+   taHandoffToNormalSwipe(e);
+  }
+  e.stopImmediatePropagation();e.preventDefault();
+ },true);
+ function finish(e){if(e.pointerId!==consumedPointer)return;consumedPointer=null;if(gesture&&e.pointerId===gesture.id){const g=gesture;gesture=null;if(active()){taAppendGesturePoint(g,loc(e));makeTrace(g)}}e.stopImmediatePropagation();e.preventDefault();}
  field.addEventListener('pointerup',finish,true);field.addEventListener('lostpointercapture',e=>{if(e.pointerId===consumedPointer){consumedPointer=null;gesture=null;}},true);field.addEventListener('pointercancel',e=>{if(e.pointerId===consumedPointer)consumedPointer=null;if(gesture&&e.pointerId===gesture.id)gesture=null},true);
  field.addEventListener('pointermove',e=>{if(e.pointerId===consumedPointer){e.stopImmediatePropagation();e.preventDefault()}},false);
  function checkWords(){if(!traces.length)return;const hr=hero.getBoundingClientRect();for(const w of field.querySelectorAll('.word')){if(!valid(w))continue;const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;const x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;for(const f of traces){if(f.segs.some(([a,b,radius])=>near(x,y,a,b,radius+Math.min(20,r.width*.24)))){collect(w,f.type);break}}}}
@@ -11360,24 +11451,8 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    ctx.drawImage(rim.texture,-256*ratio,-256*ratio,512*ratio,512*ratio);
    ctx.restore();
  }
- // Draw the unfinished dial on the EXACT same canvas and in the same
- // hero-local coordinate system as the fire/ice trace. No CSS positioning,
- // transforms, viewport scaling or mobile-specific offsets can separate them.
- if(clockDial){
-  const d=clockDial,elapsed=now-d.started;
-  const fade=elapsed<=CLOCK_VISIBLE_MS?1:Math.max(0,1-(elapsed-CLOCK_VISIBLE_MS)/CLOCK_FADE_MS);
-  if(fade>0){
-   const hue=d.type==='fire'?'255,152,109':'139,223,255';
-   ctx.save();ctx.globalAlpha=fade;ctx.translate(d.x,d.y);
-   ctx.shadowColor=`rgba(${hue},.65)`;ctx.shadowBlur=8;
-   ctx.strokeStyle=`rgba(${hue},.88)`;ctx.lineWidth=2.8;
-   ctx.setLineDash([3,2]);ctx.beginPath();ctx.arc(0,0,70,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
-   ctx.shadowBlur=0;ctx.strokeStyle='rgba(255,240,214,.88)';ctx.lineWidth=1.7;
-   for(let i=0;i<12;i++){const a=i*Math.PI/6-Math.PI/2;ctx.beginPath();ctx.moveTo(Math.cos(a)*60,Math.sin(a)*60);ctx.lineTo(Math.cos(a)*66,Math.sin(a)*66);ctx.stroke();}
-   ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,0,3,0,Math.PI*2);ctx.fill();
-   ctx.restore();
-  }
- }
+ // The unfinished clock face is intentionally invisible. Keep clockDial and
+ // its expiry, center, eclipse tap, and hand recognition intact.
  traces=traces.filter(f=>f.left>0);checkWords();renderCrossBursts(now);
  for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){taRecycleSpark(p);particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy+=(p.type==='fire'?-24:18)*dt;if(p.type==='fire'){p.sway+=dt*12;p.vx+=Math.sin(p.sway)*dt*22;}if(taCompoundLevel===2&&i%4!==0)continue;if(taCompoundLevel===1&&i%2!==0)continue;const a=Math.min(1,p.life*2);ctx.save();ctx.globalAlpha=a;if(p.type==='fire'){const heat=p.heat??.5;const tint=heat>.76?'#fff0bd':heat>.4?'#ffba58':'#e95425';ctx.fillStyle=tint;ctx.shadowColor=heat>.4?'#ff9d36':'#b83819';ctx.shadowBlur=taCompoundLevel?0:(taMobileFx?2:(heat>.7?10:5));if(p.trail){ctx.strokeStyle=tint;ctx.globalAlpha=a*.42;ctx.lineWidth=Math.max(.5,p.r*.55);ctx.beginPath();ctx.moveTo(p.x-p.vx*.035,p.y-p.vy*.035);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.globalAlpha=a;}ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(.55,p.r*.58),Math.max(.8,p.r*(1.15+heat*.5)),Math.atan2(p.vy,p.vx)+Math.PI/2,0,Math.PI*2);ctx.fill();}else{ctx.fillStyle=Math.random()>.5?'#e3fbff':'#80d8ff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=taCompoundLevel?0:(taMobileFx?2:9);ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}if(p.type==='ice'){ctx.strokeStyle='#e6faff';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p.x-p.r*2,p.y);ctx.lineTo(p.x+p.r*2,p.y);ctx.moveTo(p.x,p.y-p.r*2);ctx.lineTo(p.x,p.y+p.r*2);ctx.stroke()}ctx.restore()}
  // Full-screen final white flash, followed by a gentle shower of white motes.
@@ -11558,8 +11633,22 @@ body>.ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!importa
 @keyframes ta-star-settle{from{transform:scale(1.8) rotate(-25deg);opacity:.3}to{transform:scale(1);opacity:1}}
 .ta-star-toast{position:fixed;top:clamp(70px,12vh,125px);left:50%;transform:translateX(-50%);z-index:100020;pointer-events:none;max-width:min(90vw,360px);width:max-content;padding:11px 22px;border:1px solid #ddbd78a6;border-radius:13px;background:linear-gradient(120deg,#151a29f2,#393023ed);box-shadow:0 8px 32px #0009,0 0 25px #f4cf6920;color:#fbe7b7;text-align:center;font-size:14px;letter-spacing:.06em;animation:ta-star-toast-in .3s ease-out}
 .ta-star-toast small{display:block;margin-top:4px;color:#e0d4bc;font-size:12px}
+/* Achievement notification: same warm metallic shimmer as the result hint. */
+.ta-star-toast{isolation:isolate;overflow:hidden;animation:ta-star-toast-in .3s ease-out both,ta-star-toast-glow 1.25s ease-out .3s 1 both!important}
+.ta-star-toast::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(115deg,transparent 0%,transparent 39%,rgba(252,221,154,.16) 45%,rgba(255,255,242,.78) 49%,rgba(255,247,207,.24) 53%,transparent 60%,transparent 100%);background-size:320% 100%;background-position:110% 0;opacity:0;mix-blend-mode:screen;animation:ta-star-toast-sweep 1.25s ease-out .3s 1 both}
+.ta-star-toast>small,.ta-star-toast>.ta-star-toast-emblem{z-index:1}
+@keyframes ta-star-toast-sweep{0%{opacity:0;background-position:110% 0}5%,38%{opacity:1}55%,100%{opacity:0;background-position:-10% 0}}
+@keyframes ta-star-toast-glow{0%,100%{border-color:rgba(232,190,113,.72);box-shadow:0 8px 32px #0009,inset 0 0 15px rgba(212,166,98,.10),0 0 9px rgba(237,181,88,.24)}45%{border-color:rgba(255,221,151,.96);box-shadow:0 8px 32px #0009,inset 0 0 18px rgba(212,166,98,.20),0 0 21px rgba(237,181,88,.55)}}
+@media(prefers-reduced-motion:reduce){.ta-star-toast{animation:none!important}.ta-star-toast::after{animation:none!important}}
+
+.ta-star-toast{padding-left:49px}
+.ta-star-toast-emblem{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:24px;line-height:1;color:#ffe9a7;text-shadow:0 0 7px #fff4ce,0 0 17px #e9b855;filter:drop-shadow(0 0 4px #e8a44b)}
 @keyframes ta-star-toast-in{from{opacity:0;transform:translate(-50%,-12px)}to{opacity:1;transform:translate(-50%,0)}}
-.ta-star-fly{position:fixed;z-index:100021;pointer-events:none;font-size:26px;color:#ffe8a3;text-shadow:0 0 13px #ffc75c,0 0 25px #ffbb4e;will-change:transform,opacity}
+.ta-star-toast.ta-star-toast-out{animation:ta-star-toast-out .36s ease-in both!important}
+.ta-star-toast.ta-star-toast-out::after{animation:none!important;opacity:0!important}
+@keyframes ta-star-toast-out{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,-14px)}}
+.ta-star-fly{position:fixed;z-index:100021;pointer-events:none;font-size:25px;line-height:1;color:#ffe8a3;text-shadow:0 0 13px #ffc75c,0 0 25px #ffbb4e;will-change:transform,opacity}
+.ta-star-trail{position:fixed;z-index:100020;pointer-events:none;width:65px;height:3px;border-radius:100%;background:linear-gradient(90deg,transparent 0%,#f5c77380 24%,#ffe6aa 70%,#fff9e5 100%);box-shadow:0 0 5px 2px #ffdf98a8,0 0 15px 4px #ffc65c6b;transform-origin:50% 50%;will-change:transform,opacity}
 .ta-star-total{font-size:25px;text-align:center;color:#dfb969;margin:12px auto}
 .ta-star-note{font-size:12px;opacity:.8;line-height:1.7}
 .ta-star-achievements{display:grid;gap:9px;margin-top:15px}
