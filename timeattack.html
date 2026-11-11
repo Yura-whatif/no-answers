@@ -12189,6 +12189,35 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  let active=false, layer=null, timer=null, spawnTimer=null, swapTimer=null, oldPaused=false, oldComboAt=0, lastStart=0;
  let gainScore=0,gainTime=0,heroRect=null,photoStartTimer=null,wordStartTimer=null,photoStopTimer=null,finishTimer=null,pauseClones=[];
  const pointerTrails=new Map();
+ // Preserve a held finger across the memory-to-normal transition.
+ const heldPointers=new Map();
+ const handoffPointers=new Map();
+ const normalField=()=>document.getElementById('drift');
+ function forwardNormalPointer(e,type){
+   const field=normalField();if(!field)return;
+   const evt=new PointerEvent(type,{bubbles:true,cancelable:true,composed:true,
+     pointerId:e.pointerId,pointerType:e.pointerType||'touch',isPrimary:e.isPrimary,
+     clientX:e.clientX,clientY:e.clientY,screenX:e.screenX,screenY:e.screenY,
+     button:type==='pointermove'?-1:0,buttons:type==='pointerup'?0:1,pressure:e.pressure||.5});
+   field.dispatchEvent(evt);
+ }
+ // A real pointerdown cannot occur again while the finger is held. Once the
+ // memory overlay disappears, forward motion/up if capture still belongs to it.
+ document.addEventListener('pointermove',e=>{
+   const held=heldPointers.get(e.pointerId);
+   if(held){held.x=e.clientX;held.y=e.clientY;held.screenX=e.screenX;held.screenY=e.screenY;}
+   if(!handoffPointers.has(e.pointerId))return;
+   const field=normalField();
+   if(field && e.target!==field && !field.contains(e.target))forwardNormalPointer(e,'pointermove');
+ },true);
+ document.addEventListener('pointerup',e=>{
+   if(handoffPointers.has(e.pointerId)){
+     const field=normalField();
+     if(field && e.target!==field && !field.contains(e.target))forwardNormalPointer(e,'pointerup');
+   }
+   heldPointers.delete(e.pointerId);handoffPointers.delete(e.pointerId);
+ },true);
+ document.addEventListener('pointercancel',e=>{heldPointers.delete(e.pointerId);handoffPointers.delete(e.pointerId);},true);
  const timeBox=document.getElementById('taTimeBox');
  if(timeBox && !timeBox.querySelector('.ta-soumatou-time-pause')){
    const pause=document.createElement('span');pause.className='ta-soumatou-time-pause';pause.textContent='一時停止';pause.setAttribute('aria-hidden','true');timeBox.append(pause);
@@ -12219,6 +12248,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    const r=heroRect;
    if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;
    pointerTrails.set(e.pointerId,{x:e.clientX,y:e.clientY});
+   heldPointers.set(e.pointerId,{x:e.clientX,y:e.clientY,screenX:e.screenX,screenY:e.screenY,pointerType:e.pointerType||'touch',isPrimary:e.isPrimary});
    collectOnTrail(e.clientX,e.clientY,e.clientX,e.clientY);
  },true);
  document.addEventListener('pointermove',e=>{
@@ -12238,6 +12268,20 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    clearTimeout(photoStartTimer);clearTimeout(wordStartTimer);clearTimeout(photoStopTimer);clearTimeout(finishTimer);
    pauseClones.forEach(e=>e.remove());pauseClones=[];document.documentElement.classList.remove('ta-memory-world');
    if(layer){layer.remove();layer=null;}
+   // Re-enter the ordinary collector at the current finger position. This
+   // permits one continuous swipe instead of requiring a lift and new touch.
+   if(active && heldPointers.size){
+     const field=normalField(),rect=field?.getBoundingClientRect();
+     if(field&&rect){
+       for(const [id,p] of heldPointers){
+         if(p.x<rect.left||p.x>rect.right||p.y<rect.top||p.y>rect.bottom)continue;
+         handoffPointers.set(id,true);
+         forwardNormalPointer({pointerId:id,pointerType:p.pointerType,isPrimary:p.isPrimary,
+           clientX:p.x,clientY:p.y,screenX:p.screenX,screenY:p.screenY,pressure:.5},'pointerdown');
+       }
+     }
+   }
+   heldPointers.clear();
    if(active){
      // All rewards have ALREADY been credited by taAward at collection time.
      // This is a visual summary only; never call taAward here.
