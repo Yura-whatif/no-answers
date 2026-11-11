@@ -4741,6 +4741,14 @@ function taComboScoreImpact(bonus){
 // Two separate circular waves: expand from combo, then contract into score.
 // Bonus is awarded only after the score-side wave has arrived.
 function comboStepBonus(n){
+  if(window.taSoumatou?.active()){
+    // The normal chain milestone bonus is credited exactly once, without any
+    // rings, HUD pulses or score-side contraction during the memory sequence.
+    const bonus=n%100===0?100:10;
+    taAward(false,bonus,true,null,true);
+    window.taSoumatou.recordBonus(bonus);
+    return;
+  }
   comboGlow();
   comboBurst(n);
   sfx.comboMilestone(n % 100 === 0);
@@ -5211,7 +5219,7 @@ function bumpCombo(){
   // DEMO / START演出中は連鎖を発生させない。
   if(!taRunning) return 1;
   const now = Date.now();
-  if(comboPaused && !flood && !open && !charging) resumeCombo();   // 念のため：読んでいないのに止まっていたら、触れた時点で戻す
+  if(comboPaused && !flood && !open && !charging && !window.taSoumatou?.active()) resumeCombo();   // 念のため：読んでいないのに止まっていたら、触れた時点で戻す
   combo = (flood || comboPaused || now - comboAt <= comboWindowMs) ? combo + 1 : 1; comboAt = now;
   comboWindowMs=COMBO_MS; // Ordinary collection does not inherit skill grace.
   $("combo").classList.remove("ta-skill-grace");
@@ -9731,6 +9739,7 @@ function taPickResultHint(){
  try{sessionStorage.setItem('taResultHintRecent',JSON.stringify([...recent,index].slice(-3)))}catch(_e){}
 }
 function taFinish(manualExit=false){
+  window.taSoumatou?.stop();
   document.body.classList.add('ta-timeover-finished');
   // Clear legacy void-only counter before Time Over; never expose '違和感 0' in results.
   document.querySelectorAll('.void-pts').forEach(el=>el.remove());
@@ -9835,7 +9844,7 @@ function taFinish(manualExit=false){
     if(qualified)document.getElementById('taResultClose').focus();
   },2450);
 }
-function taTick(now){if(!taRunning)return;const delta=Math.min(0.1,(now-taLast)/1000);taLast=now;if(typeof flood!=='undefined'&&!flood){taSeconds-=delta;}if(taSeconds<=0){taSeconds=0;taFinish();}taRender();if(taRunning)taRaf=requestAnimationFrame(taTick)}
+function taTick(now){if(!taRunning)return;const delta=Math.min(0.1,(now-taLast)/1000);taLast=now;if(typeof flood!=='undefined'&&!flood&&!window.taSoumatou?.active()){taSeconds-=delta;}if(taSeconds<=0){taSeconds=0;taFinish();}taRender();if(taRunning)taRaf=requestAnimationFrame(taTick)}
 // Android Chrome: prevent a downward field swipe from triggering pull-to-refresh.
 document.addEventListener('touchmove',e=>{
   if(!taRunning || !e.cancelable)return;
@@ -9843,6 +9852,7 @@ document.addEventListener('touchmove',e=>{
 },{passive:false});
 let taStarting=false;
 function taBeginReady(){
+  window.taSoumatou?.stop();
   if(taRunning||taStarting)return;
   // Defensive cleanup: a previous unranked result must never block another run.
   document.documentElement.classList.remove('ta-result-locked');
@@ -10287,6 +10297,36 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  // Stage 6-H: a two-element finisher temporarily limits a following emerald summon.
  let taLastDualFinisher=-Infinity;
  const taDualGreenWindowMs=5000;
+ // The third, explicitly selected emerald orb finishes the infinity.
+ let taInfinityPending=null,taInfinityMarker=null,taInfinityTimer=0;
+ function taClearInfinityPending(){
+  clearTimeout(taInfinityTimer);taInfinityTimer=0;
+  taInfinityPending=null;
+  if(taInfinityMarker){taInfinityMarker.remove();taInfinityMarker=null;}
+ }
+ function taArmInfinity(a,b){
+  taClearInfinityPending();
+  const hr=hero.getBoundingClientRect();
+  const x=(a.x+b.x)/2,y=(a.y+b.y)/2;
+  taInfinityPending={x,y,expires:performance.now()+2800};
+  const marker=document.createElement('span');marker.className='ta-infinity-green-target';
+  marker.style.left=(hr.left+x)+'px';marker.style.top=(hr.top+y)+'px';
+  marker.setAttribute('aria-hidden','true');document.body.append(marker);taInfinityMarker=marker;
+  taInfinityTimer=setTimeout(taClearInfinityPending,2800);
+ }
+ function taGreenTouchesInfinity(points){
+  const target=taInfinityPending;
+  if(!target||performance.now()>target.expires||!window.taSoumatou||window.taSoumatou.active())return false;
+  const radius=53;
+  if(!points.some(p=>Math.hypot(p.x-target.x,p.y-target.y)<=radius)){
+   let hit=false;for(let i=1;i<points.length;i++)if(near(target.x,target.y,points[i-1],points[i],radius)){hit=true;break;}
+   if(!hit)return false;
+  }
+  taClearInfinityPending();
+  clearClock();
+  return !!window.taSoumatou.start();
+ }
+
  // Fire/ice clock: one elemental tap draws the dial; the other color draws two hands.
  let clockDial=null,clockFx=null,clockTimer=null;
  const CLOCK_VISIBLE_MS=2800;
@@ -11374,7 +11414,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    ctx.restore();
   }
  }
- function makeTrace(g){if(g.type==='summon'){summon(g);return;}const pts=g.points;let len=0;for(let i=1;i<pts.length;i++)len+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
+ function makeTrace(g){if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summon(g);return;}const pts=g.points;let len=0;for(let i=1;i<pts.length;i++)len+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
  // A stationary tap places a round 68px-radius elemental field (not a short stroke).
  const isTap=len<22;
  // Clock creation is tied to a normal elemental tap. The opposite-color stroke
@@ -11385,7 +11425,21 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const eclipseTap=isTap && eclipseDial && eclipseDial.type!==g.type &&
    performance.now()<=eclipseDial.expires &&
    Math.hypot(pts[0].x-eclipseDial.x,pts[0].y-eclipseDial.y)<=28;
+ const soumatouTap=isTap && eclipseDial && eclipseDial.type!==g.type &&
+   performance.now()<=eclipseDial.expires &&
+   Math.abs(pts[0].y-eclipseDial.y)<=58 &&
+   Math.abs(pts[0].x-eclipseDial.x)>=88 &&
+   Math.abs(pts[0].x-eclipseDial.x)<=145 &&
+   !!window.taSoumatou && !window.taSoumatou.active();
  const completed=!isTap&&clockHands(g,pts);
+ if(soumatouTap){
+   const a={x:eclipseDial.x,y:eclipseDial.y};
+   const b={x:pts[0].x,y:pts[0].y};
+   // Red and blue only arm the intersection. No extra reserve is consumed.
+   taArmInfinity(a,b);
+   clearClock();
+ }
+
  if(eclipseTap){
    taLastDualFinisher=performance.now();
    const center={x:pts[0].x,y:pts[0].y};
@@ -11400,10 +11454,10 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    const eclipseX=er.left+(hr.left+center.x)*er.width/(window.innerWidth||1);
    const eclipseY=er.top+(hr.top+center.y)*er.height/(window.innerHeight||1);
    pullAll(eclipseX,eclipseY,null,true,g.type);
- }else if(isTap&&(!clockDial||clockDial.type!==g.type)){clockDialFx(pts[0],g.type)}
+ }else if(isTap&&!soumatouTap&&(!clockDial||clockDial.type!==g.type)){clockDialFx(pts[0],g.type)}
  const segs=[];if(isTap){const c=pts[0];segs.push([c,{x:c.x+.01,y:c.y},94]);}
  else for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(Math.hypot(b.x-a.x,b.y-a.y)>1)segs.push([a,b,23]);}
- if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:(completed||eclipseTap)?.30:(typeof taStarRunValue==='function'?taStarRunValue(g.type):3.1),total:(typeof taStarRunValue==='function'?taStarRunValue(g.type):3.1),age:0,resonated:false,clockDissolve:completed||eclipseTap};traces.push(trace);if(!completed&&!eclipseTap&&(g.type==='fire'||g.type==='ice'))window.taStars?.track(g.type);if(traces.length>2){for(const older of traces.slice(0,-2)){if(!older.clockDissolve){older.left=Math.min(older.left,1.85);older.total=3.1;older.retiring=true;}}}if(traces.length>6)traces.splice(0,traces.length-6);for(const other of traces){if(!completed&&!eclipseTap&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed&&!eclipseTap)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
+ if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:(completed||eclipseTap)?.30:(typeof taStarRunValue==='function'?taStarRunValue(g.type):3.1),total:(typeof taStarRunValue==='function'?taStarRunValue(g.type):3.1),age:0,resonated:false,clockDissolve:completed||eclipseTap};traces.push(trace);if(!completed&&!eclipseTap&&!soumatouTap&&(g.type==='fire'||g.type==='ice'))window.taStars?.track(g.type);if(traces.length>2){for(const older of traces.slice(0,-2)){if(!older.clockDissolve){older.left=Math.min(older.left,1.85);older.total=3.1;older.retiring=true;}}}if(traces.length>6)traces.splice(0,traces.length-6);for(const other of traces){if(!completed&&!eclipseTap&&!soumatouTap&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed&&!eclipseTap)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
  checkWords();}
  // Capture the armed gesture before the normal word/tap collectors can consume it.
  field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<=0||gesture||consumedPointer!==null)return;playElementSound(selected);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
@@ -12076,6 +12130,438 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   if(img.decode)img.decode().catch(()=>{});
 })();
 </script>
+
+<style id="ta-soumatou-style">
+.ta-soumatou-stage{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:95;isolation:isolate;}
+.ta-soumatou-scene{position:absolute;inset:0;background-position:center;background-size:cover;filter:sepia(.85) saturate(.67) contrast(1.1) brightness(.78);transition:opacity .2s linear;}
+.ta-soumatou-wash{position:absolute;inset:0;background:linear-gradient(130deg,rgba(108,65,22,.25),rgba(48,24,10,.22));mix-blend-mode:screen;}
+.ta-soumatou-sign{position:absolute;inset:0;display:grid;place-items:center;z-index:3;pointer-events:none;}
+.ta-soumatou-sign svg{width:min(75%,380px);overflow:visible;filter:drop-shadow(0 0 12px #ffd77d) drop-shadow(0 0 28px #bc7c27);animation:taSoumatouSign .85s ease-out both;}
+.ta-soumatou-sign path{fill:none;stroke:#ffe6a0;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;}
+@keyframes taSoumatouSign{0%{transform:scale(.5);opacity:0}30%{transform:scale(1);opacity:1}70%{transform:scale(1.15);opacity:1}100%{transform:scale(2.2);opacity:0}}
+/* Match normal .word pill size and hit area; keep sepia contrast over black/photos. */
+.ta-soumatou-stage .ta-soumatou-word{position:absolute;z-index:6;box-sizing:border-box;display:block;
+  font:inherit;font-family:var(--mincho);font-size:.86rem;letter-spacing:.06em;line-height:normal;
+  white-space:nowrap;color:#382b1d;background:rgba(238,221,188,.94);
+  border:1px solid rgba(167,133,83,.95);border-radius:999px;padding:4px 10px;
+  box-shadow:0 0 9px 2px rgba(224,183,114,.30),0 0 19px 5px rgba(206,153,82,.12);
+  text-shadow:none;pointer-events:auto;touch-action:none;cursor:pointer;
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+  animation:taSoumatouRise var(--life,2.7s) linear both;}
+.ta-soumatou-stage .ta-soumatou-word.time{color:#29485c;background:rgba(238,221,188,.94);
+  border-color:rgba(120,200,255,.94);text-shadow:0 0 7px rgba(109,187,255,.38);
+  box-shadow:0 0 10px 2px rgba(99,178,255,.48),0 0 23px 6px rgba(83,158,255,.24);}
+.ta-soumatou-stage .ta-soumatou-word:focus-visible{outline:2px solid #f4d394;outline-offset:2px;}
+@keyframes taSoumatouRise{0%{transform:translateY(0);opacity:0}12%{opacity:1}72%{opacity:1}100%{transform:translateY(-190px);opacity:0}}
+.ta-soumatou-end{animation:taMemoryBookExit .35s ease-in both;}
+@keyframes taSoumatouEnd{to{opacity:0}}
+</style>
+
+<style id="ta-memory-gather-fx-style">
+/* Soumatou: the collected word itself burns, glows and rises, like the fire orb. */
+.ta-soumatou-stage .ta-memory-gather{position:absolute;z-index:8;pointer-events:none;overflow:visible;isolation:isolate;}
+.ta-soumatou-stage .ta-memory-burning-word{position:absolute;left:0;top:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;white-space:nowrap;font:inherit;font-family:var(--mincho);font-size:.86rem;letter-spacing:.06em;line-height:normal;padding:4px 10px;border:1px solid transparent;border-radius:999px;color:#fff3c9;background:transparent;text-shadow:0 0 5px #fff7d6,0 0 13px #ffb84f,0 0 21px #ed7826;box-shadow:none;transform-origin:50% 65%;animation:taMemoryBurnWord .86s cubic-bezier(.16,.52,.26,1) both;}
+.ta-memory-burning-word::after{content:"";position:absolute;inset:0;border:1px solid #f5c476;border-radius:999px;background:rgba(153,78,26,.87);box-shadow:0 0 13px #ffa13e99,inset 0 0 9px #ffcf6e88;z-index:-1;pointer-events:none;animation:taMemoryFrameVanish .17s ease-out both;}
+@keyframes taMemoryFrameVanish{0%{opacity:1}35%{opacity:.45}100%{opacity:0}}
+.ta-memory-burning-word::before{content:"";position:absolute;inset:-9px -7px;border-radius:50%;background:radial-gradient(ellipse at 50% 62%,rgba(255,246,175,.6),rgba(255,153,46,.26) 40%,transparent 73%);filter:blur(5px);z-index:-1;animation:taMemoryBurnAura .68s ease-out both;}
+.ta-memory-ember{position:absolute;left:var(--ex);top:var(--ey);width:var(--size);height:var(--size);border-radius:50%;background:radial-gradient(circle,#fff9df 0%,#ffd574 38%,#eaa142 72%,transparent 100%);box-shadow:0 0 5px #f5bb63,0 0 11px #e4a34b;animation:taMemoryEmber var(--dur) ease-out var(--delay) both;}
+@keyframes taMemoryBurnWord{0%{opacity:1;transform:translateY(0) scale(1);filter:brightness(1.3)}22%{opacity:1;transform:translateY(-7px) scale(1.09);filter:brightness(1.9)}54%{opacity:.85;transform:translateY(-26px) scale(.96);filter:brightness(1.5)}100%{opacity:0;transform:translateY(-76px) scale(.68);filter:brightness(.8) blur(3px)}}
+@keyframes taMemoryBurnAura{0%{opacity:.5;transform:scale(.65)}30%{opacity:1;transform:scale(1.15)}100%{opacity:0;transform:scale(1.7)}}
+@keyframes taMemoryEmber{0%{opacity:0;transform:translate(0,0) scale(.5)}16%{opacity:1}65%{opacity:.9}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.15)}}
+@media(prefers-reduced-motion:reduce){.ta-memory-burning-word,.ta-memory-ember{animation-duration:.2s!important;}}
+</style>
+
+<style id="ta-void-original-gather-style">
+/* Direct port of index.html's post-shatter "余韻の時" word/gold-dust effect. */
+.ta-void-collected-word{position:fixed;z-index:10030;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;font-family:var(--mincho,serif);font-size:1rem;letter-spacing:.1em;color:#fff7df;text-shadow:0 0 16px rgba(255,238,185,.95);background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:0!important;}
+.ta-void-gdust-box{position:fixed;z-index:10031;pointer-events:none;transform:translate(-50%,-50%);}
+.ta-void-gdust{position:absolute;left:0;top:0;width:3px;height:3px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fffdf4,#ffd96e 50%,rgba(255,196,96,0) 78%);box-shadow:0 0 6px 1px rgba(255,214,120,.85);pointer-events:none;}
+</style>
+<style id="ta-soumatou-pause-hud">
+#taTimeBox{position:relative;}
+#taTimeBox .ta-soumatou-time-pause{display:none;position:absolute;inset:0;z-index:10;align-items:center;justify-content:center;border-radius:inherit;background:color-mix(in srgb,var(--ground) 82%,transparent);color:var(--accent);font-family:var(--mincho);font-weight:600;font-size:.76rem;letter-spacing:.16em;pointer-events:none;}
+#taTimeBox.ta-soumatou-paused .ta-soumatou-time-pause{display:flex;animation:cpauseFade 1.6s ease-in-out infinite;}
+</style>
+<script id="ta-soumatou-script">
+/* Soumatou is deliberately independent of stage/combo background classes.
+   No star-gate during development; one tap of each element, adjacent circles. */
+(()=>{
+ let active=false, layer=null, timer=null, spawnTimer=null, swapTimer=null, oldPaused=false, oldComboAt=0, lastStart=0;
+ let gainScore=0,gainTime=0,heroRect=null,photoStartTimer=null,wordStartTimer=null,photoStopTimer=null,finishTimer=null,pauseClones=[];
+ const pointerTrails=new Map();
+ const timeBox=document.getElementById('taTimeBox');
+ if(timeBox && !timeBox.querySelector('.ta-soumatou-time-pause')){
+   const pause=document.createElement('span');pause.className='ta-soumatou-time-pause';pause.textContent='一時停止';pause.setAttribute('aria-hidden','true');timeBox.append(pause);
+ }
+ function intersectsSegment(x1,y1,x2,y2,r){
+   const margin=14,left=r.left-margin,right=r.right+margin,top=r.top-margin,bottom=r.bottom+margin;
+   const inside=(x,y)=>x>=left&&x<=right&&y>=top&&y<=bottom;
+   if(inside(x1,y1)||inside(x2,y2))return true;
+   let lo=0,hi=1,dx=x2-x1,dy=y2-y1;
+   for(const [p,q] of [[-dx,x1-left],[dx,right-x1],[-dy,y1-top],[dy,bottom-y1]]){
+     if(p===0){if(q<0)return false;continue;}
+     const t=q/p;if(p<0){if(t>hi)return false;if(t>lo)lo=t;}else{if(t<lo)return false;if(t<hi)hi=t;}
+   }
+   return lo<=hi;
+ }
+ function collectOnTrail(x1,y1,x2,y2){
+   if(!active||!layer)return;
+   for(const word of layer.querySelectorAll('.ta-soumatou-word:not([data-taken])')){
+     const r=word.getBoundingClientRect();
+     if(r.width && r.height && intersectsSegment(x1,y1,x2,y2,r))award(word);
+   }
+ }
+ // Capture pointer motion even when the initial touch lands on the background.
+ document.addEventListener('pointerdown',e=>{
+   if(!active||!layer||!e.isPrimary||!heroRect)return;
+   // The full-screen memory veil sits above .hero, so event.target is no
+   // longer inside .hero. Test the original collection area by coordinates.
+   const r=heroRect;
+   if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;
+   pointerTrails.set(e.pointerId,{x:e.clientX,y:e.clientY});
+   collectOnTrail(e.clientX,e.clientY,e.clientX,e.clientY);
+ },true);
+ document.addEventListener('pointermove',e=>{
+   if(!active||!layer)return;
+   const p=pointerTrails.get(e.pointerId);if(!p)return;
+   collectOnTrail(p.x,p.y,e.clientX,e.clientY);
+   p.x=e.clientX;p.y=e.clientY;
+ },true);
+ for(const type of ['pointerup','pointercancel'])document.addEventListener(type,e=>pointerTrails.delete(e.pointerId),true);
+ window.addEventListener('blur',()=>pointerTrails.clear());
+ const STAGES=Array.from({length:10},(_,i)=>'img/stage_'+String(i+1).padStart(2,'0')+'.webp');
+ STAGES.forEach(src=>{const im=new Image();im.src=src;});
+ const $hero=()=>document.querySelector('#drift')?.closest('.hero');
+ const cleanup=()=>{
+   clearTimeout(timer);clearInterval(spawnTimer);clearInterval(swapTimer);
+   pointerTrails.clear();timeBox?.classList.remove('ta-soumatou-paused');
+   clearTimeout(photoStartTimer);clearTimeout(wordStartTimer);clearTimeout(photoStopTimer);clearTimeout(finishTimer);
+   pauseClones.forEach(e=>e.remove());pauseClones=[];document.documentElement.classList.remove('ta-memory-world');
+   if(layer){layer.remove();layer=null;}
+   if(active){
+     // All rewards have ALREADY been credited by taAward at collection time.
+     // This is a visual summary only; never call taAward here.
+     const scoreText=typeof taScoreFormat==='function'?taScoreFormat(gainScore):gainScore.toLocaleString('ja-JP');
+     const timeText=Number(gainTime.toFixed(2)).toLocaleString('ja-JP');
+     if(gainScore>0||gainTime>0){
+       const summary=document.createElement('div');summary.className='ta-memory-result';
+       if(gainTime>0){const line=document.createElement('div');line.className='ta-memory-result-time';
+         line.textContent='＋'+timeText+'秒';summary.append(line);}
+       if(gainScore>0){const line=document.createElement('div');line.className='ta-memory-result-score';
+         line.textContent='＋'+scoreText+'点';summary.append(line);}
+       document.body.append(summary);
+       summary.addEventListener('animationend',()=>summary.remove(),{once:true});
+       setTimeout(()=>summary.remove(),2700);
+     }
+     active=false;
+     if(typeof comboPaused!=='undefined' && typeof combo!=='undefined'){
+       if(!oldPaused){comboPaused=false;document.getElementById('combo')?.classList.remove('paused');}
+       if(combo>=2 && typeof comboAt!=='undefined'){comboAt=Date.now();if(typeof bumpCombo==='function' && typeof COMBO_MS!=='undefined'){clearTimeout(bumpCombo.h);bumpCombo.h=setTimeout(()=>{if(!window.taSoumatou.active())expireCombo();},COMBO_MS);}}
+     }
+   }
+ };
+ // Each collection shows its actual reward at the collected word position.
+ // This is presentation only: taAward remains the sole reward writer.
+ function showMemoryPlus(wordRect,points,seconds){
+   const x=wordRect.left+wordRect.width/2;
+   const y=wordRect.top+wordRect.height/2;
+   const lines=[];
+   if(seconds>0)lines.push({value:'＋'+Number(seconds.toFixed(2)).toLocaleString('ja-JP')+'秒',type:'time'});
+   if(points>0)lines.push({value:'＋'+(typeof taScoreFormat==='function'?taScoreFormat(points):points.toLocaleString('ja-JP'))+'点',type:'score'});
+   for(let i=0;i<lines.length;i++){
+     const line=document.createElement('span');
+     line.className='ta-memory-collect-plus '+lines[i].type;
+     line.textContent=lines[i].value;
+     line.style.left=x+'px';
+     line.style.top=(y+(lines.length===2?(i===0?-15:15):0))+'px';
+     document.body.append(line);
+     line.addEventListener('animationend',()=>line.remove(),{once:true});
+     setTimeout(()=>line.remove(),700);
+   }
+ }
+ const MAX_FX=18;
+ function memoryGatherFx(w){
+   // Exact "余韻の時" collection motion and goldDust from index.html.
+   // A separate, borderless text copy lets the original capsule disappear immediately.
+   const r=w.getBoundingClientRect();
+   const x=r.left+r.width/2,y=r.top+r.height/2;
+   const ghost=document.createElement('span');
+   ghost.className='ta-void-collected-word';
+   ghost.textContent=w.textContent;
+   Object.assign(ghost.style,{left:x+'px',top:y+'px'});
+   document.body.append(ghost);
+   const anim=ghost.animate([
+     {opacity:1,transform:'translate(-50%,-50%) scale(1)'},
+     {opacity:1,transform:'translate(-50%,-56%) scale(1.14)',offset:.22},
+     {opacity:0,transform:'translate(-50%,-122%) scale(1)'}
+   ],{duration:520,easing:'ease-out',fill:'forwards'});
+   anim.onfinish=()=>ghost.remove();
+   setTimeout(()=>ghost.remove(),650);
+   // Same 24 particles, distribution, animation, and lifetime as index.html goldDust().
+   const box=document.createElement('div');box.className='ta-void-gdust-box';
+   box.style.left=x+'px';box.style.top=y+'px';document.body.append(box);
+   for(let i=0;i<24;i++){
+     const e=document.createElement('i');e.className='ta-void-gdust';box.append(e);
+     const sx=(Math.random()-.5)*48,rise=96+Math.random()*130;
+     const sway=(Math.random()-.5)*36,sc=.5+Math.random()*1.1;
+     const dur=1000+Math.random()*760;
+     e.animate([
+       {transform:`translate(${sx}px,6px) scale(${sc})`,opacity:0},
+       {transform:`translate(${(sx+sway*.4).toFixed(1)}px,${(-rise*.32).toFixed(1)}px) scale(${sc})`,opacity:1,offset:.2},
+       {transform:`translate(${(sx+sway).toFixed(1)}px,${(-rise).toFixed(1)}px) scale(${(sc*.45).toFixed(2)})`,opacity:0}
+     ],{duration:dur,easing:'cubic-bezier(.3,.55,.3,1)',fill:'forwards',delay:Math.random()*90});
+   }
+   setTimeout(()=>box.remove(),1900);
+ }
+
+ function award(w){
+   if(!active||w.dataset.taken)return;
+   const rewardRect=w.getBoundingClientRect();
+   memoryGatherFx(w);
+   w.dataset.taken='1';w.style.pointerEvents='none';w.style.opacity='0';
+   try{
+     if(typeof bumpCombo==='function')bumpCombo();
+     const scoreBefore=typeof taScore==='number'?taScore:0;
+     const timeBefore=typeof taSeconds==='number'?taSeconds:0;
+     if(w.classList.contains('time')){gainTime+=1;if(typeof taAward==='function')taAward(true,0,false,null,true,1);}
+     else {gainScore+=2;if(typeof taAward==='function')taAward(false,2,false,null,true);}
+     showMemoryPlus(rewardRect,Math.max(0,(typeof taScore==='number'?taScore:scoreBefore)-scoreBefore),Math.max(0,(typeof taSeconds==='number'?taSeconds:timeBefore)-timeBefore));
+     const nowt=Date.now();
+     if(nowt-(award._snd||0)>70 && typeof sfx!=='undefined' && typeof sfx.sharan==='function'){sfx.sharan();award._snd=nowt;}
+   }catch(e){console.error('Soumatou reward',e)}
+   w.remove();
+ }
+ function spawn(){
+   if(!active||!layer)return;
+   const words=layer.querySelectorAll('.ta-soumatou-word:not([data-taken])');
+   if(words.length>=13)return;
+   const w=document.createElement('button');w.type='button';w.className='ta-soumatou-word';
+   const isTime=Math.random()<.22;if(isTime)w.classList.add('time');
+   w.textContent=typeof taMixedWord==='function'?taMixedWord():['記憶','残響','夢','時'][Math.floor(Math.random()*4)];
+   const r=heroRect||$hero()?.getBoundingClientRect();if(!r)return;
+   w.style.left=(r.left+r.width*(.06+Math.random()*.75))+'px';
+   w.style.top=(r.top+r.height*(.65+Math.random()*.24))+'px';
+   const life=2.2+Math.random()*1.1;w.style.setProperty('--life',life+'s');
+   w.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();award(w)});
+   w.addEventListener('pointerenter',e=>{if(pointerTrails.has(e.pointerId))award(w)});
+   w.addEventListener('animationend',()=>w.remove(),{once:true});
+   layer.append(w);
+ }
+ function makePauseClone(el){
+   if(!el)return;
+   const r=el.getBoundingClientRect();if(!r.width||!r.height)return;
+   const clone=document.createElement('div');clone.className='ta-memory-pause-ghost';clone.textContent='一時停止';
+   Object.assign(clone.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});
+   document.body.append(clone);pauseClones.push(clone);
+ }
+ function start(a,b){
+   if(active||(typeof taRunning==='undefined'||!taRunning)||performance.now()-lastStart<12500)return false;
+   const hero=$hero();if(!hero)return false;
+   lastStart=performance.now();active=true;gainScore=0;gainTime=0;heroRect=hero.getBoundingClientRect();
+   timeBox?.classList.add('ta-soumatou-paused');
+   oldPaused=typeof comboPaused!=='undefined'?comboPaused:false;
+   oldComboAt=typeof comboAt!=='undefined'?comboAt:0;
+   if(typeof comboPaused!=='undefined'){comboPaused=true;clearTimeout(bumpCombo.h);document.getElementById('combo')?.classList.add('paused');}
+   // The blackout is a viewport overlay, never a change to the current stage classes.
+   layer=document.createElement('div');layer.className='ta-soumatou-stage ta-memory-fullscreen';layer.setAttribute('aria-label','走馬灯');
+   const sign=document.createElement('div');sign.className='ta-soumatou-sign';
+   sign.innerHTML='<svg viewBox="0 0 320 180" aria-hidden="true"><path d="M160 90 C115 15 35 40 35 90 C35 143 114 159 160 90 C207 22 285 37 285 90 C285 143 208 159 160 90"/></svg>';
+   // Gold is inscribed first; the emerald touch completes the silver inscription.
+   // Keep all visuals within the memory overlay, independent of the game stage.
+   const silverInk=document.createElementNS('http://www.w3.org/2000/svg','path');
+   silverInk.setAttribute('d',sign.querySelector('path').getAttribute('d'));
+   silverInk.setAttribute('class','ta-memory-silver-ink');
+   sign.querySelector('svg').append(silverInk);
+   // The emerald orb has already been spent by the player's gesture.
+   // Keep the original gold inscription and silver completion, without an
+   // automatic ITEM deduction or a misleading ring from the reserve.
+   layer.append(sign);document.body.append(layer);
+   document.documentElement.classList.add('ta-memory-world');
+   // Pause indicators fade out together with the normal HUD; no floating text clones.
+   // 1 s blackout + 2 s stillness + 10 s memory + 1 s return.
+   wordStartTimer=setTimeout(()=>{if(active){spawn();spawnTimer=setInterval(spawn,220);}},3000);
+   photoStartTimer=setTimeout(()=>{if(active)window.dispatchEvent(new Event('ta-memory-photos-start'));},3000);
+   photoStopTimer=setTimeout(()=>{clearInterval(spawnTimer);spawnTimer=null;window.dispatchEvent(new Event('ta-memory-photos-stop'));if(layer)layer.classList.add('ta-memory-return');},13000);
+   timer=setTimeout(cleanup,14000);
+   return true;
+ }
+ window.taSoumatou={start,stop:cleanup,active:()=>active,recordBonus:(v)=>{if(active&&Number.isFinite(v)){gainScore+=v;}}};
+})();
+</script>
+<style id="ta-soumatou-photo-v2">
+
+/* Soumatou: sepia memory-book background with gentle entrance/exit. */
+.ta-soumatou-stage{
+  background:#000!important;
+  animation:taMemoryBookEnter .65s ease-out both;
+}
+.ta-soumatou-stage::before{content:none!important;display:none!important;}
+.ta-soumatou-stage.ta-soumatou-end{animation:taMemoryBookExit .35s ease-in both!important;}
+@keyframes taMemoryBookEnter{from{opacity:0}to{opacity:1}}
+@keyframes taMemoryBookExit{from{opacity:1}to{opacity:0}}
+.ta-soumatou-stage .ta-soumatou-photo-field{z-index:1;}
+.ta-soumatou-stage .ta-soumatou-sign{z-index:5;}
+.ta-soumatou-stage .ta-soumatou-word{z-index:6;}
+
+/* Independent black stage: no stage-background changes and no input interception. */
+.ta-soumatou-stage{background:#000!important;perspective:850px;perspective-origin:50% 43%;}
+.ta-soumatou-scene,.ta-soumatou-wash{display:none!important;}
+.ta-soumatou-black{display:none!important;}
+.ta-soumatou-photo-field{position:absolute;inset:0;overflow:hidden;z-index:1;transform-style:preserve-3d;pointer-events:none;}
+.ta-soumatou-photo{position:absolute;left:var(--x);bottom:-12%;width:var(--w);height:var(--h);box-sizing:border-box;padding:5px 5px 16px;background:linear-gradient(135deg,#f3e7d3,#c4b49c);border-radius:2px;box-shadow:0 10px 30px rgba(0,0,0,.7),0 0 14px rgba(245,211,160,.14);transform-origin:50% 50%;opacity:0;backface-visibility:visible;animation:taMemoryPhotoFloat var(--duration) var(--delay) linear both;will-change:transform,opacity;}
+.ta-soumatou-stage .ta-soumatou-photo > img{display:block!important;position:relative!important;inset:auto!important;width:100%!important;height:100%!important;object-fit:cover!important;opacity:1!important;transform:none!important;transition:none!important;animation:none!important;filter:sepia(.92) saturate(.52) contrast(1.06) brightness(.88)!important;pointer-events:none!important;}
+.ta-soumatou-photo::after{content:'';position:absolute;inset:4px 4px 15px;border:1px solid rgba(255,255,255,.25);pointer-events:none;}
+@keyframes taMemoryPhotoFloat{0%{opacity:0;transform:translate3d(0,30px,var(--depth)) rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(var(--rz)) scale(var(--scale));}8%{opacity:var(--alpha);}65%{opacity:var(--alpha);}90%{opacity:calc(var(--alpha)*.65);}100%{opacity:0;transform:translate3d(var(--drift),var(--travel-neg),var(--depth-end)) rotateX(var(--rx-end)) rotateY(var(--ry-end)) rotateZ(var(--rz-end)) scale(var(--scale-end));}}
+.ta-soumatou-photo{background:linear-gradient(135deg,#d6c09a,#9d8060)!important;box-shadow:0 10px 30px rgba(0,0,0,.75),0 0 14px rgba(166,117,61,.18)!important;}
+.ta-soumatou-word{filter:sepia(.9) saturate(.6);}
+.ta-soumatou-word.time{filter:none;}
+.ta-soumatou-sign{z-index:5!important;}
+.ta-soumatou-sign svg{animation:taSoumatouSignPhoto 2s ease-out both!important;}
+.ta-soumatou-sign path{stroke:#ffe2a0;stroke-width:5;stroke-dasharray:900;stroke-dashoffset:900;animation:taSoumatouInk 1.25s cubic-bezier(.2,.65,.32,1) forwards;filter:drop-shadow(0 0 5px #ffc65a) drop-shadow(0 0 13px #bf792a);}
+@keyframes taSoumatouInk{to{stroke-dashoffset:0;}}
+@keyframes taSoumatouSignPhoto{0%,55%{transform:scale(1);opacity:1;}76%{transform:scale(1.14);opacity:1;}100%{transform:scale(1.85);opacity:0;}}
+.ta-soumatou-word{z-index:6!important;}
+@media(prefers-reduced-motion:reduce){.ta-soumatou-photo{animation-duration:7s!important;}.ta-soumatou-sign path{animation-duration:.1s!important;}}
+</style>
+<script id="ta-soumatou-photo-v2-script">
+(()=>{
+ const PHOTO_FILES=["b1.webp", "b10.webp", "b11.webp", "b12.webp", "b13.webp", "b14.webp", "b15.webp", "b16.webp", "b17.webp", "b18.webp", "b19.webp", "b2.webp", "b20.webp", "b21.webp", "b22.webp", "b23.webp", "b24.webp", "b25.webp", "b26.webp", "b3.webp", "b4.webp", "b5.webp", "b6.webp", "b7.webp", "b8.webp", "b9.webp", "w10.webp", "w11.webp", "w12.webp", "w13.webp", "w14.webp", "w15.webp", "w16.webp", "w17.webp", "w18.webp", "w19.webp", "w20.webp", "w21.webp", "w22.webp", "w23.webp", "w24.webp", "w25.webp", "w26.webp", "w27.webp", "w28.webp", "w29.webp", "w30.webp", "w31.webp", "w32.webp", "w33.webp", "w34.webp", "w35.webp", "w36.webp", "w37.webp", "w38.webp", "w39.webp", "w40.webp", "w41.webp", "w42.webp", "w43.webp", "w44.webp", "w45.webp", "w46.webp", "w47.webp", "w48.webp", "w49.webp", "w50.webp", "w51.webp", "w52.webp", "w53.webp", "w54.webp", "w55.webp", "w56.webp", "w57.webp", "w58.webp", "w59.webp", "w60.webp", "w61.webp", "w62.webp", "w63.webp", "w64.webp", "w65.webp", "w66.webp", "w67.webp", "w68.webp", "w69.webp", "w70.webp", "w71.webp", "w72.webp", "w73.webp", "w74.webp", "w75.webp", "w76.webp", "w77.webp", "w78.webp", "w79.webp", "w8.webp", "w80.webp", "w81.webp", "w9.webp"];
+ const random=(a,b)=>a+Math.random()*(b-a);
+ const pick=()=>PHOTO_FILES[Math.floor(Math.random()*PHOTO_FILES.length)];
+ let photoInterval=null, pending=[];
+ function clear(){if(photoInterval!==null){clearInterval(photoInterval);photoInterval=null;}pending.forEach(clearTimeout);pending=[];}
+ function addPhoto(field){if(!field.isConnected)return;
+   const depthIndex=Math.floor(Math.random()*3); // distant, middle, near
+   const cfg=[{w:[52,76],scale:[.55,.8],depth:-210,alpha:.46,travel:[260,390],time:[4.1,5.6]},
+              {w:[72,100],scale:[.85,1.08],depth:-65,alpha:.72,travel:[340,500],time:[3.5,4.8]},
+              {w:[96,132],scale:[1.05,1.3],depth:105,alpha:.92,travel:[410,610],time:[2.9,4.1]}][depthIndex];
+   const card=document.createElement('div');card.className='ta-soumatou-photo';
+   const img=document.createElement('img');img.alt='';img.decoding='async';img.src=new URL('img/'+pick(),document.baseURI).href;
+   card.append(img);
+   const set=(key,val)=>card.style.setProperty('--'+key,val);
+   set('x',random(4,75).toFixed(1)+'%');const photoWidth=random(...cfg.w);set('w',photoWidth.toFixed(0)+'px');set('h',(photoWidth*1.28).toFixed(0)+'px');
+   set('scale',random(...cfg.scale).toFixed(2));set('depth',cfg.depth+'px');set('alpha',cfg.alpha);
+   set('rx',random(-20,18).toFixed(1)+'deg');set('ry',random(-37,37).toFixed(1)+'deg');
+   set('rz',random(-23,23).toFixed(1)+'deg');set('spin',random(-40,40).toFixed(1)+'deg');
+   set('drift',random(-125,125).toFixed(0)+'px');
+   set('travel-neg',(-random(...cfg.travel)*.90).toFixed(0)+'px');set('depth-end',(cfg.depth-130)+'px');set('rx-end',(parseFloat(card.style.getPropertyValue('--rx'))+16)+'deg');set('ry-end',(parseFloat(card.style.getPropertyValue('--ry'))+38)+'deg');set('rz-end',(parseFloat(card.style.getPropertyValue('--rz'))+parseFloat(card.style.getPropertyValue('--spin')))+'deg');set('scale-end',(parseFloat(card.style.getPropertyValue('--scale'))*.68).toFixed(3));set('duration',(random(...cfg.time)*1.18).toFixed(2)+'s');set('delay','0s');
+   card.addEventListener('animationend',()=>card.remove(),{once:true});field.append(card);
+ }
+ function launch(){clear();const layer=document.querySelector('.ta-soumatou-stage');if(!layer)return;
+   layer.querySelector('.ta-soumatou-scene')?.remove();layer.querySelector('.ta-soumatou-wash')?.remove();
+   const field=document.createElement('div');field.className='ta-soumatou-photo-field';
+   layer.prepend(field);
+   for(let i=0;i<4;i++)pending.push(setTimeout(()=>addPhoto(field),i*160));
+   photoInterval=setInterval(()=>{if(!layer.isConnected||!window.taSoumatou?.active()){clear();return;}addPhoto(field);},260);
+   pending.push(setTimeout(clear,8000));
+ }
+ // start() creates the overlay synchronously; wrap once after it has been defined.
+ function install(){if(!window.taSoumatou?.start)return false;
+   const orig=window.taSoumatou.start;
+   if(orig.__photoV2)return true;
+   const wrapped=function(...args){return orig.apply(this,args);};
+   wrapped.__photoV2=true;window.taSoumatou.start=wrapped;
+   const stop=window.taSoumatou.stop;
+   window.taSoumatou.stop=function(...args){clear();return stop.apply(this,args);};
+   return true;
+ }
+ window.addEventListener('ta-memory-photos-start',launch);
+ window.addEventListener('ta-memory-photos-stop',clear);
+ if(!install())document.addEventListener('DOMContentLoaded',install,{once:true});
+})();
+</script>
+
+<style id="ta-memory-fullscreen-v1">
+/* The veil itself is transparent: a dedicated black pseudo-element fades over the
+   complete game. This avoids the previous !important black background snapping on. */
+.ta-soumatou-stage.ta-memory-fullscreen{
+ position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;
+ z-index:10000!important;overflow:hidden!important;background:transparent!important;
+ opacity:1;animation:none!important;pointer-events:none!important;isolation:isolate!important;
+}
+.ta-soumatou-stage.ta-memory-fullscreen::before{
+ content:""!important;display:block!important;position:fixed!important;inset:0!important;
+ z-index:0!important;background:#000!important;pointer-events:none!important;
+ opacity:0;animation:taMemoryBlackIn 1s ease-in-out forwards!important;
+}
+@keyframes taMemoryBlackIn{from{opacity:0}to{opacity:1}}
+/* Fade the whole memory scene away in one second, exposing the unchanged stage. */
+.ta-soumatou-stage.ta-memory-fullscreen.ta-memory-return{
+ opacity:1;animation:taMemorySceneOut 1s ease-in-out forwards!important;
+}
+@keyframes taMemorySceneOut{from{opacity:1}to{opacity:0}}
+.ta-memory-fullscreen .ta-soumatou-sign{position:fixed!important;inset:0!important;z-index:8!important;}
+.ta-memory-fullscreen .ta-soumatou-sign svg{animation:taSoumatouSignPhoto 2s ease-out both!important;}
+.ta-memory-fullscreen .ta-soumatou-photo-field{position:fixed!important;inset:0!important;overflow:hidden!important;z-index:2!important;}
+.ta-memory-fullscreen .ta-soumatou-word{position:fixed!important;z-index:7!important;}
+/* During memory, swipes are game gestures, not browser scrolling. */
+html.ta-memory-world,html.ta-memory-world body{touch-action:none!important;overscroll-behavior:none!important;}
+.ta-soumatou-stage.ta-memory-fullscreen{touch-action:none!important;}
+/* Keep the existing pause text within the HUD; it disappears with the rest of the UI. */
+.ta-memory-pause-ghost{display:none!important;}
+</style>
+
+<style id="ta-memory-silver-finisher">
+/* One continuous ring: expands from ITEM before the fade, then contracts
+   into the golden infinity crossing. It stays above the blackout veil. */
+.ta-memory-fullscreen .ta-memory-silver-wave{
+ position:fixed;left:var(--silver-source-x);top:var(--silver-source-y);
+ width:100px;height:100px;margin:-50px 0 0 -50px;
+ border:2.5px solid rgba(232,247,255,.95);border-radius:50%;
+ background:radial-gradient(circle,transparent 66%,rgba(182,222,255,.14) 85%,transparent 100%);
+ box-shadow:0 0 12px 2px rgba(245,250,255,.88),inset 0 0 12px rgba(185,219,255,.55),0 0 28px rgba(137,195,248,.48);
+ pointer-events:none;z-index:9;opacity:0;
+ animation:taMemorySilverWave 1.85s cubic-bezier(.22,.61,.36,1) both;
+ will-change:transform,opacity;
+}
+@keyframes taMemorySilverWave{
+ 0%{opacity:0;transform:translate(0,0) scale(.08)}
+ 8%{opacity:.95;transform:translate(0,0) scale(.5)}
+ 36%{opacity:.9;transform:translate(0,0) scale(12)}
+ 55%{opacity:.75;transform:translate(0,0) scale(12)}
+ 77%{opacity:.95;transform:translate(var(--silver-target-dx),var(--silver-target-dy)) scale(4.5)}
+ 94%{opacity:1;transform:translate(var(--silver-target-dx),var(--silver-target-dy)) scale(.18)}
+ 100%{opacity:0;transform:translate(var(--silver-target-dx),var(--silver-target-dy)) scale(0)}
+}
+.ta-memory-fullscreen .ta-soumatou-sign path.ta-memory-silver-ink{
+ stroke:#e7f5ff!important;stroke-width:5.2!important;
+ stroke-dasharray:900!important;stroke-dashoffset:900!important;
+ filter:drop-shadow(0 0 6px #fff) drop-shadow(0 0 15px #9dd9ff)!important;
+ animation:taMemorySilverTrace .52s ease-out 1.78s forwards!important;
+}
+@keyframes taMemorySilverTrace{to{stroke-dashoffset:0}}
+</style>
+<style id="ta-infinity-green-target-style">
+.ta-infinity-green-target{position:fixed;z-index:10020;width:48px;height:48px;margin:-24px 0 0 -24px;pointer-events:none;border-radius:50%;
+ background:radial-gradient(circle,#fffef0 0%,#fff1b8 12%,rgba(255,202,86,.78) 27%,rgba(235,159,41,.3) 50%,transparent 76%);
+ box-shadow:0 0 16px 7px rgba(255,224,132,.85),0 0 38px 17px rgba(239,172,62,.48),0 0 65px 26px rgba(237,156,50,.2);
+ animation:taInfinityGreenTargetPulse 1.05s ease-in-out infinite alternate;}
+.ta-infinity-green-target::before{content:'';position:absolute;inset:-10px;border:2px solid rgba(255,239,172,.94);border-radius:50%;box-shadow:0 0 12px 3px rgba(255,208,96,.72),inset 0 0 12px rgba(255,223,138,.42);animation:taInfinityTargetRing 1.4s ease-out infinite;}
+.ta-infinity-green-target::after{content:'';position:absolute;inset:-25px;border:2px solid rgba(255,209,103,.8);border-radius:50%;box-shadow:0 0 14px 4px rgba(255,188,72,.43);animation:taInfinityTargetRing 1.4s ease-out .35s infinite;}
+@keyframes taInfinityGreenTargetPulse{from{transform:scale(.91);opacity:.86}to{transform:scale(1.12);opacity:1}}
+@keyframes taInfinityTargetRing{0%{transform:scale(.65);opacity:1}85%,100%{transform:scale(1.18);opacity:0}}
+</style>
+<style id="ta-memory-collect-plus-v1">
+/* Smooth, compositor-friendly motion: no animated blur or scale. */
+.ta-memory-collect-plus{
+ position:fixed;z-index:10045;pointer-events:none;white-space:nowrap;
+ font-family:var(--mincho,serif);font-weight:700;
+ font-size:clamp(15px,3.5vw,23px);letter-spacing:.035em;
+ transform:translate3d(-50%,0,0);
+ will-change:transform,opacity;
+ backface-visibility:hidden;
+ contain:layout style paint;
+ animation:taMemoryCollectPlusRise .5s linear both;
+}
+.ta-memory-collect-plus.time{color:#b3eaff;text-shadow:0 0 7px #2f91d4,0 0 15px rgba(85,185,255,.7),0 1px 3px #000;}
+.ta-memory-collect-plus.score{color:#ffe2a0;text-shadow:0 0 7px #b9852d,0 0 15px rgba(255,192,88,.65),0 1px 3px #000;}
+@keyframes taMemoryCollectPlusRise{
+ 0%{opacity:0;transform:translate3d(-50%,12px,0)}
+ 15%{opacity:1}
+ 67%{opacity:1}
+ 100%{opacity:0;transform:translate3d(-50%,-65px,0)}
+}
+</style>
 </body>
 <style>
 /* Readable thousand-point popup labels in the collection area. */
@@ -12107,6 +12593,31 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 #viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled{box-shadow:none!important}
 #viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled::before{opacity:0!important}
 </style>
+<style id="ta-memory-fx-repair-v1">
+/* The post-shatter word and gold dust live above the full-screen memory layer. */
+.ta-void-collected-word{z-index:10030!important}
+.ta-void-gdust-box{z-index:10031!important}
+/* During memory, milestone rings and frame flashes are deliberately absent. */
+html.ta-memory-world .ta-combo-wave,
+html.ta-memory-world .ta-reward-pickup-wave{display:none!important}
+/* The summary is purely visual and never modifies the actual counters. */
+.ta-memory-result{position:fixed;left:50%;top:47%;z-index:10050;
+ transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;
+ gap:clamp(10px,2vh,22px);pointer-events:none;white-space:nowrap;text-align:center;
+ font-family:var(--mincho,serif);font-weight:700;line-height:1.25;
+ animation:taMemoryResultRise 4s cubic-bezier(.18,.65,.35,1) both;}
+.ta-memory-result-time{color:#9bdcff;font-size:clamp(30px,7vw,66px);
+ text-shadow:0 0 15px rgba(102,202,255,.8),0 0 35px rgba(66,143,255,.38)}
+.ta-memory-result-score{color:#f9d78e;font-size:clamp(30px,7vw,66px);
+ text-shadow:0 0 15px rgba(255,211,122,.8),0 0 35px rgba(229,153,60,.35)}
+@keyframes taMemoryResultRise{
+ 0%{opacity:0;transform:translate(-50%,calc(-50% + 8px))}
+ 12%{opacity:1;transform:translate(-50%,-50%)}
+ 58%{opacity:1;transform:translate(-50%,calc(-50% - 17px))}
+ 100%{opacity:0;transform:translate(-50%,calc(-50% - 40px))}
+}
+</style>
+
 </html>
 
 <style>/* 連鎖レベルは未採用。倍率計算は維持し、レベル表記のみ非表示 */
