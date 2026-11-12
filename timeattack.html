@@ -600,6 +600,10 @@ html.ta-800-lit #viewMain>.hero.rush{
 .ta-growth-record{margin:12px 0;padding:12px;border:1px solid rgba(160,178,202,.3);border-radius:9px;font-size:12px;line-height:1.8}
 .ta-growth-record strong{display:block;font-size:14px;margin-bottom:6px}
 @media(max-height:760px){#taHud #taWordMastery{margin-top:2px;gap:1px}#taHud #taWordMasteryTrack{height:3px}#taHud #taWordMasteryCaption{font-size:8px}}
+
+/* Level-up title: one large name+level, concise upgrades beneath. */
+.ta-level-announcement .ta-level-number{font-size:clamp(32px,7.6vw,72px);letter-spacing:.025em;white-space:nowrap;}
+.ta-level-announcement .ta-level-upgrades{display:block;max-width:min(92vw,600px);margin:12px auto 0;white-space:normal;color:#f5f0df;font:600 clamp(13px,2.7vw,19px)/1.55 system-ui,sans-serif;letter-spacing:.04em;text-shadow:0 1px 5px #09101c,0 0 14px var(--level-color,#b7d9ff);}
 </style>
 <script>
 /* 最初の描画より前に、前回の世界（白/黒）を決めておく。万一起動処理が止まっても4秒で必ず見せる */
@@ -5851,7 +5855,7 @@ function endFlood(){
     const award = () => {
       if(awardSession !== taFinishToken || !taRunning)return;
       if(i % 4 === 0)sfx.arrive();
-      taAward(taTime, taTime ? 1 : taPoints, false, boostedAtRelease && mode === 'black');
+      taAward(taTime, taTime ? 1 : taPoints, false, boostedAtRelease && mode === 'black', false, null, true);
     };
     setTimeout(award, arrivalDelay);
     if(!shouldDraw)return;
@@ -6437,7 +6441,7 @@ function spawnWord(opt = {}){
     const arrive = () => {
       // All points and seconds are credited. Dense, overlapping arrivals
       // share one audible cue and omit unreadable score popups/reflows.
-      taAward(taTime,taPoints,taDenseSwipe,moonBoostAtCollect,taDenseSwipe);
+      taAward(taTime,taPoints,taDenseSwipe,moonBoostAtCollect,taDenseSwipe,null,true);
       const at=performance.now();
       if(!taDenseSwipe || at-taSwipeLastArrivalSound>260){sfx.arrive();taSwipeLastArrivalSound=at;}
     };
@@ -6703,7 +6707,7 @@ function orbsFromCollected(items, cx, cy, eclipse=false){
       else{
         o.remove();
         // 合計時間はtimeGainOverrideへ渡し、二重加算しない。
-        taAward(isTime,isTime?1:value,false,false,false,isTime?value:null);
+        taAward(isTime,isTime?1:value,false,false,false,isTime?value:null,true);
         sfx.arrive();
       }
     };
@@ -6739,7 +6743,7 @@ function resonate(x, y, self){
       o.style.left = nx + "px"; o.style.top = ny + "px"; document.body.append(o);
       const dx = t.left + t.width/2 - nx, dy = t.top + t.height/2 - ny;
       o.animate([{transform:"translate(0,0) scale(0)", opacity:0},{transform:"translate(0,-4px) scale(1.4)", opacity:1, offset:.2},{transform:`translate(${dx*.3}px,${dy*.3 - 30}px) scale(1.1)`, opacity:.95, offset:.5},{transform:`translate(${dx}px,${dy}px) scale(.45)`, opacity:.5}],
-        {duration:850, easing:"cubic-bezier(.45,0,.6,1)", fill:"forwards"}).onfinish = () => { o.remove(); taAward(isTime,isTime ? 1 : Math.max(1,m) * (glowRemain>0?2:1),false,o.classList.contains('ta-reward-boost')&&mode==='black'); addToDict(word); };
+        {duration:850, easing:"cubic-bezier(.45,0,.6,1)", fill:"forwards"}).onfinish = () => { o.remove(); taAward(isTime,isTime ? 1 : Math.max(1,m) * (glowRemain>0?2:1),false,o.classList.contains('ta-reward-boost')&&mode==='black',false,null,true); addToDict(word); };
     }, 90);
     px = nx; py = ny; step++;
     setTimeout(hop, 130);
@@ -9161,22 +9165,24 @@ let taSessionMaxCombo=0,taSessionTimeGain=0;
 const TA_RECORD_KEY = 'ta-time-attack-records-v1';
 /* Unified permanent word mastery; stars are collectible achievements only. */
 const taWordMastery=(()=>{
- const KEY='ta-word-mastery-v1', limits=[0,200,400,600,1000];
+ const KEY='ta-word-mastery-v1', limits=[0,200,400,600,1000,1600,2400,3400,4600,6000];
  let count=0;
  try{const n=Number(localStorage.getItem(KEY));if(Number.isFinite(n))count=Math.max(0,Math.floor(n));}catch(_e){}
  const level=()=>1+limits.slice(1).filter(n=>count>=n).length;
- const rate=()=>[1,1.10,1.20,1.30,1.40][level()-1];
- const silverStart=()=>1+(level()>=3?1:0)+(level()>=5?1:0);
- const silverInterval=()=>[100,100,95,90,85][level()-1];
+ const rate=()=>[1,1.10,1.20,1.30,1.40,1.45,1.50,1.55,1.60,1.65][level()-1];
+ const scoreRate=()=>[1,1,1,1,1,1.02,1.02,1.04,1.04,1.05][level()-1];
+ const timeRate=()=>[1,1,1,1,1,1,1.02,1.02,1.04,1.05][level()-1];
+ const silverStart=()=>1+(level()>=3?1:0)+(level()>=5?1:0)+(level()>=8?1:0)+(level()>=10?1:0);
+ const silverInterval=()=>[100,100,95,90,85,85,80,80,75,75][level()-1];
  let fxQueue=[],fxBusy=false;
  const render=()=>{
   const fill=document.getElementById('taWordMasteryFill'),badge=document.getElementById('taWordMasteryBadge');
   if(!fill||!badge)return;
-  const lv=level(),base=limits[lv-1],next=limits[lv]??limits[4];
-  fill.style.width=(lv===5?100:Math.max(0,Math.min(100,(count-base)/(next-base)*100)))+'%';
+  const lv=level(),base=limits[lv-1],next=limits[lv]??limits[9];
+  fill.style.width=(lv===10?100:Math.max(0,Math.min(100,(count-base)/(next-base)*100)))+'%';
   badge.textContent='言霊Lv'+lv;
   const record=document.getElementById('taWordMasteryRecord');
-  if(record){const remaining=lv===5?'MAX':(next-count).toLocaleString('ja-JP')+'個';record.innerHTML=`<div class="ta-growth-head"><strong>言霊</strong><b>Lv${lv} / 5</b></div><div class="ta-growth-track"><i style="width:${lv===5?100:Math.max(0,Math.min(100,(count-base)/(next-base)*100))}%"></i></div><div class="ta-growth-meta"><span>${lv===5?'累計 '+count.toLocaleString('ja-JP')+'個':count.toLocaleString('ja-JP')+' / '+next.toLocaleString('ja-JP')+'個'}</span><span>${lv===5?'MAX':'次まで '+remaining}</span></div><div class="ta-growth-effect">言霊発生数増加・白銀所持数増加</div>`;}
+  if(record){const remaining=lv===10?'MAX':(next-count).toLocaleString('ja-JP')+'個';record.innerHTML=`<div class="ta-growth-head"><strong>言霊</strong><b>Lv${lv} / 10</b></div><div class="ta-growth-track"><i style="width:${lv===10?100:Math.max(0,Math.min(100,(count-base)/(next-base)*100))}%"></i></div><div class="ta-growth-meta"><span>${lv===10?'累計 '+count.toLocaleString('ja-JP')+'個':count.toLocaleString('ja-JP')+' / '+next.toLocaleString('ja-JP')+'個'}</span><span>${lv===10?'MAX':'次まで '+remaining}</span></div><div class="ta-growth-effect">言霊発生数増加・得点増加・時間増加・白銀玉強化</div>`;}
  };
  const nextFx=()=>{
   if(fxBusy||!fxQueue.length)return;
@@ -9187,13 +9193,15 @@ const taWordMastery=(()=>{
   const h=hero.getBoundingClientRect(),color='#b7d9ff';
   const title=document.createElement('div');title.className='ta-level-announcement';title.style.setProperty('--level-color',color);
   title.style.left=(h.left+h.width/2)+'px';title.style.top=(h.top+h.height/2)+'px';
-  const name=document.createElement('span');name.className='ta-level-name';name.textContent='言霊';
-  const number=document.createElement('span');number.className='ta-level-number';number.textContent='Lv '+lv;
-  title.append(name,number);
-  if(lv===3||lv===5){
-   const bonus=document.createElement('span');bonus.className='ta-word-silver-bonus';bonus.textContent='白銀玉強化';
-   title.append(bonus);
-  }
+  const number=document.createElement('span');number.className='ta-level-number';number.textContent='言霊Lv'+lv;
+  title.append(number);
+  const upgrades=[];
+  upgrades.push('言霊発生率UP');
+  if([6,8,10].includes(lv))upgrades.push('得点UP');
+  if([7,9,10].includes(lv))upgrades.push('時間UP');
+  if([3,5,8,10].includes(lv))upgrades.push('初期白銀玉UP');
+  if([3,4,5,7,9].includes(lv))upgrades.push('白銀玉出現率UP');
+  const bonus=document.createElement('span');bonus.className='ta-level-upgrades';bonus.textContent=upgrades.join('・');title.append(bonus);
   document.body.append(title);
   try{if(typeof sfx!=='undefined'&&sfx.comboMilestone)sfx.comboMilestone(true);}catch(_e){}
   title.animate([{opacity:0,transform:'translate(-50%,-50%) translateY(8px)'},{opacity:1,transform:'translate(-50%,-50%) translateY(-15px)',offset:.55},{opacity:0,transform:'translate(-50%,-50%) translateY(-40px)'}],{duration:2100,easing:'ease-out',fill:'forwards'}).onfinish=()=>title.remove();
@@ -9247,10 +9255,10 @@ const taWordMastery=(()=>{
  };
  const add=(n=1)=>{if(!taRunning)return;const prev=level();count+=n;try{localStorage.setItem(KEY,String(count));}catch(_e){}render();if(level()>prev){const bar=document.getElementById('taWordMastery');if(bar){bar.classList.remove('ta-word-levelup');void bar.offsetWidth;bar.classList.add('ta-word-levelup');setTimeout(()=>bar.classList.remove('ta-word-levelup'),1000);}for(let lv=prev+1;lv<=level();lv++)fxQueue.push({lv,preview:false});nextFx();}};
  let testLv=1;
- const testLevelUp=()=>{testLv=testLv>=5?2:testLv+1;fxQueue.push({lv:testLv,preview:true});nextFx();};
+ const testLevelUp=()=>{testLv=testLv>=10?2:testLv+1;fxQueue.push({lv:testLv,preview:true});nextFx();};
  const reset=()=>{count=0;fxQueue=[];try{localStorage.removeItem(KEY);}catch(_e){}render();};
  window.addEventListener('resize',render);requestAnimationFrame(render);
- return{level,rate,silverStart,silverInterval,add,render,reset,testLevelUp,get count(){return count;}};
+ return{level,rate,scoreRate,timeRate,silverStart,silverInterval,add,render,reset,testLevelUp,get count(){return count;}};
 })();
 /* Independent orb mastery: XP is never derived from stars or mere activations. */
 const taMastery=(()=>{
@@ -9333,9 +9341,10 @@ const taMastery=(()=>{
   const area=hero.getBoundingClientRect();
   const title=document.createElement('div');title.className='ta-level-announcement';title.style.setProperty('--level-color',color);
   title.style.left=(area.left+area.width/2)+'px';title.style.top=(area.top+area.height/2)+'px';
-  const name=document.createElement('span');name.className='ta-level-name';name.textContent=names[k];
-  const number=document.createElement('span');number.className='ta-level-number';number.textContent='Lv '+lv;
-  title.append(name,number);document.body.append(title);
+  const number=document.createElement('span');number.className='ta-level-number';number.textContent=names[k]+'Lv'+lv;
+  const bonus=document.createElement('span');bonus.className='ta-level-upgrades';
+  bonus.textContent=k==='green'?'言霊発生数UP':'効果時間・スワイプ距離UP';
+  title.append(number,bonus);document.body.append(title);
   // Use exactly the same entrance, rise, and fade timing as the 100-chain
   // +100,000 announcement; keep the independent orb/halo sequence unchanged.
   const titleMotion=title.animate([
@@ -9740,7 +9749,7 @@ function taStyleRewardOrb(orb,isTime,boosted=false){
   if(boosted)orb.classList.add('ta-reward-boost');
   return orb;
 }
-function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null){if(!taRunning)return;const id=isTime?'taTime':'taScore';const taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect)?2:1)):0;if(isTime){taSeconds+=taTimeGain;taSessionTimeGain+=taTimeGain;}else {taScore+=pts;taScoreRefresh();}taRender();if(suppressPlus){return;}const el=document.getElementById(id);taReplayCssAnimation(el,'ta-pop','taPulse');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}const r=taPlusRect(el,id),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+taTimeGain+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
+function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null,wordGrowth=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';let taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect)?2:1)):0;if(wordGrowth){if(isTime)taTimeGain=Math.round(taTimeGain*taWordMastery.timeRate()*100)/100;else pts=Math.round(pts*taWordMastery.scoreRate());}if(isTime){taSeconds+=taTimeGain;taSessionTimeGain+=taTimeGain;}else {taScore+=pts;taScoreRefresh();}taRender();if(suppressPlus){return;}const el=document.getElementById(id);taReplayCssAnimation(el,'ta-pop','taPulse');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}const r=taPlusRect(el,id),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+Number(taTimeGain.toFixed(2))+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
 const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
