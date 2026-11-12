@@ -2704,12 +2704,20 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
 <style id="ta-level-echo-final-20261112">
 /* Keep the badge fully inside the HUD; the lower rule is painted inside its box. */
 #taHud #taWordMasteryBadge{
-  transform:translateY(-3px)!important;
-  border:1px solid #b8d4f4!important;
-  border-bottom:2px solid #b8d4f4!important;
-  box-shadow:inset 0 -1px 0 #d9eaff,0 1px 3px #0009!important;
-  padding-bottom:5px!important;
-  background-clip:padding-box!important;
+  transform:none!important;
+  border:0!important;
+  border-bottom:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  padding:0 2px!important;
+  min-height:0!important;
+  height:auto!important;
+  font:400 12px/1.2 'Segoe UI',sans-serif!important;
+  color:#e8f2ff!important;
+  white-space:nowrap!important;
+  text-shadow:0 0 5px rgba(147,192,236,.28)!important;
+  align-self:center!important;
 }
 #taHud #taWordMastery{overflow:visible!important;}
 /* Orb echoes render above the HUD and have no clipping ancestor. */
@@ -2717,6 +2725,7 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
 .ta-orb-level-echo-main{color:#fff;text-shadow:0 0 3px var(--echo-color);}
 .ta-orb-level-echo-trail{color:transparent;-webkit-text-stroke:.65px var(--echo-color);text-shadow:none;}
 
+</style>
 <style id="ta-clean-echo-gauge-20261112">
 /* Orb XP tracks glow only when XP reaches the next level threshold. */
 #viewMain>.ta-items .ta-mastery-badge.ta-mastery-gain .ta-mastery-track,
@@ -2730,6 +2739,19 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
  100%{border-color:#84796b;box-shadow:inset 0 1px 3px #000b,0 1px 2px #0008;}
 }
 @media(prefers-reduced-motion:reduce){#viewMain>.ta-items .ta-mastery-badge.ta-mastery-full-flash .ta-mastery-track{animation:none!important;}}
+</style>
+
+<style id="ta-word-label-text-only-20261113">
+/* Only the word-level label changes; HUD/arena sizes stay original. */
+#viewMain>.slip #taHud #taWordMasteryBadge{
+ border:0!important;border-bottom:0!important;border-radius:0!important;
+ background:transparent!important;box-shadow:none!important;
+ transform:none!important;padding:0 2px!important;
+ min-height:0!important;height:auto!important;
+ font-size:12px!important;font-weight:400!important;line-height:1.2!important;
+ text-shadow:0 0 5px rgba(147,192,236,.28)!important;
+}
+@media(max-width:480px){#viewMain>.slip #taHud #taWordMasteryBadge{font-size:11px!important;}}
 </style>
 </head>
 <body>
@@ -2808,7 +2830,7 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
   </figure>
 
   <article class="slip" id="slip" tabindex="0" aria-live="polite">
-    <div id="taHud"><div class="ta-stats"><div id="taTimeBox"><small>残り時間</small><strong id="taTime">60.0</strong></div><div id="taScoreBox"><small>得点</small><strong id="taScore">0</strong></div></div><div id="taWordMastery" aria-label="言霊レベル"><div id="taWordMasteryTrack"><i id="taWordMasteryFill"></i></div><span id="taWordMasteryBadge">言霊Lv1</span></div></div>
+    <div id="taHud"><div class="ta-stats"><div id="taTimeBox"><small>残り時間</small><strong id="taTime">60.0</strong></div><div id="taScoreBox"><small>得点</small><strong id="taScore">0</strong></div></div><div id="taWordMastery" aria-label="言霊レベル"><div id="taWordMasteryTrack"><i id="taWordMasteryFill"></i></div><span id="taWordMasteryBadge">Lv1</span></div></div>
     <div class="slip-bg" id="sbg" aria-hidden="true"></div>
     <div class="meta"><span id="no"></span><span id="kind"></span></div>
     <div class="title" id="title"></div>
@@ -9180,7 +9202,7 @@ const taWordMastery=(()=>{
   if(!fill||!badge)return;
   const lv=level(),base=limits[lv-1],next=limits[lv]??limits[9];
   fill.style.width=(lv===10?100:Math.max(0,Math.min(100,(count-base)/(next-base)*100)))+'%';
-  badge.textContent='言霊Lv'+lv;
+  badge.textContent='Lv'+lv;
   const record=document.getElementById('taWordMasteryRecord');
   if(record){const remaining=lv===10?'MAX':(next-count).toLocaleString('ja-JP')+'個';record.innerHTML=`<div class="ta-growth-head"><strong>言霊</strong><b>Lv${lv} / 10</b></div><div class="ta-growth-track"><i style="width:${lv===10?100:Math.max(0,Math.min(100,(count-base)/(next-base)*100))}%"></i></div><div class="ta-growth-meta"><span>${lv===10?'累計 '+count.toLocaleString('ja-JP')+'個':count.toLocaleString('ja-JP')+' / '+next.toLocaleString('ja-JP')+'個'}</span><span>${lv===10?'MAX':'次まで '+remaining}</span></div><div class="ta-growth-effect">言霊発生数増加・得点増加・時間増加・白銀玉強化</div>`;}
  };
@@ -9221,7 +9243,7 @@ const taWordMastery=(()=>{
       const layer=document.createElement('div');layer.className='ta-word-text-echo-layer';
       layer.style.left=centerX+'px';layer.style.top=centerY+'px';
       document.body.append(layer);
-      const echoText='言霊Lv'+lv;
+      const echoText='Lv'+lv;
       const makeText=(cls)=>{
        const el=document.createElement('span');el.className='ta-word-text-echo '+cls;
        el.textContent=echoText;el.style.fontFamily=font.fontFamily;
