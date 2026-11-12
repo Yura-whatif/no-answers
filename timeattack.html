@@ -588,6 +588,18 @@ html.ta-800-lit #viewMain>.hero.rush{
 
 /* Challenge count belongs to the ranking heading, not the shared tab header. */
 #paneRank .ta-ranking-heading .ta-rank-count-inline{display:flex;justify-content:flex-end;align-items:center;margin-top:12px;min-height:22px;text-align:right;font-family:var(--mincho);font-size:.8rem;letter-spacing:.04em;color:var(--mute)}
+
+/* Unified word mastery: compact HUD, independent of star collection. */
+#taHud #taWordMastery{width:min(100%,370px);max-width:100%;box-sizing:border-box;margin-top:5px;display:flex;flex-direction:column;gap:3px;align-items:stretch;pointer-events:none}
+#taHud #taWordMasteryTrack{height:5px;border-radius:9px;overflow:hidden;background:rgba(120,138,165,.24);border:1px solid rgba(160,180,207,.22)}
+#taHud #taWordMasteryFill{display:block;height:100%;width:0;background:linear-gradient(90deg,#e8e2d9,#9cccf5);border-radius:9px;transition:width .22s ease}
+#taHud #taWordMasteryCaption{display:block;text-align:center;font-size:clamp(8px,1.2vw,11px);line-height:1.1;color:#b8c6d9;white-space:nowrap}
+#taHud.ta-hud-demo #taWordMastery{opacity:.55}
+#taHud #taWordMastery.ta-word-levelup #taWordMasteryTrack{animation:taWordLevelGlow 1s ease-out}
+@keyframes taWordLevelGlow{0%{box-shadow:0 0 0 rgba(164,214,255,0)}35%{box-shadow:0 0 14px 4px rgba(164,214,255,.85)}100%{box-shadow:0 0 0 rgba(164,214,255,0)}}
+.ta-growth-record{margin:12px 0;padding:12px;border:1px solid rgba(160,178,202,.3);border-radius:9px;font-size:12px;line-height:1.8}
+.ta-growth-record strong{display:block;font-size:14px;margin-bottom:6px}
+@media(max-height:760px){#taHud #taWordMastery{margin-top:2px;gap:1px}#taHud #taWordMasteryTrack{height:3px}#taHud #taWordMasteryCaption{font-size:8px}}
 </style>
 <script>
 /* 最初の描画より前に、前回の世界（白/黒）を決めておく。万一起動処理が止まっても4秒で必ず見せる */
@@ -2584,6 +2596,84 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
  box-shadow:0 0 16px 7px var(--level-color),0 0 32px 13px var(--level-color),inset 0 0 14px 5px #fff9;
  mix-blend-mode:screen;will-change:transform,opacity;}
 </style>
+
+<style id="ta-word-mastery-compact-layout-20261112">
+/* One continuous mastery gauge spans the full outer edges of both stat cards. */
+#taHud #taWordMastery{position:relative;width:100%!important;max-width:none!important;align-self:stretch!important;box-sizing:border-box;margin-top:5px!important;padding:0!important;display:block!important;min-width:0!important;}
+#taHud #taWordMasteryTrack{width:100%!important;box-sizing:border-box;height:6px!important;margin:0!important;}
+#taHud #taWordMasteryBadge{position:absolute;right:0;top:calc(100% + 3px);display:block;box-sizing:border-box;padding:2px 5px;border-radius:6px;border:1px solid #a58b67;background:linear-gradient(155deg,#292631ed,#0e101ae8);color:#f6e5c4;font:700 10px/1.1 'Segoe UI',sans-serif;letter-spacing:.02em;text-shadow:0 0 6px #f5cc8880;box-shadow:0 2px 6px #000b,0 0 7px #edc38230;white-space:nowrap;}
+#taHud #taWordMasteryCaption{display:none!important;}
+/* Reserve room for the compact badge without changing the stat-card widths. */
+#taHud{padding-bottom:17px!important;}
+@media(max-height:760px){#taHud #taWordMastery{margin-top:3px!important;}#taHud #taWordMasteryTrack{height:4px!important;}#taHud #taWordMasteryBadge{font-size:9px;padding:1px 4px;top:calc(100% + 2px);}}
+</style>
+
+<style id="ta-word-mastery-arrival-20261112">
+/* The shrinking level halo lands on the boxed word-level label, not the track. */
+#taHud #taWordMasteryBadge{transform-origin:center center;will-change:transform,filter;}
+#taHud #taWordMasteryBadge.ta-word-badge-arrival{animation:taWordBadgeArrival .85s cubic-bezier(.18,.75,.3,1) both!important;}
+@keyframes taWordBadgeArrival{
+ 0%{transform:scale(1);filter:brightness(1);}
+ 25%{transform:scale(1.55);filter:brightness(2.3) drop-shadow(0 0 10px #b7d9ff);}
+ 52%{transform:scale(1.26);filter:brightness(1.85) drop-shadow(0 0 7px #b7d9ff);}
+ 100%{transform:scale(1);filter:brightness(1);}
+}
+.ta-level-announcement .ta-word-silver-bonus{display:block;margin-top:10px;color:#f4f2e9;font:600 clamp(14px,2.7vw,22px)/1.5 Georgia,serif;letter-spacing:.13em;text-shadow:0 0 9px #fff,0 0 22px #c3dfff,0 0 35px #a5c7ed;}
+@media(prefers-reduced-motion:reduce){#taHud #taWordMasteryBadge.ta-word-badge-arrival{animation:none!important;}}
+</style>
+<style id="ta-growth-simple-20261112">
+/* High-contrast level label, no permanent glow. */
+#taHud #taWordMasteryBadge{color:#fff!important;background:#182436!important;border:1px solid #a6c4e7!important;text-shadow:none!important;box-shadow:0 2px 5px #0009!important;font:700 11px/1.25 'Segoe UI',sans-serif!important;letter-spacing:0!important;padding:3px 7px!important;}
+#taHud #taWordMasteryBadge.ta-word-badge-arrival{box-shadow:0 0 14px #b7d9ff,0 0 4px #fff!important;}
+.ta-growth-record{line-height:1.5!important;}
+.ta-growth-record>strong{margin-bottom:10px!important;}
+#taWordMasteryRecord,.ta-growth-orb{padding:10px 11px;margin:0 0 9px;border-radius:8px;background:rgba(122,151,190,.09);border:1px solid rgba(162,184,210,.20);}
+.ta-growth-head,.ta-growth-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.ta-growth-head strong{display:inline!important;margin:0!important;font-size:13px!important;}
+.ta-growth-head b{font-size:12px;white-space:nowrap;}
+.ta-growth-track{height:6px;margin:7px 0 5px;background:rgba(132,151,177,.25);border-radius:8px;overflow:hidden;}
+.ta-growth-track i{display:block;height:100%;background:linear-gradient(90deg,#d9e4f3,#94bdf1);border-radius:8px;}
+.ta-growth-meta{font-size:11px;color:#b6c5d9;}
+.ta-growth-effect{margin-top:5px;font-size:11px;color:#d3dce9;}
+.ta-growth-fire .ta-growth-track i{background:#e68a75;}.ta-growth-ice .ta-growth-track i{background:#8ac5f4;}.ta-growth-green .ta-growth-track i{background:#85d5a7;}
+</style>
+<style id="ta-word-mastery-visibility-fix-20261112">
+/* Keep the gauge and boxed label on the SAME line; no clipped badge below the HUD. */
+#taHud #taWordMastery{
+ display:flex!important;flex-direction:row!important;align-items:center!important;
+ gap:8px!important;position:relative!important;width:100%!important;
+ min-width:0!important;margin-top:6px!important;padding:0!important;
+}
+#taHud #taWordMasteryTrack{
+ flex:1 1 auto!important;width:auto!important;min-width:0!important;
+ height:7px!important;margin:0!important;
+}
+#taHud #taWordMasteryBadge{
+ position:relative!important;top:auto!important;right:auto!important;bottom:auto!important;
+ flex:0 0 auto!important;display:inline-flex!important;align-items:center!important;
+ justify-content:center!important;min-height:23px!important;
+ padding:3px 8px!important;white-space:nowrap!important;
+ font-size:11px!important;line-height:1.3!important;z-index:2!important;
+ color:#fff!important;background:#182436!important;border:1px solid #a6c4e7!important;
+ text-shadow:none!important;
+}
+#taHud{padding-bottom:5px!important;}
+.ta-growth-effect{color:#f0f4fa!important;font-size:12px!important;font-weight:500!important;line-height:1.6!important;opacity:1!important;}
+.ta-growth-meta{color:#d8e4f3!important;}
+@media(max-height:760px){
+ #taHud #taWordMastery{margin-top:4px!important;gap:6px!important;}
+ #taHud #taWordMasteryTrack{height:5px!important;}
+ #taHud #taWordMasteryBadge{min-height:20px!important;padding:2px 6px!important;font-size:10px!important;}
+}
+</style>
+<style id="ta-growth-parchment-text-fix-20261112">
+/* Match the achievement description's readable dark ink on parchment. */
+#taGuideStarsPanel .ta-growth-effect,
+#taGuideStarsPanel .ta-growth-meta{color:#645a4c!important;opacity:1!important;text-shadow:none!important;}
+#taGuideStarsPanel .ta-growth-effect{font-weight:400!important;}
+/* Star total is intentionally omitted; the achievements themselves remain. */
+#taGuideStarsPanel #taStarTotal{display:none!important;}
+</style>
 </head>
 <body>
 <style>
@@ -2661,7 +2751,7 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
   </figure>
 
   <article class="slip" id="slip" tabindex="0" aria-live="polite">
-    <div id="taHud"><div class="ta-stats"><div id="taTimeBox"><small>残り時間</small><strong id="taTime">60.0</strong></div><div id="taScoreBox"><small>得点</small><strong id="taScore">0</strong></div></div></div>
+    <div id="taHud"><div class="ta-stats"><div id="taTimeBox"><small>残り時間</small><strong id="taTime">60.0</strong></div><div id="taScoreBox"><small>得点</small><strong id="taScore">0</strong></div></div><div id="taWordMastery" aria-label="言霊レベル"><div id="taWordMasteryTrack"><i id="taWordMasteryFill"></i></div><span id="taWordMasteryBadge">言霊Lv1</span></div></div>
     <div class="slip-bg" id="sbg" aria-hidden="true"></div>
     <div class="meta"><span id="no"></span><span id="kind"></span></div>
     <div class="title" id="title"></div>
@@ -2698,6 +2788,7 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
       <button type="button" id="t-c100">連鎖 +9</button>
       <button type="button" id="t-reward-orb">白銀玉出現</button>
       <button type="button" id="t-fire-levelup">紅玉Lvアップ</button>
+      <button type="button" id="t-word-levelup">言霊Lvアップ</button>
       <button type="button" id="t-glow">降る記憶・昇る想いを呼ぶ</button>
       <button type="button" id="t-petal">桜の花びらを呼ぶ</button>
     </div>
@@ -2749,7 +2840,7 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
     </div>
     <div class="pane" id="paneRank" hidden>
       <nav class="ta-guide-tabs" aria-label="タイムアタックの記録と手引き">
-        <button type="button" class="is-current" id="taGuideTabStars" aria-pressed="true">星の軌跡</button>
+        <button type="button" class="is-current" id="taGuideTabStars" aria-pressed="true">成長と星</button>
         <button type="button" id="taGuideTabRank" aria-pressed="false">得点ランキング</button>
         <button type="button" id="taGuideTabGuide" aria-pressed="false">説明書</button>
       </nav>
@@ -2767,10 +2858,10 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
       <div id="taGuideStarsPanel">
         <div class="bookcover ta-record-cover"><div class="spread one ta-record-spread"><section class="page solo ta-record-page">
           <div class="pg-head"><span>NO ANSWERS</span><span>STAR MEMORIES</span></div>
-          <div class="ta-ranking-heading"><h3>星の軌跡</h3><p>集めた星が、次の挑戦で新たな力になります。</p></div>
-          <div class="ta-star-total" id="taStarTotal">★ 0 / 30</div>
-          <div id="taStarNextUpgrade" class="ta-star-next-upgrade"></div>
-          <details class="ta-star-upgrades"><summary>取得済みの強化</summary><div class="ta-star-upgrades-content"><table class="ta-star-upgrades-table"><thead><tr><th scope="col">スキル</th><th scope="col">第一段階</th><th scope="col">第二段階</th><th scope="col">第三段階</th></tr></thead><tbody id="taStarUpgradeRows"></tbody></table></div></details>
+          <div class="ta-ranking-heading"><h3>星の軌跡</h3><p>星は挑戦の記録。言霊と玉は採集・使用によって成長します。</p></div>
+          <div class="ta-star-total" id="taStarTotal">★ 0</div>
+          <div class="ta-growth-record"><strong>成長の記録</strong><div id="taWordMasteryRecord"></div><div id="taOrbMasteryRecord"></div></div><div id="taStarNextUpgrade" hidden></div>
+          
           <div id="taStarAchievements" class="ta-star-achievements"></div>
         </section></div></div>
       </div>
@@ -5225,7 +5316,7 @@ function bumpCombo(){
   $("combo").classList.remove("ta-skill-grace");
   if(combo===1 && taMeteorHadCentury)taMeteorReset();
   if(combo>taSessionMaxCombo) taSessionMaxCombo=combo;
-  if(window.taStars){window.taStars.track('words');window.taStars.check();}
+  if(window.taStars){window.taStars.track('words');window.taStars.check();}if(typeof taWordMastery!=='undefined')taWordMastery.add(1);
   if(combo > maxCombo){ maxCombo = combo; store.set("ta-yura-maxcombo", maxCombo); }
   const m = comboMult(combo), el = $("combo"), prevX = el.classList.contains("x3") ? 3 : el.classList.contains("x2") ? 2 : 1;
   $("cbn").textContent = combo; $("cbx").textContent = "";
@@ -8947,14 +9038,16 @@ $("t-petal").onclick=()=>{ forceSakura = true; toast("まもなく、ひとひ�
 $("t-glow").onclick=()=>{ forceGlow = true; toast("まもなく、「降る記憶」または「昇る想い」が現れます"); };
 $("t-reward-orb").onclick=()=>document.dispatchEvent(new Event("ta-reward-spawn-test"));
 $("t-fire-levelup").onclick=()=>taMastery.testLevelUp();
+$("t-word-levelup").onclick=()=>taWordMastery.testLevelUp();
 $("t-c100").onclick=()=>{ combo += 8; comboAt = Date.now(); bumpCombo(); toast("連鎖を9増やしました"); };
 $("t-all").onclick=()=>{
-  if(!confirm("得点ランキング・星の記憶・赤青翠玉のLvとXPをすべて初期化しますか？"))return;
+  if(!confirm("得点ランキング・星の記憶・言霊Lv・赤青翠玉のLvとXPをすべて初期化しますか？"))return;
   try{localStorage.removeItem('ta-time-attack-records-v1');}catch(e){}
   window.taStars?.reset();
   taMastery.reset();
+  taWordMastery.reset();
   taRenderRecords();
-  toast("ランキング・星の記憶・玉のLvとXPを初期化しました");
+  toast("ランキング・星の記憶・言霊Lv・玉のLvとXPを初期化しました");
 };
 
 /* タイムアタックでは初回案内を使用しない。元コードの呼び出し先だけ保持。 */
@@ -8963,7 +9056,7 @@ const tut = {start(){}, on(){}, reset(){}};
 // テスト用ボタンは、URL の最後に #test を付けて開いたときだけ出す
 if(location.hash === "#test"){
  $("testbar").hidden = false;
- const b=document.createElement('button');b.type='button';b.textContent='★試作テスト';b.onclick=()=>window.taStars?.testAward();$("testbar").append(b);
+
 }
 boot();
 setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
@@ -9013,28 +9106,81 @@ setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
 let taRunning=false,taSeconds=60,taScore=0,taLast=0,taRaf=0,taFinishToken=0;
 let taSessionMaxCombo=0,taSessionTimeGain=0;
 const TA_RECORD_KEY = 'ta-time-attack-records-v1';
-/* Star upgrades: one immutable snapshot per run; existing saved achievements remain valid. */
-const taStarUpgradeTable=[
- {key:'white',name:'開始時の白銀玉',unit:'個',steps:[[0,1],[3,2],[24,3],[43,4]]},
- {key:'whiteRate',name:'白言霊の出現率',unit:'%',steps:[[0,95],[14,100],[32,103],[38,106]]},
- {key:'blueRate',name:'青言霊の出現率',unit:'%',steps:[[0,95],[18,100],[36,103],[40,106]]},
- {key:'silverRate',name:'白銀玉の出現間隔',unit:'%',steps:[[0,100],[29,95],[39,90],[50,85]]}
-];
+/* Unified permanent word mastery; stars are collectible achievements only. */
+const taWordMastery=(()=>{
+ const KEY='ta-word-mastery-v1', limits=[0,200,400,600,1000];
+ let count=0;
+ try{const n=Number(localStorage.getItem(KEY));if(Number.isFinite(n))count=Math.max(0,Math.floor(n));}catch(_e){}
+ const level=()=>1+limits.slice(1).filter(n=>count>=n).length;
+ const rate=()=>[1,1.10,1.20,1.30,1.40][level()-1];
+ const silverStart=()=>1+(level()>=3?1:0)+(level()>=5?1:0);
+ const silverInterval=()=>[100,100,95,90,85][level()-1];
+ let fxQueue=[],fxBusy=false;
+ const render=()=>{
+  const fill=document.getElementById('taWordMasteryFill'),badge=document.getElementById('taWordMasteryBadge');
+  if(!fill||!badge)return;
+  const lv=level(),base=limits[lv-1],next=limits[lv]??limits[4];
+  fill.style.width=(lv===5?100:Math.max(0,Math.min(100,(count-base)/(next-base)*100)))+'%';
+  badge.textContent='言霊Lv'+lv;
+  const record=document.getElementById('taWordMasteryRecord');
+  if(record){const remaining=lv===5?'MAX':(next-count).toLocaleString('ja-JP')+'個';record.innerHTML=`<div class="ta-growth-head"><strong>言霊</strong><b>Lv${lv} / 5</b></div><div class="ta-growth-track"><i style="width:${lv===5?100:Math.max(0,Math.min(100,(count-base)/(next-base)*100))}%"></i></div><div class="ta-growth-meta"><span>${lv===5?'累計 '+count.toLocaleString('ja-JP')+'個':count.toLocaleString('ja-JP')+' / '+next.toLocaleString('ja-JP')+'個'}</span><span>${lv===5?'MAX':'次まで '+remaining}</span></div><div class="ta-growth-effect">言霊発生数増加・白銀所持数増加</div>`;}
+ };
+ const nextFx=()=>{
+  if(fxBusy||!fxQueue.length)return;
+  if(!taRunning&&!fxQueue[0].preview){fxQueue=[];return;}
+  fxBusy=true;const {lv,preview}=fxQueue.shift();
+  const hero=document.querySelector('#viewMain>.hero');const bar=document.getElementById('taWordMastery');const badge=document.getElementById('taWordMasteryBadge');
+  if(!hero||!bar){fxBusy=false;nextFx();return;}
+  const h=hero.getBoundingClientRect(),color='#b7d9ff';
+  const title=document.createElement('div');title.className='ta-level-announcement';title.style.setProperty('--level-color',color);
+  title.style.left=(h.left+h.width/2)+'px';title.style.top=(h.top+h.height/2)+'px';
+  const name=document.createElement('span');name.className='ta-level-name';name.textContent='言霊';
+  const number=document.createElement('span');number.className='ta-level-number';number.textContent='Lv '+lv;
+  title.append(name,number);
+  if(lv===3||lv===5){
+   const bonus=document.createElement('span');bonus.className='ta-word-silver-bonus';bonus.textContent='白銀玉強化';
+   title.append(bonus);
+  }
+  document.body.append(title);
+  try{if(typeof sfx!=='undefined'&&sfx.comboMilestone)sfx.comboMilestone(true);}catch(_e){}
+  title.animate([{opacity:0,transform:'translate(-50%,-50%) translateY(8px)'},{opacity:1,transform:'translate(-50%,-50%) translateY(-15px)',offset:.55},{opacity:0,transform:'translate(-50%,-50%) translateY(-40px)'}],{duration:2100,easing:'ease-out',fill:'forwards'}).onfinish=()=>title.remove();
+  setTimeout(()=>{
+   if(!taRunning&&!preview)return;
+   const target=(badge||bar).getBoundingClientRect();
+   const halo=document.createElement('div');halo.className='ta-level-halo';halo.style.setProperty('--level-color',color);
+   halo.style.setProperty('--halo-size','180px');halo.style.left=(target.left+target.width/2)+'px';halo.style.top=(target.top+target.height/2)+'px';document.body.append(halo);
+   halo.animate([{opacity:0,transform:'translate(-50%,-50%) scale(1.3)'},{opacity:.9,transform:'translate(-50%,-50%) scale(1)',offset:.3},{opacity:0,transform:'translate(-50%,-50%) scale(.04)'}],{duration:740,fill:'forwards'}).onfinish=()=>{
+    halo.remove();
+    if(badge){badge.classList.remove('ta-word-badge-arrival');void badge.offsetWidth;badge.classList.add('ta-word-badge-arrival');
+     clearTimeout(badge._wordArrivalTimer);badge._wordArrivalTimer=setTimeout(()=>badge.classList.remove('ta-word-badge-arrival'),850);}
+   };
+   // Gauge glow is triggered only when actual collection fills its track.
+  },750);
+  setTimeout(()=>{title.remove();fxBusy=false;nextFx();},2700);
+ };
+ const add=(n=1)=>{if(!taRunning)return;const prev=level();count+=n;try{localStorage.setItem(KEY,String(count));}catch(_e){}render();if(level()>prev){const bar=document.getElementById('taWordMastery');if(bar){bar.classList.remove('ta-word-levelup');void bar.offsetWidth;bar.classList.add('ta-word-levelup');setTimeout(()=>bar.classList.remove('ta-word-levelup'),1000);}for(let lv=prev+1;lv<=level();lv++)fxQueue.push({lv,preview:false});nextFx();}};
+ let testLv=1;
+ const testLevelUp=()=>{testLv=testLv>=5?2:testLv+1;fxQueue.push({lv:testLv,preview:true});nextFx();};
+ const reset=()=>{count=0;fxQueue=[];try{localStorage.removeItem(KEY);}catch(_e){}render();};
+ window.addEventListener('resize',render);requestAnimationFrame(render);
+ return{level,rate,silverStart,silverInterval,add,render,reset,testLevelUp,get count(){return count;}};
+})();
 /* Independent orb mastery: XP is never derived from stars or mere activations. */
 const taMastery=(()=>{
- const KEY='ta-orb-mastery-v1', limits=[0,40,150,400], names={fire:'紅玉',ice:'蒼玉',green:'翠玉'};
+ const KEY='ta-orb-mastery-v1', limits=[0,36,135,360], names={fire:'紅玉',ice:'蒼玉',green:'翠玉'};
  let xp={fire:0,ice:0,green:0};
  try{const old=JSON.parse(localStorage.getItem(KEY)||'{}');for(const k of Object.keys(xp))if(Number.isFinite(old[k]))xp[k]=Math.max(0,Math.floor(old[k]));}catch(_e){}
  const level=k=>1+limits.slice(1).filter(v=>xp[k]>=v).length;
  const value=k=>{const lv=level(k);if(k==='fire'||k==='ice')return {seconds:lv+.1,distance:60+10*lv};return {extra:lv===1?-3:lv===2?-2:lv===3?-1:0};};
  const render=()=>{
   const bar=document.querySelector('#viewMain>.ta-items');if(!bar)return;
+  const record=document.getElementById('taOrbMasteryRecord');if(record)record.innerHTML=Object.keys(xp).map(k=>{const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[3],pct=lv===4?100:Math.max(0,Math.min(100,(xp[k]-base)/(next-base)*100));const effect=k==='green'?'言霊の発生数を強化':'効果時間・スワイプ距離を強化';return `<div class="ta-growth-orb ta-growth-${k}"><div class="ta-growth-head"><strong>${names[k]}</strong><b>Lv${lv} / 4</b></div><div class="ta-growth-track"><i style="width:${pct}%"></i></div><div class="ta-growth-meta"><span>${lv===4?'累計 '+xp[k]+' XP':xp[k]+' / '+next+' XP'}</span><span>${lv===4?'MAX':'次まで '+(next-xp[k])+' XP'}</span></div><div class="ta-growth-effect">${effect}</div></div>`;}).join('');
   for(const k of Object.keys(xp)){
    const button=bar.querySelector('.ta-orb.'+(k==='green'?'summon':k));if(!button)continue;
    let badge=bar.querySelector('.ta-mastery-'+k);
    if(!badge){badge=document.createElement('span');badge.className='ta-mastery-badge ta-mastery-'+k;badge.innerHTML='<span class="ta-mastery-track"><i></i></span><b></b>';bar.append(badge);}
    const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[3];
-   badge.style.left=button.offsetLeft+'px';badge.style.top=button.offsetTop+'px';badge.style.width=button.offsetWidth+'px';badge.style.height=button.offsetHeight+'px';
+   const br=button.getBoundingClientRect(),pr=bar.getBoundingClientRect();badge.style.left=(br.left-pr.left)+'px';badge.style.top=(br.top-pr.top)+'px';badge.style.width=br.width+'px';badge.style.height=br.height+'px';
    badge.querySelector('i').style.width=(lv===4?100:Math.max(0,Math.min(100,(xp[k]-base)/(next-base)*100)))+'%';
    badge.querySelector('b').textContent='Lv'+lv;
   }
@@ -9119,42 +9265,28 @@ const taMastery=(()=>{
  const testLevelUp=()=>{render();announce('fire',Math.min(4,level('fire')+1),true);};
  const add=(k,word,n=1)=>{
   if(!taRunning||!Object.hasOwn(xp,k)||!Number.isFinite(n)||n<=0)return;
-  const prev=level(k);xp[k]=Math.min(400,xp[k]+n);
+  const prev=level(k);xp[k]=Math.min(limits[3],xp[k]+n);
   try{localStorage.setItem(KEY,JSON.stringify(xp));}catch(_e){}
   render();
   if(level(k)>prev){for(let lv=prev+1;lv<=level(k);lv++)announce(k,lv);}else pulse(k,false);
  };
  window.addEventListener('resize',render);document.addEventListener('ta-item-start-activate',render);
+ if(typeof ResizeObserver!=='undefined'){const bar=document.querySelector('#viewMain>.ta-items');if(bar){const ro=new ResizeObserver(()=>requestAnimationFrame(render));ro.observe(bar);bar.querySelectorAll('.ta-orb').forEach(b=>ro.observe(b));}}
+ document.addEventListener('ta-item-reset',()=>requestAnimationFrame(render));
  requestAnimationFrame(render);
  const reset=()=>{clearLevelFx();for(const k of Object.keys(xp))xp[k]=0;try{localStorage.removeItem(KEY);}catch(_e){}render();};
  return {level,value,add,render,xp,reset,testLevelUp};
 })();
-function taStarValue(key,count){const item=taStarUpgradeTable.find(x=>x.key===key);if(!item)return 0;let value=item.steps[0][1];for(const [threshold,next] of item.steps)if(count>=threshold)value=next;return value;}
-let taStarRunLevel=0;
-let taStarTestLevel=null;
-let taStarRunUses={fire:0,ice:0,green:0};
-const taStarUseThresholds=[5,20,50];
-const taStarSwipeThresholds=[3,10,30];
-function taStarSkillValue(key,stars,uses){
- const item=taStarUpgradeTable.find(x=>x.key===key);if(!item)return 0;
- let value=item.steps[0][1];
- for(let i=1;i<item.steps.length;i++){
-  const [requiredStars,next]=item.steps[i];
-  const useKind=key==='swipeFire'?'fire':key==='swipeIce'?'ice':(['fire','ice','green'].includes(key)?key:null);
-  const needed=key.startsWith('swipe')?taStarSwipeThresholds[i-1]:taStarUseThresholds[i-1];
-  if(stars>=requiredStars&&(!useKind||uses[useKind]>=needed))value=next;
- }
- return value;
-}
 function taStarRunValue(key){
  if(key==='fire'||key==='ice')return taMastery.value(key).seconds;
  if(key==='swipeFire')return taMastery.value('fire').distance;
  if(key==='swipeIce')return taMastery.value('ice').distance;
  if(key==='green')return taMastery.value('green').extra;
- return taStarSkillValue(key,taStarRunLevel,taStarRunUses);
+ if(key==='whiteRate'||key==='blueRate')return taWordMastery.rate()*100;
+ if(key==='white')return taWordMastery.silverStart();
+ if(key==='silverRate')return taWordMastery.silverInterval();
+ return 0;
 }
-
-function taStarUpcoming(oldCount,newCount){return taStarUpgradeTable.flatMap(item=>item.steps.slice(1).filter(step=>step[0]>oldCount&&step[0]<=newCount).map(step=>({at:step[0],name:item.name,delta:step[1]-taStarValue(item.key,step[0]-1),unit:item.unit,after:step[1]}))).sort((a,b)=>a.at-b.at);}
 /* Star memory prototype. Isolated from existing score/ranking and skill logic. */
 const taStars=(()=>{
  const KEY='ta-star-memories-v2-50'; // Keep saved progress when expanding to 67 stars.
@@ -9170,22 +9302,10 @@ const taStars=(()=>{
   {id:'score50000',title:'得点の記憶 III',kind:'score',goal:2000000,stars:1,unit:'点'},
   {id:'score10m',title:'得点の記憶 IV',kind:'score',goal:5000000,stars:2,unit:'点'},
   {id:'score20m',title:'得点の記憶 V',kind:'score',goal:10000000,stars:2,unit:'点'},
-  {id:'time30',title:'時のかけら I',kind:'time',goal:30,stars:1,unit:'秒'},
   {id:'time60',title:'時のかけら II',kind:'time',goal:60,stars:1,unit:'秒'},
   {id:'time120',title:'時のかけら III',kind:'time',goal:120,stars:2,unit:'秒'},
   {id:'time180',title:'時のかけら IV',kind:'time',goal:180,stars:2,unit:'秒'},
-  {id:'fire3',title:'紅の残響 I',kind:'fire',goal:5,stars:1,unit:'回'},
-  {id:'fire15',title:'紅の残響 II',kind:'fire',goal:20,stars:1,unit:'回'},
-  {id:'ice3',title:'蒼の残響 I',kind:'ice',goal:5,stars:1,unit:'回'},
-  {id:'ice15',title:'蒼の残響 II',kind:'ice',goal:20,stars:1,unit:'回'},
-  {id:'green3',title:'翠の残響 I',kind:'green',goal:5,stars:1,unit:'回'},
-  {id:'green15',title:'翠の残響 II',kind:'green',goal:20,stars:1,unit:'回'},
-  {id:'silver1',title:'白銀の導き I',kind:'silver',goal:5,stars:1,unit:'個'},
   {id:'silver10',title:'白銀の導き II',kind:'silver',goal:30,stars:1,unit:'個'},
-  {id:'words500',title:'言葉の記憶 I',kind:'words',goal:500,stars:1,unit:'個'},
-  {id:'words3000',title:'言葉の記憶 II',kind:'words',goal:1000,stars:1,unit:'個'},
-  {id:'words10000',title:'言葉の記憶 III',kind:'words',goal:2000,stars:2,unit:'個'},
-  {id:'plays3',title:'挑戦の足跡 I',kind:'plays',goal:3,stars:1,unit:'回'},
   {id:'plays10',title:'挑戦の足跡 II',kind:'plays',goal:10,stars:1,unit:'回'},
   {id:'plays30',title:'挑戦の足跡 III',kind:'plays',goal:30,stars:1,unit:'回'},
   {id:'plays100',title:'挑戦の足跡 IV',kind:'plays',goal:100,stars:2,unit:'回'},
@@ -9194,31 +9314,23 @@ const taStars=(()=>{
   {id:'ultimateCross',title:'消された記憶',kind:'ultimateCross',goal:1,stars:1,unit:'回'},
   {id:'ultimateEclipse',title:'忘却の片隅',kind:'ultimateEclipse',goal:1,stars:1,unit:'回'},
   {id:'ultimateStop',title:'止まった日々',kind:'ultimateStop',goal:1,stars:1,unit:'回'},
-  {id:'gessen3',title:'三つの閃光',kind:'gessen3',goal:1,stars:1,unit:'回'},
-  {id:'gessen4',title:'四つの閃光',kind:'gessen4',goal:1,stars:1,unit:'回'},
-  {id:'gessen5',title:'五つの閃光',kind:'gessen5',goal:1,stars:2,unit:'回'},
+  {id:'gessen3',title:'三つの閃光',kind:'gessen3',goal:5,stars:1,unit:'回'},
+  {id:'gessen4',title:'四つの閃光',kind:'gessen4',goal:5,stars:1,unit:'回'},
+  {id:'gessen5',title:'五つの閃光',kind:'gessen5',goal:5,stars:2,unit:'回'},
   {id:'stop20',title:'時を抱く者',kind:'stop20',goal:20,stars:1,unit:'秒'},
   {id:'nightEnd',title:'夜を越えた者',kind:'nightEnd',goal:1,stars:2,unit:'回'},
-  {id:'plays1',title:'小さな一歩',kind:'plays',goal:1,stars:1,unit:'回'},
-  {id:'words100',title:'言葉の足跡 I',kind:'words',goal:100,stars:1,unit:'個'},
-  {id:'words300',title:'言葉の足跡 II',kind:'words',goal:300,stars:1,unit:'個'},
   {id:'fire1',title:'紅の目覚め',kind:'fire',goal:1,stars:1,unit:'回'},
   {id:'ice1',title:'蒼の目覚め',kind:'ice',goal:1,stars:1,unit:'回'},
   {id:'green1',title:'翠の目覚め',kind:'green',goal:1,stars:1,unit:'回'},
-  {id:'fire50',title:'紅の残響 III',kind:'fire',goal:50,stars:1,unit:'回'},
-  {id:'ice50',title:'蒼の残響 III',kind:'ice',goal:50,stars:1,unit:'回'},
-  {id:'green50',title:'翠の残響 III',kind:'green',goal:50,stars:1,unit:'回'},
   {id:'silver60',title:'白銀の導き III',kind:'silver',goal:60,stars:1,unit:'個'},
-  {id:'totalTime300',title:'時を紡ぐ者 I',kind:'totalTime',goal:300,stars:1,unit:'秒'},
-  {id:'totalTime1000',title:'時を紡ぐ者 II',kind:'totalTime',goal:1000,stars:1,unit:'秒'},
-  {id:'achievements10',title:'星を追う者',kind:'achievements',goal:10,stars:1,unit:'件'},
+  {id:'achievements10',title:'星を追う者',kind:'achievements',goal:30,stars:1,unit:'件'},
   {id:'fireIce30',title:'紅と蒼の共鳴',kind:'fireIce',goal:30,stars:2,unit:'回'},
   {id:'triple50',title:'三色の記憶',kind:'triple50',goal:50,stars:2,unit:'回'}
  ];
  let state={earned:[],plays:0,bestChain:0,bestScore:0,fire:0,ice:0,green:0,silver:0,words:0,totalTime:0},session=[],queue=[],busy=false,sessionStartStars=0;
  let runColors={fire:0,ice:0,green:0},runSpecial={ultimateCross:0,ultimateEclipse:0,ultimateStop:0,gessen3:0,gessen4:0,gessen5:0,stop20:0};
  try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved&&typeof saved==='object'){
-  state.earned=Array.isArray(saved.earned)?saved.earned.filter(x=>goals.some(g=>g.id===x)):[];
+  state.earned=Array.isArray(saved.earned)?saved.earned.filter(x=>typeof x==='string'):[];
   state.plays=Math.max(0,Number(saved.plays)||0);state.bestChain=Math.max(0,Number(saved.bestChain)||0);state.bestScore=Math.max(0,Number(saved.bestScore)||0);
   for(const key of ['fire','ice','green','silver','words','totalTime'])state[key]=Math.max(0,Math.floor(Number(saved[key])||0));
  }}catch(_e){}
@@ -9301,7 +9413,7 @@ const taStars=(()=>{
    else if(g.kind==='time')v=taSessionTimeGain;
    else if(g.kind==='tricolor')v=(runColors.fire>=3&&runColors.ice>=3&&runColors.green>=3)?3:(runColors.fire>0&&runColors.ice>0&&runColors.green>0)?1:0;
    else if(g.kind==='totalTime')v=state.totalTime;
-   else if(g.kind==='achievements')v=state.earned.length;
+   else if(g.kind==='achievements')v=goals.filter(x=>x.id!==g.id&&state.earned.includes(x.id)).length;
    else if(g.kind==='fireIce')v=Math.min(state.fire,state.ice);
    else if(g.kind==='triple50')v=Math.min(state.fire,state.ice,state.green);
    else if(g.kind==='nightEnd')v=(taSessionMaxCombo>=800&&taScore*TA_SCORE_UNIT>=5000000)?1:0;
@@ -9320,7 +9432,7 @@ const taStars=(()=>{
   if(kind!=='words'||state.words%25===0)save();
   if(kind!=='words'||state.words%25===0)check();
  }
- function start(){clearEffects();session=[];runColors={fire:0,ice:0,green:0};runSpecial={ultimateCross:0,ultimateEclipse:0,ultimateStop:0,gessen3:0,gessen4:0,gessen5:0,stop20:0};draw();sessionStartStars=starTotal();taStarRunLevel=taStarTestLevel===null?sessionStartStars:taStarTestLevel;taStarRunUses={fire:state.fire,ice:state.ice,green:state.green};save();}
+ function start(){clearEffects();session=[];runColors={fire:0,ice:0,green:0};runSpecial={ultimateCross:0,ultimateEclipse:0,ultimateStop:0,gessen3:0,gessen4:0,gessen5:0,stop20:0};draw();sessionStartStars=starTotal();save();}
  function finish(){
   // Count only scored runs. A zero-point exit never advances play-count achievements.
   if(taScore>0){
@@ -9329,50 +9441,18 @@ const taStars=(()=>{
    // Play count and cumulative time are awarded only after a scored run ends.
    goals.filter(g=>(g.kind==='plays'&&state.plays>=g.goal)||(g.kind==='totalTime'&&state.totalTime>=g.goal)).forEach(award);
    // Achievements earned during this run also count toward the meta achievement.
-   goals.filter(g=>g.kind==='achievements'&&state.earned.length>=g.goal).forEach(award);
+   goals.filter(g=>g.kind==='achievements'&&goals.filter(x=>x.id!==g.id&&state.earned.includes(x.id)).length>=g.goal).forEach(award);
   }
   save();const el=document.getElementById('taStarResult');if(!el)return;
   el.hidden=false;el.replaceChildren();
   const summary=document.createElement('div');summary.className='ta-star-result-summary';summary.textContent=sessionStarTotal()?`今回獲得　${'★'.repeat(sessionStarTotal())}（＋${sessionStarTotal()}）`:'今回の★獲得なし';el.append(summary);
-  const upgrades=taStarUpgradeTable.flatMap(item=>item.steps.slice(1).filter((step,i)=>sessionStartStars<step[0]&&starTotal()>=step[0]).map(step=>({at:step[0],name:item.name,delta:step[1]-taStarValue(item.key,step[0]-1),unit:item.unit}))); 
-  if(upgrades.length){const heading=document.createElement('strong');heading.textContent='新しい力が目覚めました';heading.className='ta-star-unlock-heading';el.append(heading);
-   upgrades.forEach(u=>{const row=document.createElement('div');row.className='ta-star-unlock';row.textContent=u.name==='白銀玉の出現間隔'?`${u.name} ${Math.abs(Number(u.delta.toFixed(2)))}%短縮`:`${u.name} ＋${Number(u.delta.toFixed(2))}${u.unit}`;el.append(row);});
-  }else if(sessionStarTotal()){const hint=document.createElement('small');hint.textContent='次の強化に向けて星を集めましょう';el.append(hint);}
+  // Stars are collectible records; no ability upgrades are awarded.
+
  }
  function render(){const total=document.getElementById('taStarTotal'),box=document.getElementById('taStarAchievements');if(!total||!box)return;
-  total.textContent=`★ ${starTotal()} / 67`;
-  const earnedCount=starTotal();
-  const allUpgrades=taStarUpgradeTable.flatMap(item=>item.steps.slice(1).map(step=>({at:step[0],name:item.name,delta:step[1]-taStarValue(item.key,step[0]-1),unit:item.unit}))).sort((x,y)=>x.at-y.at);
-  const uses={fire:state.fire,ice:state.ice,green:state.green};
-  const nextUpgrade=allUpgrades.find(u=>earnedCount<u.at);
-  const nextBox=document.getElementById('taStarNextUpgrade');
-  if(nextBox){
-   nextBox.replaceChildren();
-   const heading=document.createElement('strong');heading.textContent='次の強化';nextBox.append(heading);
-   const detail=document.createElement('div');
-   detail.textContent=nextUpgrade?`★${nextUpgrade.at} ${nextUpgrade.name}`:'すべての強化を獲得しました';
-   nextBox.append(detail);
-  }
-  const rows=document.getElementById('taStarUpgradeRows');
-  if(rows){
-   rows.replaceChildren();
-   const shortNames={white:'開始時の白銀玉',fire:'紅玉の効果時間',ice:'蒼玉の効果時間',green:'翠玉の発生言霊数',stop:'時間停止',swipeFire:'紅玉のスワイプ距離',swipeIce:'蒼玉のスワイプ距離',whiteRate:'白言霊の出現率',blueRate:'青言霊の出現率',silverRate:'白銀玉の出現間隔'};
-   for(const item of taStarUpgradeTable){
-    const tr=document.createElement('tr');
-    const th=document.createElement('th');th.scope='row';th.textContent=shortNames[item.key]||item.name;tr.append(th);
-    item.steps.slice(1).forEach(step=>{
-     const td=document.createElement('td');
-     const amount=step[1]-taStarValue(item.key,step[0]-1);
-     const displayAmount=item.key==='silverRate'?`出現間隔${100-step[1]}%短縮`:item.key.startsWith('swipe')?`＋${step[1]-item.steps[0][1]}%`:`＋${amount}${item.unit}`;
-     const value=document.createElement('span');
-     if(earnedCount>=step[0]){value.textContent=displayAmount;td.className='is-unlocked';}
-     else{value.textContent='—';td.className='is-locked';}
-     const threshold=document.createElement('small');const kind=item.key==='swipeFire'?'fire':item.key==='swipeIce'?'ice':(['fire','ice','green'].includes(item.key)?item.key:null);const countNeeded=item.key.startsWith('swipe')?taStarSwipeThresholds[item.steps.indexOf(step)-1]:taStarUseThresholds[item.steps.indexOf(step)-1];threshold.textContent=`★${step[0]}`+(kind?`・${kind==='fire'?'赤':kind==='ice'?'青':'緑'}玉${countNeeded}回`:'');
-     td.append(value,threshold);tr.append(td);
-    });
-    rows.append(tr);
-   }
-  }
+  total.textContent='';
+  taWordMastery.render();
+  const nextBox=document.getElementById('taStarNextUpgrade');if(nextBox)nextBox.replaceChildren();
   box.replaceChildren();goals.forEach(g=>{
    const achieved=state.earned.includes(g.id);
    const row=document.createElement('div');row.className='ta-star-achievement'+(achieved?' is-earned':'');
@@ -9383,7 +9463,7 @@ const taStars=(()=>{
     ultimateCross:'【累計】「全部なかったことに」を1回発動する',
     ultimateEclipse:'【累計】「置き忘れたもの」を1回発動する',
     ultimateStop:'【累計】「あの日のままで」を1回発動する',
-    gessen3:'【累計】三閃を1回発動する',gessen4:'【累計】四閃を1回発動する',gessen5:'【累計】五閃を1回発動する',
+    gessen3:'【累計】三閃を5回発動する',gessen4:'【累計】四閃を5回発動する',gessen5:'【累計】五閃を5回発動する',
     stop20:'【1プレイ】時間停止を合計20秒発動する',
     nightEnd:'【1プレイ】800連鎖と500万点を達成する', 
     chain:`【1プレイ】最大連鎖数が${n}連鎖に到達する`,
@@ -9406,10 +9486,9 @@ const taStars=(()=>{
    row.append(left,mark);box.append(row);
   });
  }
- function testAward(){const next=goals.find(g=>!state.earned.includes(g.id));if(next)award(next);}
  function demo(){clearEffects();session=[];draw();}
- function reset(){clearEffects();state={earned:[],plays:0,bestChain:0,bestScore:0,fire:0,ice:0,green:0,silver:0,words:0,totalTime:0};runColors={fire:0,ice:0,green:0};runSpecial={ultimateCross:0,ultimateEclipse:0,ultimateStop:0,gessen3:0,gessen4:0,gessen5:0,stop20:0};session=[];sessionStartStars=0;taStarRunLevel=0;taStarRunUses={fire:0,ice:0,green:0};try{localStorage.removeItem(KEY);}catch(_e){}draw();render();const result=document.getElementById('taStarResult');if(result){result.hidden=true;result.textContent='';}}
- return{check,track,start,finish,render,testAward,demo,reset,playAwardSound,hasSessionAwards:()=>sessionStarTotal()>0};
+ function reset(){clearEffects();state={earned:[],plays:0,bestChain:0,bestScore:0,fire:0,ice:0,green:0,silver:0,words:0,totalTime:0};runColors={fire:0,ice:0,green:0};runSpecial={ultimateCross:0,ultimateEclipse:0,ultimateStop:0,gessen3:0,gessen4:0,gessen5:0,stop20:0};session=[];sessionStartStars=0;try{localStorage.removeItem(KEY);}catch(_e){}draw();render();const result=document.getElementById('taStarResult');if(result){result.hidden=true;result.textContent='';}}
+ return{check,track,start,finish,render,demo,reset,playAwardSound,hasSessionAwards:()=>sessionStarTotal()>0};
 })();
 window.taStars=taStars;
 (()=>{const hero=document.querySelector('#viewMain>.hero');if(hero&&!document.getElementById('taStarTray')){const t=document.createElement('div');t.id='taStarTray';t.className='ta-star-tray';t.setAttribute('aria-label','今回獲得した星');hero.append(t);}})();
@@ -10314,18 +10393,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   marker.setAttribute('aria-hidden','true');document.body.append(marker);taInfinityMarker=marker;
   taInfinityTimer=setTimeout(taClearInfinityPending,2800);
  }
- function taGreenTouchesInfinity(points){
-  const target=taInfinityPending;
-  if(!target||performance.now()>target.expires||!window.taSoumatou||window.taSoumatou.active())return false;
-  const radius=53;
-  if(!points.some(p=>Math.hypot(p.x-target.x,p.y-target.y)<=radius)){
-   let hit=false;for(let i=1;i<points.length;i++)if(near(target.x,target.y,points[i-1],points[i],radius)){hit=true;break;}
-   if(!hit)return false;
-  }
-  taClearInfinityPending();
-  clearClock();
-  return !!window.taSoumatou.start();
- }
+ function taGreenTouchesInfinity(points){return false;} // Retired: soumatou is never activated.
 
  // Fire/ice clock: one elemental tap draws the dial; the other color draws two hands.
  let clockDial=null,clockFx=null,clockTimer=null;
@@ -11425,20 +11493,8 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const eclipseTap=isTap && eclipseDial && eclipseDial.type!==g.type &&
    performance.now()<=eclipseDial.expires &&
    Math.hypot(pts[0].x-eclipseDial.x,pts[0].y-eclipseDial.y)<=28;
- const soumatouTap=isTap && eclipseDial && eclipseDial.type!==g.type &&
-   performance.now()<=eclipseDial.expires &&
-   Math.abs(pts[0].y-eclipseDial.y)<=58 &&
-   Math.abs(pts[0].x-eclipseDial.x)>=88 &&
-   Math.abs(pts[0].x-eclipseDial.x)<=145 &&
-   !!window.taSoumatou && !window.taSoumatou.active();
+ const soumatouTap=false; // Retired mode: keep ordinary elemental gesture handling.
  const completed=!isTap&&clockHands(g,pts);
- if(soumatouTap){
-   const a={x:eclipseDial.x,y:eclipseDial.y};
-   const b={x:pts[0].x,y:pts[0].y};
-   // Red and blue only arm the intersection. No extra reserve is consumed.
-   taArmInfinity(a,b);
-   clearClock();
- }
 
  if(eclipseTap){
    taLastDualFinisher=performance.now();
@@ -11460,7 +11516,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:(completed||eclipseTap)?.30:(typeof taStarRunValue==='function'?taStarRunValue(g.type):3.1),total:(typeof taStarRunValue==='function'?taStarRunValue(g.type):3.1),age:0,resonated:false,clockDissolve:completed||eclipseTap};traces.push(trace);if(!completed&&!eclipseTap&&!soumatouTap&&(g.type==='fire'||g.type==='ice'))window.taStars?.track(g.type);if(traces.length>2){for(const older of traces.slice(0,-2)){if(!older.clockDissolve){older.left=Math.min(older.left,1.85);older.total=3.1;older.retiring=true;}}}if(traces.length>6)traces.splice(0,traces.length-6);for(const other of traces){if(!completed&&!eclipseTap&&!soumatouTap&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed&&!eclipseTap)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
  checkWords();}
  // Capture the armed gesture before the normal word/tap collectors can consume it.
- field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<=0||gesture||consumedPointer!==null)return;playElementSound(selected);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
+ field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<=0||gesture||consumedPointer!==null)return;playElementSound(selected);taMastery.add(selected==='summon'?'green':selected,null,2);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
  // Once the elemental stroke reaches its range/time budget, the same held
  // pointer continues as an ordinary word-collection swipe. The special trace
  // remains clipped to its range, so its visuals and elemental hits stay aligned.
@@ -12131,449 +12187,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
-<style id="ta-soumatou-style">
-.ta-soumatou-stage{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:95;isolation:isolate;}
-.ta-soumatou-scene{position:absolute;inset:0;background-position:center;background-size:cover;filter:sepia(.85) saturate(.67) contrast(1.1) brightness(.78);transition:opacity .2s linear;}
-.ta-soumatou-wash{position:absolute;inset:0;background:linear-gradient(130deg,rgba(108,65,22,.25),rgba(48,24,10,.22));mix-blend-mode:screen;}
-.ta-soumatou-sign{position:absolute;inset:0;display:grid;place-items:center;z-index:3;pointer-events:none;}
-.ta-soumatou-sign svg{width:min(75%,380px);overflow:visible;filter:drop-shadow(0 0 12px #ffd77d) drop-shadow(0 0 28px #bc7c27);animation:taSoumatouSign .85s ease-out both;}
-.ta-soumatou-sign path{fill:none;stroke:#ffe6a0;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;}
-@keyframes taSoumatouSign{0%{transform:scale(.5);opacity:0}30%{transform:scale(1);opacity:1}70%{transform:scale(1.15);opacity:1}100%{transform:scale(2.2);opacity:0}}
-/* Match normal .word pill size and hit area; keep sepia contrast over black/photos. */
-.ta-soumatou-stage .ta-soumatou-word{position:absolute;z-index:6;box-sizing:border-box;display:block;
-  font:inherit;font-family:var(--mincho);font-size:.86rem;letter-spacing:.06em;line-height:normal;
-  white-space:nowrap;color:#382b1d;background:rgba(238,221,188,.94);
-  border:1px solid rgba(167,133,83,.95);border-radius:999px;padding:4px 10px;
-  box-shadow:0 0 9px 2px rgba(224,183,114,.30),0 0 19px 5px rgba(206,153,82,.12);
-  text-shadow:none;pointer-events:auto;touch-action:none;cursor:pointer;
-  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
-  animation:taSoumatouRise var(--life,2.7s) linear both;}
-.ta-soumatou-stage .ta-soumatou-word.time{color:#29485c;background:rgba(238,221,188,.94);
-  border-color:rgba(120,200,255,.94);text-shadow:0 0 7px rgba(109,187,255,.38);
-  box-shadow:0 0 10px 2px rgba(99,178,255,.48),0 0 23px 6px rgba(83,158,255,.24);}
-.ta-soumatou-stage .ta-soumatou-word:focus-visible{outline:2px solid #f4d394;outline-offset:2px;}
-@keyframes taSoumatouRise{0%{transform:translateY(0);opacity:0}12%{opacity:1}72%{opacity:1}100%{transform:translateY(-190px);opacity:0}}
-.ta-soumatou-end{animation:taMemoryBookExit .35s ease-in both;}
-@keyframes taSoumatouEnd{to{opacity:0}}
-</style>
-
-<style id="ta-memory-gather-fx-style">
-/* Soumatou: the collected word itself burns, glows and rises, like the fire orb. */
-.ta-soumatou-stage .ta-memory-gather{position:absolute;z-index:8;pointer-events:none;overflow:visible;isolation:isolate;}
-.ta-soumatou-stage .ta-memory-burning-word{position:absolute;left:0;top:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;white-space:nowrap;font:inherit;font-family:var(--mincho);font-size:.86rem;letter-spacing:.06em;line-height:normal;padding:4px 10px;border:1px solid transparent;border-radius:999px;color:#fff3c9;background:transparent;text-shadow:0 0 5px #fff7d6,0 0 13px #ffb84f,0 0 21px #ed7826;box-shadow:none;transform-origin:50% 65%;animation:taMemoryBurnWord .86s cubic-bezier(.16,.52,.26,1) both;}
-.ta-memory-burning-word::after{content:"";position:absolute;inset:0;border:1px solid #f5c476;border-radius:999px;background:rgba(153,78,26,.87);box-shadow:0 0 13px #ffa13e99,inset 0 0 9px #ffcf6e88;z-index:-1;pointer-events:none;animation:taMemoryFrameVanish .17s ease-out both;}
-@keyframes taMemoryFrameVanish{0%{opacity:1}35%{opacity:.45}100%{opacity:0}}
-.ta-memory-burning-word::before{content:"";position:absolute;inset:-9px -7px;border-radius:50%;background:radial-gradient(ellipse at 50% 62%,rgba(255,246,175,.6),rgba(255,153,46,.26) 40%,transparent 73%);filter:blur(5px);z-index:-1;animation:taMemoryBurnAura .68s ease-out both;}
-.ta-memory-ember{position:absolute;left:var(--ex);top:var(--ey);width:var(--size);height:var(--size);border-radius:50%;background:radial-gradient(circle,#fff9df 0%,#ffd574 38%,#eaa142 72%,transparent 100%);box-shadow:0 0 5px #f5bb63,0 0 11px #e4a34b;animation:taMemoryEmber var(--dur) ease-out var(--delay) both;}
-@keyframes taMemoryBurnWord{0%{opacity:1;transform:translateY(0) scale(1);filter:brightness(1.3)}22%{opacity:1;transform:translateY(-7px) scale(1.09);filter:brightness(1.9)}54%{opacity:.85;transform:translateY(-26px) scale(.96);filter:brightness(1.5)}100%{opacity:0;transform:translateY(-76px) scale(.68);filter:brightness(.8) blur(3px)}}
-@keyframes taMemoryBurnAura{0%{opacity:.5;transform:scale(.65)}30%{opacity:1;transform:scale(1.15)}100%{opacity:0;transform:scale(1.7)}}
-@keyframes taMemoryEmber{0%{opacity:0;transform:translate(0,0) scale(.5)}16%{opacity:1}65%{opacity:.9}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.15)}}
-@media(prefers-reduced-motion:reduce){.ta-memory-burning-word,.ta-memory-ember{animation-duration:.2s!important;}}
-</style>
-
 <style id="ta-void-original-gather-style">
 /* Direct port of index.html's post-shatter "余韻の時" word/gold-dust effect. */
 .ta-void-collected-word{position:fixed;z-index:10030;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;font-family:var(--mincho,serif);font-size:1rem;letter-spacing:.1em;color:#fff7df;text-shadow:0 0 16px rgba(255,238,185,.95);background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:0!important;}
 .ta-void-gdust-box{position:fixed;z-index:10031;pointer-events:none;transform:translate(-50%,-50%);}
 .ta-void-gdust{position:absolute;left:0;top:0;width:3px;height:3px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fffdf4,#ffd96e 50%,rgba(255,196,96,0) 78%);box-shadow:0 0 6px 1px rgba(255,214,120,.85);pointer-events:none;}
-</style>
-<style id="ta-soumatou-pause-hud">
-#taTimeBox{position:relative;}
-#taTimeBox .ta-soumatou-time-pause{display:none;position:absolute;inset:0;z-index:10;align-items:center;justify-content:center;border-radius:inherit;background:color-mix(in srgb,var(--ground) 82%,transparent);color:var(--accent);font-family:var(--mincho);font-weight:600;font-size:.76rem;letter-spacing:.16em;pointer-events:none;}
-#taTimeBox.ta-soumatou-paused .ta-soumatou-time-pause{display:flex;animation:cpauseFade 1.6s ease-in-out infinite;}
-</style>
-<script id="ta-soumatou-script">
-/* Soumatou is deliberately independent of stage/combo background classes.
-   No star-gate during development; one tap of each element, adjacent circles. */
-(()=>{
- let active=false, layer=null, timer=null, spawnTimer=null, swapTimer=null, oldPaused=false, oldComboAt=0, lastStart=0;
- let gainScore=0,gainTime=0,heroRect=null,photoStartTimer=null,wordStartTimer=null,photoStopTimer=null,finishTimer=null,pauseClones=[];
- const pointerTrails=new Map();
- // Preserve a held finger across the memory-to-normal transition.
- const heldPointers=new Map();
- const handoffPointers=new Map();
- const normalField=()=>document.getElementById('drift');
- function forwardNormalPointer(e,type){
-   const field=normalField();if(!field)return;
-   const evt=new PointerEvent(type,{bubbles:true,cancelable:true,composed:true,
-     pointerId:e.pointerId,pointerType:e.pointerType||'touch',isPrimary:e.isPrimary,
-     clientX:e.clientX,clientY:e.clientY,screenX:e.screenX,screenY:e.screenY,
-     button:type==='pointermove'?-1:0,buttons:type==='pointerup'?0:1,pressure:e.pressure||.5});
-   field.dispatchEvent(evt);
- }
- // A real pointerdown cannot occur again while the finger is held. Once the
- // memory overlay disappears, forward motion/up if capture still belongs to it.
- document.addEventListener('pointermove',e=>{
-   const held=heldPointers.get(e.pointerId);
-   if(held){held.x=e.clientX;held.y=e.clientY;held.screenX=e.screenX;held.screenY=e.screenY;}
-   if(!handoffPointers.has(e.pointerId))return;
-   const field=normalField();
-   if(field && e.target!==field && !field.contains(e.target))forwardNormalPointer(e,'pointermove');
- },true);
- document.addEventListener('pointerup',e=>{
-   if(handoffPointers.has(e.pointerId)){
-     const field=normalField();
-     if(field && e.target!==field && !field.contains(e.target))forwardNormalPointer(e,'pointerup');
-   }
-   heldPointers.delete(e.pointerId);handoffPointers.delete(e.pointerId);
- },true);
- document.addEventListener('pointercancel',e=>{heldPointers.delete(e.pointerId);handoffPointers.delete(e.pointerId);},true);
- const timeBox=document.getElementById('taTimeBox');
- if(timeBox && !timeBox.querySelector('.ta-soumatou-time-pause')){
-   const pause=document.createElement('span');pause.className='ta-soumatou-time-pause';pause.textContent='一時停止';pause.setAttribute('aria-hidden','true');timeBox.append(pause);
- }
- function intersectsSegment(x1,y1,x2,y2,r){
-   const margin=14,left=r.left-margin,right=r.right+margin,top=r.top-margin,bottom=r.bottom+margin;
-   const inside=(x,y)=>x>=left&&x<=right&&y>=top&&y<=bottom;
-   if(inside(x1,y1)||inside(x2,y2))return true;
-   let lo=0,hi=1,dx=x2-x1,dy=y2-y1;
-   for(const [p,q] of [[-dx,x1-left],[dx,right-x1],[-dy,y1-top],[dy,bottom-y1]]){
-     if(p===0){if(q<0)return false;continue;}
-     const t=q/p;if(p<0){if(t>hi)return false;if(t>lo)lo=t;}else{if(t<lo)return false;if(t<hi)hi=t;}
-   }
-   return lo<=hi;
- }
- function collectOnTrail(x1,y1,x2,y2){
-   if(!active||!layer)return;
-   for(const word of layer.querySelectorAll('.ta-soumatou-word:not([data-taken])')){
-     const r=word.getBoundingClientRect();
-     if(r.width && r.height && intersectsSegment(x1,y1,x2,y2,r))award(word);
-   }
- }
- // Capture pointer motion even when the initial touch lands on the background.
- document.addEventListener('pointerdown',e=>{
-   if(!active||!layer||!e.isPrimary||!heroRect)return;
-   // The full-screen memory veil sits above .hero, so event.target is no
-   // longer inside .hero. Test the original collection area by coordinates.
-   const r=heroRect;
-   if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;
-   pointerTrails.set(e.pointerId,{x:e.clientX,y:e.clientY});
-   heldPointers.set(e.pointerId,{x:e.clientX,y:e.clientY,screenX:e.screenX,screenY:e.screenY,pointerType:e.pointerType||'touch',isPrimary:e.isPrimary});
-   collectOnTrail(e.clientX,e.clientY,e.clientX,e.clientY);
- },true);
- document.addEventListener('pointermove',e=>{
-   if(!active||!layer)return;
-   const p=pointerTrails.get(e.pointerId);if(!p)return;
-   collectOnTrail(p.x,p.y,e.clientX,e.clientY);
-   p.x=e.clientX;p.y=e.clientY;
- },true);
- for(const type of ['pointerup','pointercancel'])document.addEventListener(type,e=>pointerTrails.delete(e.pointerId),true);
- window.addEventListener('blur',()=>pointerTrails.clear());
- const STAGES=Array.from({length:10},(_,i)=>'img/stage_'+String(i+1).padStart(2,'0')+'.webp');
- STAGES.forEach(src=>{const im=new Image();im.src=src;});
- const $hero=()=>document.querySelector('#drift')?.closest('.hero');
- const cleanup=()=>{
-   clearTimeout(timer);clearInterval(spawnTimer);clearInterval(swapTimer);
-   pointerTrails.clear();timeBox?.classList.remove('ta-soumatou-paused');
-   clearTimeout(photoStartTimer);clearTimeout(wordStartTimer);clearTimeout(photoStopTimer);clearTimeout(finishTimer);
-   pauseClones.forEach(e=>e.remove());pauseClones=[];document.documentElement.classList.remove('ta-memory-world');
-   if(layer){layer.remove();layer=null;}
-   // Re-enter the ordinary collector at the current finger position. This
-   // permits one continuous swipe instead of requiring a lift and new touch.
-   if(active && heldPointers.size){
-     const field=normalField(),rect=field?.getBoundingClientRect();
-     if(field&&rect){
-       for(const [id,p] of heldPointers){
-         if(p.x<rect.left||p.x>rect.right||p.y<rect.top||p.y>rect.bottom)continue;
-         handoffPointers.set(id,true);
-         forwardNormalPointer({pointerId:id,pointerType:p.pointerType,isPrimary:p.isPrimary,
-           clientX:p.x,clientY:p.y,screenX:p.screenX,screenY:p.screenY,pressure:.5},'pointerdown');
-       }
-     }
-   }
-   heldPointers.clear();
-   if(active){
-     // All rewards have ALREADY been credited by taAward at collection time.
-     // This is a visual summary only; never call taAward here.
-     const scoreText=typeof taScoreFormat==='function'?taScoreFormat(gainScore):gainScore.toLocaleString('ja-JP');
-     const timeText=Number(gainTime.toFixed(2)).toLocaleString('ja-JP');
-     if(gainScore>0||gainTime>0){
-       const summary=document.createElement('div');summary.className='ta-memory-result';
-       if(gainTime>0){const line=document.createElement('div');line.className='ta-memory-result-time';
-         line.textContent='＋'+timeText+'秒';summary.append(line);}
-       if(gainScore>0){const line=document.createElement('div');line.className='ta-memory-result-score';
-         line.textContent='＋'+scoreText+'点';summary.append(line);}
-       document.body.append(summary);
-       summary.addEventListener('animationend',()=>summary.remove(),{once:true});
-       setTimeout(()=>summary.remove(),2700);
-     }
-     active=false;
-     if(typeof comboPaused!=='undefined' && typeof combo!=='undefined'){
-       if(!oldPaused){comboPaused=false;document.getElementById('combo')?.classList.remove('paused');}
-       if(combo>=2 && typeof comboAt!=='undefined'){comboAt=Date.now();if(typeof bumpCombo==='function' && typeof COMBO_MS!=='undefined'){clearTimeout(bumpCombo.h);bumpCombo.h=setTimeout(()=>{if(!window.taSoumatou.active())expireCombo();},COMBO_MS);}}
-     }
-   }
- };
- // Each collection shows its actual reward at the collected word position.
- // This is presentation only: taAward remains the sole reward writer.
- function showMemoryPlus(wordRect,points,seconds){
-   const x=wordRect.left+wordRect.width/2;
-   const y=wordRect.top+wordRect.height/2;
-   const lines=[];
-   if(seconds>0)lines.push({value:'＋'+Number(seconds.toFixed(2)).toLocaleString('ja-JP')+'秒',type:'time'});
-   if(points>0)lines.push({value:'＋'+(typeof taScoreFormat==='function'?taScoreFormat(points):points.toLocaleString('ja-JP'))+'点',type:'score'});
-   for(let i=0;i<lines.length;i++){
-     const line=document.createElement('span');
-     line.className='ta-memory-collect-plus '+lines[i].type;
-     line.textContent=lines[i].value;
-     line.style.left=x+'px';
-     line.style.top=(y+(lines.length===2?(i===0?-15:15):0))+'px';
-     document.body.append(line);
-     line.addEventListener('animationend',()=>line.remove(),{once:true});
-     setTimeout(()=>line.remove(),700);
-   }
- }
- const MAX_FX=18;
- function memoryGatherFx(w){
-   // Exact "余韻の時" collection motion and goldDust from index.html.
-   // A separate, borderless text copy lets the original capsule disappear immediately.
-   const r=w.getBoundingClientRect();
-   const x=r.left+r.width/2,y=r.top+r.height/2;
-   const ghost=document.createElement('span');
-   ghost.className='ta-void-collected-word';
-   ghost.textContent=w.textContent;
-   Object.assign(ghost.style,{left:x+'px',top:y+'px'});
-   document.body.append(ghost);
-   const anim=ghost.animate([
-     {opacity:1,transform:'translate(-50%,-50%) scale(1)'},
-     {opacity:1,transform:'translate(-50%,-56%) scale(1.14)',offset:.22},
-     {opacity:0,transform:'translate(-50%,-122%) scale(1)'}
-   ],{duration:520,easing:'ease-out',fill:'forwards'});
-   anim.onfinish=()=>ghost.remove();
-   setTimeout(()=>ghost.remove(),650);
-   // Same 24 particles, distribution, animation, and lifetime as index.html goldDust().
-   const box=document.createElement('div');box.className='ta-void-gdust-box';
-   box.style.left=x+'px';box.style.top=y+'px';document.body.append(box);
-   for(let i=0;i<24;i++){
-     const e=document.createElement('i');e.className='ta-void-gdust';box.append(e);
-     const sx=(Math.random()-.5)*48,rise=96+Math.random()*130;
-     const sway=(Math.random()-.5)*36,sc=.5+Math.random()*1.1;
-     const dur=1000+Math.random()*760;
-     e.animate([
-       {transform:`translate(${sx}px,6px) scale(${sc})`,opacity:0},
-       {transform:`translate(${(sx+sway*.4).toFixed(1)}px,${(-rise*.32).toFixed(1)}px) scale(${sc})`,opacity:1,offset:.2},
-       {transform:`translate(${(sx+sway).toFixed(1)}px,${(-rise).toFixed(1)}px) scale(${(sc*.45).toFixed(2)})`,opacity:0}
-     ],{duration:dur,easing:'cubic-bezier(.3,.55,.3,1)',fill:'forwards',delay:Math.random()*90});
-   }
-   setTimeout(()=>box.remove(),1900);
- }
-
- function award(w){
-   if(!active||w.dataset.taken)return;
-   const rewardRect=w.getBoundingClientRect();
-   memoryGatherFx(w);
-   w.dataset.taken='1';w.style.pointerEvents='none';w.style.opacity='0';
-   try{
-     if(typeof bumpCombo==='function')bumpCombo();
-     const scoreBefore=typeof taScore==='number'?taScore:0;
-     const timeBefore=typeof taSeconds==='number'?taSeconds:0;
-     if(w.classList.contains('time')){gainTime+=1;if(typeof taAward==='function')taAward(true,0,false,null,true,1);}
-     else {gainScore+=2;if(typeof taAward==='function')taAward(false,2,false,null,true);}
-     showMemoryPlus(rewardRect,Math.max(0,(typeof taScore==='number'?taScore:scoreBefore)-scoreBefore),Math.max(0,(typeof taSeconds==='number'?taSeconds:timeBefore)-timeBefore));
-     const nowt=Date.now();
-     if(nowt-(award._snd||0)>70 && typeof sfx!=='undefined' && typeof sfx.sharan==='function'){sfx.sharan();award._snd=nowt;}
-   }catch(e){console.error('Soumatou reward',e)}
-   w.remove();
- }
- function spawn(){
-   if(!active||!layer)return;
-   const words=layer.querySelectorAll('.ta-soumatou-word:not([data-taken])');
-   if(words.length>=13)return;
-   const w=document.createElement('button');w.type='button';w.className='ta-soumatou-word';
-   const isTime=Math.random()<.22;if(isTime)w.classList.add('time');
-   w.textContent=typeof taMixedWord==='function'?taMixedWord():['記憶','残響','夢','時'][Math.floor(Math.random()*4)];
-   const r=heroRect||$hero()?.getBoundingClientRect();if(!r)return;
-   w.style.left=(r.left+r.width*(.06+Math.random()*.75))+'px';
-   w.style.top=(r.top+r.height*(.65+Math.random()*.24))+'px';
-   const life=2.2+Math.random()*1.1;w.style.setProperty('--life',life+'s');
-   w.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();award(w)});
-   w.addEventListener('pointerenter',e=>{if(pointerTrails.has(e.pointerId))award(w)});
-   w.addEventListener('animationend',()=>w.remove(),{once:true});
-   layer.append(w);
- }
- function makePauseClone(el){
-   if(!el)return;
-   const r=el.getBoundingClientRect();if(!r.width||!r.height)return;
-   const clone=document.createElement('div');clone.className='ta-memory-pause-ghost';clone.textContent='一時停止';
-   Object.assign(clone.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});
-   document.body.append(clone);pauseClones.push(clone);
- }
- function start(a,b){
-   if(active||(typeof taRunning==='undefined'||!taRunning)||performance.now()-lastStart<12500)return false;
-   const hero=$hero();if(!hero)return false;
-   lastStart=performance.now();active=true;gainScore=0;gainTime=0;heroRect=hero.getBoundingClientRect();
-   timeBox?.classList.add('ta-soumatou-paused');
-   oldPaused=typeof comboPaused!=='undefined'?comboPaused:false;
-   oldComboAt=typeof comboAt!=='undefined'?comboAt:0;
-   if(typeof comboPaused!=='undefined'){comboPaused=true;clearTimeout(bumpCombo.h);document.getElementById('combo')?.classList.add('paused');}
-   // The blackout is a viewport overlay, never a change to the current stage classes.
-   layer=document.createElement('div');layer.className='ta-soumatou-stage ta-memory-fullscreen';layer.setAttribute('aria-label','走馬灯');
-   const sign=document.createElement('div');sign.className='ta-soumatou-sign';
-   sign.innerHTML='<svg viewBox="0 0 320 180" aria-hidden="true"><path d="M160 90 C115 15 35 40 35 90 C35 143 114 159 160 90 C207 22 285 37 285 90 C285 143 208 159 160 90"/></svg>';
-   // Gold is inscribed first; the emerald touch completes the silver inscription.
-   // Keep all visuals within the memory overlay, independent of the game stage.
-   const silverInk=document.createElementNS('http://www.w3.org/2000/svg','path');
-   silverInk.setAttribute('d',sign.querySelector('path').getAttribute('d'));
-   silverInk.setAttribute('class','ta-memory-silver-ink');
-   sign.querySelector('svg').append(silverInk);
-   // The emerald orb has already been spent by the player's gesture.
-   // Keep the original gold inscription and silver completion, without an
-   // automatic ITEM deduction or a misleading ring from the reserve.
-   layer.append(sign);document.body.append(layer);
-   document.documentElement.classList.add('ta-memory-world');
-   // Pause indicators fade out together with the normal HUD; no floating text clones.
-   // 1 s blackout + 2 s stillness + 10 s memory + 1 s return.
-   wordStartTimer=setTimeout(()=>{if(active){spawn();spawnTimer=setInterval(spawn,220);}},3000);
-   photoStartTimer=setTimeout(()=>{if(active)window.dispatchEvent(new Event('ta-memory-photos-start'));},3000);
-   photoStopTimer=setTimeout(()=>{clearInterval(spawnTimer);spawnTimer=null;window.dispatchEvent(new Event('ta-memory-photos-stop'));if(layer)layer.classList.add('ta-memory-return');},13000);
-   timer=setTimeout(cleanup,14000);
-   return true;
- }
- window.taSoumatou={start,stop:cleanup,active:()=>active,recordBonus:(v)=>{if(active&&Number.isFinite(v)){gainScore+=v;}}};
-})();
-</script>
-<style id="ta-soumatou-photo-v2">
-
-/* Soumatou: sepia memory-book background with gentle entrance/exit. */
-.ta-soumatou-stage{
-  background:#000!important;
-  animation:taMemoryBookEnter .65s ease-out both;
-}
-.ta-soumatou-stage::before{content:none!important;display:none!important;}
-.ta-soumatou-stage.ta-soumatou-end{animation:taMemoryBookExit .35s ease-in both!important;}
-@keyframes taMemoryBookEnter{from{opacity:0}to{opacity:1}}
-@keyframes taMemoryBookExit{from{opacity:1}to{opacity:0}}
-.ta-soumatou-stage .ta-soumatou-photo-field{z-index:1;}
-.ta-soumatou-stage .ta-soumatou-sign{z-index:5;}
-.ta-soumatou-stage .ta-soumatou-word{z-index:6;}
-
-/* Independent black stage: no stage-background changes and no input interception. */
-.ta-soumatou-stage{background:#000!important;perspective:850px;perspective-origin:50% 43%;}
-.ta-soumatou-scene,.ta-soumatou-wash{display:none!important;}
-.ta-soumatou-black{display:none!important;}
-.ta-soumatou-photo-field{position:absolute;inset:0;overflow:hidden;z-index:1;transform-style:preserve-3d;pointer-events:none;}
-.ta-soumatou-photo{position:absolute;left:var(--x);bottom:-12%;width:var(--w);height:var(--h);box-sizing:border-box;padding:5px 5px 16px;background:linear-gradient(135deg,#f3e7d3,#c4b49c);border-radius:2px;box-shadow:0 10px 30px rgba(0,0,0,.7),0 0 14px rgba(245,211,160,.14);transform-origin:50% 50%;opacity:0;backface-visibility:visible;animation:taMemoryPhotoFloat var(--duration) var(--delay) linear both;will-change:transform,opacity;}
-.ta-soumatou-stage .ta-soumatou-photo > img{display:block!important;position:relative!important;inset:auto!important;width:100%!important;height:100%!important;object-fit:cover!important;opacity:1!important;transform:none!important;transition:none!important;animation:none!important;filter:sepia(.92) saturate(.52) contrast(1.06) brightness(.88)!important;pointer-events:none!important;}
-.ta-soumatou-photo::after{content:'';position:absolute;inset:4px 4px 15px;border:1px solid rgba(255,255,255,.25);pointer-events:none;}
-@keyframes taMemoryPhotoFloat{0%{opacity:0;transform:translate3d(0,30px,var(--depth)) rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(var(--rz)) scale(var(--scale));}8%{opacity:var(--alpha);}65%{opacity:var(--alpha);}90%{opacity:calc(var(--alpha)*.65);}100%{opacity:0;transform:translate3d(var(--drift),var(--travel-neg),var(--depth-end)) rotateX(var(--rx-end)) rotateY(var(--ry-end)) rotateZ(var(--rz-end)) scale(var(--scale-end));}}
-.ta-soumatou-photo{background:linear-gradient(135deg,#d6c09a,#9d8060)!important;box-shadow:0 10px 30px rgba(0,0,0,.75),0 0 14px rgba(166,117,61,.18)!important;}
-.ta-soumatou-word{filter:sepia(.9) saturate(.6);}
-.ta-soumatou-word.time{filter:none;}
-.ta-soumatou-sign{z-index:5!important;}
-.ta-soumatou-sign svg{animation:taSoumatouSignPhoto 2s ease-out both!important;}
-.ta-soumatou-sign path{stroke:#ffe2a0;stroke-width:5;stroke-dasharray:900;stroke-dashoffset:900;animation:taSoumatouInk 1.25s cubic-bezier(.2,.65,.32,1) forwards;filter:drop-shadow(0 0 5px #ffc65a) drop-shadow(0 0 13px #bf792a);}
-@keyframes taSoumatouInk{to{stroke-dashoffset:0;}}
-@keyframes taSoumatouSignPhoto{0%,55%{transform:scale(1);opacity:1;}76%{transform:scale(1.14);opacity:1;}100%{transform:scale(1.85);opacity:0;}}
-.ta-soumatou-word{z-index:6!important;}
-@media(prefers-reduced-motion:reduce){.ta-soumatou-photo{animation-duration:7s!important;}.ta-soumatou-sign path{animation-duration:.1s!important;}}
-</style>
-<script id="ta-soumatou-photo-v2-script">
-(()=>{
- const PHOTO_FILES=["b1.webp", "b10.webp", "b11.webp", "b12.webp", "b13.webp", "b14.webp", "b15.webp", "b16.webp", "b17.webp", "b18.webp", "b19.webp", "b2.webp", "b20.webp", "b21.webp", "b22.webp", "b23.webp", "b24.webp", "b25.webp", "b26.webp", "b3.webp", "b4.webp", "b5.webp", "b6.webp", "b7.webp", "b8.webp", "b9.webp", "w10.webp", "w11.webp", "w12.webp", "w13.webp", "w14.webp", "w15.webp", "w16.webp", "w17.webp", "w18.webp", "w19.webp", "w20.webp", "w21.webp", "w22.webp", "w23.webp", "w24.webp", "w25.webp", "w26.webp", "w27.webp", "w28.webp", "w29.webp", "w30.webp", "w31.webp", "w32.webp", "w33.webp", "w34.webp", "w35.webp", "w36.webp", "w37.webp", "w38.webp", "w39.webp", "w40.webp", "w41.webp", "w42.webp", "w43.webp", "w44.webp", "w45.webp", "w46.webp", "w47.webp", "w48.webp", "w49.webp", "w50.webp", "w51.webp", "w52.webp", "w53.webp", "w54.webp", "w55.webp", "w56.webp", "w57.webp", "w58.webp", "w59.webp", "w60.webp", "w61.webp", "w62.webp", "w63.webp", "w64.webp", "w65.webp", "w66.webp", "w67.webp", "w68.webp", "w69.webp", "w70.webp", "w71.webp", "w72.webp", "w73.webp", "w74.webp", "w75.webp", "w76.webp", "w77.webp", "w78.webp", "w79.webp", "w8.webp", "w80.webp", "w81.webp", "w9.webp"];
- const random=(a,b)=>a+Math.random()*(b-a);
- const pick=()=>PHOTO_FILES[Math.floor(Math.random()*PHOTO_FILES.length)];
- let photoInterval=null, pending=[];
- function clear(){if(photoInterval!==null){clearInterval(photoInterval);photoInterval=null;}pending.forEach(clearTimeout);pending=[];}
- function addPhoto(field){if(!field.isConnected)return;
-   const depthIndex=Math.floor(Math.random()*3); // distant, middle, near
-   const cfg=[{w:[52,76],scale:[.55,.8],depth:-210,alpha:.46,travel:[260,390],time:[4.1,5.6]},
-              {w:[72,100],scale:[.85,1.08],depth:-65,alpha:.72,travel:[340,500],time:[3.5,4.8]},
-              {w:[96,132],scale:[1.05,1.3],depth:105,alpha:.92,travel:[410,610],time:[2.9,4.1]}][depthIndex];
-   const card=document.createElement('div');card.className='ta-soumatou-photo';
-   const img=document.createElement('img');img.alt='';img.decoding='async';img.src=new URL('img/'+pick(),document.baseURI).href;
-   card.append(img);
-   const set=(key,val)=>card.style.setProperty('--'+key,val);
-   set('x',random(4,75).toFixed(1)+'%');const photoWidth=random(...cfg.w);set('w',photoWidth.toFixed(0)+'px');set('h',(photoWidth*1.28).toFixed(0)+'px');
-   set('scale',random(...cfg.scale).toFixed(2));set('depth',cfg.depth+'px');set('alpha',cfg.alpha);
-   set('rx',random(-20,18).toFixed(1)+'deg');set('ry',random(-37,37).toFixed(1)+'deg');
-   set('rz',random(-23,23).toFixed(1)+'deg');set('spin',random(-40,40).toFixed(1)+'deg');
-   set('drift',random(-125,125).toFixed(0)+'px');
-   set('travel-neg',(-random(...cfg.travel)*.90).toFixed(0)+'px');set('depth-end',(cfg.depth-130)+'px');set('rx-end',(parseFloat(card.style.getPropertyValue('--rx'))+16)+'deg');set('ry-end',(parseFloat(card.style.getPropertyValue('--ry'))+38)+'deg');set('rz-end',(parseFloat(card.style.getPropertyValue('--rz'))+parseFloat(card.style.getPropertyValue('--spin')))+'deg');set('scale-end',(parseFloat(card.style.getPropertyValue('--scale'))*.68).toFixed(3));set('duration',(random(...cfg.time)*1.18).toFixed(2)+'s');set('delay','0s');
-   card.addEventListener('animationend',()=>card.remove(),{once:true});field.append(card);
- }
- function launch(){clear();const layer=document.querySelector('.ta-soumatou-stage');if(!layer)return;
-   layer.querySelector('.ta-soumatou-scene')?.remove();layer.querySelector('.ta-soumatou-wash')?.remove();
-   const field=document.createElement('div');field.className='ta-soumatou-photo-field';
-   layer.prepend(field);
-   for(let i=0;i<4;i++)pending.push(setTimeout(()=>addPhoto(field),i*160));
-   photoInterval=setInterval(()=>{if(!layer.isConnected||!window.taSoumatou?.active()){clear();return;}addPhoto(field);},260);
-   pending.push(setTimeout(clear,8000));
- }
- // start() creates the overlay synchronously; wrap once after it has been defined.
- function install(){if(!window.taSoumatou?.start)return false;
-   const orig=window.taSoumatou.start;
-   if(orig.__photoV2)return true;
-   const wrapped=function(...args){return orig.apply(this,args);};
-   wrapped.__photoV2=true;window.taSoumatou.start=wrapped;
-   const stop=window.taSoumatou.stop;
-   window.taSoumatou.stop=function(...args){clear();return stop.apply(this,args);};
-   return true;
- }
- window.addEventListener('ta-memory-photos-start',launch);
- window.addEventListener('ta-memory-photos-stop',clear);
- if(!install())document.addEventListener('DOMContentLoaded',install,{once:true});
-})();
-</script>
-
-<style id="ta-memory-fullscreen-v1">
-/* The veil itself is transparent: a dedicated black pseudo-element fades over the
-   complete game. This avoids the previous !important black background snapping on. */
-.ta-soumatou-stage.ta-memory-fullscreen{
- position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;
- z-index:10000!important;overflow:hidden!important;background:transparent!important;
- opacity:1;animation:none!important;pointer-events:none!important;isolation:isolate!important;
-}
-.ta-soumatou-stage.ta-memory-fullscreen::before{
- content:""!important;display:block!important;position:fixed!important;inset:0!important;
- z-index:0!important;background:#000!important;pointer-events:none!important;
- opacity:0;animation:taMemoryBlackIn 1s ease-in-out forwards!important;
-}
-@keyframes taMemoryBlackIn{from{opacity:0}to{opacity:1}}
-/* Fade the whole memory scene away in one second, exposing the unchanged stage. */
-.ta-soumatou-stage.ta-memory-fullscreen.ta-memory-return{
- opacity:1;animation:taMemorySceneOut 1s ease-in-out forwards!important;
-}
-@keyframes taMemorySceneOut{from{opacity:1}to{opacity:0}}
-.ta-memory-fullscreen .ta-soumatou-sign{position:fixed!important;inset:0!important;z-index:8!important;}
-.ta-memory-fullscreen .ta-soumatou-sign svg{animation:taSoumatouSignPhoto 2s ease-out both!important;}
-.ta-memory-fullscreen .ta-soumatou-photo-field{position:fixed!important;inset:0!important;overflow:hidden!important;z-index:2!important;}
-.ta-memory-fullscreen .ta-soumatou-word{position:fixed!important;z-index:7!important;}
-/* During memory, swipes are game gestures, not browser scrolling. */
-html.ta-memory-world,html.ta-memory-world body{touch-action:none!important;overscroll-behavior:none!important;}
-.ta-soumatou-stage.ta-memory-fullscreen{touch-action:none!important;}
-/* Keep the existing pause text within the HUD; it disappears with the rest of the UI. */
-.ta-memory-pause-ghost{display:none!important;}
-</style>
-
-<style id="ta-memory-silver-finisher">
-/* One continuous ring: expands from ITEM before the fade, then contracts
-   into the golden infinity crossing. It stays above the blackout veil. */
-.ta-memory-fullscreen .ta-memory-silver-wave{
- position:fixed;left:var(--silver-source-x);top:var(--silver-source-y);
- width:100px;height:100px;margin:-50px 0 0 -50px;
- border:2.5px solid rgba(232,247,255,.95);border-radius:50%;
- background:radial-gradient(circle,transparent 66%,rgba(182,222,255,.14) 85%,transparent 100%);
- box-shadow:0 0 12px 2px rgba(245,250,255,.88),inset 0 0 12px rgba(185,219,255,.55),0 0 28px rgba(137,195,248,.48);
- pointer-events:none;z-index:9;opacity:0;
- animation:taMemorySilverWave 1.85s cubic-bezier(.22,.61,.36,1) both;
- will-change:transform,opacity;
-}
-@keyframes taMemorySilverWave{
- 0%{opacity:0;transform:translate(0,0) scale(.08)}
- 8%{opacity:.95;transform:translate(0,0) scale(.5)}
- 36%{opacity:.9;transform:translate(0,0) scale(12)}
- 55%{opacity:.75;transform:translate(0,0) scale(12)}
- 77%{opacity:.95;transform:translate(var(--silver-target-dx),var(--silver-target-dy)) scale(4.5)}
- 94%{opacity:1;transform:translate(var(--silver-target-dx),var(--silver-target-dy)) scale(.18)}
- 100%{opacity:0;transform:translate(var(--silver-target-dx),var(--silver-target-dy)) scale(0)}
-}
-.ta-memory-fullscreen .ta-soumatou-sign path.ta-memory-silver-ink{
- stroke:#e7f5ff!important;stroke-width:5.2!important;
- stroke-dasharray:900!important;stroke-dashoffset:900!important;
- filter:drop-shadow(0 0 6px #fff) drop-shadow(0 0 15px #9dd9ff)!important;
- animation:taMemorySilverTrace .52s ease-out 1.78s forwards!important;
-}
-@keyframes taMemorySilverTrace{to{stroke-dashoffset:0}}
 </style>
 <style id="ta-infinity-green-target-style">
 .ta-infinity-green-target{position:fixed;z-index:10020;width:48px;height:48px;margin:-24px 0 0 -24px;pointer-events:none;border-radius:50%;
@@ -12584,27 +12202,6 @@ html.ta-memory-world,html.ta-memory-world body{touch-action:none!important;overs
 .ta-infinity-green-target::after{content:'';position:absolute;inset:-25px;border:2px solid rgba(255,209,103,.8);border-radius:50%;box-shadow:0 0 14px 4px rgba(255,188,72,.43);animation:taInfinityTargetRing 1.4s ease-out .35s infinite;}
 @keyframes taInfinityGreenTargetPulse{from{transform:scale(.91);opacity:.86}to{transform:scale(1.12);opacity:1}}
 @keyframes taInfinityTargetRing{0%{transform:scale(.65);opacity:1}85%,100%{transform:scale(1.18);opacity:0}}
-</style>
-<style id="ta-memory-collect-plus-v1">
-/* Smooth, compositor-friendly motion: no animated blur or scale. */
-.ta-memory-collect-plus{
- position:fixed;z-index:10045;pointer-events:none;white-space:nowrap;
- font-family:var(--mincho,serif);font-weight:700;
- font-size:clamp(15px,3.5vw,23px);letter-spacing:.035em;
- transform:translate3d(-50%,0,0);
- will-change:transform,opacity;
- backface-visibility:hidden;
- contain:layout style paint;
- animation:taMemoryCollectPlusRise .5s linear both;
-}
-.ta-memory-collect-plus.time{color:#b3eaff;text-shadow:0 0 7px #2f91d4,0 0 15px rgba(85,185,255,.7),0 1px 3px #000;}
-.ta-memory-collect-plus.score{color:#ffe2a0;text-shadow:0 0 7px #b9852d,0 0 15px rgba(255,192,88,.65),0 1px 3px #000;}
-@keyframes taMemoryCollectPlusRise{
- 0%{opacity:0;transform:translate3d(-50%,12px,0)}
- 15%{opacity:1}
- 67%{opacity:1}
- 100%{opacity:0;transform:translate3d(-50%,-65px,0)}
-}
 </style>
 </body>
 <style>
@@ -12637,31 +12234,6 @@ html.ta-memory-world,html.ta-memory-world body{touch-action:none!important;overs
 #viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled{box-shadow:none!important}
 #viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled::before{opacity:0!important}
 </style>
-<style id="ta-memory-fx-repair-v1">
-/* The post-shatter word and gold dust live above the full-screen memory layer. */
-.ta-void-collected-word{z-index:10030!important}
-.ta-void-gdust-box{z-index:10031!important}
-/* During memory, milestone rings and frame flashes are deliberately absent. */
-html.ta-memory-world .ta-combo-wave,
-html.ta-memory-world .ta-reward-pickup-wave{display:none!important}
-/* The summary is purely visual and never modifies the actual counters. */
-.ta-memory-result{position:fixed;left:50%;top:47%;z-index:10050;
- transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;
- gap:clamp(10px,2vh,22px);pointer-events:none;white-space:nowrap;text-align:center;
- font-family:var(--mincho,serif);font-weight:700;line-height:1.25;
- animation:taMemoryResultRise 4s cubic-bezier(.18,.65,.35,1) both;}
-.ta-memory-result-time{color:#9bdcff;font-size:clamp(30px,7vw,66px);
- text-shadow:0 0 15px rgba(102,202,255,.8),0 0 35px rgba(66,143,255,.38)}
-.ta-memory-result-score{color:#f9d78e;font-size:clamp(30px,7vw,66px);
- text-shadow:0 0 15px rgba(255,211,122,.8),0 0 35px rgba(229,153,60,.35)}
-@keyframes taMemoryResultRise{
- 0%{opacity:0;transform:translate(-50%,calc(-50% + 8px))}
- 12%{opacity:1;transform:translate(-50%,-50%)}
- 58%{opacity:1;transform:translate(-50%,calc(-50% - 17px))}
- 100%{opacity:0;transform:translate(-50%,calc(-50% - 40px))}
-}
-</style>
-
 </html>
 
 <style>/* 連鎖レベルは未採用。倍率計算は維持し、レベル表記のみ非表示 */
