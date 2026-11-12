@@ -2680,8 +2680,8 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
 #taHud #taWordMasteryBadge.ta-word-badge-arrival{animation:none!important;transform:none!important;filter:none!important;box-shadow:0 2px 5px #0009!important;}
 .ta-word-text-echo-layer{position:fixed;z-index:2147483000;pointer-events:none;overflow:visible;width:0;height:0;isolation:isolate;}
 .ta-word-text-echo{position:absolute;left:0;top:0;display:block;white-space:nowrap;line-height:1.25;transform-origin:center center;letter-spacing:0;will-change:transform,opacity;}
-.ta-word-text-echo-main{color:#fff;text-shadow:0 0 5px #fff,0 0 16px #a8d5ff;}
-.ta-word-text-echo-trail{color:#a7d9ff;text-shadow:0 0 12px #7ebaff;}
+.ta-word-text-echo-main{color:#fff;text-shadow:0 0 3px #a8d5ff;}
+.ta-word-text-echo-trail{color:transparent;-webkit-text-stroke:.65px #a7d9ff;text-shadow:none;}
 @media(prefers-reduced-motion:reduce){.ta-word-text-echo-layer{display:none!important;}}
 </style>
 
@@ -2710,8 +2710,23 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
 #taHud #taWordMastery{overflow:visible!important;}
 /* Orb echoes render above the HUD and have no clipping ancestor. */
 .ta-orb-level-echo-layer{z-index:2147483001!important;}
-.ta-orb-level-echo-main{color:#fff;text-shadow:0 0 7px #fff,0 0 18px var(--echo-color),0 0 32px var(--echo-color);}
-.ta-orb-level-echo-trail{text-shadow:0 0 14px var(--echo-color),0 0 26px var(--echo-color);}
+.ta-orb-level-echo-main{color:#fff;text-shadow:0 0 3px var(--echo-color);}
+.ta-orb-level-echo-trail{color:transparent;-webkit-text-stroke:.65px var(--echo-color);text-shadow:none;}
+
+<style id="ta-clean-echo-gauge-20261112">
+/* Orb XP tracks glow only when XP reaches the next level threshold. */
+#viewMain>.ta-items .ta-mastery-badge.ta-mastery-gain .ta-mastery-track,
+#viewMain>.ta-items .ta-mastery-badge.ta-mastery-levelup .ta-mastery-track{animation:none!important;}
+#viewMain>.ta-items .ta-mastery-badge.ta-mastery-full-flash .ta-mastery-track{
+ animation:taMasteryFullFlash .9s ease-out 1!important;
+}
+@keyframes taMasteryFullFlash{
+ 0%{border-color:#d4e4ff;box-shadow:0 0 0 transparent;}
+ 30%{border-color:#fff;box-shadow:0 0 9px 3px #fff9,0 0 19px 5px #a8d5ff88;}
+ 100%{border-color:#84796b;box-shadow:inset 0 1px 3px #000b,0 1px 2px #0008;}
+}
+@media(prefers-reduced-motion:reduce){#viewMain>.ta-items .ta-mastery-badge.ta-mastery-full-flash .ta-mastery-track{animation:none!important;}}
+</style>
 </head>
 <body>
 <style>
@@ -9206,21 +9221,21 @@ const taWordMastery=(()=>{
        layer.append(el);return el;
       };
       const main=makeText('ta-word-text-echo-main');
-      const trails=[makeText('ta-word-text-echo-trail'),makeText('ta-word-text-echo-trail'),makeText('ta-word-text-echo-trail')];
+      const trails=[makeText('ta-word-text-echo-trail'),makeText('ta-word-text-echo-trail')];
       // All glyphs share one exact center. No directional translation:
       // the echoes bloom concentrically beyond the fixed badge frame.
       const centered=scale=>`translate(-50%,-50%) scale(${scale})`;
       const ease='cubic-bezier(.18,.72,.24,1)';
       main.animate([
        {transform:centered(1),opacity:0,filter:'brightness(1)'},
-       {transform:centered(2.7),opacity:1,filter:'brightness(1.9) drop-shadow(0 0 12px #b7d9ff)',offset:.3},
-       {transform:centered(2.25),opacity:.92,filter:'brightness(1.4) drop-shadow(0 0 9px #b7d9ff)',offset:.56},
-       {transform:centered(1),opacity:0,filter:'brightness(1)',offset:1}
+       {transform:centered(2.7),opacity:1,filter:'brightness(1.08)',offset:.3},
+       {transform:centered(3.0),opacity:.78,filter:'brightness(1)',offset:.56},
+       {transform:centered(3.25),opacity:0,filter:'brightness(1)',offset:1}
       ],{duration:1000,easing:ease,fill:'forwards'});
       trails.forEach((el,i)=>el.animate([
        {transform:centered(1),opacity:0},
-       {transform:centered(2.45+i*.32),opacity:.43-i*.08,offset:.30+i*.055},
-       {transform:centered(3.15+i*.42),opacity:0}
+       {transform:centered(2.85+i*.85),opacity:.32-i*.10,offset:.30+i*.055},
+       {transform:centered(3.6+i*.85),opacity:0}
       ],{duration:1000,easing:'ease-out',fill:'forwards'}));
       setTimeout(()=>layer.remove(),1050);
      }
@@ -9265,6 +9280,14 @@ const taMastery=(()=>{
   clearTimeout(badge._masteryPulseTimer);
   badge._masteryPulseTimer=setTimeout(()=>badge.classList.remove(cls),up?1050:520);
  };
+ const flashOrbFullGauge=(k)=>{
+  const badge=document.querySelector('#viewMain>.ta-items .ta-mastery-'+k);
+  if(!badge)return;
+  badge.classList.remove('ta-mastery-full-flash');void badge.offsetWidth;
+  badge.classList.add('ta-mastery-full-flash');
+  clearTimeout(badge._fullFlashTimer);
+  badge._fullFlashTimer=setTimeout(()=>badge.classList.remove('ta-mastery-full-flash'),950);
+ };
  const orbEchoLayers=new Set();
  const showOrbLevelEcho=(k,lv,color)=>{
   if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
@@ -9282,14 +9305,14 @@ const taMastery=(()=>{
   // the same apparent size. All layers stay anchored at the badge center.
   create('ta-orb-level-echo-main').animate([
    {transform:center(1),opacity:0,filter:'brightness(1)'},
-   {transform:center(5.2),opacity:1,filter:'brightness(2) drop-shadow(0 0 14px '+color+')',offset:.3},
-   {transform:center(4.35),opacity:.94,filter:'brightness(1.5) drop-shadow(0 0 11px '+color+')',offset:.56},
-   {transform:center(1),opacity:0,filter:'brightness(1)'}
+   {transform:center(5.2),opacity:1,filter:'brightness(1.08)',offset:.3},
+   {transform:center(5.7),opacity:.78,filter:'brightness(1)',offset:.56},
+   {transform:center(6.1),opacity:0,filter:'brightness(1)'}
   ],{duration:1000,easing:'cubic-bezier(.18,.72,.24,1)',fill:'forwards'});
-  for(let i=0;i<3;i++)create('ta-orb-level-echo-trail').animate([
+  for(let i=0;i<2;i++)create('ta-orb-level-echo-trail').animate([
    {transform:center(1),opacity:0},
-   {transform:center(4.8+i*.6),opacity:.55-i*.08,offset:.30+i*.055},
-   {transform:center(6.2+i*.85),opacity:0}
+   {transform:center(5.5+i*1.4),opacity:.32-i*.10,offset:.30+i*.055},
+   {transform:center(7.1+i*1.4),opacity:0}
   ],{duration:1000,easing:'ease-out',fill:'forwards'});
   setTimeout(()=>{layer.remove();orbEchoLayers.delete(layer);},1050);
  };
@@ -9370,7 +9393,7 @@ const taMastery=(()=>{
   const prev=level(k);xp[k]=Math.min(limits[3],xp[k]+n);
   try{localStorage.setItem(KEY,JSON.stringify(xp));}catch(_e){}
   render();
-  if(level(k)>prev){for(let lv=prev+1;lv<=level(k);lv++)announce(k,lv);}else pulse(k,false);
+  if(level(k)>prev){flashOrbFullGauge(k);for(let lv=prev+1;lv<=level(k);lv++)announce(k,lv);}else pulse(k,false);
  };
  window.addEventListener('resize',render);document.addEventListener('ta-item-start-activate',render);
  if(typeof ResizeObserver!=='undefined'){const bar=document.querySelector('#viewMain>.ta-items');if(bar){const ro=new ResizeObserver(()=>requestAnimationFrame(render));ro.observe(bar);bar.querySelectorAll('.ta-orb').forEach(b=>ro.observe(b));}}
