@@ -2674,6 +2674,44 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
 /* Star total is intentionally omitted; the achievements themselves remain. */
 #taGuideStarsPanel #taStarTotal{display:none!important;}
 </style>
+
+<style id="ta-word-text-only-echo-20261112">
+/* The framed badge never scales: only its temporary text copies break the frame. */
+#taHud #taWordMasteryBadge.ta-word-badge-arrival{animation:none!important;transform:none!important;filter:none!important;box-shadow:0 2px 5px #0009!important;}
+.ta-word-text-echo-layer{position:fixed;z-index:2147483000;pointer-events:none;overflow:visible;width:0;height:0;isolation:isolate;}
+.ta-word-text-echo{position:absolute;left:0;top:0;display:block;white-space:nowrap;line-height:1.25;transform-origin:center center;letter-spacing:0;will-change:transform,opacity;}
+.ta-word-text-echo-main{color:#fff;text-shadow:0 0 5px #fff,0 0 16px #a8d5ff;}
+.ta-word-text-echo-trail{color:#a7d9ff;text-shadow:0 0 12px #7ebaff;}
+@media(prefers-reduced-motion:reduce){.ta-word-text-echo-layer{display:none!important;}}
+</style>
+
+<style id="ta-orb-echo-polish-20261112">
+/* Keep the lower edge of the word level frame fully drawn. */
+#taHud #taWordMasteryBadge{border-bottom:1px solid #a6c4e7!important;box-shadow:0 2px 5px #0009!important;line-height:1.35!important;padding-bottom:4px!important;overflow:visible!important;}
+#taHud #taWordMastery{overflow:visible!important;}
+/* Orb label frames stay fixed; the glyphs alone expand as concentric echoes. */
+#viewMain>.ta-items .ta-mastery-badge.ta-mastery-levelup b{animation:none!important;transform:none!important;}
+.ta-orb-level-echo-layer{position:fixed;z-index:2147483000;pointer-events:none;width:0;height:0;overflow:visible;isolation:isolate;}
+.ta-orb-level-echo-text{position:absolute;left:0;top:0;display:block;white-space:nowrap;line-height:1.25;transform-origin:center center;will-change:transform,opacity;}
+.ta-orb-level-echo-main{color:#fff;text-shadow:0 0 6px #fff,0 0 17px var(--echo-color,#a8d5ff);}
+.ta-orb-level-echo-trail{color:var(--echo-color,#a8d5ff);text-shadow:0 0 12px var(--echo-color,#a8d5ff);}
+@media(prefers-reduced-motion:reduce){.ta-orb-level-echo-layer{display:none!important;}}
+</style>
+<style id="ta-level-echo-final-20261112">
+/* Keep the badge fully inside the HUD; the lower rule is painted inside its box. */
+#taHud #taWordMasteryBadge{
+  transform:translateY(-3px)!important;
+  border:1px solid #b8d4f4!important;
+  border-bottom:2px solid #b8d4f4!important;
+  box-shadow:inset 0 -1px 0 #d9eaff,0 1px 3px #0009!important;
+  padding-bottom:5px!important;
+  background-clip:padding-box!important;
+}
+#taHud #taWordMastery{overflow:visible!important;}
+/* Orb echoes render above the HUD and have no clipping ancestor. */
+.ta-orb-level-echo-layer{z-index:2147483001!important;}
+.ta-orb-level-echo-main{color:#fff;text-shadow:0 0 7px #fff,0 0 18px var(--echo-color),0 0 32px var(--echo-color);}
+.ta-orb-level-echo-trail{text-shadow:0 0 14px var(--echo-color),0 0 26px var(--echo-color);}
 </head>
 <body>
 <style>
@@ -9151,8 +9189,42 @@ const taWordMastery=(()=>{
    halo.style.setProperty('--halo-size','180px');halo.style.left=(target.left+target.width/2)+'px';halo.style.top=(target.top+target.height/2)+'px';document.body.append(halo);
    halo.animate([{opacity:0,transform:'translate(-50%,-50%) scale(1.3)'},{opacity:.9,transform:'translate(-50%,-50%) scale(1)',offset:.3},{opacity:0,transform:'translate(-50%,-50%) scale(.04)'}],{duration:740,fill:'forwards'}).onfinish=()=>{
     halo.remove();
-    if(badge){badge.classList.remove('ta-word-badge-arrival');void badge.offsetWidth;badge.classList.add('ta-word-badge-arrival');
-     clearTimeout(badge._wordArrivalTimer);badge._wordArrivalTimer=setTimeout(()=>badge.classList.remove('ta-word-badge-arrival'),850);}
+    if(badge){
+     // Keep the framed badge perfectly still; animate only free-floating text clones.
+     const rect=badge.getBoundingClientRect();
+     if(rect.width&&rect.height){
+      const centerX=rect.left+rect.width/2,centerY=rect.top+rect.height/2;
+      const font=getComputedStyle(badge);
+      const layer=document.createElement('div');layer.className='ta-word-text-echo-layer';
+      layer.style.left=centerX+'px';layer.style.top=centerY+'px';
+      document.body.append(layer);
+      const echoText='言霊Lv'+lv;
+      const makeText=(cls)=>{
+       const el=document.createElement('span');el.className='ta-word-text-echo '+cls;
+       el.textContent=echoText;el.style.fontFamily=font.fontFamily;
+       el.style.fontWeight=font.fontWeight;el.style.fontSize=font.fontSize;
+       layer.append(el);return el;
+      };
+      const main=makeText('ta-word-text-echo-main');
+      const trails=[makeText('ta-word-text-echo-trail'),makeText('ta-word-text-echo-trail'),makeText('ta-word-text-echo-trail')];
+      // All glyphs share one exact center. No directional translation:
+      // the echoes bloom concentrically beyond the fixed badge frame.
+      const centered=scale=>`translate(-50%,-50%) scale(${scale})`;
+      const ease='cubic-bezier(.18,.72,.24,1)';
+      main.animate([
+       {transform:centered(1),opacity:0,filter:'brightness(1)'},
+       {transform:centered(2.7),opacity:1,filter:'brightness(1.9) drop-shadow(0 0 12px #b7d9ff)',offset:.3},
+       {transform:centered(2.25),opacity:.92,filter:'brightness(1.4) drop-shadow(0 0 9px #b7d9ff)',offset:.56},
+       {transform:centered(1),opacity:0,filter:'brightness(1)',offset:1}
+      ],{duration:1000,easing:ease,fill:'forwards'});
+      trails.forEach((el,i)=>el.animate([
+       {transform:centered(1),opacity:0},
+       {transform:centered(2.45+i*.32),opacity:.43-i*.08,offset:.30+i*.055},
+       {transform:centered(3.15+i*.42),opacity:0}
+      ],{duration:1000,easing:'ease-out',fill:'forwards'}));
+      setTimeout(()=>layer.remove(),1050);
+     }
+    }
    };
    // Gauge glow is triggered only when actual collection fills its track.
   },750);
@@ -9193,9 +9265,37 @@ const taMastery=(()=>{
   clearTimeout(badge._masteryPulseTimer);
   badge._masteryPulseTimer=setTimeout(()=>badge.classList.remove(cls),up?1050:520);
  };
+ const orbEchoLayers=new Set();
+ const showOrbLevelEcho=(k,lv,color)=>{
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const badge=document.querySelector('#viewMain>.ta-items .ta-mastery-'+k+' b');
+  if(!badge)return;
+  const rect=badge.getBoundingClientRect();if(!rect.width||!rect.height)return;
+  const style=getComputedStyle(badge),layer=document.createElement('div');
+  layer.className='ta-orb-level-echo-layer';layer.style.left=(rect.left+rect.width/2)+'px';layer.style.top=(rect.top+rect.height/2)+'px';
+  layer.style.setProperty('--echo-color',color);document.body.append(layer);orbEchoLayers.add(layer);
+  const create=(cls)=>{const el=document.createElement('span');el.className='ta-orb-level-echo-text '+cls;
+   el.textContent='Lv'+lv;el.style.fontFamily=style.fontFamily;el.style.fontWeight=style.fontWeight;
+   el.style.fontSize=style.fontSize;layer.append(el);return el;};
+  const center=scale=>'translate(-50%,-50%) scale('+scale+')';
+  // The short 'Lv3' label needs a larger scale than '言霊Lv3' to achieve
+  // the same apparent size. All layers stay anchored at the badge center.
+  create('ta-orb-level-echo-main').animate([
+   {transform:center(1),opacity:0,filter:'brightness(1)'},
+   {transform:center(5.2),opacity:1,filter:'brightness(2) drop-shadow(0 0 14px '+color+')',offset:.3},
+   {transform:center(4.35),opacity:.94,filter:'brightness(1.5) drop-shadow(0 0 11px '+color+')',offset:.56},
+   {transform:center(1),opacity:0,filter:'brightness(1)'}
+  ],{duration:1000,easing:'cubic-bezier(.18,.72,.24,1)',fill:'forwards'});
+  for(let i=0;i<3;i++)create('ta-orb-level-echo-trail').animate([
+   {transform:center(1),opacity:0},
+   {transform:center(4.8+i*.6),opacity:.55-i*.08,offset:.30+i*.055},
+   {transform:center(6.2+i*.85),opacity:0}
+  ],{duration:1000,easing:'ease-out',fill:'forwards'});
+  setTimeout(()=>{layer.remove();orbEchoLayers.delete(layer);},1050);
+ };
  const levelQueue=[];
  let levelBusy=false,levelGeneration=0;
- const clearLevelFx=()=>{levelGeneration++;levelQueue.length=0;levelBusy=false;document.querySelectorAll('.ta-level-announcement,.ta-level-halo').forEach(e=>e.remove());document.querySelectorAll('.ta-orb.ta-level-arrival').forEach(e=>e.classList.remove('ta-level-arrival'));};
+ const clearLevelFx=()=>{levelGeneration++;levelQueue.length=0;levelBusy=false;orbEchoLayers.forEach(e=>e.remove());orbEchoLayers.clear();document.querySelectorAll('.ta-level-announcement,.ta-level-halo').forEach(e=>e.remove());document.querySelectorAll('.ta-orb.ta-level-arrival').forEach(e=>e.classList.remove('ta-level-arrival'));};
  const levelSound=()=>{try{if(typeof sfx!=='undefined'&&sfx.comboMilestone)sfx.comboMilestone(true);}catch(_e){}};
  const nextLevelFx=()=>{
   if(levelBusy||!levelQueue.length)return;
@@ -9256,6 +9356,8 @@ const taMastery=(()=>{
     }
     button.style.setProperty('--level-color',color);button.classList.remove('ta-level-arrival');void button.offsetWidth;button.classList.add('ta-level-arrival');
     pulse(k,true);
+    // At the exact moment the orb lights up, expand only the Lv glyphs.
+    showOrbLevelEcho(k,lv,color);
     setTimeout(()=>button.classList.remove('ta-level-arrival'),900);
    },690);
   },790);
