@@ -11814,12 +11814,11 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(thunderBusy)return;
   thunderClear();thunderBusy=true;sync();const epoch=thunderEpoch;
   const fw=field.clientWidth||1,fh=field.clientHeight||1,reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // 言葉の輪：幅が足りる範囲で大きくとり、触れた場所に寄せつつ輪がはみ出さない位置に置く
-  // 内側の輪（最初の10語）と外側の輪（一拍おいて現れる10語）。外側の輪がはみ出さない位置に中心を置く
+  // 黄玉はタップ位置に関係なく採集エリアの中心に魔法陣を展開する。
+  // 言葉の散布範囲は画面の縦横に合わせて個別に調整する。
   const rx=Math.max(80,Math.min(fw*.37,280)),ry=Math.max(70,Math.min(fh*.41,fh/2-30));       // 外側の輪
   const rxIn=rx*.55,ryIn=ry*.52;                                                             // 内側の輪
-  const clampC=(v,lo,hi,mid)=>lo<=hi?Math.max(lo,Math.min(hi,v)):mid;
-  const cx=clampC(pt.x,rx+44,fw-rx-44,fw/2),cy=clampC(pt.y,ry+26,fh-ry-26,fh/2);
+  const cx=fw/2,cy=fh/2; // スマホ・PCともに魔法陣の中心を固定
   const R=Math.max(38,Math.min(60,Math.min(rxIn,ryIn)*.6));   // 魔法陣の半径
   const ringPts=(ex,ey,off)=>Array.from({length:10},(_,i)=>{const a=-Math.PI/2+off+i*Math.PI/5;return {x:cx+Math.cos(a)*ex,y:cy+Math.sin(a)*ey,a};});
   const centers=ringPts(rxIn,ryIn,0),outerCenters=ringPts(rx,ry,Math.PI/10);   // 外側は内側の言葉のあいだに来るよう半分ずらす
@@ -11863,7 +11862,10 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const DARK_IN=700,DARK_OUT=1300;   // 魔法陣ができたら採集エリアを真っ黒へ。1回目のまき散らしと一緒に元の絵へ戻す
   let darkOutAt=0;
   const strike=(power)=>{const t=now();pillars.push({born:t,power});flashAt=t;flashA=power;circleBoost=1;
-   rings.push({born:t,life:900,max:Math.max(rx,ry)*1.35,w:2.2*power},{born:t+90,life:1100,max:Math.max(rx,ry)*1.7,w:1.2*power});
+   // 縦横比に依存しない同心円の波紋。画面短辺に収めて軽量描画する。
+   const rippleRadius=Math.max(R*1.8,Math.min(fw,fh)*.48);
+   rings.push({born:t,life:850,max:rippleRadius,w:1.8*power},
+              {born:t+130,life:1050,max:rippleRadius*1.08,w:1.1*power});
    const top=addBolt(cx+(Math.random()-.5)*30,-10,cx,cy,reduce?260:320,{width:1.9*power,regen:3,rough:.16,branchy:.55});
    burst(cx,cy,reduce?0:Math.round(26*power),150);thunderSound('strike',2);   // 落雷の音だけ（鐘の和音なし）
    if(!reduce)field.animate([{transform:'translate(0,0)'},{transform:'translate(2px,-1px)'},{transform:'translate(-2px,1px)'},{transform:'translate(0,0)'}],{duration:180,easing:'ease-out'});};
@@ -11900,7 +11902,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
     bx.globalAlpha=.9*k;const gs=R*4.4*p.power;bx.drawImage(glow,cx-gs/2,cy-gs/2,gs,gs);}
    // 衝撃の輪
    for(let k=rings.length-1;k>=0;k--){const r=rings[k],a=(t-r.born)/r.life;if(a<0)continue;if(a>=1){rings.splice(k,1);continue;}const e=1-Math.pow(1-a,3);
-    bx.globalAlpha=(1-a)*.75;bx.strokeStyle='#ffe7a0';bx.lineWidth=r.w*(1-a*.6);bx.beginPath();bx.ellipse(cx,cy,r.max*e,r.max*e*(ry/rx)*.92+r.max*e*.08,0,0,Math.PI*2);bx.stroke();}
+    bx.globalAlpha=(1-a)*.52;bx.strokeStyle='#ffe7a0';bx.lineWidth=r.w*(1-a*.65);bx.beginPath();bx.arc(cx,cy,r.max*e,0,Math.PI*2);bx.stroke();}
    // 稲妻（数回だけ形を変えてちらつかせる）
    for(let k=bolts.length-1;k>=0;k--){const b=bolts[k],a=(t-b.born)/b.life;if(a>=1){bolts.splice(k,1);continue;}
     if(b.regen>0&&a>(b.next+1)/(b.regen+1)){b.next++;b.shape=genBolt(b.ax,b.ay,b.bx,b.by,b.rough,b.branchy);}
