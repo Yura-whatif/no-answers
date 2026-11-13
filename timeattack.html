@@ -2753,6 +2753,43 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
 }
 @media(max-width:480px){#viewMain>.slip #taHud #taWordMasteryBadge{font-size:11px!important;}}
 </style>
+<style id="ta-thunder-orb-v1">
+/* Fourth orb: compact enough to keep the original five-pip counter visible. */
+#viewMain>.ta-items{gap:clamp(3px,1vw,9px)!important;padding-left:7px!important;padding-right:7px!important}
+#viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon,.thunder){width:clamp(39px,10.7vw,51px)!important;height:clamp(39px,10.7vw,51px)!important;min-width:0!important;min-height:0!important;flex:0 0 clamp(39px,10.7vw,51px)!important}
+#viewMain>.ta-items .ta-orb.thunder{--energy-rgb:255,208,61;--ta-unified-light:255,215,84;--orb-glow:rgba(255,219,70,.95);position:relative;border:0;border-radius:50%;font-size:24px;color:#fff3b3;text-shadow:0 0 9px #ffe77b,0 0 18px #f7ac2c;background:radial-gradient(circle at 33% 25%,#fffbe2 0%,#ffe482 13%,#db9c24 39%,#70451c 67%,#211522 100%)!important;box-shadow:inset 0 0 9px #fff4a5,0 0 13px #ffcb4d8a!important}
+#viewMain>.ta-items .ta-orb.thunder[aria-pressed=true]{outline:2px solid #fff5b4!important;outline-offset:2px;animation:taThunderOrbPulse .85s ease-in-out infinite!important}
+#viewMain>.ta-items .ta-orb.thunder:disabled{filter:grayscale(.8)!important;opacity:.42!important;animation:none!important;box-shadow:none!important}
+@keyframes taThunderOrbPulse{50%{box-shadow:inset 0 0 15px #fff8d2,0 0 22px 5px #ffd05c!important;filter:brightness(1.3)}}
+.ta-thunder-stage{position:absolute;inset:0;z-index:65;pointer-events:none;overflow:hidden;isolation:isolate}
+.ta-thunder-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 4px #ffdc69) drop-shadow(0 0 9px #ffc63a)}
+.ta-thunder-bolt{fill:none;stroke:#fff6c7;stroke-width:2.7;stroke-linecap:round;stroke-linejoin:round}
+.ta-thunder-flash{position:absolute;inset:0;background:radial-gradient(ellipse at center,#fff9cfbb,#ffd35e42 35%,transparent 80%);opacity:0;mix-blend-mode:screen}
+.ta-thunder-core{position:absolute;width:38px;height:38px;border-radius:50%;transform:translate(-50%,-50%);background:repeating-conic-gradient(from 14deg,#ffdb38 0deg,#a94e06 21deg,#20100a 42deg,#f5aa0e 60deg);box-shadow:inset 0 0 0 3px #2c1407,inset 0 0 11px 5px #fff16e,0 0 11px 3px #ffe05c,0 0 35px 13px #e77e14b8,0 0 65px 18px #b5371577;animation:taThunderCoreBreath .42s ease-in-out infinite alternate}
+.ta-thunder-core:before{content:"";position:absolute;inset:6px;border-radius:50%;background:radial-gradient(circle at 42% 34%,#fff6a6 0%,#f9cb18 18%,#8d3207 46%,#240b09 76%,#050305 100%);box-shadow:inset 0 0 9px #f6bd22,0 0 10px #ffad12}
+.ta-thunder-core:after{content:"";position:absolute;inset:-8px;border:2px dashed #ffce38;border-radius:50%;filter:drop-shadow(0 0 5px #ff9a17);animation:taThunderSpin 1.2s linear infinite}
+@keyframes taThunderSpin{to{transform:rotate(360deg)}}
+.ta-thunder-ring{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 6px #ffb629) drop-shadow(0 0 13px #ff7215)}
+.ta-thunder-ring ellipse{fill:none;stroke:#ffe069;stroke-width:2.8;stroke-dasharray:5 8}
+@keyframes taThunderCoreBreath{to{box-shadow:0 0 20px 8px #fff9db,0 0 43px 16px #ffdf6c,0 0 75px 22px #ffc94b88}}
+#drift .word.ta-thunder-word{z-index:10;text-shadow:0 0 8px #ffe9a6,0 0 16px #ffc451}
+@media(max-width:390px){#viewMain>.ta-items .ta-items-label{display:none!important}#viewMain>.ta-items .ta-item-counter{margin-left:0!important}}
+</style>
+<style id="ta-thunder-enchanted-v3">
+.ta-thunder-enchanted .ta-thunder-core{width:46px;height:46px;background:radial-gradient(circle at 42% 34%,#fff4a1 0%,#ffcf32 12%,#d98b0c 25%,#6b2609 48%,#17080c 70%,#050307 100%);box-shadow:inset 0 0 8px 2px #ffe375,0 0 16px 4px #fbbf35b8,0 0 44px 13px #b44c155e;animation:taArcaneBreath 1.55s ease-in-out infinite alternate}
+.ta-thunder-enchanted .ta-thunder-core:before{inset:9px;background:radial-gradient(circle at 36% 29%,#fff9d5,#ffd747 16%,#c76c08 36%,#48140c 62%,#09050a 100%);box-shadow:inset 0 0 12px #ffc12b,0 0 12px #ffb529}
+.ta-thunder-enchanted .ta-thunder-core:after{inset:-10px;border:1px solid #ffdb68a0;border-top-color:transparent;border-bottom-color:#a64b1e77;border-style:solid;box-shadow:0 0 13px #e5a13e88;animation:taThunderSpin 5s linear infinite}
+.ta-thunder-enchanted .ta-thunder-halo{position:absolute;width:85px;height:85px;border-radius:50%;transform:translate(-50%,-50%);opacity:0;background:radial-gradient(circle,#fff5b6a6 0%,#ffc04b4d 28%,#a82c1926 58%,transparent 73%);filter:blur(5px);pointer-events:none}
+.ta-thunder-enchanted .ta-thunder-wave{fill:none;stroke:#ffeaa5;stroke-width:1.9;stroke-dasharray:none;filter:drop-shadow(0 0 4px #ffe486) drop-shadow(0 0 12px #e98c21)}
+.ta-thunder-enchanted .ta-thunder-bolt-silk{stroke:#fff6d3;stroke-width:2.1;filter:drop-shadow(0 0 2px #fff1b4)}
+.ta-thunder-enchanted .ta-thunder-bolt-glow{stroke:#ffc74c;stroke-width:7;opacity:.6;filter:blur(3px)}
+.ta-thunder-enchanted .ta-thunder-twig{fill:none;stroke:#ffd77b;stroke-width:1.15;stroke-linecap:round;filter:drop-shadow(0 0 4px #ffac31)}
+.ta-thunder-enchanted .ta-thunder-svg{filter:none}
+/* 神聖な金の雷：言葉の奥に魔法陣・柱・稲妻、手前は閃光だけ */
+#drift>canvas.ta-thunder-back{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.ta-thunder-stage>canvas.ta-thunder-front{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+@keyframes taArcaneBreath{to{box-shadow:inset 0 0 12px 3px #ffe77a,0 0 22px 7px #ffd459a8,0 0 53px 17px #ae4c2266;filter:brightness(1.18)}}
+</style>
 </head>
 <body>
 <style>
@@ -2948,13 +2985,13 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
         <div class="bookcover ta-record-cover"><div class="spread one ta-record-spread">
           <section class="page solo ta-record-page ta-guide-page">
             <div class="pg-head"><span>NO ANSWERS</span><span>FIELD GUIDE</span></div>
-            <div class="ta-ranking-heading"><h3>説明書</h3><p>特殊効果と連鎖の仕組みを知るための案内書。</p></div>
-            <p class="ta-guide-intro">夜、ユラは本を開く。浮かぶ言葉に触れ、忘れたいことや置き忘れたものと向き合いながら、朝を迎える。<br>言葉をつなぎ、できるだけ長く時を紡いでください。</p>
-            <nav class="ta-guide-index" aria-label="手引きの目次"><a href="#taGuideBasics">基本</a><a href="#taGuideOrbs">玉と補充</a><a href="#taGuideSkills">奥義</a><a href="#taGuideDaybreak">夜明け</a><a href="#taGuideTips">攻略</a></nav>
+            <div class="ta-ranking-heading"><h3>説明書</h3><p>言葉をつなぎ、時を紡ぐための小さな手引き。</p></div>
+            <p class="ta-guide-intro">漂う言葉に触れるたび、連鎖がつながり、時間の中に新たな軌跡が刻まれます。<br>玉の力を借りながら、できるだけ長く言葉をつないでください。</p>
+            <nav class="ta-guide-index" aria-label="手引きの目次"><a href="#taGuideBasics">基本</a><a href="#taGuideOrbs">玉と補充</a><a href="#taGuideSkills">奥義</a><a href="#taGuideDaybreak">光と夜明け</a><a href="#taGuideTips">攻略</a></nav>
             <section class="ta-guide-section" id="taGuideBasics"><h4><span>01</span> 遊び方と連鎖</h4>
               <p>ゲームは<strong>残り時間60秒</strong>から始まります。採集エリアに漂う言葉をタップ、またはスワイプして回収しましょう。回収を続けると「連鎖」が伸び、得点も積み重なります。</p>
-              <div class="ta-guide-tip"><b>攻略の鍵</b><p>次の言葉が見当たらないときは、画面全体を見渡して連鎖を維持。特殊技による連鎖猶予も活用できます。</p></div>
-              <p>10連鎖ごとに波紋が広がり、100連鎖では世界が夜から朝へ移り変わります。連鎖が途切れると、景色はゆっくり夜に戻ります。</p>
+              <div class="ta-guide-tip"><b>攻略の鍵</b><p>言葉を追いながら次の一つを探しましょう。奥義による時間停止も、連鎖をつなぐ助けになります。</p></div>
+              <p>連鎖を重ねるほど得点の伸びも大きくなります。100連鎖に届くと景色は夜明けへ向かい、連鎖が途切れると再び夜へ戻ります。</p>
             </section>
             <section class="ta-guide-section" id="taGuideOrbs"><h4><span>02</span> 3色の玉と白銀玉</h4>
               <div class="ta-guide-skill"><i class="ta-guide-dot red"></i><div><b>紅玉 ― 炎</b><p>言葉に炎の効果を与える玉。広範囲の技や奥義の組み合わせにも使います。</p></div></div>
@@ -2970,15 +3007,16 @@ html.ta-direct-stage01-return #viewMain>.hero.ta-active-visual>picture.ta-bg-pic
               <details><summary>置き忘れたもの</summary><p>漂う言葉を中心へ引き寄せ、最後に解き放つ奥義。炎・氷の効果との組み合わせが攻略の鍵になります。</p></details>
               <div class="ta-guide-tip"><b>ひと工夫</b><p>奥義は「使える瞬間にすぐ使う」だけが正解ではありません。言葉が多い場面や、時間が厳しい場面まで温存する戦い方もあります。</p></div>
             </section>
-            <section class="ta-guide-section" id="taGuideDaybreak"><h4><span>04</span> 夜から朝へ</h4>
-              <div class="ta-guide-phases"><div><span>夜 ／ 0〜99連鎖</span><strong>花の忘却 ・ 降る記憶／昇る想い</strong><p>夜の記憶が漂う時間。</p></div><div><span>朝 ／ 100連鎖以降</span><strong>花の記憶 ・ 降る記憶／昇る想い</strong><p>朝の光とともに、新たな効果が現れます。</p></div></div>
-              <p>100連鎖に到達すると背景が徐々に朝へ変わります。連鎖が途切れると、景色はゆっくり夜に戻ります。</p>
+            <section class="ta-guide-section" id="taGuideDaybreak"><h4><span>04</span> 光の言葉と夜明け</h4>
+              <div class="ta-guide-skill"><div><b>降る記憶</b><p>淡い光の粒が静かに降りそそぎ、景色をやさしく包みます。触れると10秒間、言葉から得られる得点が2倍になります。</p></div></div>
+              <div class="ta-guide-skill"><div><b>昇る想い</b><p>やわらかな光が差し込み、光の粒が空へ昇っていきます。触れると10秒間、言葉から得られる得点が2倍になります。</p></div></div>
+              <p>言葉を100連鎖までつなぐと、景色は少しずつ夜明けへ。光の言葉とは別に、連鎖が描く風景の変化も楽しめます。</p>
             </section>
             <section class="ta-guide-section" id="taGuideTips"><h4><span>05</span> 連鎖をつなぐ技術</h4>
               <div class="ta-guide-tip"><b>初級｜連鎖を最優先</b><p>一つの言葉を回収したら、次に触れる言葉をすぐ探しましょう。タップとスワイプを使い分けるのが基本です。</p></div>
               <div class="ta-guide-tip"><b>中級｜残り時間と玉在庫を管理</b><p>高得点だけでなく、蒼玉による時間回復や、白銀玉・得点による補充の機会も意識しましょう。</p></div>
               <div class="ta-guide-tip"><b>上級｜奥義の順番を研究</b><p>炎と氷を重ねる順序、「置き忘れたもの」で言葉を引き寄せるタイミングや、「全部なかったことに」を使う場面によって、同じ盤面でも回収の結果が変わります。</p></div>
-              <p class="ta-guide-ending">忘れたかった言葉も、朝になれば少し違って見える。<br>あなたは、どこまで夜を越えられるでしょうか。</p>
+              <p class="ta-guide-ending">一つの言葉が、次の言葉へ。<br>あなたは、どこまでその軌跡をつなげられるでしょうか。</p>
             </section>
           </section>
         </div></div>
@@ -9201,10 +9239,10 @@ const taWordMastery=(()=>{
   const fill=document.getElementById('taWordMasteryFill'),badge=document.getElementById('taWordMasteryBadge');
   if(!fill||!badge)return;
   const lv=level(),base=limits[lv-1],next=limits[lv]??limits[9];
-  fill.style.width=(lv===10?100:Math.max(0,Math.min(100,(count-base)/(next-base)*100)))+'%';
+  fill.style.width=(lv===10?100:Math.max(0,Math.min(100,count/next*100)))+'%';
   badge.textContent='Lv'+lv;
   const record=document.getElementById('taWordMasteryRecord');
-  if(record){const remaining=lv===10?'MAX':(next-count).toLocaleString('ja-JP')+'個';record.innerHTML=`<div class="ta-growth-head"><strong>言霊</strong><b>Lv${lv} / 10</b></div><div class="ta-growth-track"><i style="width:${lv===10?100:Math.max(0,Math.min(100,(count-base)/(next-base)*100))}%"></i></div><div class="ta-growth-meta"><span>${lv===10?'累計 '+count.toLocaleString('ja-JP')+'個':count.toLocaleString('ja-JP')+' / '+next.toLocaleString('ja-JP')+'個'}</span><span>${lv===10?'MAX':'次まで '+remaining}</span></div><div class="ta-growth-effect">言霊発生数増加・得点増加・時間増加・白銀玉強化</div>`;}
+  if(record){const remaining=lv===10?'MAX':(next-count).toLocaleString('ja-JP')+'個';record.innerHTML=`<div class="ta-growth-head"><strong>言霊</strong><b>Lv${lv} / 10</b></div><div class="ta-growth-track"><i style="width:${lv===10?100:Math.max(0,Math.min(100,count/next*100))}%"></i></div><div class="ta-growth-meta"><span>${lv===10?'累計 '+count.toLocaleString('ja-JP')+'個':count.toLocaleString('ja-JP')+' / '+next.toLocaleString('ja-JP')+'個'}</span><span>${lv===10?'MAX':'次まで '+remaining}</span></div><div class="ta-growth-effect">言霊発生数増加・得点増加・時間増加・白銀玉強化</div>`;}
  };
  const nextFx=()=>{
   if(fxBusy||!fxQueue.length)return;
@@ -9291,14 +9329,39 @@ const taMastery=(()=>{
  const value=k=>{const lv=level(k);if(k==='fire'||k==='ice')return {seconds:lv+.1,distance:60+10*lv};return {extra:lv===1?-3:lv===2?-2:lv===3?-1:0};};
  const render=()=>{
   const bar=document.querySelector('#viewMain>.ta-items');if(!bar)return;
-  const record=document.getElementById('taOrbMasteryRecord');if(record)record.innerHTML=Object.keys(xp).map(k=>{const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[3],pct=lv===4?100:Math.max(0,Math.min(100,(xp[k]-base)/(next-base)*100));const effect=k==='green'?'言霊の発生数を強化':'効果時間・スワイプ距離を強化';return `<div class="ta-growth-orb ta-growth-${k}"><div class="ta-growth-head"><strong>${names[k]}</strong><b>Lv${lv} / 4</b></div><div class="ta-growth-track"><i style="width:${pct}%"></i></div><div class="ta-growth-meta"><span>${lv===4?'累計 '+xp[k]+' XP':xp[k]+' / '+next+' XP'}</span><span>${lv===4?'MAX':'次まで '+(next-xp[k])+' XP'}</span></div><div class="ta-growth-effect">${effect}</div></div>`;}).join('');
+  const record=document.getElementById('taOrbMasteryRecord');if(record)record.innerHTML=Object.keys(xp).map(k=>{const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[3],pct=lv===4?100:Math.max(0,Math.min(100,xp[k]/next*100));const effect=k==='green'?'言霊の発生数を強化':'効果時間・スワイプ距離を強化';return `<div class="ta-growth-orb ta-growth-${k}"><div class="ta-growth-head"><strong>${names[k]}</strong><b>Lv${lv} / 4</b></div><div class="ta-growth-track"><i style="width:${pct}%"></i></div><div class="ta-growth-meta"><span>${lv===4?'累計 '+xp[k]+' XP':xp[k]+' / '+next+' XP'}</span><span>${lv===4?'MAX':'次まで '+(next-xp[k])+' XP'}</span></div><div class="ta-growth-effect">${effect}</div></div>`;}).join('');
+  // Visual future cost only: actual activation still consumes one silver orb.
+  const thunderCostButton=bar.querySelector('.ta-orb.thunder');
+  if(thunderCostButton){
+   let cost=bar.querySelector('.ta-thunder-cost');
+   if(!cost){cost=document.createElement('span');cost.className='ta-thunder-cost';cost.innerHTML='<span class="ta-thunder-silver-icon" aria-hidden="true"></span><span class="ta-thunder-cost-number">×3</span>';cost.setAttribute('aria-label','正式版の予定消費：白銀玉3個。試験中は1個');bar.append(cost);}
+   // Position is finalized after the MAX badge is laid out below.
+
+  }
+  // Yellow orb is a fixed, fully charged MAX display during the trial.
+  const thunderButton=bar.querySelector('.ta-orb.thunder');
+  if(thunderButton){
+   let badge=bar.querySelector('.ta-mastery-thunder');
+   if(!badge){badge=document.createElement('span');badge.className='ta-mastery-badge ta-mastery-thunder';badge.innerHTML='<span class="ta-mastery-track"><i></i></span><b>MAX</b>';bar.append(badge);}
+   const br=thunderButton.getBoundingClientRect(),pr=bar.getBoundingClientRect();
+   badge.style.left=(br.left-pr.left)+'px';badge.style.top=(br.top-pr.top)+'px';badge.style.width=br.width+'px';badge.style.height=br.height+'px';
+   badge.querySelector('i').style.width='100%';badge.querySelector('b').textContent='MAX';
+   // Place the silver-orb x3 just above MAX, overlapping the thunder orb's upper-right area.
+   const cost=bar.querySelector('.ta-thunder-cost');
+   if(cost){
+    const maxRect=badge.querySelector('b').getBoundingClientRect();
+    const parentRect=bar.getBoundingClientRect();
+    cost.style.left=(maxRect.left-parentRect.left+(maxRect.width-cost.offsetWidth)/2)+'px';
+    cost.style.top=(maxRect.top-parentRect.top-cost.offsetHeight-3)+'px';
+   }
+  }
   for(const k of Object.keys(xp)){
    const button=bar.querySelector('.ta-orb.'+(k==='green'?'summon':k));if(!button)continue;
    let badge=bar.querySelector('.ta-mastery-'+k);
    if(!badge){badge=document.createElement('span');badge.className='ta-mastery-badge ta-mastery-'+k;badge.innerHTML='<span class="ta-mastery-track"><i></i></span><b></b>';bar.append(badge);}
    const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[3];
    const br=button.getBoundingClientRect(),pr=bar.getBoundingClientRect();badge.style.left=(br.left-pr.left)+'px';badge.style.top=(br.top-pr.top)+'px';badge.style.width=br.width+'px';badge.style.height=br.height+'px';
-   badge.querySelector('i').style.width=(lv===4?100:Math.max(0,Math.min(100,(xp[k]-base)/(next-base)*100)))+'%';
+   badge.querySelector('i').style.width=(lv===4?100:Math.max(0,Math.min(100,xp[k]/next*100)))+'%';
    badge.querySelector('b').textContent='Lv'+lv;
   }
  };
@@ -10354,7 +10417,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
 /* Residual elemental traces: fire collects; ice instantly shatters for +0.5s. */
 (()=>{
  const field=document.getElementById('drift'),hero=field&&field.closest('.hero');if(!field||!hero)return;
- const ui=document.createElement('div');ui.className='ta-items';ui.innerHTML='<span class="ta-items-label">ITEM</span><button class="ta-orb fire" type="button" data-orb="fire" aria-label="紅玉・炎" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>🔥</button><button class="ta-orb ice" type="button" data-orb="ice" aria-label="蒼玉・氷" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>❄</button><button class="ta-orb summon" type="button" data-orb="summon" aria-label="翠玉・言霊召喚" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>✧</button><span class="ta-item-counter" aria-live="polite"><b id="taItemRemaining">5</b><small>/5</small><span class="ta-item-pips" aria-hidden="true"></span></span>';
+ const ui=document.createElement('div');ui.className='ta-items';ui.innerHTML='<span class="ta-items-label">ITEM</span><button class="ta-orb fire" type="button" data-orb="fire" aria-label="紅玉・炎" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>🔥</button><button class="ta-orb ice" type="button" data-orb="ice" aria-label="蒼玉・氷" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>❄</button><button class="ta-orb summon" type="button" data-orb="summon" aria-label="翠玉・言霊召喚" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>✧</button><button class="ta-orb thunder" type="button" data-orb="thunder" aria-label="黄玉・雷の言霊（正式版は白銀玉3個、試験中は1個）" aria-pressed="false">⚡</button><span class="ta-item-counter" aria-live="polite"><b id="taItemRemaining">5</b><small>/5</small><span class="ta-item-pips" aria-hidden="true"></span></span>';
  hero.insertAdjacentElement('afterend',ui);
  // The initial fit runs before the orb bar exists; fit again after insertion.
  requestAnimationFrame(()=>{ if(typeof fitLayout==='function') fitLayout(); });
@@ -10775,7 +10838,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const pipBox=ui.querySelector('.ta-item-pips');
  const pipNodes=Array.from({length:MAX_USES},()=>{const pip=document.createElement('span');pip.className='ta-item-pip';pipBox.appendChild(pip);return pip;});
  const sync=()=>{
-  ui.querySelectorAll('button').forEach(b=>{b.setAttribute('aria-pressed',String(selected===b.dataset.orb));b.disabled=usesLeft<=0||!active();});
+  ui.querySelectorAll('button').forEach(b=>{b.setAttribute('aria-pressed',String(selected===b.dataset.orb));b.disabled=usesLeft<1||!active()||(b.dataset.orb==='thunder'&&thunderBusy);});
   const displayUses=active()?usesLeft:0;
   const count=ui.querySelector('#taItemRemaining');if(count)count.textContent=displayUses;
   const decreasing=usesLeft<previousPips;
@@ -10798,7 +10861,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  // Select on pointerdown so a fast swipe-to-orb transition does not lose the first tap.
  // Suppress the synthetic click following that pointerdown to avoid toggling selection off.
  let lastOrbPointerAt=-Infinity;
- function selectOrb(b){if(!b||!active()||usesLeft<=0)return;selected=selected===b.dataset.orb?null:b.dataset.orb;sync();}
+ function selectOrb(b){if(!b||!active()||usesLeft<1||(b.dataset.orb==='thunder'&&thunderBusy))return;selected=selected===b.dataset.orb?null:b.dataset.orb;sync();}
  // PC-only elemental orb shortcuts. Reuse the pointer selection path so
  // toggling, visual feedback, and automatic deselection after use stay identical.
  document.addEventListener('keydown',e=>{
@@ -10815,7 +10878,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    if(selected!==null){selected=null;sync();e.preventDefault();}
    return;
   }
-  const type=({Digit1:'fire',Digit2:'ice',Digit3:'summon',Numpad1:'fire',Numpad2:'ice',Numpad3:'summon'})[e.code];
+  const type=({Digit1:'fire',Digit2:'ice',Digit3:'summon',Digit4:'thunder',Numpad1:'fire',Numpad2:'ice',Numpad3:'summon',Numpad4:'thunder'})[e.code];
   if(!type)return;
   const button=ui.querySelector('[data-orb="'+type+'"]');
   if(!button)return;
@@ -10833,7 +10896,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(performance.now()-lastOrbPointerAt<750){e.preventDefault();return;}
   selectOrb(b); // keyboard / assistive technology activation
  });
- function clear(){document.querySelectorAll(".ta-eclipse-session-fx").forEach(el=>{el.getAnimations().forEach(a=>a.cancel());el.remove();});taUltimateClear();clearPaintedClock();clockCanvas.classList.remove('ta-clock-front');clearClock();if(taCompletedClock){taCompletedClock.remove();taCompletedClock=null;}taClockVeilCenter=null;taCompletedClockAnchor=null;selected=null;sync();gesture=null;consumedPointer=null;taLastDualFinisher=-Infinity;traces=[];eclipseRims=[];layer.classList.remove("ta-eclipse-rim-front");particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.restore();clockCtx.save();clockCtx.setTransform(1,0,0,1,0,0);clockCtx.clearRect(0,0,clockCanvas.width,clockCanvas.height);clockCtx.restore();fxWasDrawing=false;}
+ function clear(){thunderClear();document.querySelectorAll(".ta-eclipse-session-fx").forEach(el=>{el.getAnimations().forEach(a=>a.cancel());el.remove();});taUltimateClear();clearPaintedClock();clockCanvas.classList.remove('ta-clock-front');clearClock();if(taCompletedClock){taCompletedClock.remove();taCompletedClock=null;}taClockVeilCenter=null;taCompletedClockAnchor=null;selected=null;sync();gesture=null;consumedPointer=null;taLastDualFinisher=-Infinity;traces=[];eclipseRims=[];layer.classList.remove("ta-eclipse-rim-front");particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.restore();clockCtx.save();clockCtx.setTransform(1,0,0,1,0,0);clockCtx.clearRect(0,0,clockCanvas.width,clockCanvas.height);clockCtx.restore();fxWasDrawing=false;}
  // Eclipse perimeter uses exactly the same renderFire/renderIce as a normal tap circle.
  window.taEclipseRimStart=(x,y,radius,type,duration)=>{
    const hr=hero.getBoundingClientRect();
@@ -11671,8 +11734,229 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  else for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(Math.hypot(b.x-a.x,b.y-a.y)>1)segs.push([a,b,23]);}
  if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:(completed||eclipseTap)?.30:(typeof taStarRunValue==='function'?taStarRunValue(g.type):3.1),total:(typeof taStarRunValue==='function'?taStarRunValue(g.type):3.1),age:0,resonated:false,clockDissolve:completed||eclipseTap};traces.push(trace);if(!completed&&!eclipseTap&&!soumatouTap&&(g.type==='fire'||g.type==='ice'))window.taStars?.track(g.type);if(traces.length>2){for(const older of traces.slice(0,-2)){if(!older.clockDissolve){older.left=Math.min(older.left,1.85);older.total=3.1;older.retiring=true;}}}if(traces.length>6)traces.splice(0,traces.length-6);for(const other of traces){if(!completed&&!eclipseTap&&!soumatouTap&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed&&!eclipseTap)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
  checkWords();}
+ // Yellow orb: a one-charge test of the lightning miracle. The actual words are spawned
+ // through the existing collector, so scores, flying orbs and combos stay native.
+ // 黄玉：神聖な金の雷。触れた場所に金の魔法陣が描かれ、天から光の柱が落ち、
+ // 魔法陣から伸びる稲妻の先に言葉が1つずつ顕現する。言葉の数・時刻・自動回収・得点は従来どおり。
+ // 描画は採集エリア内の描画面2枚（言葉の奥／言葉の手前の閃光）だけで行う。
+ let thunderEpoch=0,thunderTimers=[],thunderStage=null,thunderAC=null,thunderBusy=false;
+ function thunderLater(fn,delay){const id=setTimeout(fn,delay);thunderTimers.push(id);return id;}
+ function thunderClear(){thunderEpoch++;thunderTimers.forEach(clearTimeout);thunderTimers=[];if(thunderStage){if(thunderStage._raf)cancelAnimationFrame(thunderStage._raf);if(thunderStage._back)thunderStage._back.remove();thunderStage.remove();thunderStage=null;}thunderBusy=false;selected=selected==='thunder'?null:selected;sync();}
+ // 音：溜め（澄んだ高まり）、落雷（裂ける音＋轟き＋聖なる鐘の和音）、放電（パチパチ）、顕現（鈴）
+ function thunderSound(kind,i=0){
+  if(typeof sfx!=='undefined'&&!sfx.on)return;
+  try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;thunderAC=thunderAC||new AC();const ac=thunderAC;if(ac.state==='suspended')ac.resume();
+   const t=ac.currentTime+.01,out=ac.createGain();out.gain.value=.85;out.connect(ac.destination);
+   const noise=(dur)=>{const b=ac.createBuffer(1,Math.max(1,Math.floor(ac.sampleRate*dur)),ac.sampleRate),d=b.getChannelData(0);for(let k=0;k<d.length;k++)d[k]=Math.random()*2-1;const s=ac.createBufferSource();s.buffer=b;return s;};
+   const tone=(f,at,v,dur,type='sine',f2)=>{const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(f,at);if(f2)o.frequency.exponentialRampToValueAtTime(f2,at+dur);
+    g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(v,at+.012);g.gain.exponentialRampToValueAtTime(.0001,at+dur);o.connect(g);g.connect(out);o.start(at);o.stop(at+dur+.05);};
+   if(kind==='charge'){
+    const n=noise(.5),bp=ac.createBiquadFilter(),g=ac.createGain();bp.type='bandpass';bp.Q.value=6;bp.frequency.setValueAtTime(1200,t);bp.frequency.exponentialRampToValueAtTime(5200,t+.42);
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.09,t+.36);g.gain.exponentialRampToValueAtTime(.0001,t+.46);n.connect(bp);bp.connect(g);g.connect(out);n.start(t);n.stop(t+.5);
+    tone(880,t,.035,.45,'sine',1760);tone(1318.5,t+.08,.025,.38,'sine',2637);
+   }else if(kind==='strike'){
+    const big=i!==1;
+    const c=noise(.08),hp=ac.createBiquadFilter(),cg=ac.createGain();hp.type='highpass';hp.frequency.value=2500;cg.gain.setValueAtTime(big?.5:.3,t);cg.gain.exponentialRampToValueAtTime(.0001,t+.07);c.connect(hp);hp.connect(cg);cg.connect(out);c.start(t);c.stop(t+.08);
+    const r=noise(1.9),lp=ac.createBiquadFilter(),rg=ac.createGain();lp.type='lowpass';lp.frequency.setValueAtTime(1400,t);lp.frequency.exponentialRampToValueAtTime(110,t+1.6);
+    rg.gain.setValueAtTime(.0001,t);rg.gain.exponentialRampToValueAtTime(big?.55:.3,t+.03);rg.gain.exponentialRampToValueAtTime(.0001,t+(big?1.8:1.1));r.connect(lp);lp.connect(rg);rg.connect(out);r.start(t);r.stop(t+1.9);
+    tone(62,t,big?.32:.18,big?.9:.5,'sine',38);
+    // 聖なる鐘の和音（A・E・C#・A）。まき散らしのとき（i===2）は落雷の音だけにする
+    if(i!==2)[[880,.05,2.2],[1318.5,.035,1.9],[1661.2,.026,1.6],[2637,.016,1.2]].forEach(([f,v,d])=>{tone(f,t+.02,v*(big?1:.6),d);tone(f*1.0035,t+.02,v*.5*(big?1:.6),d);});
+   }else if(kind==='zap'){
+    for(let k=0;k<3;k++){const at=t+k*.035+Math.random()*.012,s=noise(.03),bp=ac.createBiquadFilter(),g=ac.createGain();bp.type='bandpass';bp.Q.value=3;bp.frequency.value=2600+Math.random()*3000;
+     g.gain.setValueAtTime(.12,at);g.gain.exponentialRampToValueAtTime(.0001,at+.025);s.connect(bp);bp.connect(g);g.connect(out);s.start(at);s.stop(at+.03);}
+    const sc=[1318.5,1480,1661.2,1975.5,2217.5,2637,2960,3322.4,3951,4434.9];tone(sc[i%10],t+.04,.03,.55);
+   }else if(kind==='summon'||kind==='dissolve'){
+    // 広い空間に響くように、残響を1つ作って使い回す
+    if(!thunderSound.rv||thunderSound.rv.context!==ac){const len=Math.floor(ac.sampleRate*2.6),ir=ac.createBuffer(2,len,ac.sampleRate);
+     for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);for(let k=0;k<len;k++)d[k]=(Math.random()*2-1)*Math.pow(1-k/len,2.6);}
+     const cv=ac.createConvolver();cv.buffer=ir;const wet=ac.createGain();wet.gain.value=.55;cv.connect(wet);wet.connect(ac.destination);thunderSound.rv=cv;}
+    const rv=thunderSound.rv,send=ac.createGain();send.gain.value=.9;out.connect(send);send.connect(rv);out.gain.value=1.5;   // 落雷に埋もれないよう少し大きめ
+    // ハープのような撥弦（三角波＋少し高い倍音、すぐ減衰）
+    const harp=(f,at,v,dur)=>{for(const [m,k] of [[1,1],[2,.28],[3.01,.08]]){const o=ac.createOscillator(),g=ac.createGain();o.type=m===1?'triangle':'sine';o.frequency.value=f*m;
+      g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(v*k,at+.006);g.gain.exponentialRampToValueAtTime(.0001,at+dur*(m===1?1:.6));o.connect(g);g.connect(out);o.start(at);o.stop(at+dur+.05);}};
+    const air=(f0,f1,at,dur,v)=>{const n=noise(dur+.05),bp=ac.createBiquadFilter(),g=ac.createGain();bp.type='bandpass';bp.Q.value=4;bp.frequency.setValueAtTime(f0,at);bp.frequency.exponentialRampToValueAtTime(f1,at+dur);
+     g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(v,at+dur*.45);g.gain.exponentialRampToValueAtTime(.0001,at+dur);n.connect(bp);bp.connect(g);g.connect(out);n.start(at);n.stop(at+dur+.05);};
+    const pad=(fs,at,att,hold,rel,v)=>fs.forEach((f,k)=>{for(const det of [-4,4]){const o=ac.createOscillator(),g=ac.createGain(),lp=ac.createBiquadFilter();o.type='triangle';o.frequency.value=f;o.detune.value=det;lp.type='lowpass';lp.frequency.value=1800;
+      g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(v,at+att);g.gain.setValueAtTime(v,at+att+hold);g.gain.exponentialRampToValueAtTime(.0001,at+att+hold+rel);o.connect(lp);lp.connect(g);g.connect(out);o.start(at);o.stop(at+att+hold+rel+.05);}});
+    const A=[880,1108.7,1318.5,1760,2217.5,2637];   // A・C#・E の明るい和音
+    if(kind==='summon'){
+     // 魔法陣が描かれる：澄んだ和音がふわっと立ち上がり、ハープが上へ駆けのぼって、きらめきが残る
+     pad([440,659.25,880],t,.35,.5,1.6,.016);
+     A.forEach((f,k)=>harp(f,t+.05+k*.065,.05*(1-k*.08),1.4));
+     air(5000,9000,t+.05,.9,.018);
+     [3520,4434.9].forEach((f,k)=>harp(f,t+.5+k*.09,.012,1.8));
+    }else{
+     // 魔法陣がほどける：ハープが下へ降りていき、風がやわらかく抜けて、低い鈴が長く残る
+     [...A].reverse().forEach((f,k)=>harp(f,t+k*.085,.04*(1-k*.06),1.3));
+     air(4200,700,t+.05,1.3,.03);
+     pad([440,659.25],t+.35,.25,.2,1.9,.014);
+     harp(440,t+.55,.03,2.4);
+    }
+   }else if(kind==='end'){
+    [2637,2217.5,1975.5,1661.2,1318.5].forEach((f,k)=>tone(f,t+k*.09,.018,.9));
+   }
+  }catch(_){}
+ }
+ function thunderCast(pt){
+  if(thunderBusy)return;
+  thunderClear();thunderBusy=true;sync();const epoch=thunderEpoch;
+  const fw=field.clientWidth||1,fh=field.clientHeight||1,reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // 言葉の輪：幅が足りる範囲で大きくとり、触れた場所に寄せつつ輪がはみ出さない位置に置く
+  // 内側の輪（最初の10語）と外側の輪（一拍おいて現れる10語）。外側の輪がはみ出さない位置に中心を置く
+  const rx=Math.max(80,Math.min(fw*.37,280)),ry=Math.max(70,Math.min(fh*.41,fh/2-30));       // 外側の輪
+  const rxIn=rx*.55,ryIn=ry*.52;                                                             // 内側の輪
+  const clampC=(v,lo,hi,mid)=>lo<=hi?Math.max(lo,Math.min(hi,v)):mid;
+  const cx=clampC(pt.x,rx+44,fw-rx-44,fw/2),cy=clampC(pt.y,ry+26,fh-ry-26,fh/2);
+  const R=Math.max(38,Math.min(60,Math.min(rxIn,ryIn)*.6));   // 魔法陣の半径
+  const ringPts=(ex,ey,off)=>Array.from({length:10},(_,i)=>{const a=-Math.PI/2+off+i*Math.PI/5;return {x:cx+Math.cos(a)*ex,y:cy+Math.sin(a)*ey,a};});
+  const centers=ringPts(rxIn,ryIn,0),outerCenters=ringPts(rx,ry,Math.PI/10);   // 外側は内側の言葉のあいだに来るよう半分ずらす
+  // 描画面：奥（言葉の後ろ）と手前（閃光だけ）
+  const dpr=Math.min(devicePixelRatio||1,1.5);
+  const mk=(cls)=>{const c=document.createElement('canvas');c.className=cls;c.width=Math.round(fw*dpr);c.height=Math.round(fh*dpr);return c;};
+  const back=mk('ta-thunder-back'),stage=document.createElement('div');stage.className='ta-thunder-stage';const front=mk('ta-thunder-front');stage.append(front);
+  field.insertBefore(back,field.firstChild);field.append(stage);stage._back=back;thunderStage=stage;
+  const bx=back.getContext('2d'),fx=front.getContext('2d');
+  const live=()=>epoch===thunderEpoch&&active()&&stage.isConnected;
+  const later=(fn,t)=>thunderLater(()=>{if(live())fn();},t);
+  // 光の玉の画像（加算で重ねて光らせる）
+  const glow=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);
+   g.addColorStop(0,'rgba(255,248,214,1)');g.addColorStop(.16,'rgba(255,214,110,.82)');g.addColorStop(.42,'rgba(255,160,40,.28)');g.addColorStop(1,'rgba(255,130,20,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return c;})();
+  // 魔法陣（外輪と内側の紋）を一度だけ描いておく
+  const sprite=(draw)=>{const S=Math.ceil((R+14)*2*dpr),c=document.createElement('canvas');c.width=c.height=S;const x=c.getContext('2d');x.translate(S/2,S/2);x.scale(dpr,dpr);x.lineCap='round';x.lineJoin='round';
+   const pass=(w,a,col)=>{x.lineWidth=w;x.strokeStyle=col;x.fillStyle=col;x.globalAlpha=a;draw(x);};pass(4.2,.22,'#ffb648');pass(1.2,.95,'#fff1c2');return c;};
+  const outer=sprite(x=>{x.beginPath();x.arc(0,0,R,0,Math.PI*2);x.stroke();x.beginPath();x.arc(0,0,R-6,0,Math.PI*2);x.stroke();
+   for(let k=0;k<24;k++){const a=k/24*Math.PI*2,r=R-3,px=Math.cos(a)*r,py=Math.sin(a)*r;x.save();x.translate(px,py);x.rotate(a);
+    if(k%3===0){x.beginPath();x.moveTo(0,-2.2);x.lineTo(1.6,0);x.lineTo(0,2.2);x.lineTo(-1.6,0);x.closePath();x.stroke();}
+    else if(k%3===1){x.beginPath();x.moveTo(-1.6,-1.4);x.lineTo(1.6,-1.4);x.moveTo(0,-1.4);x.lineTo(0,1.6);x.stroke();}
+    else{x.beginPath();x.arc(0,0,.9,0,Math.PI*2);x.fill();}x.restore();}
+   for(let k=0;k<8;k++){const a=k/8*Math.PI*2;x.beginPath();x.moveTo(Math.cos(a)*(R+3),Math.sin(a)*(R+3));x.lineTo(Math.cos(a)*(R+9),Math.sin(a)*(R+9));x.stroke();}});
+  const inner=sprite(x=>{const r=R*.72;x.beginPath();x.arc(0,0,r,0,Math.PI*2);x.stroke();
+   for(const off of [0,Math.PI]){x.beginPath();for(let k=0;k<3;k++){const a=-Math.PI/2+off+k*Math.PI*2/3;k?x.lineTo(Math.cos(a)*r,Math.sin(a)*r):x.moveTo(Math.cos(a)*r,Math.sin(a)*r);}x.closePath();x.stroke();}
+   x.beginPath();x.arc(0,0,R*.3,0,Math.PI*2);x.stroke();
+   for(let k=0;k<12;k++){const a=k/12*Math.PI*2;x.beginPath();x.moveTo(Math.cos(a)*R*.3,Math.sin(a)*R*.3);x.lineTo(Math.cos(a)*R*.4,Math.sin(a)*R*.4);x.stroke();}});
+  // 稲妻：中点をずらす分割で、自然に枝分かれする形を作る
+  const genBolt=(ax,ay,bx2,by2,rough=.2,branchy=.35)=>{const len=Math.hypot(bx2-ax,by2-ay);
+   let pts=[[ax,ay],[bx2,by2]],disp=len*rough;const branches=[];
+   for(let d=0;d<5;d++){const np=[pts[0]];for(let k=1;k<pts.length;k++){const a=pts[k-1],b=pts[k],mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2,dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1,o=(Math.random()-.5)*disp;
+     const m=[mx-dy/l*o,my+dx/l*o];np.push(m,b);
+     if(d>=1&&d<=3&&Math.random()<branchy*(.6-d*.12)){const ang=Math.atan2(dy,dx)+(Math.random()<.5?-1:1)*(.45+Math.random()*.5),bl=l*(.9+Math.random()*1.1);branches.push(genBolt(m[0],m[1],m[0]+Math.cos(ang)*bl,m[1]+Math.sin(ang)*bl,.28,0).main);}}
+    pts=np;disp*=.52;}
+   return {main:pts,branches};};
+  const bolts=[],sparks=[],rings=[],motes=[];
+  const addBolt=(ax,ay,bx2,by2,life,{width=1,regen=2,rough=.2,branchy=.35}={})=>{const b={ax,ay,bx:bx2,by:by2,born:now(),life,width,regen,rough,branchy,shape:genBolt(ax,ay,bx2,by2,rough,branchy),next:0};bolts.push(b);return b;};
+  const burst=(x,y,n,sp=110)=>{if(reduce)return;for(let k=0;k<n;k++){const a=Math.random()*Math.PI*2,v=sp*(.35+Math.random());sparks.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-20,born:now(),life:320+Math.random()*380,r:.7+Math.random()*1.3});}};
+  const born=performance.now(),now=()=>performance.now()-born;
+  let flashA=0,flashAt=-1e9,pillars=[],circleBoost=0,dissolveAt=0,raf=0;
+  const DARK_IN=700,DARK_OUT=1300;   // 魔法陣ができたら採集エリアを真っ黒へ。1回目のまき散らしと一緒に元の絵へ戻す
+  let darkOutAt=0;
+  const strike=(power)=>{const t=now();pillars.push({born:t,power});flashAt=t;flashA=power;circleBoost=1;
+   rings.push({born:t,life:900,max:Math.max(rx,ry)*1.35,w:2.2*power},{born:t+90,life:1100,max:Math.max(rx,ry)*1.7,w:1.2*power});
+   const top=addBolt(cx+(Math.random()-.5)*30,-10,cx,cy,reduce?260:320,{width:1.9*power,regen:3,rough:.16,branchy:.55});
+   burst(cx,cy,reduce?0:Math.round(26*power),150);thunderSound('strike',2);   // 落雷の音だけ（鐘の和音なし）
+   if(!reduce)field.animate([{transform:'translate(0,0)'},{transform:'translate(2px,-1px)'},{transform:'translate(-2px,1px)'},{transform:'translate(0,0)'}],{duration:180,easing:'ease-out'});};
+  // 魔法陣が描かれる溜め：光の粒が中心へ吸い込まれる
+  for(let k=0;k<(reduce?0:34);k++){const a=Math.random()*Math.PI*2,d=R*(1.6+Math.random()*1.6);motes.push({kind:'in',x0:cx+Math.cos(a)*d,y0:cy+Math.sin(a)*d,born:Math.random()*160,life:360+Math.random()*120,r:.8+Math.random()*1.2});}
+  thunderSound('summon');   // 魔法陣が描かれる音
+  const CHARGE=420;
+  const draw=()=>{
+   if(!live()){if(epoch===thunderEpoch)thunderClear();return;}
+   const t=now();
+   const idle=!bolts.length&&!sparks.length&&!rings.length&&!motes.length&&t-flashAt>600&&pillars.every(p=>t-p.born>760)&&(darkOutAt?t-darkOutAt>DARK_OUT:false)&&!dissolveAt;
+   if(idle&&t-(draw.last||0)<32){raf=requestAnimationFrame(draw);stage._raf=raf;return;}draw.last=t;   // 魔法陣が回っているだけの待機中は描き直しを半分に
+   bx.setTransform(1,0,0,1,0,0);bx.clearRect(0,0,back.width,back.height);bx.setTransform(dpr,0,0,dpr,0,0);
+   fx.setTransform(1,0,0,1,0,0);fx.clearRect(0,0,front.width,front.height);fx.setTransform(dpr,0,0,dpr,0,0);
+   // 魔法陣ができたら、採集エリアの絵を真っ黒に沈める（言葉と光はその上に残る）
+   {let d=Math.max(0,Math.min(1,(t-CHARGE)/DARK_IN));d=d*d*(3-2*d);if(darkOutAt){const q=Math.max(0,Math.min(1,(t-darkOutAt)/DARK_OUT));d*=1-q*q*(3-2*q);}
+    if(d>0){bx.globalCompositeOperation='source-over';bx.globalAlpha=1;bx.fillStyle=`rgba(0,0,0,${d.toFixed(3)})`;bx.fillRect(0,0,fw,fh);}}
+   // 明るい背景でも金の光が埋もれないよう、魔法陣のまわりだけをほんのり沈める
+   {const fade0=dissolveAt?Math.max(0,1-(t-dissolveAt)/700):1,k=Math.min(1,t/CHARGE)*fade0;if(k>0){const g=bx.createRadialGradient(cx,cy,R*.2,cx,cy,R*2.1);g.addColorStop(0,`rgba(12,10,28,${.34*k})`);g.addColorStop(1,'rgba(12,10,28,0)');bx.fillStyle=g;bx.fillRect(cx-R*2.2,cy-R*2.2,R*4.4,R*4.4);}}
+   bx.globalCompositeOperation='lighter';
+   // 魔法陣：溜めのあいだに円を描くように現れ、ゆっくり回り続ける。終わりは光の粒にほどける
+   circleBoost=Math.max(0,circleBoost-.025);
+   const reveal=Math.min(1,t/CHARGE),fade=dissolveAt?Math.max(0,1-(t-dissolveAt)/700):1;
+   if(fade>0){const base=(.55+.12*Math.sin(t/260)+.45*circleBoost)*fade;
+    bx.globalAlpha=Math.min(1,base*.42);const gs=R*2.6*(1+circleBoost*.3);bx.drawImage(glow,cx-gs/2,cy-gs/2,gs,gs);
+    const drawSp=(img,rot)=>{const s=img.width/dpr;bx.save();bx.translate(cx,cy);
+     if(reveal<1){bx.beginPath();bx.moveTo(0,0);bx.arc(0,0,R+16,-Math.PI/2,-Math.PI/2+Math.PI*2*reveal);bx.closePath();bx.clip();}
+     bx.rotate(rot);bx.globalAlpha=Math.min(1,base+.15);bx.drawImage(img,-s/2,-s/2,s,s);bx.restore();};
+    drawSp(outer,t/1000*.35);drawSp(inner,-t/1000*.55);}
+   // 光の柱（天から魔法陣へ）
+   for(const p of pillars){const a=(t-p.born)/1000;if(a<0||a>.75)continue;const k=a<.06?a/.06:Math.pow(1-(a-.06)/.69,1.6),w=(10+26*p.power)*(a<.06?.6+a/.06*.4:1)*(1-a*.5);
+    const g=bx.createLinearGradient(cx-w,0,cx+w,0);g.addColorStop(0,'rgba(255,190,80,0)');g.addColorStop(.35,`rgba(255,214,120,${.35*k})`);g.addColorStop(.5,`rgba(255,250,228,${.9*k})`);g.addColorStop(.65,`rgba(255,214,120,${.35*k})`);g.addColorStop(1,'rgba(255,190,80,0)');
+    bx.globalAlpha=1;bx.fillStyle=g;bx.fillRect(cx-w,0,w*2,cy);
+    bx.globalAlpha=.9*k;const gs=R*4.4*p.power;bx.drawImage(glow,cx-gs/2,cy-gs/2,gs,gs);}
+   // 衝撃の輪
+   for(let k=rings.length-1;k>=0;k--){const r=rings[k],a=(t-r.born)/r.life;if(a<0)continue;if(a>=1){rings.splice(k,1);continue;}const e=1-Math.pow(1-a,3);
+    bx.globalAlpha=(1-a)*.75;bx.strokeStyle='#ffe7a0';bx.lineWidth=r.w*(1-a*.6);bx.beginPath();bx.ellipse(cx,cy,r.max*e,r.max*e*(ry/rx)*.92+r.max*e*.08,0,0,Math.PI*2);bx.stroke();}
+   // 稲妻（数回だけ形を変えてちらつかせる）
+   for(let k=bolts.length-1;k>=0;k--){const b=bolts[k],a=(t-b.born)/b.life;if(a>=1){bolts.splice(k,1);continue;}
+    if(b.regen>0&&a>(b.next+1)/(b.regen+1)){b.next++;b.shape=genBolt(b.ax,b.ay,b.bx,b.by,b.rough,b.branchy);}
+    const flick=a<.1?a/.1:(1-a)*(.75+.25*Math.random()),grow=Math.min(1,a/.16);
+    const pathOf=(pts,frac)=>{const n=Math.max(2,Math.round(pts.length*frac));bx.beginPath();bx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<n;i++)bx.lineTo(pts[i][0],pts[i][1]);};
+    for(const [lw,al,col] of [[9,.14,'#ffb444'],[4,.42,'#ffd77a'],[1.5,1,'#fffbe8']]){bx.globalAlpha=al*flick;bx.strokeStyle=col;bx.lineWidth=lw*b.width;bx.lineCap='round';bx.lineJoin='round';
+     pathOf(b.shape.main,grow);bx.stroke();
+     if(grow>=1)for(const br of b.shape.branches){bx.globalAlpha=al*flick*.6;bx.lineWidth=lw*b.width*.55;pathOf(br,1);bx.stroke();}}
+    if(grow>=1){bx.globalAlpha=.7*flick;const gs=34*b.width;bx.drawImage(glow,b.bx-gs/2,b.by-gs/2,gs,gs);}}
+   // 火花
+   for(let k=sparks.length-1;k>=0;k--){const s=sparks[k],a=(t-s.born)/s.life;if(a>=1){sparks.splice(k,1);continue;}const d=(t-s.born)/1000,x=s.x+s.vx*d,y=s.y+s.vy*d+60*d*d;
+    bx.globalAlpha=1-a;bx.strokeStyle='#fff3c4';bx.lineWidth=s.r;bx.beginPath();bx.moveTo(x,y);bx.lineTo(x-s.vx*.03,y-s.vy*.03);bx.stroke();}
+   // 光の粒（溜めで吸い込まれる／最後に立ちのぼる）
+   for(let k=motes.length-1;k>=0;k--){const m=motes[k],a=(t-m.born)/m.life;if(a<0)continue;if(a>=1){motes.splice(k,1);continue;}let x,y,al;
+    if(m.kind==='in'){const e=a*a;x=m.x0+(cx-m.x0)*e;y=m.y0+(cy-m.y0)*e;al=Math.sin(Math.PI*a);}else{x=m.x0+Math.sin(a*6+m.ph)*4;y=m.y0-m.v*a;al=(1-a)*Math.min(1,a*5);}
+    bx.globalAlpha=al;const gs=m.r*9;bx.drawImage(glow,x-gs/2,y-gs/2,gs,gs);}
+   bx.globalAlpha=1;bx.globalCompositeOperation='source-over';
+   // 手前：落雷の瞬間だけ、採集エリアが白金に閃く
+   const fa=(t-flashAt)/1000;if(fa>=0&&fa<.5){const k=fa<.04?fa/.04:fa<.12?1-(fa-.04)/.08*.7:.3*(1-(fa-.12)/.38),a=Math.max(0,k)*.55*flashA;
+    const g=fx.createRadialGradient(cx,cy,0,cx,cy,Math.hypot(fw,fh));g.addColorStop(0,`rgba(255,252,236,${a})`);g.addColorStop(.35,`rgba(255,234,170,${a*.6})`);g.addColorStop(1,`rgba(255,214,120,${a*.2})`);fx.fillStyle=g;fx.fillRect(0,0,fw,fh);}
+   raf=requestAnimationFrame(draw);stage._raf=raf;
+  };
+  raf=requestAnimationFrame(draw);stage._raf=raf;
+  // 言葉の顕現：魔法陣の縁から稲妻が伸び、その先に言葉が現れる。言葉は輪の上に中心をそろえ、重ならないように置く
+  const placed=[];
+  const place=(w,c)=>{const ww=w.offsetWidth||80,wh=w.offsetHeight||26;let x=Math.max(4,Math.min(fw-ww-4,c.x-ww/2)),y=Math.max(4,Math.min(fh-wh-4,c.y-wh/2));
+   const fr=field.getBoundingClientRect(),tn=performance.now(),blooming=new Set(placed.filter(p=>tn-p.at<700).map(p=>p.el)),others=[...field.querySelectorAll('.word:not(.got)')].filter(o=>o!==w&&!blooming.has(o)).map(o=>{const r=o.getBoundingClientRect();return {x:r.left-fr.left,y:r.top-fr.top,w:r.width,h:r.height};}).filter(o=>o.w>0);   // いま画面にある言葉の実際の位置（漂いのずれ込み）と比べる
+   // 輪の位置のまわりを、近い順に少しずつずらして空いている場所を探す（見つからなければ一番重なりの少ない場所）
+   const all=others.concat(placed.filter(p=>blooming.has(p.el))),   // 現れかけ（拡大中）の言葉だけは、置いた位置で比べる
+   cl=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+   const overlap=(x0,y0)=>all.reduce((s,p)=>s+Math.max(0,Math.min(x0+ww+6,p.x+p.w)-Math.max(x0,p.x-6))*Math.max(0,Math.min(y0+wh+10,p.y+p.h)-Math.max(y0,p.y-10)),0);   // 上下は漂う動きのずれも見込んで広めに
+   let best={x,y,o:overlap(x,y)};
+   if(best.o>0){const ux=Math.cos(c.a||0),uy=Math.sin(c.a||0);
+    outer:for(const r of [6,12,18,26,34,44,56,70,86]){for(const [ox,oy] of [[ux,uy],[-uy,ux],[uy,-ux],[-ux,-uy],[0,1],[0,-1],[1,0],[-1,0],[.7,.7],[-.7,.7],[.7,-.7],[-.7,-.7]]){
+     const nx=cl(x+ox*r,4,fw-ww-4),ny=cl(y+oy*r*.8,4,fh-wh-4),o=overlap(nx,ny);if(o<best.o){best={x:nx,y:ny,o};if(!o)break outer;}}}}
+   x=best.x;y=best.y;
+   placed.push({x,y,w:ww,h:wh,el:w,at:performance.now()});w.style.setProperty('--x',x.toFixed(1)+'px');w.style.setProperty('--y',y.toFixed(1)+'px');w.style.setProperty('--dx',((Math.random()-.5)*8).toFixed(0)+'px');return {x:x+ww/2,y:y+wh/2};};
+  // まき散らし：魔法陣の中心から言葉が勢いよく飛び出し、採集エリアのあちこちに散って止まる
+  function scatterSpots(n){const off=Math.random()*Math.PI*2;return Array.from({length:n},(_,i)=>{const a=off+i*Math.PI*2/n+(Math.random()-.5)*.5,k=.5+Math.random()*.5;
+   return {x:cx+Math.cos(a)*rx*k,y:cy+Math.sin(a)*ry*k,a};}).sort(()=>Math.random()-.5);}
+  function fling(c,i){
+   const w=spawnWord({force:true,plain:true,summonX:c.x/fw*100,summonY:c.y/fh*100});if(!w)return;
+   w.classList.add('ta-thunder-word');const p=place(w,c),dx=cx-p.x,dy=cy-p.y,side=(i%2?1:-1)*Math.min(40,Math.hypot(dx,dy)*.25);
+   const nx=-dy/(Math.hypot(dx,dy)||1),ny=dx/(Math.hypot(dx,dy)||1),dur=reduce?1:560+Math.random()*120;
+   w.animate([{opacity:0,transform:`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px) scale(.25)`,filter:'brightness(3) blur(3px)'},
+     {opacity:1,transform:`translate(${(dx*.45+nx*side).toFixed(1)}px,${(dy*.45+ny*side).toFixed(1)}px) scale(.8)`,filter:'brightness(2.2) blur(1px)',offset:.35},
+     {opacity:1,transform:'translate(0,0) scale(1.08)',filter:'brightness(1.4) blur(0px)',offset:.82},{opacity:1,transform:'translate(0,0) scale(1)',filter:'none'}],
+    {duration:dur,easing:'cubic-bezier(.18,.75,.25,1)'});
+   // 飛び出す光の尾と、着地の火花
+   const a=Math.atan2(-dy,-dx);addBolt(cx+Math.cos(a)*R,cy+Math.sin(a)*R,p.x,p.y,dur*.7,{width:.75,regen:1,rough:.16,branchy:.15});
+   later(()=>burst(p.x,p.y,9,80),dur*.8);   // まき散らしの音は落雷だけ（1語ごとの鈴は鳴らさない）
+  }
+  function scatter(n,gap){circleBoost=1;
+   placed.length=0;scatterSpots(n).forEach((c,i)=>later(()=>{circleBoost=Math.max(circleBoost,.5);fling(c,i);},i*gap));}
+  // 魔法陣から8語ずつ、10秒間隔で5回（合計40語）生成する。
+  // 最終波から3秒後に消滅演出を開始し、演出終了後に後片付けする。
+  const SCATTER1=CHARGE+DARK_IN+250,EVERY=10000,SCATTER2=SCATTER1+EVERY,SCATTER3=SCATTER2+EVERY,SCATTER4=SCATTER3+EVERY,SCATTER5=SCATTER4+EVERY,END=SCATTER5+3000;
+  later(()=>{darkOutAt=now();strike(1);scatter(8,85);},SCATTER1);
+  later(()=>{strike(1);scatter(8,85);},SCATTER2);
+  later(()=>{strike(1);scatter(8,85);},SCATTER3);
+  later(()=>{strike(1);scatter(8,85);},SCATTER4);
+  later(()=>{strike(1);scatter(8,85);},SCATTER5);
+  later(()=>{dissolveAt=now();thunderSound('dissolve');if(!reduce)for(let k=0;k<40;k++){const a=Math.random()*Math.PI*2,r=R*(.3+Math.random()*.75);motes.push({kind:'up',x0:cx+Math.cos(a)*r,y0:cy+Math.sin(a)*r,born:dissolveAt+Math.random()*300,life:700+Math.random()*500,v:40+Math.random()*60,ph:Math.random()*6.28,r:.7+Math.random()*1.1});}},END);
+  later(()=>{thunderClear();},END+1200);
+ }
+ document.addEventListener('visibilitychange',()=>{if(document.hidden&&thunderBusy)thunderClear();});
  // Capture the armed gesture before the normal word/tap collectors can consume it.
- field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<=0||gesture||consumedPointer!==null)return;playElementSound(selected);taMastery.add(selected==='summon'?'green':selected,null,2);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
+ field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<1||(selected==='thunder'&&thunderBusy)||gesture||consumedPointer!==null)return;if(selected==='thunder'){usesLeft-=1;selected=null;sync();thunderCast(loc(e));e.stopImmediatePropagation();e.preventDefault();return;}playElementSound(selected);taMastery.add(selected==='summon'?'green':selected,null,2);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
  // Once the elemental stroke reaches its range/time budget, the same held
  // pointer continues as an ordinary word-collection swipe. The special trace
  // remains clipped to its range, so its visuals and elemental hits stay aligned.
@@ -12202,7 +12486,7 @@ body>.ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!importa
 /* Stage 10: transparent glass shells with floating, yaw-rotating 3D emblems.
    Pre-render 72 frames per emblem once, then draw only cached frames during play. */
 const SIZE=96,FRAMES=72,PERIOD=9000,INTERVAL=45;
-const kinds={fire:{rgb:[255,89,65]},ice:{rgb:[65,176,255]},summon:{rgb:[72,239,137]}};
+const kinds={fire:{rgb:[255,89,65]},ice:{rgb:[65,176,255]},summon:{rgb:[72,239,137]},thunder:{rgb:[255,205,48]}};
 const atlas={};const states=[];
 const point=(x,y,z,theta)=>[x*Math.cos(theta)+z*Math.sin(theta),y,-x*Math.sin(theta)+z*Math.cos(theta)];
 function emblem(ctx,kind,theta){
@@ -12228,6 +12512,19 @@ function emblem(ctx,kind,theta){
    for(const r of [.43,.7]){line(to(r,0,0),to(r-.15,.25,.06),1,.9);line(to(r,0,0),to(r-.15,-.25,.06),1,.9)}
    line(to(.84,-.12),to(.96),.8,.95);line(to(.84,.12),to(.96),.8,.95);
   }
+ }else if(kind==='thunder'){
+  // User-provided angular lightning silhouette, filled rather than outlined.
+  // The emblem yaws in 3D inside the fixed glass sphere.
+  const shape=[ [.49,-1.0],[-.38,-.04],[.44,-.04],[-.62,1.0],[-.13,.01],[-.54,.01] ];
+  const yaw=Math.cos(theta),depth=Math.sin(theta);
+  ctx.save();ctx.translate(cx,cy);
+  ctx.transform(yaw,0,depth*.13,1,0,0);
+  ctx.beginPath();shape.forEach(([x,y],i)=>i?ctx.lineTo(x*scale,y*scale):ctx.moveTo(x*scale,y*scale));ctx.closePath();
+  ctx.shadowColor='#f5f900';ctx.shadowBlur=8;
+  ctx.fillStyle='#efff00';ctx.fill();
+  ctx.shadowBlur=0;ctx.strokeStyle='rgba(255,255,130,.48)';ctx.lineWidth=.65;ctx.stroke();
+  ctx.restore();
+  return;
  }else{
   // Vine stem and leaf outlines suspended at several depths.
   const stem=[];for(let j=0;j<=20;j++){const t=j/20;stem.push([.16*Math.sin(t*4.3),.87-1.75*t,.13*Math.sin(t*5)])}poly(stem,.95,1.4);
@@ -12257,16 +12554,16 @@ function makeFrame(kind,idx){
  heart.addColorStop(.17,`rgba(255,251,233,${(.67+.19*pulse).toFixed(3)})`);
  heart.addColorStop(.43,`rgba(${color},${(.28+.22*pulse).toFixed(3)})`);
  heart.addColorStop(1,'rgba(0,0,0,0)');
- ctx.fillStyle=heart;ctx.fillRect(cx-18,cy-18,36,36);
+ if(kind!=='thunder'){ctx.fillStyle=heart;ctx.fillRect(cx-18,cy-18,36,36);}
  // Glass silhouette remains static; the inner emblem alone rotates.
  g=ctx.createRadialGradient(33,24,4,cx,cy,47);g.addColorStop(0,'rgba(255,255,255,.13)');g.addColorStop(.60,'rgba(255,255,255,.025)');g.addColorStop(.85,`rgba(${color},.06)`);g.addColorStop(.94,`rgba(${color},.24)`);g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,46,0,Math.PI*2);ctx.fill();
  ctx.strokeStyle=`rgba(${color},.65)`;ctx.lineWidth=1.45;ctx.shadowColor=`rgb(${color})`;ctx.shadowBlur=5;ctx.beginPath();ctx.arc(cx,cy,43.2,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;
  g=ctx.createRadialGradient(31,24,0,31,24,20);g.addColorStop(0,'rgba(255,255,255,.72)');g.addColorStop(.38,'rgba(255,255,255,.18)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(30,25,18,9,-.55,0,Math.PI*2);ctx.fill();
  return c;
 }
-function setup(){document.querySelectorAll('#viewMain>.ta-items .ta-orb.fire,#viewMain>.ta-items .ta-orb.ice,#viewMain>.ta-items .ta-orb.summon').forEach(button=>{
+function setup(){document.querySelectorAll('#viewMain>.ta-items .ta-orb.fire,#viewMain>.ta-items .ta-orb.ice,#viewMain>.ta-items .ta-orb.summon,#viewMain>.ta-items .ta-orb.thunder').forEach(button=>{
  if(button.querySelector('canvas.ta-sphere-surface'))return;
- const kind=button.classList.contains('fire')?'fire':button.classList.contains('ice')?'ice':'summon';const canvas=document.createElement('canvas');canvas.className='ta-sphere-surface';canvas.width=canvas.height=SIZE;canvas.setAttribute('aria-hidden','true');button.insertBefore(canvas,button.firstChild);states.push({button,kind,ctx:canvas.getContext('2d'),last:-1});
+ const kind=button.classList.contains('fire')?'fire':button.classList.contains('ice')?'ice':button.classList.contains('thunder')?'thunder':'summon';const canvas=document.createElement('canvas');canvas.className='ta-sphere-surface';canvas.width=canvas.height=SIZE;canvas.setAttribute('aria-hidden','true');button.insertBefore(canvas,button.firstChild);states.push({button,kind,ctx:canvas.getContext('2d'),last:-1});
 });}
 let prepared=false;
 function prepare(){if(prepared)return;prepared=true;setup();let kindIndex=0,frameIndex=0;const names=Object.keys(kinds);
@@ -12389,6 +12686,55 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 }
 #viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled{box-shadow:none!important}
 #viewMain>.ta-items .ta-orb:is(.fire,.ice,.summon):disabled::before{opacity:0!important}
+</style>
+<style id="ta-thunder-sphere-v12">
+/* Yellow lightning sphere follows the same cached, rotating 3D emblem as the other orbs. */
+#viewMain>.ta-items .ta-orb.thunder{
+ --ta-aura-rgb:255,202,38!important;
+ font-size:0!important;overflow:hidden!important;isolation:isolate!important;
+ border-color:transparent!important;
+ background:radial-gradient(circle at 48% 46%,rgba(255,255,255,.17),rgba(255,202,38,.32) 31%,rgba(255,202,38,.16) 59%,transparent 79%)!important;
+ box-shadow:0 0 7px 2px rgba(255,202,38,.40),0 0 16px 5px rgba(255,202,38,.19),0 0 26px 8px rgba(255,202,38,.08)!important;
+}
+#viewMain>.ta-items .ta-orb.thunder::before{
+ inset:-15px!important;
+ background:radial-gradient(circle,rgba(255,202,38,.35),rgba(255,202,38,.25) 31%,rgba(255,202,38,.12) 52%,transparent 79%)!important;
+ opacity:.9!important;
+}
+#viewMain>.ta-items .ta-orb.thunder canvas.ta-sphere-surface{
+ position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+ border-radius:50%!important;pointer-events:none!important;z-index:0!important;
+ filter:saturate(1.18) brightness(1.12) drop-shadow(0 0 4px rgba(255,202,38,.5))!important;
+}
+#viewMain>.ta-items .ta-orb.thunder:disabled{box-shadow:none!important}
+#viewMain>.ta-items .ta-orb.thunder:disabled::before{opacity:0!important}
+</style>
+
+<style id="ta-thunder-v13-cost-and-mastery">
+#viewMain>.ta-items .ta-thunder-cost{
+ position:absolute;z-index:30;pointer-events:none;white-space:nowrap;
+ display:inline-flex;align-items:center;justify-content:center;gap:3px;
+ padding:0;border:0;border-radius:0;background:none;box-shadow:none;
+ color:#fff3d7;font:800 12px/1.25 system-ui,sans-serif;
+ text-shadow:0 1px 3px #000,0 0 5px #e9bf60;
+}
+#viewMain>.ta-items .ta-thunder-silver-icon{
+ display:inline-block;flex:none;width:14px;height:14px;border-radius:50%;
+ background:radial-gradient(circle at 31% 24%,#fff 0%,#f9faff 13%,#e1e7f0 34%,#9daab9 67%,#657487 87%,#364352 100%);
+ box-shadow:inset -2px -2px 3px #26364888,inset 1px 1px 2px #fff9,0 0 4px #dfeaffaa;
+}
+#viewMain>.ta-items .ta-thunder-cost-number{display:inline-block}
+#viewMain>.ta-items .ta-mastery-thunder .ta-mastery-track i{
+ background:linear-gradient(90deg,#a67809,#fff47b)!important;
+ box-shadow:0 0 6px #ffde47!important;
+ width:100%!important;
+}
+#viewMain>.ta-items .ta-mastery-thunder b{
+ border-color:#edc75a!important;color:#fff3b0!important;
+ text-shadow:0 0 6px #ffd65a88!important;
+ letter-spacing:.015em!important;
+}
+@media(max-width:480px){#viewMain>.ta-items .ta-thunder-cost{font-size:11px;gap:2px}#viewMain>.ta-items .ta-thunder-silver-icon{width:12px;height:12px}}
 </style>
 </html>
 
@@ -12678,4 +13024,34 @@ html.ta-result-locked #taTimeOverInputShield{pointer-events:none!important}
 <style>
 .ta-star-achievement-upgrade{font-size:12px!important;color:#a78335!important;opacity:1!important;font-weight:600;margin-top:7px!important}
 .ta-star-achievement:not(.is-earned) .ta-star-achievement-upgrade{color:#8d7553!important}
+</style>
+
+<style id="ta-thunder-v15-selected-and-cost-position">
+/* Silver-orb x3 sits above MAX on the upper-right of the thunder orb. */
+#viewMain>.ta-items .ta-thunder-cost{justify-content:flex-start!important;z-index:35!important}
+/* Give thunder the same selected ring and top pointer as the three existing gems. */
+#viewMain>.ta-items .ta-orb.thunder{--ta-ring:255,210,48;overflow:visible!important}
+#viewMain>.ta-items .ta-orb.thunder::after{
+ content:''!important;position:absolute!important;top:-25px!important;left:50%!important;
+ width:0!important;height:0!important;border-left:8px solid transparent!important;
+ border-right:8px solid transparent!important;border-top:12px solid #fff3d0!important;
+ border-bottom:0!important;border-radius:0!important;background:none!important;
+ box-shadow:none!important;opacity:0!important;transform:translateX(-50%)!important;
+ pointer-events:none!important;animation:none!important;
+ filter:drop-shadow(0 0 5px rgba(var(--ta-ring),.95))!important;
+}
+#viewMain>.ta-items .ta-orb.thunder[aria-pressed="true"]{
+ transform:scale(1.045)!important;animation:none!important;filter:none!important;outline:none!important;
+}
+#viewMain>.ta-items .ta-orb.thunder[aria-pressed="true"]::before{
+ content:''!important;position:absolute!important;inset:-6px!important;
+ border-radius:50%!important;border:3px solid rgba(var(--ta-ring),.95)!important;
+ background:none!important;opacity:1!important;pointer-events:none!important;
+ transform:scale(.96)!important;animation:taSelectedGemRing 1.45s ease-in-out infinite!important;
+}
+#viewMain>.ta-items .ta-orb.thunder[aria-pressed="true"]::after{opacity:1!important}
+#viewMain>.ta-items .ta-orb.thunder:disabled{opacity:.48!important;filter:grayscale(.65)!important;transform:none!important}
+#viewMain>.ta-items .ta-orb.thunder:disabled::before,
+#viewMain>.ta-items .ta-orb.thunder:disabled::after{opacity:0!important;animation:none!important}
+@media(prefers-reduced-motion:reduce){#viewMain>.ta-items .ta-orb.thunder[aria-pressed="true"]::before{animation:none!important}}
 </style>
