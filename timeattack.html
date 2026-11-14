@@ -2842,6 +2842,11 @@ html.ta-night-bonus #taTimeBox.ta-night-time-paused #taTime{opacity:.35}
 .ta-thunder-css-glyph canvas.inner{animation:taGlyphSpinInner 11.42s linear infinite}
 @keyframes taGlyphSpinOuter{from{transform:translate(-50%,-50%) rotate(0)}to{transform:translate(-50%,-50%) rotate(360deg)}}
 @keyframes taGlyphSpinInner{from{transform:translate(-50%,-50%) rotate(0)}to{transform:translate(-50%,-50%) rotate(-360deg)}}
+/* Circle entrance begins only after the arena has darkened. Exit is opacity-only. */
+.ta-thunder-css-glyph{opacity:0;transition:opacity 850ms cubic-bezier(.22,.65,.3,1)}
+.ta-thunder-css-glyph.ta-glyph-visible{opacity:1}
+.ta-thunder-css-glyph.ta-glyph-leaving{opacity:0;transition-duration:1100ms;transition-timing-function:ease-in-out}
+
 </style><meta name="ta-diagnostic-build" content="v48-word-effect-isolation-20261113">
 <meta name="ta-build" content="v52-segment-swipe-no-queue-20261113">
 </head>
@@ -12183,6 +12188,8 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   }
   glyph.style.left=cx+'px';glyph.style.top=cy+'px';
   stage.append(glyph);
+  // Darkness comes first; the circle is revealed only after it settles.
+  later(()=>glyph.classList.add('ta-glyph-visible'),350);
   // 稲妻：中点をずらす分割で、自然に枝分かれする形を作る
   const genBolt=(ax,ay,bx2,by2,rough=.2,branchy=.35)=>{const len=Math.hypot(bx2-ax,by2-ay);
    let pts=[[ax,ay],[bx2,by2]],disp=len*rough;const branches=[];
@@ -12196,7 +12203,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const burst=(x,y,n,sp=110)=>{if(reduce)return;for(let k=0;k<n;k++){const a=Math.random()*Math.PI*2,v=sp*(.35+Math.random());sparks.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-20,born:now(),life:320+Math.random()*380,r:.7+Math.random()*1.3});}};
   const born=performance.now(),now=()=>performance.now()-born;
   let flashA=0,flashAt=-1e9,pillars=[],circleBoost=0,dissolveAt=0,raf=0,frontLit=false,idleWake=0;
-  const DARK_IN=700,DARK_OUT=1300;   // 魔法陣ができたら採集エリアを真っ黒へ。1回目のまき散らしと一緒に元の絵へ戻す
+  const DARK_IN=300,DARK_OUT=300; // 先に暗転→魔法陣→一拍→明転→落雷
+  const CHARGE=1150,PAUSE=400;
+  const RESTORE_AT=CHARGE+PAUSE,SCATTER1=RESTORE_AT+DARK_OUT+80;
   let darkOutAt=0;
   const strike=(power)=>{
    if(idleWake){clearTimeout(idleWake);idleWake=0;raf=requestAnimationFrame(draw);stage._raf=raf;}
@@ -12211,11 +12220,12 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // 魔法陣が描かれる溜め：光の粒が中心へ吸い込まれる
   for(let k=0;k<(reduce?0:34);k++){const a=Math.random()*Math.PI*2,d=R*(1.6+Math.random()*1.6);motes.push({kind:'in',x0:cx+Math.cos(a)*d,y0:cy+Math.sin(a)*d,born:Math.random()*160,life:360+Math.random()*120,r:.8+Math.random()*1.2});}
   thunderSound('summon');   // 魔法陣が描かれる音
-  const CHARGE=420;
+  // 画面を元の明るさへ戻し終えてから、最初の落雷を発動する。
+  later(()=>{darkOutAt=now();},RESTORE_AT);
   const draw=()=>{
    if(!live()){if(epoch===thunderEpoch)thunderClear();return;}
    const t=now();
-   const idle=!bolts.length&&!sparks.length&&!rings.length&&!motes.length&&t-flashAt>600&&pillars.every(p=>t-p.born>760)&&(darkOutAt?t-darkOutAt>DARK_OUT:false)&&!dissolveAt;
+   const idle=t>SCATTER1&&!bolts.length&&!sparks.length&&!rings.length&&!motes.length&&t-flashAt>600&&pillars.every(p=>t-p.born>760)&&(darkOutAt?t-darkOutAt>DARK_OUT:false)&&!dissolveAt;
    // PCは演出中30fps、魔法陣だけの待機中15fps。画面が広くても描画し続けない。
    // RAF自体は維持し、既存の効果タイマーや採集処理には手を加えない。
    // v53: while dragging, prioritize hit handling over the decorative
@@ -12234,14 +12244,14 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    const flashElapsed=(t-flashAt)/1000,flashNow=flashElapsed>=0&&flashElapsed<.5;
    if(flashNow||frontLit){fx.setTransform(1,0,0,1,0,0);fx.clearRect(0,0,front.width,front.height);fx.setTransform(dpr,0,0,dpr,0,0);frontLit=flashNow;}
    // 魔法陣ができたら、採集エリアの絵を真っ黒に沈める（言葉と光はその上に残る）
-   {let d=Math.max(0,Math.min(1,(t-CHARGE)/DARK_IN));d=d*d*(3-2*d);if(darkOutAt){const q=Math.max(0,Math.min(1,(t-darkOutAt)/DARK_OUT));d*=1-q*q*(3-2*q);}
+   {let d=Math.max(0,Math.min(1,t/DARK_IN));d=d*d*(3-2*d);if(darkOutAt){const q=Math.max(0,Math.min(1,(t-darkOutAt)/DARK_OUT));d*=1-q*q*(3-2*q);}
     if(d>0){bx.globalCompositeOperation='source-over';bx.globalAlpha=1;bx.fillStyle=`rgba(0,0,0,${d.toFixed(3)})`;bx.fillRect(0,0,fw,fh);}}
    // 明るい背景でも金の光が埋もれないよう、魔法陣のまわりだけをほんのり沈める
-   {const fade0=dissolveAt?Math.max(0,1-(t-dissolveAt)/700):1,k=Math.min(1,t/CHARGE)*fade0;if(k>0){const g=bx.createRadialGradient(cx,cy,R*.2,cx,cy,R*2.1);g.addColorStop(0,`rgba(12,10,28,${.34*k})`);g.addColorStop(1,'rgba(12,10,28,0)');bx.fillStyle=g;bx.fillRect(cx-R*2.2,cy-R*2.2,R*4.4,R*4.4);}}
+   {const fade0=dissolveAt?Math.max(0,1-(t-dissolveAt)/1100):1,k=Math.max(0,Math.min(1,(t-350)/800))*fade0;if(k>0){const g=bx.createRadialGradient(cx,cy,R*.2,cx,cy,R*2.1);g.addColorStop(0,`rgba(12,10,28,${.34*k})`);g.addColorStop(1,'rgba(12,10,28,0)');bx.fillStyle=g;bx.fillRect(cx-R*2.2,cy-R*2.2,R*4.4,R*4.4);}}
    bx.globalCompositeOperation='lighter';
    // 魔法陣：溜めのあいだに円を描くように現れ、ゆっくり回り続ける。終わりは光の粒にほどける
    circleBoost=Math.max(0,circleBoost-.025);
-   const reveal=Math.min(1,t/CHARGE),fade=dissolveAt?Math.max(0,1-(t-dissolveAt)/700):1;
+   const reveal=Math.max(0,Math.min(1,(t-350)/800)),fade=dissolveAt?Math.max(0,1-(t-dissolveAt)/1100):1;
    if(fade>0){const base=(.55+.12*Math.sin(t/260)+.45*circleBoost)*fade;
     bx.globalAlpha=Math.min(1,base*.42);const gs=R*2.6*(1+circleBoost*.3);bx.drawImage(glow,cx-gs/2,cy-gs/2,gs,gs);
 
@@ -12318,14 +12328,14 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    placed.length=0;scatterSpots(n).forEach((c,i)=>later(()=>{circleBoost=Math.max(circleBoost,.5);fling(c,i);},i*gap));}
   // 魔法陣から8語ずつ、10秒間隔で5回（合計40語）生成する。
   // 最終波から3秒後に消滅演出を開始し、演出終了後に後片付けする。
-  const SCATTER1=CHARGE+DARK_IN+250,EVERY=10000,SCATTER2=SCATTER1+EVERY,SCATTER3=SCATTER2+EVERY,SCATTER4=SCATTER3+EVERY,SCATTER5=SCATTER4+EVERY,END=SCATTER5+3000;
-  later(()=>{darkOutAt=now();strike(1);scatter(8,85);},SCATTER1);
+  const EVERY=10000,SCATTER2=SCATTER1+EVERY,SCATTER3=SCATTER2+EVERY,SCATTER4=SCATTER3+EVERY,SCATTER5=SCATTER4+EVERY,END=SCATTER5+3000;
+  later(()=>{strike(1);scatter(8,85);},SCATTER1);
   later(()=>{strike(1);scatter(8,85);},SCATTER2);
   later(()=>{strike(1);scatter(8,85);},SCATTER3);
   later(()=>{strike(1);scatter(8,85);},SCATTER4);
   later(()=>{strike(1);scatter(8,85);},SCATTER5);
-  later(()=>{dissolveAt=now();thunderSound('dissolve');if(!reduce)for(let k=0;k<40;k++){const a=Math.random()*Math.PI*2,r=R*(.3+Math.random()*.75);motes.push({kind:'up',x0:cx+Math.cos(a)*r,y0:cy+Math.sin(a)*r,born:dissolveAt+Math.random()*300,life:700+Math.random()*500,v:40+Math.random()*60,ph:Math.random()*6.28,r:.7+Math.random()*1.1});}},END);
-  later(()=>{thunderClear();},END+1200);
+  later(()=>{dissolveAt=now();glyph.classList.add('ta-glyph-leaving');thunderSound('dissolve');if(!reduce)for(let k=0;k<40;k++){const a=Math.random()*Math.PI*2,r=R*(.3+Math.random()*.75);motes.push({kind:'up',x0:cx+Math.cos(a)*r,y0:cy+Math.sin(a)*r,born:dissolveAt+Math.random()*300,life:700+Math.random()*500,v:40+Math.random()*60,ph:Math.random()*6.28,r:.7+Math.random()*1.1});}},END);
+  later(()=>{thunderClear();},END+1500);
  }
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&thunderBusy)thunderClear();});
  // Capture the armed gesture before the normal word/tap collectors can consume it.
