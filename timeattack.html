@@ -5489,7 +5489,7 @@ function bumpCombo(){
   const now = Date.now();
   if(comboPaused && !taNightActive() && !flood && !open && !charging && !window.taSoumatou?.active()) resumeCombo();   // 念のため：読んでいないのに止まっていたら、触れた時点で戻す
   combo = (flood || comboPaused || now - comboAt <= comboWindowMs) ? combo + 1 : 1; comboAt = now;
-  comboWindowMs=COMBO_MS; // Ordinary collection does not inherit skill grace.
+  comboWindowMs=taWordMastery.comboGraceMs(); // Ordinary collection uses the current word-level grace.
   $("combo").classList.remove("ta-skill-grace");
   if(combo===1 && taMeteorHadCentury)taMeteorReset();
   if(combo>taSessionMaxCombo) taSessionMaxCombo=combo;
@@ -5505,7 +5505,7 @@ function bumpCombo(){
     number.classList.remove('ta-chain-ten','ta-chain-hundred');
     number.classList.add(combo%100===0?'ta-chain-hundred':'ta-chain-ten');
   }
-  el.style.setProperty("--ct", COMBO_MS + "ms");
+  el.style.setProperty("--ct", comboWindowMs + "ms");
   el.classList.toggle("on", combo >= 2); el.classList.toggle("x2", m === 2); el.classList.toggle("x3", m === 3); el.classList.toggle("hold", flood);
   comboRush(m === 3);
   // Chain rewards, audio and counters continue normally; scene transitions wait.
@@ -5546,14 +5546,14 @@ function bumpCombo(){
   }
   // Any combo created during stopped time must have a frozen, full gauge.
   if(flood){
-    taFloodComboRemaining=COMBO_MS;
+    taFloodComboRemaining=comboWindowMs;
     clearTimeout(bumpCombo.h);
     el.classList.add('paused');
   }
   if(!comboPaused && !flood){
     // A successful normal tap must always clear the time-stop pause styling.
     el.classList.remove("paused", "hold");
-    clearTimeout(bumpCombo.h); bumpCombo.h = setTimeout(expireCombo, COMBO_MS);
+    clearTimeout(bumpCombo.h); bumpCombo.h = setTimeout(expireCombo, comboWindowMs);
   }
   // 90を超えたら、100に近づくほど光を強く速く
   const r = combo % 100;
@@ -5576,7 +5576,7 @@ function resumeCombo(){
     comboPaused = false; el.classList.remove("paused");
     if(combo >= 2){ comboAt = Date.now();
       el.classList.remove("run"); void el.offsetWidth; el.classList.add("run");
-      clearTimeout(bumpCombo.h); bumpCombo.h = setTimeout(expireCombo, COMBO_MS);
+      clearTimeout(bumpCombo.h); bumpCombo.h = setTimeout(expireCombo, comboWindowMs);
     }
   }
 }   // 逆さまの言葉は稀に（出たあとは2分あける）
@@ -6587,7 +6587,7 @@ function spawnWord(opt = {}){
     const toPen = false;
     const taTime = w.dataset.taTime === "1";
     const fireScore = w.dataset.taFireScore === "1" && !taTime;
-    const taPoints = fireScore ? 2 : Math.max(1,cm) * (glowRemain>0?2:1);
+    const taPoints = fireScore ? taMastery.value('fire').rewardMultiplier : Math.max(1,cm) * (glowRemain>0?2:1);
     const moonBoostAtCollect=mode==='black'&&glowRemain>0;
     const arrive = () => {
       // All points and seconds are credited. Dense, overlapping arrivals
@@ -9551,7 +9551,8 @@ const taWordMastery=(()=>{
  const level=()=>1+limits.slice(1).filter(n=>count>=n).length;
  const rate=()=>[1,1.10,1.20,1.30,1.40,1.45,1.50,1.55,1.60,1.65][level()-1];
  const scoreRate=()=>[1,1,1,1,1,1.02,1.02,1.04,1.04,1.05][level()-1];
- const timeRate=()=>[1,1,1,1,1,1,1.02,1.02,1.04,1.05][level()-1];
+ const timeRate=()=>[1,1.01,1.02,1.03,1.04,1.05,1.06,1.07,1.08,1.10][level()-1];
+ const comboGraceMs=()=>2200+(level()-1)*50;
  const silverStart=()=>1+(level()>=3?1:0)+(level()>=5?1:0)+(level()>=8?1:0)+(level()>=10?1:0);
  const silverInterval=()=>[100,100,95,90,85,85,80,80,75,75][level()-1];
  let fxQueue=[],fxBusy=false;
@@ -9559,10 +9560,10 @@ const taWordMastery=(()=>{
   const fill=document.getElementById('taWordMasteryFill'),badge=document.getElementById('taWordMasteryBadge');
   if(!fill||!badge)return;
   const lv=level(),base=limits[lv-1],next=limits[lv]??limits[9];
-  fill.style.width=(lv===10?100:Math.max(0,Math.min(100,count/next*100)))+'%';
+  fill.style.width=(lv===10?100:Math.max(0,Math.min(100,(count-base)/(next-base)*100)))+'%';
   badge.textContent='Lv'+lv;
   const record=document.getElementById('taWordMasteryRecord');
-  if(record){const remaining=lv===10?'MAX':(next-count).toLocaleString('ja-JP')+'個';record.innerHTML=`<div class="ta-growth-head"><strong>言霊</strong><b>Lv${lv} / 10</b></div><div class="ta-growth-track"><i style="width:${lv===10?100:Math.max(0,Math.min(100,count/next*100))}%"></i></div><div class="ta-growth-meta"><span>${lv===10?'累計 '+count.toLocaleString('ja-JP')+'個':count.toLocaleString('ja-JP')+' / '+next.toLocaleString('ja-JP')+'個'}</span><span>${lv===10?'MAX':'次まで '+remaining}</span></div><div class="ta-growth-effect">言霊発生数増加・得点増加・時間増加・白銀玉強化</div>`;}
+  if(record){const remaining=lv===10?'MAX':(next-count).toLocaleString('ja-JP')+'個';record.innerHTML=`<div class="ta-growth-head"><strong>言霊</strong><b>Lv${lv} / 10</b></div><div class="ta-growth-track"><i style="width:${lv===10?100:Math.max(0,Math.min(100,(count-base)/(next-base)*100))}%"></i></div><div class="ta-growth-meta"><span>${lv===10?'累計 '+count.toLocaleString('ja-JP')+'個':count.toLocaleString('ja-JP')+' / '+next.toLocaleString('ja-JP')+'個'}</span><span>${lv===10?'MAX':'次まで '+remaining}</span></div><div class="ta-growth-effect">言霊発生数増加・得点増加・時間増加・連鎖猶予増加・白銀玉強化</div>`;}
  };
  const nextFx=()=>{
   if(fxBusy||!fxQueue.length)return;
@@ -9578,7 +9579,8 @@ const taWordMastery=(()=>{
   const upgrades=[];
   upgrades.push('言霊発生率UP');
   if([6,8,10].includes(lv))upgrades.push('得点UP');
-  if([7,9,10].includes(lv))upgrades.push('時間UP');
+  if(lv>=2)upgrades.push('時間UP');
+  if(lv>=2)upgrades.push('連鎖猶予UP');
   if([3,5,8,10].includes(lv))upgrades.push('初期白銀玉UP');
   if([3,4,5,7,9].includes(lv))upgrades.push('白銀玉出現率UP');
   const bonus=document.createElement('span');bonus.className='ta-level-upgrades';bonus.textContent=upgrades.join('・');title.append(bonus);
@@ -9638,7 +9640,7 @@ const taWordMastery=(()=>{
  const testLevelUp=()=>{testLv=testLv>=10?2:testLv+1;fxQueue.push({lv:testLv,preview:true});nextFx();};
  const reset=()=>{count=0;fxQueue=[];try{localStorage.removeItem(KEY);}catch(_e){}render();};
  window.addEventListener('resize',render);requestAnimationFrame(render);
- return{level,rate,scoreRate,timeRate,silverStart,silverInterval,add,render,reset,testLevelUp,get count(){return count;}};
+ return{level,rate,scoreRate,timeRate,comboGraceMs,silverStart,silverInterval,add,render,reset,testLevelUp,get count(){return count;}};
 })();
 /* Independent orb mastery: XP is never derived from stars or mere activations. */
 const taMastery=(()=>{
@@ -9646,10 +9648,10 @@ const taMastery=(()=>{
  let xp={fire:0,ice:0,green:0};
  try{const old=JSON.parse(localStorage.getItem(KEY)||'{}');for(const k of Object.keys(xp))if(Number.isFinite(old[k]))xp[k]=Math.max(0,Math.floor(old[k]));}catch(_e){}
  const level=k=>1+limits.slice(1).filter(v=>xp[k]>=v).length;
- const value=k=>{const lv=level(k);if(k==='fire'||k==='ice')return {seconds:lv+.1,distance:Math.min(100,60+10*lv)};return {extra:lv===1?-3:lv===2?-2:lv===3?-1:lv===4?0:2};};
+ const value=k=>{const lv=level(k);if(k==='fire'||k==='ice')return {seconds:lv+.1,distance:Math.min(100,60+10*lv),rewardMultiplier:k==='fire'?2+(lv-1)*.5:1+(lv-1)*.05};return {extra:lv===1?-3:lv===2?-2:lv===3?-1:lv===4?0:2};};
  const render=()=>{
   const bar=document.querySelector('#viewMain>.ta-items');if(!bar)return;
-  const record=document.getElementById('taOrbMasteryRecord');if(record)record.innerHTML=Object.keys(xp).map(k=>{const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[4],pct=lv===5?100:Math.max(0,Math.min(100,xp[k]/next*100));const effect=k==='green'?'言霊の発生数を強化':'効果時間・スワイプ距離を強化';return `<div class="ta-growth-orb ta-growth-${k}"><div class="ta-growth-head"><strong>${names[k]}</strong><b>Lv${lv} / 5</b></div><div class="ta-growth-track"><i style="width:${pct}%"></i></div><div class="ta-growth-meta"><span>${lv===5?'累計 '+xp[k]+' XP':xp[k]+' / '+next+' XP'}</span><span>${lv===5?'MAX':'次まで '+(next-xp[k])+' XP'}</span></div><div class="ta-growth-effect">${effect}</div></div>`;}).join('');
+  const record=document.getElementById('taOrbMasteryRecord');if(record)record.innerHTML=Object.keys(xp).map(k=>{const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[4],pct=lv===5?100:Math.max(0,Math.min(100,xp[k]/next*100));const effect=k==='green'?'言霊の発生数を強化':k==='fire'?'効果時間・スワイプ距離・得点倍率を強化':'効果時間・スワイプ距離・時間倍率を強化';return `<div class="ta-growth-orb ta-growth-${k}"><div class="ta-growth-head"><strong>${names[k]}</strong><b>Lv${lv} / 5</b></div><div class="ta-growth-track"><i style="width:${pct}%"></i></div><div class="ta-growth-meta"><span>${lv===5?'累計 '+xp[k]+' XP':xp[k]+' / '+next+' XP'}</span><span>${lv===5?'MAX':'次まで '+(next-xp[k])+' XP'}</span></div><div class="ta-growth-effect">${effect}</div></div>`;}).join('');
   // Yellow orb consumes three stocked silver charges after achievement unlock.
   const thunderCostButton=bar.querySelector('.ta-orb.thunder');
   if(thunderCostButton){
@@ -11538,13 +11540,14 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  let taIceArrivalLastFlash=0;
  function taIceAwardArrival(tx,ty,visual){
   if(!taRunning)return;
-  taSeconds+=1;taSessionTimeGain+=1;taRender();
+  const gain=Math.round(taMastery.value('ice').rewardMultiplier*taWordMastery.timeRate()*100)/100;
+  taSeconds+=gain;taSessionTimeGain+=gain;taRender();
   const now=performance.now();
   if(visual && (!taMobileFx||now-taIceArrivalLastFlash>180)){
    taIceArrivalLastFlash=now;
    const target=document.getElementById('taTimeBox');
    if(target){target.classList.remove('ta-frame-flash');if(!taMobileFx)void target.offsetWidth;target.classList.add('ta-frame-flash');}
-   const label=document.createElement('span');label.textContent='+1秒';label.className='ta-element-word-fx';
+   const label=document.createElement('span');label.textContent='+'+Number(gain.toFixed(2))+'秒';label.className='ta-element-word-fx';
    label.style.cssText='left:'+tx+'px;top:'+(ty-24)+'px;color:#c4f1ff;text-shadow:0 0 12px #67c8ff';document.body.append(label);
    label.animate([{opacity:1,transform:'translate(-50%,-50%)'},{opacity:0,transform:'translate(-50%,-95%)'}],{duration:850}).onfinish=()=>label.remove();
   }
@@ -11585,7 +11588,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // Do not trigger the normal word click as that would duplicate the special effect.
   if(w.isConnected){w.classList.add('got');w.remove();}
   if(typeof bumpCombo==='function')bumpCombo();
-  if(type==='fire'&&typeof taAward==='function')taAward(false,2);
+  if(type==='fire'&&typeof taAward==='function')taAward(false,taMastery.value('fire').rewardMultiplier);
   if(type==='fire')return;
  }
  if(type==='ice'){
