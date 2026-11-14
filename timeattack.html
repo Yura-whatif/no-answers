@@ -2849,6 +2849,29 @@ html.ta-night-bonus #taTimeBox.ta-night-time-paused #taTime{opacity:.35}
 
 </style><meta name="ta-diagnostic-build" content="v48-word-effect-isolation-20261113">
 <meta name="ta-build" content="v52-segment-swipe-no-queue-20261113">
+<style id="ta-gentle-bonus-hud-pulse">
+/* 降る記憶＝得点枠、昇る想い＝残り時間枠。枠の内側だけをゆっくり呼吸するように照らす。 */
+#taHud #taScoreBox, #taHud #taTimeBox { position: relative; isolation: isolate; }
+#taHud #taScoreBox::after, #taHud #taTimeBox::after {
+  content: ""; position: absolute; inset: 3px; border-radius: inherit;
+  pointer-events: none; opacity: 0; z-index: 0;
+}
+#taHud #taScoreBox > *, #taHud #taTimeBox > * { position: relative; z-index: 1; }
+html.glow-moon #taHud #taScoreBox::after {
+  background: radial-gradient(ellipse at center, rgba(255,215,151,.19), rgba(244,185,105,.055) 65%, transparent 100%);
+  box-shadow: inset 0 0 17px rgba(255,215,156,.12);
+  animation: taGentleBonusPulse 3.6s ease-in-out infinite;
+}
+html.glow-sun #taHud #taTimeBox::after {
+  background: radial-gradient(ellipse at center, rgba(161,218,255,.19), rgba(125,195,255,.055) 65%, transparent 100%);
+  box-shadow: inset 0 0 17px rgba(153,211,255,.12);
+  animation: taGentleBonusPulse 3.6s ease-in-out infinite;
+}
+@keyframes taGentleBonusPulse { 0%,100% { opacity: .12; } 50% { opacity: .9; } }
+@media (prefers-reduced-motion: reduce) {
+  html.glow-moon #taHud #taScoreBox::after, html.glow-sun #taHud #taTimeBox::after { animation: none; opacity: .38; }
+}
+</style>
 </head>
 <body>
 <style>
@@ -3068,7 +3091,7 @@ html.ta-night-bonus #taTimeBox.ta-night-time-paused #taTime{opacity:.35}
             </section>
             <section class="ta-guide-section" id="taGuideDaybreak"><h4><span>04</span> 光の言葉と夜明け</h4>
               <div class="ta-guide-skill"><div><b>降る記憶</b><p>淡い光の粒が静かに降りそそぎ、景色をやさしく包みます。触れると10秒間、言葉から得られる得点が2倍になります。</p></div></div>
-              <div class="ta-guide-skill"><div><b>昇る想い</b><p>やわらかな光が差し込み、光の粒が空へ昇っていきます。触れると10秒間、言葉から得られる得点が2倍になります。</p></div></div>
+              <div class="ta-guide-skill"><div><b>昇る想い</b><p>やわらかな光が差し込み、光の粒が空へ昇っていきます。10秒間、時間回復が2倍になり、青い言葉も少し現れやすくなります。</p></div></div>
               <p>言葉を100連鎖までつなぐと、景色は少しずつ夜明けへ。光の言葉とは別に、連鎖が描く風景の変化も楽しめます。</p>
             </section>
             <section class="ta-guide-section" id="taGuideTips"><h4><span>05</span> 連鎖をつなぐ技術</h4>
@@ -4627,12 +4650,12 @@ function updateIkan(bump){
     }
   } else iv.textContent = to;
   slip.classList.toggle("full", finalReady());
-  const boost = yieldNow() > 1;
+  const boost = taMemoryBoost();
   const ik = $("ikan"), wasBoost = ik.classList.contains("boost");
   ik.classList.toggle("boost", boost);
   // 降る記憶・昇る想いが始まった瞬間：「×2」が大きく光ってから収まり、枠もひととき光る（ボーナスタイムの合図）
   if(boost && !wasBoost){ ik.classList.remove("tm-in"); void ik.offsetWidth; ik.classList.add("tm-in"); clearTimeout(updateIkan.tmT); updateIkan.tmT = setTimeout(()=>ik.classList.remove("tm-in"), 1400); }
-  $("ikan").title = boost ? "降る記憶・昇る想いの効果中は、違和感が2倍集まります" : "";
+  $("ikan").title = boost ? "降る記憶の効果中は、得点が2倍になります" : "";
   $("tm").textContent = boost ? "×2" : "";
 }
 function updateCover(){
@@ -4840,6 +4863,9 @@ let nextResoAt = Date.now() + 30000, forceReso = false;     // 「共鳴」（�
 let nextGlowAt = Date.now() + 70000, forceGlow = false;
 const GLOW_POST_COOLDOWN = 3000;
 let glowLastKind = 'feeling';
+let taActiveGlowKind = null;
+function taMemoryBoost(){return glowRemain>0 && taActiveGlowKind==='memory';}
+function taFeelingBoost(){return glowRemain>0 && taActiveGlowKind==='feeling';}
 let glowSpawnBlockUntil=0;
 function nextGlowKind(){
   // Alternate when possible, without tying either effect to a stage.
@@ -5660,7 +5686,7 @@ function stopTap(w){
     return part;
   });
   setTimeout(()=>w.remove(),520);
-  stopPend.push({x:cx, y:cy, g, word, taTime:w.dataset.taTime === "1", taPoints:w.dataset.taFireScore === "1" && w.dataset.taTime !== "1" ? 2 : Math.max(1,comboMult(combo)) * (glowRemain>0?2:1), fireBoost:w.dataset.taFireScore === "1" && w.dataset.taTime !== "1"});
+  stopPend.push({x:cx, y:cy, g, word, taTime:w.dataset.taTime === "1", taPoints:w.dataset.taFireScore === "1" && w.dataset.taTime !== "1" ? 2 : Math.max(1,comboMult(combo)) * (taMemoryBoost()?2:1), fireBoost:w.dataset.taFireScore === "1" && w.dataset.taTime !== "1"});
   // 空いた場所には、少しして別の違和感が浮かぶ
   const cell = +w.dataset.cell; setTimeout(()=>{ if(flood) placeStill(cell); }, 600);
 }
@@ -5976,7 +6002,7 @@ function endFlood(){
     const award = () => {
       if(awardSession !== taFinishToken || !taRunning)return;
       if(i % 4 === 0)sfx.arrive();
-      taAward(taTime, taTime ? 1 : taPoints, false, boostedAtRelease && mode === 'black', false, null, true);
+      taAward(taTime, taTime ? 1 : taPoints, false, boostedAtRelease && taFeelingBoost(), false, null, true);
     };
     setTimeout(award, arrivalDelay);
     if(!shouldDraw)return;
@@ -6473,7 +6499,7 @@ function spawnWord(opt = {}){
   if(shattering || (!opt.force && field.querySelectorAll(".word:not(.got)").length >= max) || document.hidden || libOpen) return;
   const w = document.createElement("button");
   w.type = "button"; w.className = "word" + (flood ? " fast" : ""); w.textContent = taMixedWord();
-  if(opt.forceBlue || Math.random()<(flood ? .25 : .10)*(typeof taStarRunValue==='function'?taStarRunValue('blueRate')/100:1)){w.dataset.taTime="1";w.classList.add("ta-blue");}
+  if(opt.forceBlue || Math.random()<(flood ? .25 : (taFeelingBoost() ? .13 : .10))*(typeof taStarRunValue==='function'?taStarRunValue('blueRate')/100:1)){w.dataset.taTime="1";w.classList.add("ta-blue");}
   const special = false; // Pocket watch retired: time stop is now the fire/ice clock technique.
   if(special){ w.dataset.word = w.textContent; w.innerHTML = '<span class="sw"><i class="ch"></i><span class="pd"><i class="k"></i>' + [-2.4,-2,-1.6,-1.2,-.8,-.4,0,.4,.8,1.2,1.6,2,2.4].map(z=>'<i class="r" style="--z:'+z+'px"></i>').join("") + '<i class="f"></i></span></span>'; w.classList.add("special"); forceSpecial = false; nextSpecialAt = Date.now() + 180000; w.setAttribute("aria-label", "古びたペンダント（触れると言葉があふれる）"); w.title = "触れると言葉があふれる";
     setTimeout(()=>{sfx.prepStop();sfx.prepClockTick();}, 400); }   // 時が止まる音は、時計が現れたときに先に作っておく
@@ -6498,7 +6524,7 @@ function spawnWord(opt = {}){
     w.textContent=nm;w.dataset.word=nm;w.dataset.glowKind=kind;w.classList.add("glow");
     w.style.setProperty("--glowc",glowStagePalette()[kind==="memory"?0:1]);
     forceGlow=false;nextGlowAt=Date.now()+120000;
-    w.setAttribute("aria-label",nm+"（触れると10秒間、違和感が2倍）");
+    w.setAttribute("aria-label",nm+(kind==="memory"?"（10秒間、得点2倍）":"（10秒間、時間回復2倍・青い言葉が増加）"));
   }
   // ひとひらの花びら：触れると桜吹雪（白）／夜桜（黒）。降る記憶・昇る想いとは同時に出さない
   const petalW = !opt.plain && !special && !odd && !multi && !pull && !glowW && !flood && !glowRemain && !sakuraOn && !field.querySelector(".word.glow:not(.got),.word.petal:not(.got)") && (forceSakura || (Date.now() > nextSakuraAt && Math.random() < SAKURA_P));
@@ -6587,8 +6613,8 @@ function spawnWord(opt = {}){
     const toPen = false;
     const taTime = w.dataset.taTime === "1";
     const fireScore = w.dataset.taFireScore === "1" && !taTime;
-    const taPoints = fireScore ? taMastery.value('fire').rewardMultiplier : Math.max(1,cm) * (glowRemain>0?2:1);
-    const moonBoostAtCollect=mode==='black'&&glowRemain>0;
+    const taPoints = fireScore ? taMastery.value('fire').rewardMultiplier : Math.max(1,cm) * (taMemoryBoost()?2:1);
+    const moonBoostAtCollect=taFeelingBoost();
     const arrive = () => {
       // All points and seconds are credited. Dense, overlapping arrivals
       // share one audible cue and omit unreadable score popups/reflows.
@@ -6794,7 +6820,7 @@ function pullAll(x, y, self, eclipse=false, eclipseElement=null){
       K.push({transform:`translate(${(x + rr*Math.cos(a) - sx).toFixed(1)}px,${(y + rr*Math.sin(a) - sy).toFixed(1)}px) rotate(${(-t*240).toFixed(0)}deg) scale(${(1 - t*.92).toFixed(2)},${(1 - t*.97).toFixed(2)})`, opacity: t < .7 ? Math.max(o0, .6) : (1 - t) / .3}); }
     f.animate(K, {duration:(420 + r0 * .9) / (eclipse ? 1.3 : 1), easing:"cubic-bezier(.5,0,.8,.6)", fill:"forwards"}).onfinish = () => {
       f.remove(); if(eclipse && eclipseElement)taMastery.add(eclipseElement,f); const m = bumpCombo(); const isTime = eclipseIce || (!eclipseFire && w.dataset.taTime === "1");
-      const pts = Math.max(1,m) * (glowRemain>0?2:1);
+      const pts = Math.max(1,m) * (taMemoryBoost()?2:1);
       // The last elemental tap determines the Eclipse's reward. Each word is collected only once.
       const timeGain=eclipseIce ? 1 : null;
       collected.push({isTime,pts,timeGain}); sum += isTime ? (timeGain ?? 1) : pts; n++; addToDict(word);
@@ -6870,7 +6896,7 @@ function orbsFromCollected(items, cx, cy, eclipse=false){
   sfx.fly(.9);
   batches.forEach(({isTime,value},i)=>{
     const o=document.createElement('span');o.className='orb ta-aggregated-reward'+(eclipse?' ta-eclipse-aggregated-reward':'');
-    const moonBoost=glowRemain>0;
+    const moonBoost=taMemoryBoost() || taFeelingBoost();
     taStyleRewardOrb(o,isTime,moonBoost);
     document.body.append(o);
     const ang=(i/batches.length)*Math.PI*2-Math.PI/2;
@@ -6929,7 +6955,7 @@ function resonate(x, y, self){
       o.style.left = nx + "px"; o.style.top = ny + "px"; document.body.append(o);
       const dx = t.left + t.width/2 - nx, dy = t.top + t.height/2 - ny;
       o.animate([{transform:"translate(0,0) scale(0)", opacity:0},{transform:"translate(0,-4px) scale(1.4)", opacity:1, offset:.2},{transform:`translate(${dx*.3}px,${dy*.3 - 30}px) scale(1.1)`, opacity:.95, offset:.5},{transform:`translate(${dx}px,${dy}px) scale(.45)`, opacity:.5}],
-        {duration:850, easing:"cubic-bezier(.45,0,.6,1)", fill:"forwards"}).onfinish = () => { o.remove(); taAward(isTime,isTime ? 1 : Math.max(1,m) * (glowRemain>0?2:1),false,o.classList.contains('ta-reward-boost')&&mode==='black',false,null,true); addToDict(word); };
+        {duration:850, easing:"cubic-bezier(.45,0,.6,1)", fill:"forwards"}).onfinish = () => { o.remove(); taAward(isTime,isTime ? 1 : Math.max(1,m) * (taMemoryBoost()?2:1),false,taFeelingBoost(),false,null,true); addToDict(word); };
     }, 90);
     px = nx; py = ny; step++;
     setTimeout(hop, 130);
@@ -6969,7 +6995,7 @@ function startGlow(silent, collectedName){
   // An already spawned moonlight word stays moonlight after reaching 100 chains.
   const moon = collectedName ? collectedName.trim() === "降る記憶" : nextGlowKind() === "memory";
   track("glow/" + mode, moon ? "降る記憶" : "昇る想い");
-  glowRemain = GLOW_MS; glowUntil = 1;
+  glowRemain = GLOW_MS; glowUntil = 1; taActiveGlowKind = moon ? 'memory' : 'feeling';
   document.querySelectorAll('#drift .word.glow:not(.got)').forEach(w=>{w.classList.add('got');w.remove();});
   // 絵の空気を変える：陽だまりは斜めに差し込む光の筋、月明かりは青く沈んだ空気に舞い降りる光の粒
   hero.querySelectorAll(".glow-fx").forEach(layer=>layer.remove());
@@ -7034,7 +7060,7 @@ function startGlow(silent, collectedName){
   startGlow.raf = requestAnimationFrame(tick);
 }
 function endGlow(){
-  cancelAnimationFrame(startGlow.raf); glowRemain = 0; glowUntil = 0;
+  cancelAnimationFrame(startGlow.raf); glowRemain = 0; glowUntil = 0; taActiveGlowKind = null;
   const hero = document.querySelector(".hero"), fx = hero && hero.querySelector(".glow-fx");
   hero?.querySelectorAll(".glow-fx").forEach(layer=>{
     layer.animate([{opacity:getComputedStyle(layer).opacity},{opacity:0}],{duration:400,fill:"forwards"}).onfinish=()=>layer.remove();
@@ -10166,7 +10192,7 @@ function taStyleRewardOrb(orb,isTime,boosted=false){
   if(boosted)orb.classList.add('ta-reward-boost');
   return orb;
 }
-function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null,wordGrowth=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';let taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect)?2:1)):0;if(wordGrowth){if(isTime)taTimeGain=Math.round(taTimeGain*taWordMastery.timeRate()*100)/100;else pts=pts*taWordMastery.scoreRate();}if(isTime){taSeconds+=taTimeGain;taSessionTimeGain+=taTimeGain;}else {taScore+=pts;taScoreRefresh();}if(!window.taThunderBatchHud)taRender();if(suppressPlus){return;}const el=document.getElementById(id);taReplayCssAnimation(el,'ta-pop','taPulse');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}const r=taPlusRect(el,id),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+Number(taTimeGain.toFixed(2))+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
+function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null,wordGrowth=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';let taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?taFeelingBoost():boostAtCollect)?2:1)):0;if(wordGrowth){if(isTime)taTimeGain=Math.round(taTimeGain*taWordMastery.timeRate()*100)/100;else pts=pts*taWordMastery.scoreRate();}if(isTime){taSeconds+=taTimeGain;taSessionTimeGain+=taTimeGain;}else {taScore+=pts;taScoreRefresh();}if(!window.taThunderBatchHud)taRender();if(suppressPlus){return;}const el=document.getElementById(id);taReplayCssAnimation(el,'ta-pop','taPulse');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}const r=taPlusRect(el,id),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+Number(taTimeGain.toFixed(2))+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
 const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
@@ -11539,7 +11565,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  let taIceArrivalLastFlash=0;
  function taIceAwardArrival(tx,ty,visual){
   if(!taRunning)return;
-  const gain=Math.round(taMastery.value('ice').rewardMultiplier*taWordMastery.timeRate()*100)/100;
+  const gain=Math.round(taMastery.value('ice').rewardMultiplier*taWordMastery.timeRate()*(taFeelingBoost()?2:1)*100)/100;
   taSeconds+=gain;taSessionTimeGain+=gain;taRender();
   const now=performance.now();
   if(visual && (!taMobileFx||now-taIceArrivalLastFlash>180)){
