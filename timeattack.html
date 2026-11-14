@@ -3053,8 +3053,8 @@ html.ta-night-bonus #taTimeBox.ta-night-time-paused #taTime{opacity:.35}
               <p>連鎖を重ねるほど得点の伸びも大きくなります。100連鎖に届くと景色は夜明けへ向かい、連鎖が途切れると再び夜へ戻ります。</p>
             </section>
             <section class="ta-guide-section" id="taGuideOrbs"><h4><span>02</span> 3色の玉と白銀玉</h4>
-              <div class="ta-guide-skill"><i class="ta-guide-dot red"></i><div><b>紅玉 ― 炎</b><p>言葉に炎の効果を与える玉。広範囲の技や奥義の組み合わせにも使います。</p></div></div>
-              <div class="ta-guide-skill"><i class="ta-guide-dot blue"></i><div><b>蒼玉 ― 氷</b><p>言葉を凍らせる効果を持ち、時間回復を狙う場面で重要です。</p></div></div>
+              <div class="ta-guide-skill"><i class="ta-guide-dot red"></i><div><b>紅玉 ― 炎</b><p>言葉を燃やす効果を持ち、得点を大きく伸ばす場面で有効です。</p></div></div>
+              <div class="ta-guide-skill"><i class="ta-guide-dot blue"></i><div><b>蒼玉 ― 氷</b><p>言葉を凍らせる効果を持ち、時間回復を狙う場面で有効です。</p></div></div>
               <div class="ta-guide-skill"><i class="ta-guide-dot green"></i><div><b>翠玉 ― 連鎖を広げる</b><p>複数の言葉をまとめて扱う特殊効果。文字が多いときに威力を発揮します。</p></div></div>
               <div class="ta-guide-skill"><i class="ta-guide-dot whitegold"></i><div><b>白銀玉 ― アイテム補充</b><p>採集エリアに時折現れる特別な玉。回収すると、右下の玉在庫を補充できます。</p></div></div>
               <p>玉の在庫は<strong>最大5個</strong>。得点の節目でも補充の機会があります。在庫がいっぱいのときは補充の余地がないため、使いどころを考えましょう。</p>
@@ -4893,8 +4893,8 @@ function taCancelFloodResume(){
 }
 
 let maxCombo = store.get("ta-yura-maxcombo", 0);
-// 倍率（＝連鎖Lv）：1〜49はLv1（×1）、50でLv2（×2）、100でLv3（×3）
-const comboMult = n => n >= 100 ? 3 : n >= 50 ? 2 : 1;
+// 連鎖得点倍率：50連鎖で1.25倍、以後100連鎖ごとに上昇、500連鎖で最大3倍。
+const comboMult = n => n >= 500 ? 3 : n >= 400 ? 2.625 : n >= 300 ? 2.25 : n >= 200 ? 1.875 : n >= 100 ? 1.5 : n >= 50 ? 1.25 : 1;
 // 連鎖100：絵の中央に「連鎖 100」と「+100」が大きく浮かび、違和感が一気に届く
 // 連鎖10ごと：連鎖の枠から小さな違和感の玉が弧を描いて違和感の数字へ飛び、+10 が届く（ペンには注がない）
 // 連鎖ボーナスの瞬間、「連鎖 N」の文字を金色に光らせる
@@ -5506,7 +5506,7 @@ function bumpCombo(){
     number.classList.add(combo%100===0?'ta-chain-hundred':'ta-chain-ten');
   }
   el.style.setProperty("--ct", comboWindowMs + "ms");
-  el.classList.toggle("on", combo >= 2); el.classList.toggle("x2", m === 2); el.classList.toggle("x3", m === 3); el.classList.toggle("hold", flood);
+  el.classList.toggle("on", combo >= 2); el.classList.toggle("x2", m >= 2 && m < 3); el.classList.toggle("x3", m >= 3); el.classList.toggle("hold", flood);
   comboRush(m === 3);
   // Chain rewards, audio and counters continue normally; scene transitions wait.
   if(!flood){
@@ -6581,7 +6581,7 @@ function spawnWord(opt = {}){
     if(w.classList.contains("reso")){ const rr = w.getBoundingClientRect(); resonate(rr.left + rr.width/2, rr.top + rr.height/2, w); }
     if(w.classList.contains("multi")){ const fr = $("drift").getBoundingClientRect(), rr = w.getBoundingClientRect(); multiply(rr.left + rr.width/2 - fr.left, rr.top + rr.height/2 - fr.top, {boon: w.classList.contains("boon")}); }
     
-    const cm = nightResidual ? Math.max(1,combo) : bumpCombo(); if(cm>=100)window.taOrbDiag.mark("100+ hit");
+    const cm = nightResidual ? comboMult(combo) : bumpCombo(); if(cm>=100)window.taOrbDiag.mark("100+ hit");
     const g = isOdd ? ODD_PT : yieldNow() * cm;   // 時間停止中も連鎖倍率を引き継ぐ
     const wordText = w.dataset.word || w.textContent;
     const toPen = false;
@@ -9550,7 +9550,7 @@ const taWordMastery=(()=>{
  try{const n=Number(localStorage.getItem(KEY));if(Number.isFinite(n))count=Math.max(0,Math.floor(n));}catch(_e){}
  const level=()=>1+limits.slice(1).filter(n=>count>=n).length;
  const rate=()=>[1,1.10,1.20,1.30,1.40,1.45,1.50,1.55,1.60,1.65][level()-1];
- const scoreRate=()=>[1,1,1,1,1,1.02,1.02,1.04,1.04,1.05][level()-1];
+ const scoreRate=()=>[1,1.02,1.04,1.06,1.08,1.10,1.12,1.14,1.16,1.20][level()-1];
  const timeRate=()=>[1,1.01,1.02,1.03,1.04,1.05,1.06,1.07,1.08,1.10][level()-1];
  const comboGraceMs=()=>2200+(level()-1)*50;
  const silverStart=()=>1+(level()>=3?1:0)+(level()>=5?1:0)+(level()>=8?1:0)+(level()>=10?1:0);
@@ -10166,7 +10166,7 @@ function taStyleRewardOrb(orb,isTime,boosted=false){
   if(boosted)orb.classList.add('ta-reward-boost');
   return orb;
 }
-function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null,wordGrowth=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';let taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect)?2:1)):0;if(wordGrowth){if(isTime)taTimeGain=Math.round(taTimeGain*taWordMastery.timeRate()*100)/100;else pts=Math.round(pts*taWordMastery.scoreRate());}if(isTime){taSeconds+=taTimeGain;taSessionTimeGain+=taTimeGain;}else {taScore+=pts;taScoreRefresh();}if(!window.taThunderBatchHud)taRender();if(suppressPlus){return;}const el=document.getElementById(id);taReplayCssAnimation(el,'ta-pop','taPulse');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}const r=taPlusRect(el,id),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+Number(taTimeGain.toFixed(2))+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
+function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null,wordGrowth=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';let taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?(mode==='black'&&glowRemain>0):boostAtCollect)?2:1)):0;if(wordGrowth){if(isTime)taTimeGain=Math.round(taTimeGain*taWordMastery.timeRate()*100)/100;else pts=pts*taWordMastery.scoreRate();}if(isTime){taSeconds+=taTimeGain;taSessionTimeGain+=taTimeGain;}else {taScore+=pts;taScoreRefresh();}if(!window.taThunderBatchHud)taRender();if(suppressPlus){return;}const el=document.getElementById(id);taReplayCssAnimation(el,'ta-pop','taPulse');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}const r=taPlusRect(el,id),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+Number(taTimeGain.toFixed(2))+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
 const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
@@ -10339,7 +10339,6 @@ const taResultHints = [
   '翠玉は、失われた言葉を呼び戻す力を持つ。',
   '白銀玉は、特別な力を補充する貴重な玉。',
   '炎が上でも氷が上でも、二つの円は重ねられる。ワンタップで円を作り、順番による効果の違いを試そう。',
-  '夜空に流れ星が降り注ぐとき、集めた言葉の輝きは二倍になる。',
   '長い連鎖の果てに夜が明ければ、言葉の輝きは三倍に。夜明けの力を、得点に変えよう。'
 ];
 const taSpecialHintTypes={0:'cross',1:'clock',2:'clock',4:'cross',18:'eclipse',21:'eclipse'};
@@ -10518,7 +10517,7 @@ function taBeginReady(){
   hud.classList.add('ta-hud-reveal');
   taUpdatePlay();
   // Visual start cue only: all three frames glow together, then fade to their normal colors.
-  const startGlowFrames=[document.getElementById('taTimeBox'),document.querySelector('#viewMain>.ta-items'),document.querySelector('#viewMain>.hero')].filter(Boolean);
+  const startGlowFrames=[document.getElementById('taTimeBox'),document.getElementById('taScoreBox'),document.querySelector('#viewMain>.ta-items'),document.querySelector('#viewMain>.hero')].filter(Boolean);
   hud.classList.remove('ta-start-outer-silver');void hud.offsetWidth;hud.classList.add('ta-start-outer-silver');
   const hudPlaque=hud.closest('.slip');
   if(hudPlaque){hudPlaque.classList.remove('ta-start-shared-outer-glow');void hudPlaque.offsetWidth;hudPlaque.classList.add('ta-start-shared-outer-glow');}
