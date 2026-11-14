@@ -5539,7 +5539,7 @@ function bumpCombo(){
   // Switching between equivalent keyframe names avoids a synchronous layout flush.
   el.classList.toggle("ta-gauge-alt");
   el.classList.add("run");
-  if(m > prevX && !flood){
+  if(m > comboMult(Math.max(1, combo - 1)) && !flood){
     el.classList.remove("up");
     requestAnimationFrame(()=>{if(taRunning)el.classList.add("up");});
     sfx.line(0);
