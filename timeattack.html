@@ -2862,6 +2862,19 @@ html.ta-night-bonus #taTimeBox.ta-night-time-paused #taTime{opacity:.35}
 .ta-thunder-css-glyph{opacity:0;transition:opacity 850ms cubic-bezier(.22,.65,.3,1)}
 .ta-thunder-css-glyph.ta-glyph-visible{opacity:1}
 .ta-thunder-css-glyph.ta-glyph-leaving{opacity:0;transition-duration:1100ms;transition-timing-function:ease-in-out}
+/* White-silver lightning streak counter, anchored to the center of the magic circle. */
+.ta-thunder-wave-count{position:absolute;left:0;top:-3px;z-index:3;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;font-family:Georgia,"Times New Roman",serif;font-variant-numeric:tabular-nums;font-size:clamp(18px,5.3vw,26px);font-weight:500;letter-spacing:.04em;color:rgba(235,242,255,.78);text-shadow:0 0 5px rgba(241,247,255,.42),0 0 14px rgba(175,201,233,.32);opacity:0;transition:opacity 900ms ease-in-out;}
+.ta-thunder-wave-count.visible{opacity:.83}
+
+/* Thunder wave numeral: identical concentric afterimage timing to the word-level upgrade. */
+.ta-thunder-wave-echo{position:absolute;left:0;top:-3px;z-index:4;width:0;height:0;pointer-events:none;overflow:visible;isolation:isolate;}
+.ta-thunder-wave-echo-text{position:absolute;left:0;top:0;display:block;white-space:nowrap;line-height:1.25;transform-origin:center center;will-change:transform,opacity;font:500 clamp(18px,5.3vw,26px)/1.25 Georgia,"Times New Roman",serif;font-variant-numeric:tabular-nums;}
+.ta-thunder-wave-echo-main{color:#f7faff;text-shadow:0 0 3px #a8d5ff;}
+.ta-thunder-wave-echo-trail{color:transparent;-webkit-text-stroke:.65px #c7ddfa;text-shadow:none;}
+@media(prefers-reduced-motion:reduce){.ta-thunder-wave-echo{display:none!important}}
+.ta-thunder-wave-count.renew{animation:taThunderWaveRenew 1200ms ease-out}
+@keyframes taThunderWaveRenew{0%{opacity:.24;text-shadow:0 0 2px rgba(241,247,255,.2)}35%{opacity:.95;text-shadow:0 0 8px rgba(241,247,255,.6),0 0 18px rgba(175,201,233,.4)}100%{opacity:.83}}
+
 
 </style><meta name="ta-diagnostic-build" content="v48-word-effect-isolation-20261113">
 <meta name="ta-build" content="v52-segment-swipe-no-queue-20261113">
@@ -9627,9 +9640,9 @@ const taWordMastery=(()=>{
   if(!fill||!badge)return;
   const lv=level(),base=limits[lv-1],next=limits[lv]??limits[9];
   fill.style.width=(lv===10?100:Math.max(0,Math.min(100,(count-base)/(next-base)*100)))+'%';
-  badge.textContent='Lv'+lv;
+  badge.textContent=lv===10?'MAX':'Lv'+lv;
   const record=document.getElementById('taWordMasteryRecord');
-  if(record){const remaining=lv===10?'MAX':(next-count).toLocaleString('ja-JP')+'個';record.innerHTML=`<div class="ta-growth-head"><strong>言霊</strong><b>Lv${lv} / 10</b></div><div class="ta-growth-track"><i style="width:${lv===10?100:Math.max(0,Math.min(100,(count-base)/(next-base)*100))}%"></i></div><div class="ta-growth-meta"><span>${lv===10?'累計 '+count.toLocaleString('ja-JP')+'個':count.toLocaleString('ja-JP')+' / '+next.toLocaleString('ja-JP')+'個'}</span><span>${lv===10?'MAX':'次まで '+remaining}</span></div><div class="ta-growth-effect">言霊発生数増加・得点増加・時間増加・連鎖猶予増加・白銀玉強化</div>`;}
+  if(record){const remaining=lv===10?'MAX':(next-count).toLocaleString('ja-JP')+'個';record.innerHTML=`<div class="ta-growth-head"><strong>言霊</strong><b>${lv===10?'MAX':'Lv'+lv+' / 10'}</b></div><div class="ta-growth-track"><i style="width:${lv===10?100:Math.max(0,Math.min(100,(count-base)/(next-base)*100))}%"></i></div><div class="ta-growth-meta"><span>${lv===10?'累計 '+count.toLocaleString('ja-JP')+'個':count.toLocaleString('ja-JP')+' / '+next.toLocaleString('ja-JP')+'個'}</span><span>${lv===10?'MAX':'次まで '+remaining}</span></div><div class="ta-growth-effect">言霊発生数増加・得点増加・時間増加・連鎖猶予増加・白銀玉強化</div>`;}
  };
  const nextFx=()=>{
   if(fxBusy||!fxQueue.length)return;
@@ -9717,7 +9730,7 @@ const taMastery=(()=>{
  const value=k=>{const lv=level(k);if(k==='fire'||k==='ice')return {seconds:lv+.1,distance:Math.min(100,60+10*lv),rewardMultiplier:k==='fire'?2+(lv-1)*.5:1+(lv-1)*.05};return {extra:lv===1?-3:lv===2?-2:lv===3?-1:lv===4?0:2};};
  const render=()=>{
   const bar=document.querySelector('#viewMain>.ta-items');if(!bar)return;
-  const record=document.getElementById('taOrbMasteryRecord');if(record)record.innerHTML=Object.keys(xp).map(k=>{const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[4],pct=lv===5?100:Math.max(0,Math.min(100,xp[k]/next*100));const effect=k==='green'?'言霊の発生数を強化':k==='fire'?'効果時間・スワイプ距離・得点倍率を強化':'効果時間・スワイプ距離・時間倍率を強化';return `<div class="ta-growth-orb ta-growth-${k}"><div class="ta-growth-head"><strong>${names[k]}</strong><b>Lv${lv} / 5</b></div><div class="ta-growth-track"><i style="width:${pct}%"></i></div><div class="ta-growth-meta"><span>${lv===5?'累計 '+xp[k]+' XP':xp[k]+' / '+next+' XP'}</span><span>${lv===5?'MAX':'次まで '+(next-xp[k])+' XP'}</span></div><div class="ta-growth-effect">${effect}</div></div>`;}).join('');
+  const record=document.getElementById('taOrbMasteryRecord');if(record)record.innerHTML=Object.keys(xp).map(k=>{const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[4],pct=lv===5?100:Math.max(0,Math.min(100,xp[k]/next*100));const effect=k==='green'?'言霊の発生数を強化':k==='fire'?'効果時間・スワイプ距離・得点倍率を強化':'効果時間・スワイプ距離・時間倍率を強化';return `<div class="ta-growth-orb ta-growth-${k}"><div class="ta-growth-head"><strong>${names[k]}</strong><b>${lv===5?'MAX':'Lv'+lv+' / 5'}</b></div><div class="ta-growth-track"><i style="width:${pct}%"></i></div><div class="ta-growth-meta"><span>${lv===5?'累計 '+xp[k]+' XP':xp[k]+' / '+next+' XP'}</span><span>${lv===5?'MAX':'次まで '+(next-xp[k])+' XP'}</span></div><div class="ta-growth-effect">${effect}</div></div>`;}).join('');
   // Yellow orb consumes three stocked silver charges after achievement unlock.
   const thunderCostButton=bar.querySelector('.ta-orb.thunder');
   if(thunderCostButton){
@@ -9757,7 +9770,7 @@ const taMastery=(()=>{
    const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[4];
    const br=button.getBoundingClientRect(),pr=bar.getBoundingClientRect();badge.style.left=(br.left-pr.left)+'px';badge.style.top=(br.top-pr.top)+'px';badge.style.width=br.width+'px';badge.style.height=br.height+'px';
    badge.querySelector('i').style.width=(lv===5?100:Math.max(0,Math.min(100,xp[k]/next*100)))+'%';
-   badge.querySelector('b').textContent='Lv'+lv;
+   badge.querySelector('b').textContent=lv===5?'MAX':'Lv'+lv;
   }
  };
  const pulse=(k,up)=>{
@@ -11236,7 +11249,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const active=()=>typeof taRunning!=='undefined'&&taRunning&&!taNightActive()&&!document.hidden&&document.getElementById('taLaunch')?.hidden!==false;
  const specials='.special,.vortex,.crack,.petal,.multi,.pull,.glow,.reso,.odd';
  const valid=w=>w.matches('.word')&&!w.classList.contains('got')&&!w.classList.contains('late')&&(!w.classList.contains('still')||flood);
- const thunderUnlocked=()=>!!window.taStars?.hasAward('chain800');
+ const thunderUnlocked=()=>location.hash==='#test'||!!window.taStars?.hasAward('chain800');
  const thunderReady=()=>thunderUnlocked()&&usesLeft>=3&&!thunderBusy;
  const pipBox=ui.querySelector('.ta-item-pips');
  const pipNodes=Array.from({length:MAX_USES},()=>{const pip=document.createElement('span');pip.className='ta-item-pip';pipBox.appendChild(pip);return pip;});
@@ -12301,6 +12314,29 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    el.style.width=(im.width/dpr)+'px';el.style.height=(im.height/dpr)+'px';
    el.getContext('2d').drawImage(im,0,0);glyph.append(el);
   }
+  const waveCount=document.createElement('span');waveCount.className='ta-thunder-wave-count';waveCount.setAttribute('aria-label','落雷継続回数');glyph.append(waveCount);
+  // Match the level-up echo: a solid numeral plus two expanding outline afterimages.
+  const thunderWaveEcho=(wave)=>{
+   if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+   glyph.querySelectorAll('.ta-thunder-wave-echo').forEach(el=>el.remove());
+   const layer=document.createElement('span');layer.className='ta-thunder-wave-echo';
+   const create=(cls)=>{const el=document.createElement('span');el.className='ta-thunder-wave-echo-text '+cls;el.textContent=String(wave);layer.append(el);return el;};
+   glyph.append(layer);
+   const center=scale=>'translate(-50%,-50%) scale('+scale+')';
+   const main=create('ta-thunder-wave-echo-main');
+   main.animate([
+    {transform:center(1),opacity:0,filter:'brightness(1)'},
+    {transform:center(2.7),opacity:1,filter:'brightness(1.08)',offset:.3},
+    {transform:center(3.0),opacity:.78,filter:'brightness(1)',offset:.56},
+    {transform:center(3.25),opacity:0,filter:'brightness(1)'}
+   ],{duration:1000,easing:'cubic-bezier(.18,.72,.24,1)',fill:'forwards'});
+   for(let i=0;i<2;i++)create('ta-thunder-wave-echo-trail').animate([
+    {transform:center(1),opacity:0},
+    {transform:center(2.85+i*.85),opacity:.32-i*.10,offset:.30+i*.055},
+    {transform:center(3.6+i*.85),opacity:0}
+   ],{duration:1000,easing:'ease-out',fill:'forwards'});
+   setTimeout(()=>layer.remove(),1050);
+  };
   glyph.style.left=cx+'px';glyph.style.top=cy+'px';
   stage.append(glyph);
   // Darkness comes first; the circle is revealed only after it settles.
@@ -12441,16 +12477,25 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   }
   function scatter(n,gap){circleBoost=1;
    placed.length=0;scatterSpots(n).forEach((c,i)=>later(()=>{circleBoost=Math.max(circleBoost,.5);fling(c,i);},i*gap));}
-  // 魔法陣から8語ずつ、10秒間隔で5回（合計40語）生成する。
-  // 最終波から3秒後に消滅演出を開始し、演出終了後に後片付けする。
-  const EVERY=10000,SCATTER2=SCATTER1+EVERY,SCATTER3=SCATTER2+EVERY,SCATTER4=SCATTER3+EVERY,SCATTER5=SCATTER4+EVERY,END=SCATTER5+3000;
-  later(()=>{strike(1);scatter(8,85);},SCATTER1);
-  later(()=>{strike(1);scatter(8,85);},SCATTER2);
-  later(()=>{strike(1);scatter(8,85);},SCATTER3);
-  later(()=>{strike(1);scatter(8,85);},SCATTER4);
-  later(()=>{strike(1);scatter(8,85);},SCATTER5);
-  later(()=>{dissolveAt=now();glyph.classList.add('ta-glyph-leaving');thunderSound('dissolve');if(!reduce)for(let k=0;k<40;k++){const a=Math.random()*Math.PI*2,r=R*(.3+Math.random()*.75);motes.push({kind:'up',x0:cx+Math.cos(a)*r,y0:cy+Math.sin(a)*r,born:dissolveAt+Math.random()*300,life:700+Math.random()*500,v:40+Math.random()*60,ph:Math.random()*6.28,r:.7+Math.random()*1.1});}},END);
-  later(()=>{thunderClear();},END+1500);
+  // 初回の落雷は確定。2回目以降は80%で継続し、外れた時点で終了する。
+  // 既存の10秒間隔・1回8語・演出・効果音はそのまま維持する。
+  const EVERY=10000;
+  const finishThunder=()=>{
+   later(()=>{dissolveAt=now();glyph.classList.add('ta-glyph-leaving');thunderSound('dissolve');if(!reduce)for(let k=0;k<40;k++){const a=Math.random()*Math.PI*2,r=R*(.3+Math.random()*.75);motes.push({kind:'up',x0:cx+Math.cos(a)*r,y0:cy+Math.sin(a)*r,born:now(),life:950+Math.random()*350,v:50+Math.random()*65,r:.7+Math.random()*.8,ph:a});}},3000);
+   later(()=>{thunderClear();},4500);
+  };
+  const nextThunder=(wave)=>{
+   if(!live())return;
+   waveCount.textContent=String(wave);waveCount.classList.add('visible');
+   thunderWaveEcho(wave);
+   strike(1);scatter(8,85);
+   later(()=>{
+    if(!live())return;
+    if(Math.random()<.80)nextThunder(wave+1);
+    else finishThunder();
+   },EVERY);
+  };
+  later(()=>nextThunder(1),SCATTER1);
  }
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&thunderBusy)thunderClear();});
  // Capture the armed gesture before the normal word/tap collectors can consume it.
