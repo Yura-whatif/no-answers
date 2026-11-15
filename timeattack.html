@@ -802,6 +802,22 @@ html,body{overscroll-behavior-y:none;}
 .word.glow{color:var(--glowc);border-color:color-mix(in srgb,var(--glowc) 55%,transparent);background:color-mix(in srgb,var(--glowc) 14%,var(--paper) 76%);font-weight:600;letter-spacing:.14em;
   text-shadow:0 0 8px color-mix(in srgb,var(--glowc) 55%,transparent);box-shadow:0 0 16px color-mix(in srgb,var(--glowc) 45%,transparent);animation:drift 9s linear forwards,glowPulse 2.2s ease-in-out infinite}
 @keyframes glowPulse{0%,100%{box-shadow:0 0 10px color-mix(in srgb,var(--glowc) 30%,transparent)}50%{box-shadow:0 0 24px 2px color-mix(in srgb,var(--glowc) 60%,transparent)}}
+/* 降る記憶・昇る想い：漂う言葉そのものの視認性を強化（HUDは変更しない） */
+.word.glow{
+  font-weight:800;
+  letter-spacing:.16em;
+  color:#fffdf3;
+  -webkit-text-stroke:.35px var(--glowc);
+  border-width:1.6px;
+  border-color:var(--glowc);
+  background:color-mix(in srgb,var(--glowc) 28%,rgba(12,16,32,.85));
+  text-shadow:0 1px 2px rgba(0,0,0,.95),0 0 5px var(--glowc),0 0 13px var(--glowc);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--glowc) 65%,transparent),0 0 19px color-mix(in srgb,var(--glowc) 62%,transparent);
+}
+@keyframes glowPulse{
+  0%,100%{box-shadow:0 0 0 1px color-mix(in srgb,var(--glowc) 50%,transparent),0 0 13px color-mix(in srgb,var(--glowc) 45%,transparent)}
+  50%{box-shadow:0 0 0 1px var(--glowc),0 0 25px 3px color-mix(in srgb,var(--glowc) 75%,transparent)}
+}
 /* 降る記憶・昇る想いの空気：絵の上に重ねる光（言葉より奥） */
 .glow-fx{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;animation:fbIn .8s ease both}
 .glow-fx.sun{background:radial-gradient(ellipse 90% 78% at 72% 8%,rgba(255,228,150,.46),rgba(255,214,130,.15) 48%,transparent 76%),radial-gradient(ellipse 128% 102% at 50% 46%,transparent 48%,rgba(138,80,16,.24) 100%),linear-gradient(200deg,rgba(255,214,140,.14),transparent 55%)}
@@ -2850,26 +2866,50 @@ html.ta-night-bonus #taTimeBox.ta-night-time-paused #taTime{opacity:.35}
 </style><meta name="ta-diagnostic-build" content="v48-word-effect-isolation-20261113">
 <meta name="ta-build" content="v52-segment-swipe-no-queue-20261113">
 <style id="ta-gentle-bonus-hud-pulse">
-/* 降る記憶＝得点枠、昇る想い＝残り時間枠。枠の内側だけをゆっくり呼吸するように照らす。 */
-#taHud #taScoreBox, #taHud #taTimeBox { position: relative; isolation: isolate; }
-#taHud #taScoreBox::after, #taHud #taTimeBox::after {
-  content: ""; position: absolute; inset: 3px; border-radius: inherit;
-  pointer-events: none; opacity: 0; z-index: 0;
+/* 強化中：文字はフェードイン・アウト、枠線を3秒周期で柔らかく明滅する。 */
+#taHud #taScoreBox, #taHud #taTimeBox { position:relative; isolation:isolate; }
+#taHud #taScoreBox::after, #taHud #taTimeBox:not(.ta-night-time-paused)::after {
+  content:'強化中'; position:absolute; right:7px; bottom:3px;
+  z-index:3; pointer-events:none; white-space:nowrap;
+  font-size:clamp(9px,2.1vw,12px); line-height:1.1;
+  font-weight:800; letter-spacing:.07em;
+  opacity:0; visibility:hidden;
+  transition:opacity 850ms ease-in-out,visibility 0s linear 850ms;
 }
-#taHud #taScoreBox > *, #taHud #taTimeBox > * { position: relative; z-index: 1; }
-html.glow-moon #taHud #taScoreBox::after {
-  background: radial-gradient(ellipse at center, rgba(255,215,151,.19), rgba(244,185,105,.055) 65%, transparent 100%);
-  box-shadow: inset 0 0 17px rgba(255,215,156,.12);
-  animation: taGentleBonusPulse 3.6s ease-in-out infinite;
+#taHud #taScoreBox::after {
+  color:#e7ff72;
+  text-shadow:0 0 4px rgba(225,255,95,.95),0 0 9px rgba(183,255,56,.9),0 0 17px rgba(172,255,55,.55);
 }
-html.glow-sun #taHud #taTimeBox::after {
-  background: radial-gradient(ellipse at center, rgba(161,218,255,.19), rgba(125,195,255,.055) 65%, transparent 100%);
-  box-shadow: inset 0 0 17px rgba(153,211,255,.12);
-  animation: taGentleBonusPulse 3.6s ease-in-out infinite;
+#taHud #taTimeBox:not(.ta-night-time-paused)::after {
+  color:#80faff;
+  text-shadow:0 0 4px rgba(105,250,255,.95),0 0 9px rgba(57,231,255,.9),0 0 17px rgba(55,210,255,.6);
 }
-@keyframes taGentleBonusPulse { 0%,100% { opacity: .12; } 50% { opacity: .9; } }
-@media (prefers-reduced-motion: reduce) {
-  html.glow-moon #taHud #taScoreBox::after, html.glow-sun #taHud #taTimeBox::after { animation: none; opacity: .38; }
+html.glow-moon #taHud #taScoreBox::after,
+html.glow-sun #taHud #taTimeBox:not(.ta-night-time-paused)::after {
+  opacity:1;visibility:visible;
+  transition:opacity 850ms ease-in-out,visibility 0s;
+}
+/* 強化中は枠線だけを明滅。内部の背景や数字には発光を重ねない。 */
+#taHud #taScoreBox::before, #taHud #taTimeBox::before {
+  content:''; position:absolute; inset:-1px; border-radius:inherit;
+  border:1px solid transparent; box-sizing:border-box;
+  pointer-events:none; z-index:1; opacity:0;
+  background:none; box-shadow:none;
+  transition:opacity 850ms ease-in-out;
+}
+#taHud #taScoreBox::before {border-color:rgba(229,255,92,.92);}
+#taHud #taTimeBox::before {border-color:rgba(93,235,255,.92);}
+html.glow-moon #taHud #taScoreBox::before,
+html.glow-sun #taHud #taTimeBox::before {
+  animation:taBonusBorderBreathe 3.0s ease-in-out infinite;
+}
+@keyframes taBonusBorderBreathe {
+  0%,100% {opacity:.28; filter:brightness(.90);}
+  50% {opacity:1; filter:brightness(1.18);}
+}
+@media(prefers-reduced-motion:reduce){
+  html.glow-moon #taHud #taScoreBox::before,
+  html.glow-sun #taHud #taTimeBox::before {animation:none;opacity:.7;}
 }
 </style>
 </head>
