@@ -2925,6 +2925,54 @@ html.glow-sun #taHud #taTimeBox::before {
   html.glow-sun #taHud #taTimeBox::before {animation:none;opacity:.7;}
 }
 </style>
+<style id="ta-night-acceleration-style">
+/* One synchronized, slow white phosphorescent pulse, without layout reflow. */
+@keyframes taNightHudBreath{0%,100%{opacity:.53;text-shadow:0 0 3px rgba(240,249,255,.35),0 0 8px rgba(235,248,255,.18)}50%{opacity:1;text-shadow:0 0 7px rgba(255,255,255,.85),0 0 16px rgba(228,247,255,.64)}}
+#viewMain>.hero{position:relative}
+#taNightStageLabel{position:absolute;z-index:30;top:12px;right:12px;pointer-events:none;color:#f7fbff;font-size:15px;letter-spacing:.12em;font-weight:600;opacity:0;visibility:hidden;white-space:nowrap}
+#taHud #taTimeBox{position:relative}
+#taAccelerationLabel{position:absolute;right:7px;top:3px;z-index:3;color:#f7fbff;font-size:10px;letter-spacing:.015em;font-weight:600;opacity:0;visibility:hidden;pointer-events:none;white-space:nowrap}
+#taNightStageLabel.ta-night-hud-visible,#taAccelerationLabel.ta-night-hud-visible{visibility:visible;animation:taNightHudBreath 4s ease-in-out infinite;animation-delay:0s}
+</style>
+<style id="ta-night-echo-style">
+/* Separate the quiet night announcement from the typographic ripple at the HUD. */
+.ta-night-echo{position:absolute;inset:0;z-index:95;pointer-events:none;overflow:visible;isolation:isolate}
+.ta-night-echo-veil{position:absolute;inset:0;background:#050711;opacity:1;transition:opacity 1.35s ease-in-out}
+.ta-night-echo-title{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);font:500 clamp(29px,7vw,48px)/1.5 var(--mincho);letter-spacing:.25em;color:#f5f8ff;white-space:nowrap;opacity:0;text-shadow:0 0 12px rgba(241,248,255,.75),0 0 38px rgba(167,202,255,.45);transition:opacity 1.1s ease-in-out}
+.ta-night-echo.show .ta-night-echo-title{opacity:1}
+.ta-night-echo.title-fade .ta-night-echo-title{opacity:0}
+.ta-night-echo.approach .ta-night-echo-veil{opacity:0}
+/* All ripples share the exact centre of the small HUD text; no screen-traversing motion. */
+.ta-night-echo-seal{position:absolute;z-index:3;transform:translate(-50%,-50%);color:#f7fbff;font:600 15px/1.5 var(--mincho);letter-spacing:.12em;white-space:nowrap;opacity:0;text-shadow:0 0 7px #f5fbff,0 0 18px rgba(206,232,255,.65)}
+.ta-night-echo-seal::before,.ta-night-echo-seal::after{content:attr(data-night);position:absolute;inset:0;text-align:center;color:#e4f0ff;pointer-events:none;opacity:0}
+.ta-night-echo.approach .ta-night-echo-seal{animation:taNightSealConverge 1.65s cubic-bezier(.16,.55,.24,1) both}
+.ta-night-echo.approach .ta-night-echo-seal::before{animation:taNightSealTrail 1.65s .04s ease-out both}
+.ta-night-echo.approach .ta-night-echo-seal::after{animation:taNightSealTrail 1.65s .16s ease-out both}
+@keyframes taNightSealConverge{0%{opacity:0;filter:blur(7px);scale:3.4;text-shadow:0 0 6px #fff}20%{opacity:.56;filter:blur(2px)}70%{opacity:.88;filter:blur(0);scale:1.25}88%{opacity:1;scale:1;text-shadow:0 0 16px #fff,0 0 38px #c4e4ff}100%{opacity:1;scale:1;text-shadow:0 0 9px #fff,0 0 20px #c4e4ff}}
+@keyframes taNightSealTrail{0%{opacity:0;scale:4;filter:blur(3px)}28%{opacity:.35}82%{opacity:.22;scale:1.15;filter:blur(1px)}100%{opacity:0;scale:1;filter:blur(9px)}}
+/* Crossfade the converged ripple directly into the permanent HUD lettering. */
+.ta-night-echo.approach.handoff .ta-night-echo-seal{animation:none!important;opacity:0!important;transition:opacity 320ms ease-out}
+.ta-night-echo.approach.handoff .ta-night-echo-seal::before,
+.ta-night-echo.approach.handoff .ta-night-echo-seal::after{animation:none!important;opacity:0!important}
+#taNightStageLabel.ta-night-arrival-flash,#taAccelerationLabel.ta-night-arrival-flash{animation:taNightArrivalFlash 1.15s ease-out both!important}
+@keyframes taNightArrivalFlash{0%{filter:brightness(2.2) drop-shadow(0 0 15px #fff)}50%{filter:brightness(1.6) drop-shadow(0 0 9px #d7ebff)}100%{filter:brightness(1) drop-shadow(0 0 3px #fff)}}
+@media(prefers-reduced-motion:reduce){.ta-night-echo-title,.ta-night-echo-veil{transition:none!important}.ta-night-echo-seal,.ta-night-echo-seal::before,.ta-night-echo-seal::after{animation:none!important}}
+</style>
+<style id="ta-night-continuity-fix">
+/* The chain badge retires before the night declaration and never flashes again on return. */
+html.ta-night-chain-retired #viewMain>.hero #combo{opacity:0!important;visibility:hidden!important;transform:translateY(4px)!important;transition:opacity .65s ease,visibility 0s linear .65s!important;animation:none!important}
+/* One continuous black curtain for both announcements. */
+#viewMain>.hero>.ta-night-shared-curtain{position:absolute;inset:0;z-index:68;background:#050711;opacity:0;pointer-events:none;transition:opacity 1.1s ease-in-out}
+#viewMain>.hero>.ta-night-shared-curtain.visible{opacity:1}
+.ta-night-echo-veil{background:#050711!important}
+</style>
+<style id="ta-night-seamless-rank-update">
+/* The permanent label is visible before the echo fades, and never blanks at handoff. */
+#taNightStageLabel.ta-night-seal-settled{visibility:visible!important;opacity:1!important}
+#taNightStageLabel.ta-night-seal-settled.ta-night-arrival-flash{visibility:visible!important;opacity:1!important}
+.ta-night-echo.approach.handoff .ta-night-echo-seal{opacity:0!important;transition:opacity 520ms ease-in-out!important}
+.ta-record-score .ta-rank-night{display:inline-block;margin-left:.65em;font:500 .67em/1.3 var(--mincho);letter-spacing:.06em;color:#d8e5f5;text-shadow:0 0 6px rgba(216,231,255,.3);vertical-align:baseline;white-space:nowrap}
+</style>
 </head>
 <body>
 <style>
@@ -2962,7 +3010,7 @@ html.glow-sun #taHud #taTimeBox::before {
 
   <div class="view" id="viewMain">
 
-  <figure class="hero">
+  <figure class="hero"><span id="taNightStageLabel" aria-hidden="true"></span>
     <img class="w" src="img/key-white.webp" alt="白ユラ：祈るように手を組む人物。The world is less in order than I expected.">
     <picture class="ta-bg-picture b ta-dark-start" aria-hidden="true"><img src="img/stage_01.webp" alt="" decoding="async"></picture>
     <picture class="ta-bg-picture b ta-original-night"><img src="img/stage_02.webp" alt="夜の書斎と城下町"></picture>
@@ -3002,7 +3050,7 @@ html.glow-sun #taHud #taTimeBox::before {
   </figure>
 
   <article class="slip" id="slip" tabindex="0" aria-live="polite">
-    <div id="taHud"><div class="ta-stats"><div id="taTimeBox"><small>残り時間</small><strong id="taTime">60.0</strong></div><div id="taScoreBox"><small>得点</small><strong id="taScore">0</strong></div></div><div id="taWordMastery" aria-label="言霊レベル"><div id="taWordMasteryTrack"><i id="taWordMasteryFill"></i></div><span id="taWordMasteryBadge">Lv1</span></div></div>
+    <div id="taHud"><div class="ta-stats"><div id="taTimeBox"><span id="taAccelerationLabel" aria-hidden="true"></span><small>残り時間</small><strong id="taTime">60.0</strong></div><div id="taScoreBox"><small>得点</small><strong id="taScore">0</strong></div></div><div id="taWordMastery" aria-label="言霊レベル"><div id="taWordMasteryTrack"><i id="taWordMasteryFill"></i></div><span id="taWordMasteryBadge">Lv1</span></div></div>
     <div class="slip-bg" id="sbg" aria-hidden="true"></div>
     <div class="meta"><span id="no"></span><span id="kind"></span></div>
     <div class="title" id="title"></div>
@@ -3037,6 +3085,7 @@ html.glow-sun #taHud #taTimeBox::before {
     <div class="testbar" id="testbar" hidden>テスト用
       <button type="button" id="t-all">ランキング初期化</button>
       <button type="button" id="t-c100">連鎖 +9</button>
+      <button type="button" id="t-c90">連鎖 +90</button>
       <button type="button" id="t-reward-orb">白銀玉出現</button>
       <button type="button" id="t-fire-levelup">紅玉Lvアップ</button>
       <button type="button" id="t-word-levelup">言霊Lvアップ</button>
@@ -3091,8 +3140,8 @@ html.glow-sun #taHud #taTimeBox::before {
     </div>
     <div class="pane" id="paneRank" hidden>
       <nav class="ta-guide-tabs" aria-label="タイムアタックの記録と手引き">
-        <button type="button" class="is-current" id="taGuideTabStars" aria-pressed="true">成長と星</button>
-        <button type="button" id="taGuideTabRank" aria-pressed="false">得点ランキング</button>
+        <button type="button" class="is-current" id="taGuideTabRank" aria-pressed="true">得点ランキング</button>
+        <button type="button" id="taGuideTabStars" aria-pressed="false">成長と星</button>
         <button type="button" id="taGuideTabGuide" aria-pressed="false">説明書</button>
       </nav>
       <div id="taGuideRankingPanel" hidden>
@@ -5551,7 +5600,7 @@ function taApplyComboBackground(finalCombo, resumeFromStop=false){
   root.classList.toggle("ta-200-lit",finalCombo>=200);
   root.classList.toggle("ta-300-lit",finalCombo>=300);
   root.classList.toggle("ta-word-300",finalCombo>=600);
-  taSilverDust.sync(finalCombo>=600);
+  taSilverDust.sync(false); // Performance: disable persistent upward silver particle layer.
   root.classList.toggle("ta-400-lit",finalCombo>=400);
   if(finalCombo>=800)taCancelVoidReturn();
   root.classList.toggle("ta-500-lit",finalCombo>=500);
@@ -9409,6 +9458,7 @@ $("t-reward-orb").onclick=()=>document.dispatchEvent(new Event("ta-reward-spawn-
 $("t-fire-levelup").onclick=()=>taMastery.testLevelUp();
 $("t-word-levelup").onclick=()=>taWordMastery.testLevelUp();
 $("t-c100").onclick=()=>{ combo += 8; comboAt = Date.now(); bumpCombo(); toast("連鎖を9増やしました"); };
+$("t-c90").onclick=()=>{ combo += 89; comboAt = Date.now(); bumpCombo(); toast("連鎖を90増やしました"); };
 $("t-all").onclick=()=>{
   if(!confirm("得点ランキング・星の記憶・言霊Lv・赤青翠玉のLvとXPをすべて初期化しますか？"))return;
   try{localStorage.removeItem('ta-time-attack-records-v1');}catch(e){}
@@ -9473,11 +9523,22 @@ setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
 })();
 /* Rules only. All original FX remain in the original inline script. */
 let taRunning=false,taSeconds=60,taScore=0,taLast=0,taRaf=0,taFinishToken=0;
+// Night advances only after a completed 800-chain interlude. Acceleration caps at Lv5.
+let taNightNumber=1;
+function taNightKanji(n){const digits=['零','一','二','三','四','五','六','七','八','九'];if(n<10)return digits[n];if(n<20)return '十'+(n%10?digits[n%10]:'');if(n<100)return digits[Math.floor(n/10)]+'十'+(n%10?digits[n%10]:'');return String(n);}
+function taUpdateNightHud(){
+ const night=document.getElementById('taNightStageLabel'),acc=document.getElementById('taAccelerationLabel');
+ const visible=taRunning&&taNightNumber>=2;
+ if(night){night.textContent=visible?'第'+taNightKanji(taNightNumber)+'夜':'';night.classList.toggle('ta-night-hud-visible',visible);}
+ if(acc){acc.textContent=visible?'加速 Lv'+Math.min(taNightNumber,5):'';acc.classList.toggle('ta-night-hud-visible',visible);}
+}
+function taNightTimeRate(){return 1+.25*(Math.min(taNightNumber,5)-1);}
+
 // 800-chain loop-clear: one bonus per 800 chains, then stage 01 with score/time retained.
-const taNightBonus={phase:'idle',serial:0,timers:[],born:0,spawned:0,wordCount:50,orbPending:false,overlay:null,unlockAtStart:false};
+const taNightBonus={phase:'idle',serial:0,timers:[],born:0,spawned:0,wordCount:40,orbPending:false,overlay:null,curtain:null,unlockAtStart:false};
 const taNightActive=()=>taNightBonus.phase!=='idle';
 function taNightLater(fn,ms){const serial=taNightBonus.serial;const id=setTimeout(()=>{if(serial===taNightBonus.serial&&taRunning)fn();},ms);taNightBonus.timers.push(id);}
-function taNightClear(){taNightBonus.serial++;taNightBonus.timers.forEach(clearTimeout);taNightBonus.timers=[];taNightBonus.phase='idle';taNightBonus.orbPending=false;document.documentElement.classList.remove('ta-night-bonus');document.querySelectorAll('#drift .ta-night-word,#drift .ta-night-silver').forEach(el=>el.remove());taNightBonus.overlay?.remove();taNightBonus.overlay=null;}
+function taNightClear(){document.querySelectorAll('.ta-night-echo').forEach(el=>el.remove());taNightBonus.serial++;taNightBonus.timers.forEach(clearTimeout);taNightBonus.timers=[];taNightBonus.phase='idle';taNightBonus.orbPending=false;document.documentElement.classList.remove('ta-night-bonus');document.querySelectorAll('#drift .ta-night-word,#drift .ta-night-silver').forEach(el=>el.remove());taNightBonus.overlay?.remove();taNightBonus.overlay=null;taNightBonus.curtain?.remove();taNightBonus.curtain=null;}
 function taNightStart(){
  if(!taRunning||taNightActive()||combo<800)return;
  taNightClear();taNightBonus.phase='intro';taNightBonus.born=performance.now();taNightBonus.spawned=0;taNightBonus.silverPicked=0;taNightBonus.unlockAtStart=!!window.taStars?.hasAward?.('chain800');
@@ -9487,19 +9548,19 @@ function taNightStart(){
  // All ordinary words and pending item casts are discarded; the bonus has its own collector.
  // Keep existing words: they fade out on their own, preserving the 700+ flow.
  document.dispatchEvent(new Event('ta-night-bonus-start'));
- const overlay=document.createElement('div');overlay.className='ta-night-message';overlay.textContent='そして、また夜がきた';document.querySelector('#viewMain>.hero')?.append(overlay);taNightBonus.overlay=overlay;
+ const overlay=document.createElement('div');overlay.className='ta-night-message';overlay.textContent='そして、また夜がくる';document.querySelector('#viewMain>.hero')?.append(overlay);taNightBonus.overlay=overlay;
  // Continue the existing 700+ rhythm without an abrupt 1.8-second pause.
  taNightLater(()=>{
   taNightBonus.phase='collect';document.dispatchEvent(new Event('ta-night-bonus-state'));
   // Continue the natural pace of late-stage words instead of forcing a new 400ms rhythm.
   taNightScheduleBlue();
   document.dispatchEvent(new Event('ta-night-silver-check'));
-  // End naturally after the 50th birth; existing words keep their usual lifetime.
+  // End naturally after the 40th birth; existing words keep their usual lifetime.
  },80);
 }
 function taNightScheduleBlue(){
  // 700+ words' ordinary drift/expiration are reused, not a second animation mode.
- // Distribute 50 births through 20s; stop the producer at the final birth.
+ // Distribute 40 births through the unchanged 20s window; stop at the final birth.
  for(let i=0;i<taNightBonus.wordCount;i++)taNightLater(()=>{
   if(taNightBonus.phase!=='collect')return;
   taNightSpawnBlue();
@@ -9584,40 +9645,102 @@ function taNightFinishCollect(){
   if(taNightBonus.phase!=='interlude')return;
   const remaining=document.querySelectorAll('#drift .ta-night-word:not(.got)').length;
   if(remaining){taNightLater(waitForClear,250);return;}
-  // The empty screen rests for two seconds before the message appears.
+  // Retire the 800-chain badge before either announcement, never restore it in this run.
+  // Fade the SAME dark curtain in before the first phrase and keep it for the night title.
   taNightLater(()=>{
    if(taNightBonus.phase!=='interlude')return;
-   taNightBonus.phase='message';taNightBonus.overlay?.classList.add('visible');
-   taNightLater(taNightReturn,4100);
-  },2000);
+   document.documentElement.classList.add('ta-night-chain-retired');
+   const hero=document.querySelector('#viewMain>.hero');
+   const curtain=document.createElement('div');curtain.className='ta-night-shared-curtain';
+   hero?.append(curtain);taNightBonus.curtain=curtain;
+   requestAnimationFrame(()=>requestAnimationFrame(()=>curtain.classList.add('visible')));
+   taNightLater(()=>{
+    if(taNightBonus.phase!=='interlude')return;
+    taNightBonus.phase='message';taNightBonus.overlay?.classList.add('visible');
+    taNightLater(taNightReturn,4100);
+   },1250);
+  },750);
  };
  taNightLater(waitForClear,250);
 }
 function taNightReturn(){
  if(taNightBonus.phase!=='message')return;
  taNightBonus.phase='return';
- // Native stage snapshot already supports smooth 800 -> stage_01 transitions.
- taFadeChainScene();
- taSilverMusic.stop(false,3200);taCenturyMusic.stop(false,3200);taSilverDust.sync(false);
+ // Wait until the first phrase has completely faded (1.1 s), then keep a full second of silence.
  taNightBonus.overlay?.classList.remove('visible');
  taNightLater(()=>{
   if(taNightBonus.phase!=='return')return;
-  combo=0;comboAt=0;comboPaused=false;comboWindowMs=COMBO_MS;clearTimeout(bumpCombo.h);
-  const el=document.getElementById('combo');el?.classList.remove('on','x2','x3','run','heat','hold','paused','ta-skill-grace');if(el)el.style.removeProperty('--heat');
-  document.getElementById('cbn').textContent='0';document.getElementById('cbx').textContent='';comboRush(false);
-  document.documentElement.classList.remove('ta-century-lit','ta-meteor-lit','ta-night-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit','ta-word-300','ta-silver-music-started');
-  taSyncDriftingGlowWords();taNightClear();document.dispatchEvent(new Event('ta-night-bonus-state'));
-  // The yellow-orb announcement waits until the normal scene has fully returned.
-  // Resolve the achievement after the special scene. The 800-chain award may
-  // not have been checked while the normal collectors were suspended.
-  window.taStars?.check?.();
-  const newlyUnlocked=!taNightBonus.unlockAtStart&&!!window.taStars?.hasAward?.('chain800');
-  if(newlyUnlocked||window.taThunderUnlockPending){
-   window.taThunderUnlockPending=false;
-   requestAnimationFrame(()=>requestAnimationFrame(()=>document.dispatchEvent(new Event('ta-thunder-unlock-show'))));
-  }
-  taLast=performance.now();taRender();
- },3600);
+  const hero=document.querySelector('#viewMain>.hero');
+  const nextNight='第'+taNightKanji(taNightNumber+1)+'夜';
+  const echo=document.createElement('div');echo.className='ta-night-echo';echo.setAttribute('aria-hidden','true');
+  // Reuse the already opaque curtain: no one-frame change of black between titles.
+  const veil=taNightBonus.curtain||document.createElement('div');
+  veil.classList.remove('ta-night-shared-curtain','visible');veil.classList.add('ta-night-echo-veil');
+  const title=document.createElement('div');title.className='ta-night-echo-title';title.textContent=nextNight;title.dataset.night=nextNight;
+  const seal=document.createElement('div');seal.className='ta-night-echo-seal';seal.textContent=nextNight;seal.dataset.night=nextNight;
+  echo.append(veil,title,seal);hero?.append(echo);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>echo.classList.add('show')));
+  // Hold the centre title for the same 4.1 seconds as the first phrase.
+  taNightLater(()=>{
+   if(taNightBonus.phase!=='return')return;
+   echo.classList.add('title-fade');
+   // Finish its ordinary fade-out before restoring the game scene.
+   taNightLater(()=>{
+    if(taNightBonus.phase!=='return')return;
+    taFadeChainScene();
+    taSilverMusic.stop(false,3200);taCenturyMusic.stop(false,3200);taSilverDust.sync(false);
+    const target=document.getElementById('taNightStageLabel');
+    if(target&&hero){
+     // The HUD label is empty and hidden until the night increments. Measure
+     // the actual NEXT label, not the zero-width empty span.
+     target.textContent=nextNight;
+     const h=hero.getBoundingClientRect(),r=target.getBoundingClientRect();
+     const font=getComputedStyle(target);
+     seal.style.fontFamily=font.fontFamily;
+     seal.style.fontSize=font.fontSize;
+     seal.style.fontWeight=font.fontWeight;
+     seal.style.lineHeight=font.lineHeight;
+     seal.style.letterSpacing=font.letterSpacing;
+     seal.style.left=(r.left+r.width/2-h.left)+'px';
+     seal.style.top=(r.top+r.height/2-h.top)+'px';
+    }
+    // The large typographic ripple contracts in place around the HUD anchor.
+    echo.classList.add('approach');
+    // Start the handoff while the converged letters are still visible.
+    // Never remove the animated text before the real HUD text is painted.
+    taNightLater(()=>{
+     if(taNightBonus.phase!=='return')return;
+     taNightNumber++;taUpdateNightHud();
+     // Keep the settled HUD label visible while the animated seal fades away.
+     const settled=document.getElementById('taNightStageLabel');
+     if(settled)settled.classList.add('ta-night-seal-settled');
+     requestAnimationFrame(()=>requestAnimationFrame(()=>echo.classList.add('handoff')));
+    },1430);
+    taNightLater(()=>{
+     if(taNightBonus.phase!=='return')return;
+     const nightHud=document.getElementById('taNightStageLabel');
+     const speedHud=document.getElementById('taAccelerationLabel');
+     for(const node of [nightHud,speedHud]){
+      if(!node)continue;
+      node.classList.add('ta-night-arrival-flash');
+      setTimeout(()=>node.classList.remove('ta-night-arrival-flash'),1200);
+     }
+     combo=0;comboAt=0;comboPaused=false;comboWindowMs=COMBO_MS;clearTimeout(bumpCombo.h);
+     const el=document.getElementById('combo');el?.classList.remove('on','x2','x3','run','heat','hold','paused','ta-skill-grace');if(el)el.style.removeProperty('--heat');
+     document.getElementById('cbn').textContent='0';document.getElementById('cbx').textContent='';comboRush(false);
+     document.documentElement.classList.remove('ta-century-lit','ta-meteor-lit','ta-night-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit','ta-word-300','ta-silver-music-started');
+     taSyncDriftingGlowWords();taNightClear();document.dispatchEvent(new Event('ta-night-bonus-state'));
+     window.taStars?.check?.();
+     const newlyUnlocked=!taNightBonus.unlockAtStart&&!!window.taStars?.hasAward?.('chain800');
+     if(newlyUnlocked||window.taThunderUnlockPending){
+      window.taThunderUnlockPending=false;
+      requestAnimationFrame(()=>requestAnimationFrame(()=>document.dispatchEvent(new Event('ta-thunder-unlock-show'))));
+     }
+     taLast=performance.now();taRender();
+    },1750);
+   },1150);
+  },4100);
+ },2100);
 }
 
 let taSessionMaxCombo=0,taSessionTimeGain=0;
@@ -10133,7 +10256,7 @@ function taSaveRecord(){
   if(taScore<=0){taRenderRecords();return;}
   const records=taGetRecords();
   taSessionRecordAt=Date.now();
-  records.push({score:taScore,maxCombo:taSessionMaxCombo,timeGain:taSessionTimeGain,at:taSessionRecordAt});
+  records.push({score:taScore,maxCombo:taSessionMaxCombo,timeGain:taSessionTimeGain,night:taNightNumber,at:taSessionRecordAt});
   try{localStorage.setItem(TA_RECORD_KEY,JSON.stringify(records.slice(-500)))}catch(e){}
   taRenderRecords();
 }
@@ -10151,6 +10274,7 @@ function taRenderRecords(){
     const row=document.createElement('div');row.className='ta-record-row';
     const pos=document.createElement('span');pos.className='ta-record-pos';pos.textContent=String(i+1).padStart(2,'0');
     const score=document.createElement('strong');score.className='ta-record-score';score.textContent=taScoreFormat(r.score)+' 点';
+    if(Number.isFinite(r.night)&&r.night>=2){const night=document.createElement('span');night.className='ta-rank-night';night.textContent='第'+taNightKanji(r.night)+'夜';score.append(night);}
     const chain=document.createElement('span');chain.className='ta-record-chain';chain.textContent=(Number.isFinite(r.maxCombo)?'最大連鎖 '+r.maxCombo.toLocaleString('ja-JP')+'連鎖':'最大連鎖 —')+' ｜ '+(Number.isFinite(r.timeGain)?'延長時間 +'+taFormatTimeGain(r.timeGain)+'秒':'延長時間 —');
     const date=document.createElement('time');date.className='ta-record-date';date.dateTime=new Date(r.at).toISOString();date.textContent=taRecordDate(r.at);
     row.append(pos,score,chain,date);rankBox.append(row);
@@ -10286,7 +10410,7 @@ function taHeartbeatStart(){
   if(attempt && typeof attempt.catch === 'function')attempt.catch(()=>{});
 }
 let taLastCountdownNumber=null;
-function taRender(){
+function taRender(){taUpdateNightHud();
   if(taRunning && window.taStars)window.taStars.check();
   const timeEl=document.getElementById('taTime');
   const seconds=Math.max(0,taSeconds);
@@ -10450,6 +10574,7 @@ function taPickResultHint(){
 }
 function taFinish(manualExit=false){
   taNightClear();
+  taUpdateNightHud();
   window.taSoumatou?.stop();
   document.body.classList.add('ta-timeover-finished');
   // Clear legacy void-only counter before Time Over; never expose '違和感 0' in results.
@@ -10555,7 +10680,7 @@ function taFinish(manualExit=false){
     if(qualified)document.getElementById('taResultClose').focus();
   },2450);
 }
-function taTick(now){if(!taRunning)return;const delta=Math.min(0.1,(now-taLast)/1000);taLast=now;if(typeof flood!=='undefined'&&!flood&&!window.taSoumatou?.active()&&!taNightActive()){taSeconds-=delta;}if(taSeconds<=0){taSeconds=0;taFinish();}taRender();if(taRunning)taRaf=requestAnimationFrame(taTick)}
+function taTick(now){if(!taRunning)return;const delta=Math.min(0.1,(now-taLast)/1000);taLast=now;if(typeof flood!=='undefined'&&!flood&&!window.taSoumatou?.active()&&!taNightActive()){taSeconds-=delta*taNightTimeRate();}if(taSeconds<=0){taSeconds=0;taFinish();}taRender();if(taRunning)taRaf=requestAnimationFrame(taTick)}
 // Android Chrome: prevent a downward field swipe from triggering pull-to-refresh.
 document.addEventListener('touchmove',e=>{
   if(!taRunning || !e.cancelable)return;
@@ -10564,6 +10689,8 @@ document.addEventListener('touchmove',e=>{
 let taStarting=false;
 function taBeginReady(){
   taNightClear();
+  document.documentElement.classList.remove('ta-night-chain-retired');
+  taNightNumber=1;document.getElementById('taNightStageLabel')?.classList.remove('ta-night-seal-settled');taUpdateNightHud();
   window.taSoumatou?.stop();
   if(taRunning||taStarting)return;
   // Defensive cleanup: a previous unranked result must never block another run.
@@ -11359,15 +11486,18 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   sync();
   ui.classList.add('ta-items-revealing');
   const generation=startupGeneration;
-  // Fill each pip individually after the START overlay has completed.
-  for(let i=1;i<=Math.min(MAX_USES,(typeof taStarRunValue==='function'?taStarRunValue('white'):3));i++){
-   startupTimers.push(setTimeout(()=>{
-    if(generation!==startupGeneration||!active())return;
-    usesLeft=i;sync();
-    const pip=pipNodes[i-1];pip.classList.remove('ta-item-pip-recharged');requestAnimationFrame(()=>pip.classList.add('ta-item-pip-recharged'));
+  // START: grant the initial reserve together, so yellow (cost 3) becomes
+  // available at the same instant as red/blue/green, not after the third pip.
+  const initialReserve=Math.min(MAX_USES,(typeof taStarRunValue==='function'?taStarRunValue('white'):3));
+  startupTimers.push(setTimeout(()=>{
+   if(generation!==startupGeneration||!active())return;
+   usesLeft=initialReserve;sync();
+   for(let i=0;i<initialReserve;i++){
+    const pip=pipNodes[i];pip.classList.remove('ta-item-pip-recharged');
+    requestAnimationFrame(()=>pip.classList.add('ta-item-pip-recharged'));
     pip.addEventListener('animationend',()=>pip.classList.remove('ta-item-pip-recharged'),{once:true});
-   },220+(i-1)*155));
-  }
+   }
+  },220));
   startupTimers.push(setTimeout(()=>{if(generation===startupGeneration)ui.classList.remove('ta-items-revealing');},1000));
  });
  // Reserve rewards immediately, but display and credit each one only after its ring contracts.
@@ -12971,7 +13101,7 @@ body>.ta-dual-clock.clock-persistent{position:fixed!important;z-index:24!importa
   if(which==='stars')window.taStars?.render();
  }
  window.taShowGuideTab=showTab;
- showTab('stars');
+ showTab('score');
  rank.addEventListener('click',()=>showTab('score'));
  stars.addEventListener('click',()=>showTab('stars'));
  guide.addEventListener('click',()=>showTab('guide'));
