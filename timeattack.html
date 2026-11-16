@@ -9550,16 +9550,11 @@ let taRunning=false,taSeconds=60,taScore=0,taLast=0,taRaf=0,taFinishToken=0;
 // Night advances only after a completed 800-chain interlude. Acceleration caps at Lv5.
 let taNightNumber=1;
 function taNightKanji(n){const digits=['零','一','二','三','四','五','六','七','八','九'];if(n<10)return digits[n];if(n<20)return '十'+(n%10?digits[n%10]:'');if(n<100)return digits[Math.floor(n/10)]+'十'+(n%10?digits[n%10]:'');return String(n);}
-// HUD updates are event-driven by night/state changes, not rewritten on every game frame.
-let taNightHudLastKey='';
 function taUpdateNightHud(){
- const visible=taRunning&&taNightNumber>=2;
- const key=(visible?'1':'0')+':'+taNightNumber;
- if(key===taNightHudLastKey)return;
- taNightHudLastKey=key;
  const night=document.getElementById('taNightStageLabel'),acc=document.getElementById('taAccelerationLabel');
- if(night){const label=visible?'第'+taNightKanji(taNightNumber)+'夜':'';if(night.textContent!==label)night.textContent=label;night.classList.toggle('ta-night-hud-visible',visible);}
- if(acc){const label=visible?'加速 Lv'+Math.min(taNightNumber,5):'';if(acc.textContent!==label)acc.textContent=label;acc.classList.toggle('ta-night-hud-visible',visible);}
+ const visible=taRunning&&taNightNumber>=2;
+ if(night){night.textContent=visible?'第'+taNightKanji(taNightNumber)+'夜':'';night.classList.toggle('ta-night-hud-visible',visible);}
+ if(acc){acc.textContent=visible?'加速 Lv'+Math.min(taNightNumber,5):'';acc.classList.toggle('ta-night-hud-visible',visible);}
 }
 function taNightTimeRate(){return 1+.25*(Math.min(taNightNumber,5)-1);}
 
@@ -10416,7 +10411,7 @@ function taStyleRewardOrb(orb,isTime,boosted=false){
   if(boosted)orb.classList.add('ta-reward-boost');
   return orb;
 }
-function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null,wordGrowth=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';let taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?taFeelingBoost():boostAtCollect)?2:1)):0;if(wordGrowth){if(isTime)taTimeGain=Math.round(taTimeGain*taWordMastery.timeRate()*100)/100;else pts=pts*taWordMastery.scoreRate();}if(isTime){taSeconds+=taTimeGain;taSessionTimeGain+=taTimeGain;}else {taScore+=pts;taScoreRefresh();}if(!window.taThunderBatchHud && !wordGrowth)taRender();if(suppressPlus){return;}const el=document.getElementById(id);taReplayCssAnimation(el,'ta-pop','taPulse');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}const r=taPlusRect(el,id),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+Number(taTimeGain.toFixed(2))+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
+function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null,wordGrowth=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';let taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?taFeelingBoost():boostAtCollect)?2:1)):0;if(wordGrowth){if(isTime)taTimeGain=Math.round(taTimeGain*taWordMastery.timeRate()*100)/100;else pts=pts*taWordMastery.scoreRate();}if(isTime){taSeconds+=taTimeGain;taSessionTimeGain+=taTimeGain;}else {taScore+=pts;taScoreRefresh();}if(!window.taThunderBatchHud)taRender();if(suppressPlus){return;}const el=document.getElementById(id);taReplayCssAnimation(el,'ta-pop','taPulse');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}const r=taPlusRect(el,id),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+Number(taTimeGain.toFixed(2))+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
 const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
@@ -10457,14 +10452,12 @@ function taHeartbeatStart(){
   if(attempt && typeof attempt.catch === 'function')attempt.catch(()=>{});
 }
 let taLastCountdownNumber=null;
-const taHudNodes={time:null,timeBox:null,score:null};
-function taGetHudNode(key,id){return taHudNodes[key]||(taHudNodes[key]=document.getElementById(id));}
 function taRender(){taUpdateNightHud();
   if(taRunning && window.taStars)window.taStars.check();
-  const timeEl=taGetHudNode('time','taTime');
+  const timeEl=document.getElementById('taTime');
   const seconds=Math.max(0,taSeconds);
   const countdown=taRunning && !taNightActive() && seconds>0 && seconds<=5;
-  const timeFramePaused=taGetHudNode('timeBox','taTimeBox');
+  const timeFramePaused=document.getElementById('taTimeBox');
   if(timeFramePaused)timeFramePaused.classList.toggle('ta-night-time-paused',taNightActive());
   taCenturyMusic.setHeartbeatDuck(taRunning && seconds>0 && seconds<=3);
   taSilverMusic.setHeartbeatDuck(taRunning && seconds>0 && seconds<=3);
@@ -10472,7 +10465,7 @@ function taRender(){taUpdateNightHud();
   const nextTimeText=seconds.toFixed(1);
   if(timeEl.textContent!==nextTimeText)timeEl.textContent=nextTimeText;
   timeEl.classList.toggle('ta-countdown',countdown);
-  const timeFrame=timeFramePaused;
+  const timeFrame=document.getElementById('taTimeBox');
   if(timeFrame)timeFrame.classList.toggle('ta-countdown-frame',countdown);
   if(countdown && !taHeartbeatActive)taHeartbeatStart();
   if(!countdown && taHeartbeatActive)taHeartbeatStop();
@@ -10483,7 +10476,7 @@ function taRender(){taUpdateNightHud();
     taLastCountdownNumber=count;
   }
   if(!countdown){timeEl.classList.remove('ta-countdown-beat');if(timeFrame)timeFrame.classList.remove('ta-countdown-frame-beat');}
-  if(!taScoreAnim){const el=taGetHudNode('score','taScore');if(el){const t=taScoreFormat(taShownScore);if(el.textContent!==t)el.textContent=t;}}
+  if(!taScoreAnim){const el=document.getElementById('taScore');if(el){const t=taScoreFormat(taShownScore);if(el.textContent!==t)el.textContent=t;}}
 }
 // TimeOver -> DEMO: transparent crossfade, never a dark/black veil.
 // Delay DEMO PLAY for one second after the actual screen change.
@@ -12350,7 +12343,77 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    ctx.restore();
   }
  }
- function makeTrace(g){if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summon(g);return;}const pts=g.points;let len=0;for(let i=1;i<pts.length;i++)len+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
+ // Lightweight directional border glow for all red/blue/green orb levels (test rollout).
+ // One shared viewport canvas, painted only during an active 0.7s pulse.
+ const taBorderCanvas=document.createElement('canvas');
+ taBorderCanvas.setAttribute('aria-hidden','true');
+ Object.assign(taBorderCanvas.style,{position:'fixed',inset:'0',width:'100vw',height:'100vh',pointerEvents:'none',zIndex:'70',display:'none'});
+ document.body.appendChild(taBorderCanvas);
+ const taBorderCtx=taBorderCanvas.getContext('2d',{alpha:true});
+ let taBorderPulse=null,taBorderFrame=0;
+ function taBorderGlow(g){
+  if(!taBorderCtx||!g||!g.points?.length||document.hidden)return;
+  // Directional border glow is a mastery Lv5-only visual reward.
+  const masteryKey=g.type==='summon'?'green':g.type;
+  if(!['fire','ice','green'].includes(masteryKey)||taMastery.level(masteryKey)<5)return;
+  const pts=g.points,start=pts[0],end=pts[pts.length-1];
+  const dx=end.x-start.x,dy=end.y-start.y,length=Math.hypot(dx,dy);
+  const color=g.type==='fire'?[255,99,68]:g.type==='ice'?[87,188,255]:[98,239,146];
+  taBorderPulse={start:performance.now(),dx:length>=22?dx/length:0,dy:length>=22?dy/length:0,tap:length<22,color};
+  taBorderCanvas.style.display='block';
+  if(!taBorderFrame)taBorderFrame=requestAnimationFrame(taPaintBorderGlow);
+ }
+ function taPaintBorderGlow(t){
+  taBorderFrame=0;
+  const p=taBorderPulse;if(!p)return;
+  const age=(t-p.start)/700;
+  if(age>=1||document.hidden||!active()){
+   taBorderPulse=null;taBorderCtx.clearRect(0,0,taBorderCanvas.width,taBorderCanvas.height);
+   taBorderCanvas.style.display='none';return;
+  }
+  const w=window.innerWidth,h=window.innerHeight;
+  if(taBorderCanvas.width!==w||taBorderCanvas.height!==h){taBorderCanvas.width=w;taBorderCanvas.height=h;}
+  const ctx=taBorderCtx;ctx.clearRect(0,0,w,h);
+  const r=field.getBoundingClientRect();
+  const left=r.left+2,right=r.right-2,top=r.top+2,bottom=r.bottom-2;
+  if(right>left&&bottom>top){
+   const [cr,cg,cb]=p.color;
+   const midX=(left+right)/2,midY=(top+bottom)/2;
+   const span=Math.max(1,(right-left)*Math.abs(p.dx)+(bottom-top)*Math.abs(p.dy));
+   const head=-span*.5+span*(age*1.65-.15);
+   const fade=Math.min(1,age*8,(1-age)*3);
+   const x1=p.tap?left:midX-p.dx*span*.5;
+   const y1=p.tap?top:midY-p.dy*span*.5;
+   const x2=p.tap?right:midX+p.dx*span*.5;
+   const y2=p.tap?bottom:midY+p.dy*span*.5;
+   // Continuous rectangular path: gradients travel across its edges without dots.
+   const gradient=ctx.createLinearGradient(x1,y1,x2,y2);
+   if(p.tap){
+    gradient.addColorStop(0,`rgba(${cr},${cg},${cb},${.92*fade})`);
+    gradient.addColorStop(1,`rgba(${cr},${cg},${cb},${.92*fade})`);
+   }else{
+    const center=(head/span)+.5;
+    const width=Math.max(.08,Math.min(.32,Math.max(28,span*.24)/span));
+    const stops=[
+     [0,0],[center-width,0],[center-width*.55,.24],
+     [center,.98],[center+width*.55,.24],[center+width,0],[1,0]
+    ].map(([pos,v])=>[Math.max(0,Math.min(1,pos)),v]).sort((a,b)=>a[0]-b[0]);
+    // Merge equal positions (Canvas gradients allow duplicates, but distinct stops are smoother).
+    for(const [pos,v] of stops)gradient.addColorStop(pos,`rgba(${cr},${cg},${cb},${(v*fade).toFixed(3)})`);
+   }
+   const rw=right-left,rh=bottom-top;
+   ctx.save();ctx.lineJoin='round';
+   ctx.strokeStyle=gradient;
+   ctx.shadowColor=`rgba(${cr},${cg},${cb},${(.85*fade).toFixed(3)})`;
+   ctx.shadowBlur=13;ctx.lineWidth=3;
+   ctx.strokeRect(left,top,rw,rh);
+   ctx.shadowBlur=4;ctx.lineWidth=1.5;
+   ctx.strokeRect(left,top,rw,rh);
+   ctx.restore();
+  }
+  taBorderFrame=requestAnimationFrame(taPaintBorderGlow);
+ }
+ function makeTrace(g){taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summon(g);return;}const pts=g.points;let len=0;for(let i=1;i<pts.length;i++)len+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
  // A stationary tap places a round 68px-radius elemental field (not a short stroke).
  const isTap=len<22;
  // Clock creation is tied to a normal elemental tap. The opposite-color stroke
