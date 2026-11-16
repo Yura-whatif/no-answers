@@ -2972,6 +2972,7 @@ html.ta-night-chain-retired #viewMain>.hero #combo{opacity:0!important;visibilit
 #taNightStageLabel.ta-night-seal-settled{visibility:visible!important;opacity:1!important}
 #taNightStageLabel.ta-night-seal-settled.ta-night-arrival-flash{visibility:visible!important;opacity:1!important}
 .ta-night-echo.approach.handoff .ta-night-echo-seal{opacity:0!important;transition:opacity 520ms ease-in-out!important}
+#drift .ta-night-final-word{white-space:nowrap;}
 .ta-record-score .ta-rank-night{display:inline-block;margin-left:.65em;font:500 .67em/1.3 var(--mincho);letter-spacing:.06em;color:#d8e5f5;text-shadow:0 0 6px rgba(216,231,255,.3);vertical-align:baseline;white-space:nowrap}
 </style>
 <style id="ta-full-silver-stock-pulse">
@@ -9559,10 +9560,10 @@ function taUpdateNightHud(){
 function taNightTimeRate(){return 1+.25*(Math.min(taNightNumber,5)-1);}
 
 // 800-chain loop-clear: one bonus per 800 chains, then stage 01 with score/time retained.
-const taNightBonus={phase:'idle',serial:0,timers:[],born:0,spawned:0,wordCount:40,orbPending:false,overlay:null,curtain:null,unlockAtStart:false};
+const taNightBonus={phase:'idle',serial:0,timers:[],born:0,spawned:0,wordCount:30,orbPending:false,specialWordStarted:false,overlay:null,curtain:null,unlockAtStart:false};
 const taNightActive=()=>taNightBonus.phase!=='idle';
 function taNightLater(fn,ms){const serial=taNightBonus.serial;const id=setTimeout(()=>{if(serial===taNightBonus.serial&&taRunning)fn();},ms);taNightBonus.timers.push(id);}
-function taNightClear(){document.querySelectorAll('.ta-night-echo').forEach(el=>el.remove());taNightBonus.serial++;taNightBonus.timers.forEach(clearTimeout);taNightBonus.timers=[];taNightBonus.phase='idle';taNightBonus.orbPending=false;document.documentElement.classList.remove('ta-night-bonus');document.querySelectorAll('#drift .ta-night-word,#drift .ta-night-silver').forEach(el=>el.remove());taNightBonus.overlay?.remove();taNightBonus.overlay=null;taNightBonus.curtain?.remove();taNightBonus.curtain=null;}
+function taNightClear(){document.querySelectorAll('.ta-night-echo').forEach(el=>el.remove());taNightBonus.serial++;taNightBonus.timers.forEach(clearTimeout);taNightBonus.timers=[];taNightBonus.phase='idle';taNightBonus.orbPending=false;taNightBonus.specialWordStarted=false;document.documentElement.classList.remove('ta-night-bonus');document.querySelectorAll('#drift .ta-night-word,#drift .ta-night-silver').forEach(el=>el.remove());taNightBonus.overlay?.remove();taNightBonus.overlay=null;taNightBonus.curtain?.remove();taNightBonus.curtain=null;}
 function taNightStart(){
  if(!taRunning||taNightActive()||combo<800)return;
  taNightClear();taNightBonus.phase='intro';taNightBonus.born=performance.now();taNightBonus.spawned=0;taNightBonus.silverPicked=0;taNightBonus.unlockAtStart=!!window.taStars?.hasAward?.('chain800');
@@ -9661,6 +9662,17 @@ function taNightCollectBlue(w){
  document.addEventListener('pointercancel',finish,true);
  document.addEventListener('ta-night-bonus-state',()=>{if(!enabled())pointers.clear();});
 })();
+// A final ordinary blue word after the 30-word bonus; preserve the 20-second spawning window.
+function taNightSpawnFinalBlue(){
+ if(taNightBonus.phase!=='interlude')return;
+ const w=spawnWord({force:true,plain:true,nightBonus:true,forceBlue:true,summonX:19,summonY:40});
+ if(!w){taNightLater(taNightSpawnFinalBlue,350);return;}
+ w.textContent='ユラ　思考実験の記録';
+ w.dataset.word=w.textContent;
+ w.classList.add('ta-night-word','ta-night-final-word');
+ w.dataset.taTime='1';
+ w.setAttribute('aria-label',w.textContent);
+}
 function taNightFinishCollect(){
  if(taNightBonus.phase!=='collect')return;
  taNightBonus.phase='interlude';document.dispatchEvent(new Event('ta-night-bonus-state'));
@@ -9669,6 +9681,11 @@ function taNightFinishCollect(){
   if(taNightBonus.phase!=='interlude')return;
   const remaining=document.querySelectorAll('#drift .ta-night-word:not(.got)').length;
   if(remaining){taNightLater(waitForClear,250);return;}
+  if(!taNightBonus.specialWordStarted){
+   taNightBonus.specialWordStarted=true;
+   taNightLater(()=>{taNightSpawnFinalBlue();taNightLater(waitForClear,250);},850);
+   return;
+  }
   // Retire the 800-chain badge before either announcement, never restore it in this run.
   // Fade the SAME dark curtain in before the first phrase and keep it for the night title.
   taNightLater(()=>{
@@ -10316,7 +10333,7 @@ function taRenderRecords(){
     const row=document.createElement('div');row.className='ta-record-row';
     const pos=document.createElement('span');pos.className='ta-record-pos';pos.textContent=String(i+1).padStart(2,'0');
     const score=document.createElement('strong');score.className='ta-record-score';score.textContent=taScoreFormat(r.score)+' 点';
-    if(Number.isFinite(r.night)&&r.night>=2){const night=document.createElement('span');night.className='ta-rank-night';night.textContent='第'+taNightKanji(r.night)+'夜';score.append(night);}
+    if(Number.isFinite(Number(r.night))&&Number(r.night)>=2){const night=document.createElement('span');night.className='ta-rank-night';night.textContent='第'+taNightKanji(Number(r.night))+'夜';score.append(night);}
     const chain=document.createElement('span');chain.className='ta-record-chain';chain.textContent=(Number.isFinite(r.maxCombo)?'最大連鎖 '+r.maxCombo.toLocaleString('ja-JP')+'連鎖':'最大連鎖 —')+' ｜ '+(Number.isFinite(r.timeGain)?'延長時間 +'+taFormatTimeGain(r.timeGain)+'秒':'延長時間 —');
     const date=document.createElement('time');date.className='ta-record-date';date.dateTime=new Date(r.at).toISOString();date.textContent=taRecordDate(r.at);
     row.append(pos,score,chain,date);rankBox.append(row);
@@ -12783,7 +12800,20 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   e.stopImmediatePropagation();e.preventDefault();
  },true);
  function finish(e){if(e.pointerId!==consumedPointer)return;consumedPointer=null;if(gesture&&e.pointerId===gesture.id){const g=gesture;gesture=null;if(active()){taAppendGesturePoint(g,loc(e));makeTrace(g)}}e.stopImmediatePropagation();e.preventDefault();}
- field.addEventListener('pointerup',finish,true);field.addEventListener('lostpointercapture',e=>{if(e.pointerId===consumedPointer){consumedPointer=null;gesture=null;}},true);field.addEventListener('pointercancel',e=>{if(e.pointerId===consumedPointer)consumedPointer=null;if(gesture&&e.pointerId===gesture.id)gesture=null},true);
+ field.addEventListener('pointerup',finish,true);
+ // Some mobile browsers cancel/release pointer capture before pointerup. The cast
+ // sound already played on pointerdown; commit the collected gesture once here
+ // instead of silently discarding the fire/ice trace and its hit detection.
+ function taFinalizeInterruptedCast(e){
+  if(e.pointerId!==consumedPointer)return;
+  consumedPointer=null;
+  if(gesture&&e.pointerId===gesture.id){
+   const g=gesture;gesture=null;
+   if(active())makeTrace(g);
+  }
+ }
+ field.addEventListener('lostpointercapture',taFinalizeInterruptedCast,true);
+ field.addEventListener('pointercancel',taFinalizeInterruptedCast,true);
  field.addEventListener('pointermove',e=>{if(e.pointerId===consumedPointer){e.stopImmediatePropagation();e.preventDefault()}},false);
  function checkWords(){
   if(!traces.length)return;
