@@ -9725,6 +9725,8 @@ function taNightReturn(){
       node.classList.add('ta-night-arrival-flash');
       setTimeout(()=>node.classList.remove('ta-night-arrival-flash'),1200);
      }
+     // New night starts at chain 0: restore the combo HUD for the next 800-chain run.
+     document.documentElement.classList.remove('ta-night-chain-retired');
      combo=0;comboAt=0;comboPaused=false;comboWindowMs=COMBO_MS;clearTimeout(bumpCombo.h);
      const el=document.getElementById('combo');el?.classList.remove('on','x2','x3','run','heat','hold','paused','ta-skill-grace');if(el)el.style.removeProperty('--heat');
      document.getElementById('cbn').textContent='0';document.getElementById('cbx').textContent='';comboRush(false);
@@ -10668,7 +10670,6 @@ function taFinish(manualExit=false){
     document.getElementById('taLaunch').hidden=!qualified;
     // Unranked runs go straight to the independent star outcome dialog.
     if(!qualified){
-      taShowStarOutcome();
       document.documentElement.classList.remove('ta-result-locked');
       document.getElementById('taTimeOverInputShield')?.remove();
     }
@@ -10918,6 +10919,8 @@ document.getElementById('taPlay').addEventListener('click',()=>{
   else taBegin();
 });
 function taShowStarOutcome(){
+  // The separate post-Time-Over star record screen is intentionally disabled.
+  return;
   const panel=document.getElementById('taStarOutcome');
   const content=document.getElementById('taStarResult');
   if(!panel||!content)return;
@@ -10945,7 +10948,7 @@ function taCloseResultSafely(){
   try{taCenturyMusic.stop(false,1800);}catch(e){console.warn('century audio cleanup',e);}
   try{taSilverMusic.stop(false,1800);}catch(e){console.warn('silver audio cleanup',e);}
   try{taReleaseMediaSession();}catch(e){console.warn('media session cleanup',e);}
-  if(showStarAfterClose)taShowStarOutcome();
+  // Star awards remain saved; no additional post-game star screen.
   taSyncDemo();
 }
 document.getElementById('taResultClose').addEventListener('click',taCloseResultSafely);
