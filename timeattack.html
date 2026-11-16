@@ -457,6 +457,7 @@ html[data-yura="black"].ta-century-lit #viewMain>.hero.ta-active-visual>picture.
 #paneRank .ta-guide-dot.red{background:#e16b79;color:#e16b79}
 #paneRank .ta-guide-dot.blue{background:#7dbce8;color:#7dbce8}
 #paneRank .ta-guide-dot.green{background:#6dbe9b;color:#6dbe9b}
+#paneRank .ta-guide-dot.yellow{background:#e6c55b;color:#e6c55b}
 #paneRank .ta-guide-dot.whitegold{background:#f6ebce;color:#f6ebce}
 #paneRank .ta-guide-section details{border:1px solid rgba(139,114,79,.32);border-radius:6px;margin:9px 0;padding:0 13px}
 #paneRank .ta-guide-section summary{cursor:pointer;padding:13px 0;font-size:.87rem;font-weight:600}
@@ -3177,10 +3178,11 @@ html.ta-night-chain-retired #viewMain>.hero #combo{opacity:0!important;visibilit
               <div class="ta-guide-tip"><b>攻略の鍵</b><p>言葉を追いながら次の一つを探しましょう。奥義による時間停止も、連鎖をつなぐ助けになります。</p></div>
               <p>連鎖を重ねるほど得点の伸びも大きくなります。100連鎖に届くと景色は夜明けへ向かい、連鎖が途切れると再び夜へ戻ります。</p>
             </section>
-            <section class="ta-guide-section" id="taGuideOrbs"><h4><span>02</span> 3色の玉と白銀玉</h4>
+            <section class="ta-guide-section" id="taGuideOrbs"><h4><span>02</span> 4色の玉と白銀玉</h4>
               <div class="ta-guide-skill"><i class="ta-guide-dot red"></i><div><b>紅玉 ― 炎</b><p>言葉を燃やす効果を持ち、得点を大きく伸ばす場面で有効です。</p></div></div>
               <div class="ta-guide-skill"><i class="ta-guide-dot blue"></i><div><b>蒼玉 ― 氷</b><p>言葉を凍らせる効果を持ち、時間回復を狙う場面で有効です。</p></div></div>
-              <div class="ta-guide-skill"><i class="ta-guide-dot green"></i><div><b>翠玉 ― 連鎖を広げる</b><p>複数の言葉をまとめて扱う特殊効果。文字が多いときに威力を発揮します。</p></div></div>
+              <div class="ta-guide-skill"><i class="ta-guide-dot green"></i><div><b>翠玉 ― 連鎖を広げる</b><p>言葉を増やす効果を持ち、連鎖を広げる場面で有効です。</p></div></div>
+              <div class="ta-guide-skill"><i class="ta-guide-dot yellow"></i><div><b>黄玉 ― 雷</b><p>雷を呼び寄せ、複数の言葉を生み出します。落雷は80%の確率で継続します。</p><p>「連鎖の芽Ⅵ」を達成すると解放され、白銀玉3個で使用できます。</p></div></div>
               <div class="ta-guide-skill"><i class="ta-guide-dot whitegold"></i><div><b>白銀玉 ― アイテム補充</b><p>採集エリアに時折現れる特別な玉。回収すると、右下の玉在庫を補充できます。</p></div></div>
               <p>玉の在庫は<strong>最大5個</strong>。得点の節目でも補充の機会があります。在庫がいっぱいのときは補充の余地がないため、使いどころを考えましょう。</p>
             </section>
@@ -10016,12 +10018,28 @@ const taMastery=(()=>{
  window.taPlayMasteryLevelSound=levelSound;
  const announce=(k,lv,preview=false)=>{levelQueue.push({k,lv,preview});nextLevelFx();};
  const testLevelUp=()=>{render();announce('fire',Math.min(5,level('fire')+1),true);};
+ // Dense elemental clears can award dozens of mastery points in one frame.
+ // Coalesce storage, layout measurements and badge animation into one update.
+ let masteryFlushRaf=0;
+ const masteryPendingPulse=new Set();
+ function flushMastery(){
+  masteryFlushRaf=0;
+  try{localStorage.setItem(KEY,JSON.stringify(xp));}catch(_e){}
+  render();
+  for(const k of masteryPendingPulse)pulse(k,false);
+  masteryPendingPulse.clear();
+ }
  const add=(k,word,n=1)=>{
   if(!taRunning||!Object.hasOwn(xp,k)||!Number.isFinite(n)||n<=0)return;
   const prev=level(k);xp[k]=Math.min(limits[4],xp[k]+n);
-  try{localStorage.setItem(KEY,JSON.stringify(xp));}catch(_e){}
-  render();
-  if(level(k)>prev){flashOrbFullGauge(k);for(let lv=prev+1;lv<=level(k);lv++)announce(k,lv);}else pulse(k,false);
+  const current=level(k);
+  if(current>prev){
+   masteryPendingPulse.delete(k);
+   for(let lv=prev+1;lv<=current;lv++)announce(k,lv);
+  }else masteryPendingPulse.add(k);
+  if(!masteryFlushRaf)masteryFlushRaf=requestAnimationFrame(()=>{
+   flushMastery();
+  });
  };
  window.addEventListener('resize',render);document.addEventListener('ta-item-start-activate',render);
  if(typeof ResizeObserver!=='undefined'){const bar=document.querySelector('#viewMain>.ta-items');if(bar){const ro=new ResizeObserver(()=>requestAnimationFrame(render));ro.observe(bar);bar.querySelectorAll('.ta-orb').forEach(b=>ro.observe(b));}}
@@ -12665,7 +12683,30 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  function finish(e){if(e.pointerId!==consumedPointer)return;consumedPointer=null;if(gesture&&e.pointerId===gesture.id){const g=gesture;gesture=null;if(active()){taAppendGesturePoint(g,loc(e));makeTrace(g)}}e.stopImmediatePropagation();e.preventDefault();}
  field.addEventListener('pointerup',finish,true);field.addEventListener('lostpointercapture',e=>{if(e.pointerId===consumedPointer){consumedPointer=null;gesture=null;}},true);field.addEventListener('pointercancel',e=>{if(e.pointerId===consumedPointer)consumedPointer=null;if(gesture&&e.pointerId===gesture.id)gesture=null},true);
  field.addEventListener('pointermove',e=>{if(e.pointerId===consumedPointer){e.stopImmediatePropagation();e.preventDefault()}},false);
- function checkWords(){if(!traces.length)return;const hr=hero.getBoundingClientRect();for(const w of field.querySelectorAll('.word')){if(!valid(w))continue;const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;const x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;for(const f of traces){if(f.segs.some(([a,b,radius])=>near(x,y,a,b,radius+Math.min(20,r.width*.24)))){collect(w,f.type);break}}}}
+ function checkWords(){
+  if(!traces.length)return;
+  const hr=hero.getBoundingClientRect();
+  // Calculate each segment's broad-phase bounds once instead of testing
+  // every word against every segment with the expensive distance function.
+  const candidates=[];
+  for(const f of traces){
+   for(const seg of f.segs){
+    const a=seg[0],b=seg[1],radius=seg[2]+20;
+    candidates.push({f,a,b,radius,minX:Math.min(a.x,b.x)-radius,maxX:Math.max(a.x,b.x)+radius,minY:Math.min(a.y,b.y)-radius,maxY:Math.max(a.y,b.y)+radius});
+   }
+  }
+  if(!candidates.length)return;
+  for(const w of field.querySelectorAll('.word')){
+   if(!valid(w))continue;
+   const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;
+   const x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;
+   const extra=Math.min(20,r.width*.24);
+   for(const c of candidates){
+    if(x<c.minX||x>c.maxX||y<c.minY||y>c.maxY)continue;
+    if(near(x,y,c.a,c.b,c.radius-20+extra)){collect(w,c.f.type);break;}
+   }
+  }
+ }
  // Stage 5: share stable math helpers across frames rather than allocating
  // three new function objects for every effect redraw.
  const fract=v=>v-Math.floor(v);
