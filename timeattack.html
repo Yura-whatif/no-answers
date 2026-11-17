@@ -2158,8 +2158,8 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
 
 @media(prefers-reduced-motion:reduce){#viewMain>.slip.ta-start-shared-outer-glow{animation:none!important}}
 /* HUD: exactly three visible structural borders (outer HUD, time, score). */
-#viewMain>.slip:has(#taHud)::before{content:none!important;display:none!important}
-#viewMain>.slip:has(#taHud){border-color:transparent!important}
+#viewMain>.ta-has-hud:where(.slip):not(#ta-no-such)::before{content:none!important;display:none!important}
+#viewMain>.ta-has-hud:where(.slip):not(#ta-no-such){border-color:transparent!important}
 #viewMain>.slip #taHud{outline:none!important}
 </style>
 
@@ -2423,8 +2423,8 @@ body #viewMain #ikan,
 body.ta-timeover-finished #ikan,
 body.ta-timeover-finished .void-pts,
 body.ta-timeover-finished .riser:has([data-rid="iv"]),
-body:has(#taLaunch:not([hidden])) #ikan,
-body:has(#taLaunch:not([hidden])) .void-pts{display:none!important;}
+body.ta-launch-shown:not(#ta-no-such) #ikan,
+body.ta-launch-shown:not(#ta-no-such) .void-pts{display:none!important;}
 </style>
 <style id="ta-50-native-fade-20261107">
 /* Fade the actual stage_03 picture, not a translucent composite snapshot.
@@ -9946,9 +9946,28 @@ const taMastery=(()=>{
  try{const old=JSON.parse(localStorage.getItem(KEY)||'{}');for(const k of Object.keys(xp))if(Number.isFinite(old[k]))xp[k]=Math.max(0,Math.floor(old[k]));}catch(_e){}
  const level=k=>1+limits.slice(1).filter(v=>xp[k]>=v).length;
  const value=k=>{const lv=level(k);if(k==='fire'||k==='ice')return {seconds:lv+.1,distance:Math.min(100,60+10*lv),rewardMultiplier:k==='fire'?2+(lv-1)*.5:1+(lv-1)*.05};return {extra:lv===1?-3:lv===2?-2:lv===3?-1:lv===4?0:2};};
+ // 負荷対策：同じ内容なら書き換えない（書き換えると画面の再計算が起きるため）
+ const taSetHtmlIfChanged=(el,html)=>{if(el.__taHtml!==html){el.__taHtml=html;el.innerHTML=html;}};
+ // 負荷対策：言葉を拾ったときの更新は、ゲージの長さと「Lv」の文字と記録欄だけを書き換える。
+ // バッジの位置合わせ（位置の読み取りが必要で重い）は、画面の大きさが変わったときなど従来のきっかけで行う。
+ const taRecordHtml=()=>Object.keys(xp).map(k=>{const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[4],pct=lv===5?100:Math.max(0,Math.min(100,xp[k]/next*100));const effect=k==='green'?'言霊の発生数を強化':k==='fire'?'効果時間・スワイプ距離・得点倍率を強化':'効果時間・スワイプ距離・時間倍率を強化';return `<div class="ta-growth-orb ta-growth-${k}"><div class="ta-growth-head"><strong>${names[k]}</strong><b>${lv===5?'MAX':'Lv'+lv+' / 5'}</b></div><div class="ta-growth-track"><i style="width:${pct}%"></i></div><div class="ta-growth-meta"><span>${lv===5?'累計 '+xp[k]+' XP':xp[k]+' / '+next+' XP'}</span><span>${lv===5?'MAX':'次まで '+(next-xp[k])+' XP'}</span></div><div class="ta-growth-effect">${effect}</div></div>`;}).join('');
+ const renderData=()=>{
+  const bar=document.querySelector('#viewMain>.ta-items');if(!bar)return;
+  let missing=false;
+  for(const k of Object.keys(xp)){if(!bar.querySelector('.ta-orb.'+(k==='green'?'summon':k)))continue;if(!bar.querySelector('.ta-mastery-'+k)){missing=true;break;}}
+  if(missing){render();return;}
+  const record=document.getElementById('taOrbMasteryRecord');
+  if(record)taSetHtmlIfChanged(record,taRecordHtml());
+  for(const k of Object.keys(xp)){
+   const badge=bar.querySelector('.ta-mastery-'+k);if(!badge)continue;
+   const lv=level(k),next=limits[lv]??limits[4];
+   const w=(lv===5?100:Math.max(0,Math.min(100,xp[k]/next*100)))+'%',t=lv===5?'MAX':'Lv'+lv,i=badge.querySelector('i'),b=badge.querySelector('b');
+   if(i&&i.style.width!==w)i.style.width=w;if(b&&b.textContent!==t)b.textContent=t;
+  }
+ };
  const render=()=>{
   const bar=document.querySelector('#viewMain>.ta-items');if(!bar)return;
-  const record=document.getElementById('taOrbMasteryRecord');if(record)record.innerHTML=Object.keys(xp).map(k=>{const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[4],pct=lv===5?100:Math.max(0,Math.min(100,xp[k]/next*100));const effect=k==='green'?'言霊の発生数を強化':k==='fire'?'効果時間・スワイプ距離・得点倍率を強化':'効果時間・スワイプ距離・時間倍率を強化';return `<div class="ta-growth-orb ta-growth-${k}"><div class="ta-growth-head"><strong>${names[k]}</strong><b>${lv===5?'MAX':'Lv'+lv+' / 5'}</b></div><div class="ta-growth-track"><i style="width:${pct}%"></i></div><div class="ta-growth-meta"><span>${lv===5?'累計 '+xp[k]+' XP':xp[k]+' / '+next+' XP'}</span><span>${lv===5?'MAX':'次まで '+(next-xp[k])+' XP'}</span></div><div class="ta-growth-effect">${effect}</div></div>`;}).join('');
+  const record=document.getElementById('taOrbMasteryRecord');if(record)taSetHtmlIfChanged(record,taRecordHtml());
   // Yellow orb consumes three stocked silver charges after achievement unlock.
   const thunderCostButton=bar.querySelector('.ta-orb.thunder');
   if(thunderCostButton){
@@ -9995,7 +10014,8 @@ const taMastery=(()=>{
   const bar=document.querySelector('#viewMain>.ta-items');if(!bar)return;
   const badge=bar.querySelector('.ta-mastery-'+k);if(!badge)return;
   const cls=up?'ta-mastery-levelup':'ta-mastery-gain';
-  badge.classList.remove(cls);void badge.offsetWidth;badge.classList.add(cls);
+  // 負荷対策：アニメーションのやり直しには、位置の計算（offsetWidth）ではなく見た目の計算だけを使う（結果は同じ）
+  badge.classList.remove(cls);void getComputedStyle(badge).animationName;badge.classList.add(cls);
   clearTimeout(badge._masteryPulseTimer);
   badge._masteryPulseTimer=setTimeout(()=>badge.classList.remove(cls),up?1050:520);
  };
@@ -10118,7 +10138,7 @@ const taMastery=(()=>{
  function flushMastery(){
   masteryFlushRaf=0;
   try{localStorage.setItem(KEY,JSON.stringify(xp));}catch(_e){}
-  render();
+  renderData();
   for(const k of masteryPendingPulse)pulse(k,false);
   masteryPendingPulse.clear();
  }
@@ -11426,12 +11446,17 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  // Stage 2: adaptive *decorative* rendering only. Gameplay, collision checks,
  // reward timing, and the main FX update cadence are never throttled.
  let taAdaptiveLevel=0; // 0 full, 1 balanced, 2 light
+ // 装飾の軽さの段階を1か所にまとめる：長めの様子（taAdaptiveLevel）と直近の重さ（taFastLevel）の重い方。
+ // 当たり判定・得点・時間・効果の範囲には使わない（見た目の数だけを減らす）。
+ let taFastEma=16,taFastLevel=0;
+ function taFxTier(){return Math.max(taAdaptiveLevel,taFastLevel);}
+ window.taFxTier=()=>taFxTier();
  // Stage 6: compound-skill load guard. Only decorative work is reduced.
  // Cross collection pulses, stop rewards, hit tests and +value UI remain intact.
  function taCompoundFxLevel(){
   const cross=crossBursts.length;
   const overlap=(cross>=2)||(cross>0&&(flood||summonBursts.length>0||particles.length>90));
-  return overlap?2:cross>0?Math.max(1,taAdaptiveLevel):taAdaptiveLevel;
+  return overlap?2:cross>0?Math.max(1,taFxTier()):taFxTier();
  }
 
  let taAdaptiveLast=0,taAdaptiveSlow=0,taAdaptiveGood=0,taAdaptiveFrames=0;
@@ -11439,13 +11464,16 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  function taAdaptiveFrame(ts){
   if(document.hidden){taAdaptivePrevious=0;taAdaptiveActive=false;return;}
   const inGame=active();
-  if(!inGame){taAdaptivePrevious=0;taAdaptiveActive=false;taAdaptiveSlow=0;taAdaptiveGood=0;return;}
+  if(!inGame){taAdaptivePrevious=0;taAdaptiveActive=false;taAdaptiveSlow=0;taAdaptiveGood=0;taFastEma=16;taFastLevel=0;return;}
   if(taAdaptivePrevious){
    const gap=ts-taAdaptivePrevious;
    // Ignore huge gaps from tab switches and debugger pauses.
    if(gap<250){
     taAdaptiveFrames++;
     if(gap>32)taAdaptiveSlow++;else if(gap<22)taAdaptiveGood++;
+    // 速い反応：直近数コマの重さ（指数平均）で、すぐに装飾を減らし、軽くなれば約0.5秒で戻す
+    taFastEma=taFastEma*.75+gap*.25;
+    taFastLevel=taFastEma>72?2:taFastEma>44?Math.max(1,taFastLevel===2&&taFastEma>58?2:1):taFastEma<30?0:taFastLevel;
    }
   }
   taAdaptivePrevious=ts;
@@ -11874,6 +11902,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const taSparkPoolLimit=400;
  function taRecycleSpark(p){if(taSparkPool.length<taSparkPoolLimit)taSparkPool.push(p);}
  function spark(x,y,type,n=12){
+  const tier=taFxTier();if(tier)n=Math.max(2,Math.ceil(n*(tier===2?.45:.7)));   // 重いときは火花の数だけ減らす
   const cap=taMobileFx?110:380;
   // 既存の粒子を優先。上限を超える古い装飾だけを再利用する。
   const overflow=Math.max(0,particles.length+n-cap);
@@ -11899,6 +11928,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(now-taWordFxWindowStart>=180){taWordFxWindowStart=now;taWordFxWindowCount=0;}
   const n=taWordFxWindowCount++;
   // Keep the first eight impacts visible, then sample echoes during a burst.
+  const tier=taFxTier();   // 重いときは同時に出す言葉の残像を少なめに
+  if(tier===2)return n<4 || (n<16 && n%4===0);
+  if(tier===1)return n<6 || (n<20 && n%4===0);
   return n<8 || (n<24 && n%4===0);
  }
  function wordFx(w,type){
@@ -13003,14 +13035,31 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
  // mutations, score updates and orb creations from blocking the main thread.
  const taHitQueue=[];
  let taHitFrame=0;
+ // 負荷対策：このコマで処理する言葉と、得点・時間の表示などの位置を、最初にまとめて読んでおく。
+ // 言葉を1つ消すたびに「位置を読む→書き換える→また読む」が起きて画面の再計算が何度も走るのを防ぐ。
+ // 読んだ値はこのコマの処理の間だけ使い、終わったら元に戻す（このコマの中では位置は変わらないので、結果は同じ）。
+ const taRectNative=Element.prototype.getBoundingClientRect;
+ function taDrainPrimeRects(){
+  const pinned=[];
+  const pin=el=>{if(!el||!el.isConnected||Object.prototype.hasOwnProperty.call(el,'getBoundingClientRect'))return;const r=taRectNative.call(el);
+   el.getBoundingClientRect=function(){return this.isConnected?r:taRectNative.call(this);};pinned.push(el);};
+  for(let i=0;i<taHitQueue.length&&i<7;i++)pin(taHitQueue[i].w);
+  for(const id of ['taTime','taScore','taTimeBox'])pin(document.getElementById(id));
+  // 採集エリアの位置もこのタイミングで読んでおく（同じコマの中では使い回される）
+  try{hero.getBoundingClientRect();field.getBoundingClientRect();}catch(_){}
+  return pinned;
+ }
  function taDrainHitQueue(){
   taHitFrame=0;
   const start=performance.now();let processed=0;
+  const pinned=taDrainPrimeRects();
+  try{
   while(taHitQueue.length&&processed<7&&performance.now()-start<7){
    const hit=taHitQueue.shift();
    if(hit.w.isConnected&&valid(hit.w)){delete hit.w.dataset.taQueuedHit;collect(hit.w,hit.type);}
    processed++;
   }
+  }finally{for(const el of pinned)delete el.getBoundingClientRect;}
   if(taHitQueue.length)taHitFrame=requestAnimationFrame(taDrainHitQueue);
  }
  function taQueueHits(hits){
@@ -13289,7 +13338,8 @@ const __ta100Start=window.__ta100Profile.start();try {
  function renderFireStrong(f,alpha,spr,poly,age,ring,tier){
   const top=tier>=5,gd=top&&taFlameAtlas.gold.length===taFlameAtlas.F?taFlameAtlas.gold:null;
   const S=taFxScale,flash=Math.max(0,1-age/.12),settle=Math.min(1,age/.5),fr=taFlameAtlas.frames,F=taFlameAtlas.F,tick=Math.floor(now/55),m=ctx.getTransform();
-  const lite=taDenseCombo||taCompoundLevel>0;
+  if(poly.lite===undefined)poly.lite=taDenseCombo||taCompoundLevel>0;   // 線ごとに固定
+  const lite=poly.lite;
   ctx.save();ctx.globalCompositeOperation='screen';
   if(!ring){
    // 刃：白熱の芯が長く残り、ゆっくり脈打つ
@@ -13351,7 +13401,8 @@ const __ta100Start=window.__ta100Profile.start();try {
  }
  function renderIceStrong(f,alpha,spr,poly,age,ring,tier){
   const top=tier>=5;
-  const S=taFxScale,flash=Math.max(0,1-age/.12),lite=taDenseCombo||taCompoundLevel>0;
+  if(poly.lite===undefined)poly.lite=taDenseCombo||taCompoundLevel>0;
+  const S=taFxScale,flash=Math.max(0,1-age/.12),lite=poly.lite;
   const front=ring?poly.len*Math.min(1,age/.22):Math.min(1,age/.18)*poly.len,out=ring?(1-alpha)*8*S:0;
   ctx.save();ctx.globalCompositeOperation='screen';
   ctx.globalAlpha=alpha*.42;ctx.fillStyle='rgba(110,200,255,.8)';taStyleBlade(poly,(ring?18:24)*S*(1+flash*.6),ring,front);
@@ -13440,7 +13491,8 @@ const __ta100Start=window.__ta100Profile.start();try {
  }
  // 線に沿って霜（細かな針と粒）を張る。uptoまで。
  function taIceFrost(m,poly,upto,alpha,S,ring){
-  const A=window.__taIceAtlas,fr=A.frost,step=(taMobileFx?30:24)*(ring?1.1:1),n=Math.min(60,Math.floor(Math.min(upto,poly.len)/step));taStyleAt.i=1;
+  if(poly.tier===undefined)poly.tier=taDenseCombo?2:taCompoundLevel;
+  const A=window.__taIceAtlas,fr=A.frost,step=(taMobileFx?30:24)*(ring?1.1:1)*([1,1.3,1.8][poly.tier]||1),n=Math.min(60,Math.floor(Math.min(upto,poly.len)/step));taStyleAt.i=1;
   for(let k=0;k<=n;k++){const d=k*step;if(d>upto)break;const pt=taStyleSample(poly,d),ang=Math.atan2(pt.ny,pt.nx)-Math.PI/2,ca=Math.cos(ang),sa=Math.sin(ang),fl=(k&1)?-1:1,sc=S*(ring?.9:1);
    const la=ca*sc,lb=sa*sc,lc=-sa*sc*fl,ld=ca*sc*fl;
    ctx.globalAlpha=alpha*.95;ctx.setTransform(m.a*la+m.c*lb,m.b*la+m.d*lb,m.a*lc+m.c*ld,m.b*lc+m.d*ld,m.a*pt.x+m.c*pt.y+m.e,m.b*pt.x+m.d*pt.y+m.f);ctx.drawImage(fr,-32,-18);}
@@ -13450,8 +13502,9 @@ const __ta100Start=window.__ta100Profile.start();try {
  // 細い部分（線の両端寄り）ほど密に置き、高さはその位置の最大の結晶を超えないので、いちばん太いところは変わらない。
  // 位置・向き・大きさは線ごとに固定（重さや経過時間で変わらない）。
  function taIceFill(m,poly,front,age,alpha,S,hmax){
-  const A=window.__taIceAtlas,len=poly.len,mob=taMobileFx;let d=4,k=0,n=0;taStyleAt.i=1;
-  while(d<len-2&&n<(mob?70:110)){
+  if(poly.tier===undefined)poly.tier=taDenseCombo?2:taCompoundLevel;
+  const A=window.__taIceAtlas,len=poly.len,mob=taMobileFx,sp=[1,1.45,2.1][poly.tier]||1,cap=Math.round((mob?70:110)/sp);let d=4,k=0,n=0;taStyleAt.i=1;
+  while(d<len-2&&n<cap){
    const t=d/len,taper=.4+.6*Math.pow(Math.sin(Math.PI*t),.5),seed=k*71+poly.n*13+5;
    if(d<=front){const grow=taEaseBack((age-t*.16-.04)/.15);
     if(grow>0){const pt=taStyleSample(poly,d),side=hash(seed)<.5?1:-1,thin=1-(taper-.4)/.6;
@@ -13459,7 +13512,7 @@ const __ta100Start=window.__ta100Profile.start();try {
      const h=hmax*taper*grow*(.42+.5*hash(seed+2))*(.75+.25*thin),lean=(hash(seed+3)-.5)*h*.5;
      ctx.globalAlpha=alpha*(.8+.15*hash(seed+4));taIceAt(m,A.shards[(k+poly.n)%A.V],pt.x,pt.y,nx,ny,h,h*.22+2,lean);n++;}}
    // 間隔：細い部分は約5px、太い部分は約11px（スマホは少し広め）
-   d+=((5+6*Math.pow(taper,2))*(mob?1.35:1))*(.8+.4*hash(seed+5));k++;
+   d+=((5+6*Math.pow(taper,2))*(mob?1.35:1))*(.8+.4*hash(seed+5))*sp;k++;
   }
   ctx.setTransform(m);
  }
@@ -13479,7 +13532,8 @@ const __ta100Start=window.__ta100Profile.start();try {
   // 2a) タップの炎の円：本物らしく揺らぐ炎（連番画像）を円周に2層で並べ、時間差で再生する。
   //     円周をなぞるように火が回って点き、奥の層は大きく淡く、手前の層は小さく明るく。
   if(ring&&taFlameAtlas.frames.length===taFlameAtlas.F){
-   const fr=taFlameAtlas.frames,F=taFlameAtlas.F,N=taDenseCombo?14:(taMobileFx?18:26),tick=Math.floor(now/55);
+   if(poly.tier===undefined)poly.tier=taDenseCombo?2:taCompoundLevel;   // 軽さの段階は線ごとに最初に決めて固定（途中で炎の数が変わらない）
+   const fr=taFlameAtlas.frames,F=taFlameAtlas.F,N=poly.tier>=2?14:poly.tier===1?(taMobileFx?14:20):(taMobileFx?18:26),tick=Math.floor(now/55);
    for(let L=0;L<2;L++){taStyleAt.i=1;
     for(let k=0;k<N;k++){
      const a=(k+L*.5)/N,pt=taStyleSample(poly,a*poly.len),seed=k*29+L*101;
@@ -13490,7 +13544,8 @@ const __ta100Start=window.__ta100Profile.start();try {
     }}
   }else{
   // 2) 切り口から立つ鋭い炎の舌（型を押すだけ）
-  const m=ctx.getTransform(),step=(taDenseCombo?30:(taMobileFx?19:13))*(ring?1.25:1);
+  if(poly.tier===undefined)poly.tier=taDenseCombo?2:taCompoundLevel;
+  const m=ctx.getTransform(),step=(poly.tier>=2?30:(taMobileFx?19:13)*(poly.tier===1?1.35:1))*(ring?1.25:1);
   const count=Math.min(70,Math.floor(poly.len/step));taStyleAt.i=1;
   for(let k=0;k<=count;k++){
    const d=count?poly.len*k/count:0,t=d/poly.len,seed=k*37+poly.n*13,pt=taStyleSample(poly,d);
@@ -14012,7 +14067,9 @@ function tick(now){
  for(const s of states){
   if(!s.button.isConnected||!s.ctx||!atlas[s.kind])continue;
   // Hidden orbs do not need repeated canvas uploads to the GPU.
-  if(s.button.getClientRects().length===0)continue;
+  // 負荷対策：表示されているかの確認（画面の再計算を伴う）は0.4秒ごとにまとめる
+  if(!s.visAt||now-s.visAt>400){s.visAt=now;s.vis=s.button.getClientRects().length>0;}
+  if(!s.vis)continue;
   const frame=s.button.disabled?0:idx;
   if(frame===s.last||!atlas[s.kind][frame])continue;
   s.ctx.clearRect(0,0,SIZE,SIZE);s.ctx.drawImage(atlas[s.kind][frame],0,0);s.last=frame;
@@ -14175,6 +14232,43 @@ window.taV54Report=function(){const p=window.__taV54Perf;return {
 #viewMain>.ta-items:not(.ta-thunder-locked) .ta-mastery-thunder,
 #viewMain>.ta-items:not(.ta-thunder-locked) .ta-thunder-cost{display:inline-flex}
 </style>
+<script id="ta-perf-frame-rect-cache">
+// 負荷対策：採集エリア（.hero と #drift）の位置は、同じコマの中では変わらない。
+// 毎コマ何度も読まれるため、同じコマの中では最初に読んだ値を使い回す（画面の大きさやスクロールが変われば読み直す）。
+(()=>{
+ const native=Element.prototype.getBoundingClientRect;
+ let epoch=0;const bump=()=>{epoch++;};
+ addEventListener('resize',bump,{passive:true});addEventListener('orientationchange',bump,{passive:true});addEventListener('scroll',bump,{passive:true,capture:true});
+ if(window.visualViewport){visualViewport.addEventListener('resize',bump,{passive:true});visualViewport.addEventListener('scroll',bump,{passive:true});}
+ const frameKey=()=>document.timeline&&document.timeline.currentTime!=null?document.timeline.currentTime:-1;
+ const cacheRect=el=>{
+  if(!el||Object.prototype.hasOwnProperty.call(el,'getBoundingClientRect'))return;
+  let k=null,e=-1,r=null;
+  el.getBoundingClientRect=function(){const kk=frameKey();if(r&&kk!==-1&&kk===k&&e===epoch&&this.isConnected)return r;r=native.call(this);k=kk;e=epoch;return r;};
+ };
+ const install=()=>{cacheRect(document.querySelector('#viewMain>.hero'));cacheRect(document.getElementById('drift'));};
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
+})();
+</script>
+<script id="ta-perf-has-replacement">
+// 負荷対策：CSS の :has() は、玉の周りで何かが変わるたびに画面全体（約430要素）の見た目の再計算を起こしていた。
+// 同じ条件を、状態が変わったときだけクラスで付け外しする形に置き換える（見た目・条件は同じ。変化の直後、描画前に反映される）。
+(()=>{
+ const run=()=>{
+  const bar=document.querySelector('#viewMain>.ta-items');
+  if(bar){
+   const syncBar=()=>{for(const k of ['fire','ice','summon','thunder']){const b=bar.querySelector('.ta-orb.'+k);const on=!!(b&&b.matches(':disabled'));if(bar.classList.contains('ta-dis-'+k)!==on)bar.classList.toggle('ta-dis-'+k,on);}};
+   syncBar();new MutationObserver(syncBar).observe(bar,{subtree:true,childList:true,attributes:true,attributeFilter:['disabled']});
+  }
+  const launch=()=>{const el=document.getElementById('taLaunch'),on=!!(el&&!el.hidden);if(document.body.classList.contains('ta-launch-shown')!==on)document.body.classList.toggle('ta-launch-shown',on);};
+  launch();const le=document.getElementById('taLaunch');if(le)new MutationObserver(launch).observe(le,{attributes:true,attributeFilter:['hidden']});
+  new MutationObserver(launch).observe(document.body,{childList:true});
+  const slip=document.querySelector('#viewMain>.slip');
+  if(slip){const hud=()=>{const on=!!slip.querySelector('#taHud');if(slip.classList.contains('ta-has-hud')!==on)slip.classList.toggle('ta-has-hud',on);};hud();new MutationObserver(hud).observe(slip,{childList:true,subtree:true});}
+ };
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+})();
+</script>
 </body>
 <style>
 /* Readable thousand-point popup labels in the collection area. */
@@ -14258,27 +14352,27 @@ window.taV54Report=function(){const p=window.__taV54Perf;return {
 
 <style id="ta-orb-disabled-mastery-v19">
 /* Match each level label and mastery gauge to its own disabled orb. */
-#viewMain>.ta-items:has(.ta-orb.fire:disabled) .ta-mastery-fire,
-#viewMain>.ta-items:has(.ta-orb.ice:disabled) .ta-mastery-ice,
-#viewMain>.ta-items:has(.ta-orb.summon:disabled) .ta-mastery-green,
-#viewMain>.ta-items:has(.ta-orb.thunder:disabled) .ta-mastery-thunder,
-#viewMain>.ta-items:has(.ta-orb.thunder:disabled) .ta-thunder-cost {
+#viewMain>.ta-items.ta-dis-fire.ta-dis-fire.ta-dis-fire .ta-mastery-fire,
+#viewMain>.ta-items.ta-dis-ice.ta-dis-ice.ta-dis-ice .ta-mastery-ice,
+#viewMain>.ta-items.ta-dis-summon.ta-dis-summon.ta-dis-summon .ta-mastery-green,
+#viewMain>.ta-items.ta-dis-thunder.ta-dis-thunder.ta-dis-thunder .ta-mastery-thunder,
+#viewMain>.ta-items.ta-dis-thunder.ta-dis-thunder.ta-dis-thunder .ta-thunder-cost {
   opacity:.42!important;
   filter:grayscale(1) brightness(.78)!important;
   transition:opacity .18s ease,filter .18s ease;
 }
-#viewMain>.ta-items:has(.ta-orb.fire:disabled) .ta-mastery-fire *,
-#viewMain>.ta-items:has(.ta-orb.ice:disabled) .ta-mastery-ice *,
-#viewMain>.ta-items:has(.ta-orb.summon:disabled) .ta-mastery-green *,
-#viewMain>.ta-items:has(.ta-orb.thunder:disabled) .ta-mastery-thunder * {
+#viewMain>.ta-items.ta-dis-fire.ta-dis-fire.ta-dis-fire .ta-mastery-fire *,
+#viewMain>.ta-items.ta-dis-ice.ta-dis-ice.ta-dis-ice .ta-mastery-ice *,
+#viewMain>.ta-items.ta-dis-summon.ta-dis-summon.ta-dis-summon .ta-mastery-green *,
+#viewMain>.ta-items.ta-dis-thunder.ta-dis-thunder.ta-dis-thunder .ta-mastery-thunder * {
   animation:none!important;
   text-shadow:none!important;
   box-shadow:none!important;
 }
-#viewMain>.ta-items:has(.ta-orb.fire:disabled) .ta-mastery-fire .ta-mastery-track i,
-#viewMain>.ta-items:has(.ta-orb.ice:disabled) .ta-mastery-ice .ta-mastery-track i,
-#viewMain>.ta-items:has(.ta-orb.summon:disabled) .ta-mastery-green .ta-mastery-track i,
-#viewMain>.ta-items:has(.ta-orb.thunder:disabled) .ta-mastery-thunder .ta-mastery-track i {
+#viewMain>.ta-items.ta-dis-fire.ta-dis-fire.ta-dis-fire .ta-mastery-fire .ta-mastery-track i,
+#viewMain>.ta-items.ta-dis-ice.ta-dis-ice.ta-dis-ice .ta-mastery-ice .ta-mastery-track i,
+#viewMain>.ta-items.ta-dis-summon.ta-dis-summon.ta-dis-summon .ta-mastery-green .ta-mastery-track i,
+#viewMain>.ta-items.ta-dis-thunder.ta-dis-thunder.ta-dis-thunder .ta-mastery-thunder .ta-mastery-track i {
   background:#777e89!important;
   box-shadow:none!important;
 }
