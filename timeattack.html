@@ -13312,7 +13312,7 @@ const __ta100Start=window.__ta100Profile.start();try {
  function renderIceStrong(f,alpha,spr,poly,age,ring,tier){
   const top=tier>=5;
   const S=taFxScale,flash=Math.max(0,1-age/.12),lite=taDenseCombo||taCompoundLevel>0;
-  const front=ring?poly.len*Math.min(1,age/.22):Math.min(1,age/.18)*poly.len,out=(1-alpha)*8*S;
+  const front=ring?poly.len*Math.min(1,age/.22):Math.min(1,age/.18)*poly.len,out=ring?(1-alpha)*8*S:0;
   ctx.save();ctx.globalCompositeOperation='screen';
   ctx.globalAlpha=alpha*.42;ctx.fillStyle='rgba(110,200,255,.8)';taStyleBlade(poly,(ring?18:24)*S*(1+flash*.6),ring,front);
   ctx.globalAlpha=alpha*.55;ctx.fillStyle='rgba(190,238,255,.8)';taStyleBlade(poly,(ring?7:10)*S,ring,front);
@@ -13332,11 +13332,12 @@ const __ta100Start=window.__ta100Profile.start();try {
   const real=taIceReady(),IA=window.__taIceAtlas,m0=ctx.getTransform();let si=0;
   if(real){ctx.globalCompositeOperation='screen';taIceFrost(m0,poly,front,alpha,S,ring);ctx.globalCompositeOperation='source-over';}
   const Lp=new Path2D(),Dk=new Path2D(),E=new Path2D();let any=false;
-  const shard=(ox,oy,nx,ny,h,lean)=>{if(real){ctx.globalAlpha=alpha*.95;taIceAt(m0,IA.shards[(si++ +poly.n)%IA.V],ox,oy,nx,ny,h*1.18,h*.24+3,lean);return;}const tx=-ny,ty=nx,bw=h*.22+2.5;
+  const shard=(ox,oy,nx,ny,h,lean)=>{if(real){ctx.globalAlpha=alpha*.95;taIceAt(m0,IA.shards[(((ox*7+oy*13)|0)%IA.V+IA.V)%IA.V],ox,oy,nx,ny,h*1.18,h*.24+3,lean);return;}const tx=-ny,ty=nx,bw=h*.22+2.5;
    const b1x=ox-tx*bw,b1y=oy-ty*bw,b2x=ox+tx*bw,b2y=oy+ty*bw,Tx=ox+nx*h+tx*lean,Ty=oy+ny*h+ty*lean,Mx=ox+nx*h*.32+tx*bw*.25,My=oy+ny*h*.32+ty*bw*.25;
    Lp.moveTo(b1x,b1y);Lp.lineTo(Mx,My);Lp.lineTo(Tx,Ty);Lp.closePath();Dk.moveTo(Mx,My);Dk.lineTo(b2x,b2y);Dk.lineTo(Tx,Ty);Dk.closePath();
    E.moveTo(b1x,b1y);E.lineTo(Tx,Ty);E.lineTo(b2x,b2y);E.moveTo(Mx,My);E.lineTo(Tx,Ty);any=true;};
-  const step=(lite?34:(taMobileFx?22:15))*(ring?1.1:1),count=Math.min(70,Math.floor(poly.len/step));taStyleAt.i=1;
+  if(real&&!ring)taIceFill(m0,poly,front,age,alpha,S,62*1.18*S);
+  const step=(ring&&lite?34:(taMobileFx?22:15))*(ring?1.1:1),count=Math.min(70,Math.floor(poly.len/step));taStyleAt.i=1;
   for(let k=0;k<=count;k++){
    const d=count?poly.len*k/count:0;if(d>front)break;const seed=k*53+poly.n*7,pt=taStyleSample(poly,d),t=d/poly.len;
    const grow=taEaseBack((age-(ring?t*.22:t*.18)-.02)/.16);if(grow<=0)continue;
@@ -13347,7 +13348,7 @@ const __ta100Start=window.__ta100Profile.start();try {
     for(const a of [-.5,0,.5]){const c=Math.cos(a),s=Math.sin(a);shard(ox,oy,nx*c-ny*s,nx*s+ny*c,h*(a?1:1.25),lean*.3);}
    }else shard(ox,oy,nx,ny,h,lean);
    // 内側（逆向き）の小さな結晶の列
-   if(!lite&&(k&1)===0)shard(pt.x-nx*out,pt.y-ny*out,-nx,-ny,h*.42,-lean*.5);
+   if((ring?!lite:true)&&(k&1)===0)shard(pt.x-nx*out,pt.y-ny*out,-nx,-ny,h*.42,-lean*.5);
   }
   if(top&&!ring){const P=poly.P,g=taEaseBack((age-.2)/.25);if(g>0)for(const [a,b] of [[P[0],P[1]||P[0]],[P[P.length-1],P[P.length-2]||P[0]]]){let dx=a.x-b.x,dy=a.y-b.y;const l=Math.hypot(dx,dy)||1;dx/=l;dy/=l;for(const an of [-.8,-.4,0,.4,.8]){const c=Math.cos(an),s=Math.sin(an);shard(a.x,a.y,dx*c-dy*s,dx*s+dy*c,(an?52:70)*S*g*(1-Math.abs(an)*.25),0);}}}
   if(real){ctx.setTransform(m0);
@@ -13403,6 +13404,23 @@ const __ta100Start=window.__ta100Profile.start();try {
   for(let k=0;k<=n;k++){const d=k*step;if(d>upto)break;const pt=taStyleSample(poly,d),ang=Math.atan2(pt.ny,pt.nx)-Math.PI/2,ca=Math.cos(ang),sa=Math.sin(ang),fl=(k&1)?-1:1,sc=S*(ring?.9:1);
    const la=ca*sc,lb=sa*sc,lc=-sa*sc*fl,ld=ca*sc*fl;
    ctx.globalAlpha=alpha*.95;ctx.setTransform(m.a*la+m.c*lb,m.b*la+m.d*lb,m.a*lc+m.c*ld,m.b*lc+m.d*ld,m.a*pt.x+m.c*pt.y+m.e,m.b*pt.x+m.d*pt.y+m.f);ctx.drawImage(fr,-32,-18);}
+  ctx.setTransform(m);
+ }
+ // スワイプの氷の隙間を埋める細かなトゲ（魚の骨のように見えないよう、線を覆う）。
+ // 細い部分（線の両端寄り）ほど密に置き、高さはその位置の最大の結晶を超えないので、いちばん太いところは変わらない。
+ // 位置・向き・大きさは線ごとに固定（重さや経過時間で変わらない）。
+ function taIceFill(m,poly,front,age,alpha,S,hmax){
+  const A=window.__taIceAtlas,len=poly.len,mob=taMobileFx;let d=4,k=0,n=0;taStyleAt.i=1;
+  while(d<len-2&&n<(mob?70:110)){
+   const t=d/len,taper=.4+.6*Math.pow(Math.sin(Math.PI*t),.5),seed=k*71+poly.n*13+5;
+   if(d<=front){const grow=taEaseBack((age-t*.16-.04)/.15);
+    if(grow>0){const pt=taStyleSample(poly,d),side=hash(seed)<.5?1:-1,thin=1-(taper-.4)/.6;
+     const a=(hash(seed+1)-.5)*1.3,ca=Math.cos(a),sa=Math.sin(a),bx=pt.nx*side,by=pt.ny*side,nx=bx*ca-by*sa,ny=bx*sa+by*ca;
+     const h=hmax*taper*grow*(.42+.5*hash(seed+2))*(.75+.25*thin),lean=(hash(seed+3)-.5)*h*.5;
+     ctx.globalAlpha=alpha*(.8+.15*hash(seed+4));taIceAt(m,A.shards[(k+poly.n)%A.V],pt.x,pt.y,nx,ny,h,h*.22+2,lean);n++;}}
+   // 間隔：細い部分は約5px、太い部分は約11px（スマホは少し広め）
+   d+=((5+6*Math.pow(taper,2))*(mob?1.35:1))*(.8+.4*hash(seed+5));k++;
+  }
   ctx.setTransform(m);
  }
  function renderFire(f,alpha){
@@ -13464,7 +13482,9 @@ const __ta100Start=window.__ta100Profile.start();try {
   // 本物らしい氷（型ができていれば）：線に霜が張り、透き通った結晶が生える
   if(taIceReady()){const A=window.__taIceAtlas,m=ctx.getTransform();
    ctx.globalCompositeOperation='screen';taIceFrost(m,poly,front,alpha,S,ring);ctx.globalCompositeOperation='source-over';
-   const step=(taDenseCombo?40:(taMobileFx?28:16))*(ring?1.35:1),count=Math.min(60,Math.floor(poly.len/step)),out=(1-alpha)*7*S;taStyleAt.i=1;
+   // 結晶の位置は線ごとに固定（他の演出の重さや経過時間で動かない）
+   if(!ring)taIceFill(m,poly,front,age,alpha,S,70*S);
+   const step=(taMobileFx?28:16)*(ring?1.35:1),count=Math.min(60,Math.floor(poly.len/step)),out=0;taStyleAt.i=1;
    for(let k=0;k<=count;k++){
     const d=count?poly.len*k/count:0;if(d>front)break;const seed=k*53+poly.n*7,pt=taStyleSample(poly,d),t=d/poly.len;
     const grow=taEaseBack((age-(ring?0:t*.16)-.02)/.15);if(grow<=0)continue;
