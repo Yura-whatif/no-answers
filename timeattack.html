@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="ja">
 <head>
+<script id="ta-100-profiler">
+(function(){const buckets=Object.create(null);window.__ta100Profile={start:()=>performance.now(),end:function(name,t){const ms=performance.now()-t;let b=buckets[name];if(!b)b=buckets[name]={count:0,totalMs:0,maxMs:0,over16:0,over50:0};b.count++;b.totalMs+=ms;b.maxMs=Math.max(ms,b.maxMs);if(ms>=16.7)b.over16++;if(ms>=50)b.over50++},report:function(){const out={};for(const k in buckets){const b=buckets[k];out[k]={count:b.count,totalMs:+b.totalMs.toFixed(2),avgMs:+(b.totalMs/b.count).toFixed(3),maxMs:+b.maxMs.toFixed(2),over16:b.over16,over50:b.over50}}return out},reset:function(){for(const k in buckets)delete buckets[k]}}})();
+</script>
 <script>window.__taFastPickupTest=new URLSearchParams(location.search).get('fastpickup')==='1';window.__taPickupMode=new URLSearchParams(location.search).get('pickup')||'normal';</script>
 
 <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
@@ -3110,11 +3113,14 @@ html.ta-night-chain-retired #viewMain>.hero #combo{opacity:0!important;visibilit
       <button type="button" id="t-all">ランキング初期化</button>
       <button type="button" id="t-c100">連鎖 +9</button>
       <button type="button" id="t-c90">連鎖 +90</button>
+      <button type="button" id="t-spawn100">言霊100個出現</button>
       <button type="button" id="t-reward-orb">白銀玉出現</button>
       <button type="button" id="t-fire-levelup">紅玉Lvアップ</button>
       <button type="button" id="t-word-levelup">言霊Lvアップ</button>
       <button type="button" id="t-glow">降る記憶・昇る想いを呼ぶ</button>
       <button type="button" id="t-petal">桜の花びらを呼ぶ</button>
+      <button type="button" id="t-orblv">紅蒼の玉Lv +1</button>
+      <button type="button" id="t-fxlv">紅蒼の演出：Lvどおり</button>
     </div>
   </div>
 
@@ -6129,7 +6135,10 @@ function endFlood(){
     const award = () => {
       if(awardSession !== taFinishToken || !taRunning)return;
       if(i % 4 === 0)sfx.arrive();
-      taAward(taTime, taTime ? 1 : taPoints, false, boostedAtRelease && taFeelingBoost(), false, null, true);
+      const oldMerge=window.__taMergeNextRewardPlus;
+      window.__taMergeNextRewardPlus=true;
+      try{taAward(taTime, taTime ? 1 : taPoints, false, boostedAtRelease && taFeelingBoost(), false, null, true);}
+      finally{window.__taMergeNextRewardPlus=oldMerge;}
     };
     setTimeout(award, arrivalDelay);
     if(!shouldDraw)return;
@@ -6619,6 +6628,8 @@ let taSwipeBurstWindow=0,taSwipeBurstCount=0,taSwipeLastTouch=0,taSwipeLastArriv
 // Mobile: a dense sweep needs fewer overlapping visual/audio voices. Gameplay stays synchronous.
 let taMobileSwipeSoundWindow=0;
 function spawnWord(opt = {}){
+const __ta100Start=window.__ta100Profile.start();try {
+
   if(taNightActive()&&!opt.nightBonus)return;
   if(!taRunning && !taStarting) opt = {...opt, plain:true}; // DEMO: ordinary / time-extension words only
   const field = $("drift");
@@ -6745,7 +6756,11 @@ function spawnWord(opt = {}){
     const arrive = () => {
       // All points and seconds are credited. Dense, overlapping arrivals
       // share one audible cue and omit unreadable score popups/reflows.
-      taAward(taTime,taPoints,taDenseSwipe,moonBoostAtCollect,taDenseSwipe,null,true);
+      // Merge close-in-time reward labels while keeping each credit independent.
+      const oldMerge=window.__taMergeNextRewardPlus;
+      window.__taMergeNextRewardPlus=true;
+      try{taAward(taTime,taPoints,taDenseSwipe,moonBoostAtCollect,taDenseSwipe,null,true);}
+      finally{window.__taMergeNextRewardPlus=oldMerge;}
       const at=performance.now();
       if(!taDenseSwipe || at-taSwipeLastArrivalSound>260){sfx.arrive();taSwipeLastArrivalSound=at;}
     };
@@ -6855,7 +6870,15 @@ function spawnWord(opt = {}){
     const cx=fieldRect.width>24?Math.min(Math.max(cxRaw,fieldRect.left+12),fieldRect.right-12):cxRaw;
     const cy=fieldRect.height>24?Math.min(Math.max(cyRaw,fieldRect.top+12),fieldRect.bottom-12):cyRaw;
     if(!flood || Date.now() - (sfx.lastFly || 0) > 260){ sfx.lastFly = Date.now(); sfx.fly(flood ? .62 : .9); }
-    const o = document.createElement("span"); o.className = "orb"; taStyleRewardOrb(o,taTime,glowRemain>0 || fireScore);
+    // If a nearby orb with the same destination launched within 100ms,
+    // keep its flight visual and schedule this word's award independently.
+    const orbBoosted=glowRemain>0 || fireScore;
+    if(taFindMergedRewardFlight(cx,cy,taTime,orbBoosted)){
+      setTimeout(arrive,(flood?620:900));
+      return;
+    }
+    const o = document.createElement("span"); o.className = "orb"; taStyleRewardOrb(o,taTime,orbBoosted);
+    taRegisterRewardFlight(o,cx,cy,taTime,orbBoosted);
     o.style.left = cx + "px"; o.style.top = cy + "px"; document.body.append(o); if(combo>=100)window.taOrbDiag.mark("orb appended");
     const dx = (t.left + t.width/2) - cx, dy = (t.top + t.height/2) - cy;
     const lift = Math.min(46, Math.abs(dx) * .18 + 14), sway = (Math.random()*2-1) * 18;
@@ -6882,6 +6905,8 @@ function spawnWord(opt = {}){
   w.dataset.taVisibleAt = String(performance.now() + (w.classList.contains("late") ? (parseFloat(w.style.animationDelay) || 0) * 1000 : 0));
   field.append(w);
   return w;
+
+} finally {window.__ta100Profile.end('spawnWord',__ta100Start)}
 }
 // 芽生え：触れた場所のまわりに、ふつうの言葉が4〜5個、芽吹くように現れる
 const KIND_WORDS = ["ありがとう","好き","スキ","感謝","うれしい","しあわせ","大好き","だいすき","ありがと","いいね","素敵","ありがとね","会えてよかった","そばにいてくれて","だいじょうぶ"];
@@ -9478,12 +9503,39 @@ window.addEventListener("resize", ()=>{ if(libOpen && !turning) renderShelf(); }
 
 // テスト用
 $("t-petal").onclick=()=>{ forceSakura = true; toast("まもなく、ひとひらの花びらが現れます"); };
+// 紅・蒼の演出の見比べ：Lvどおり → Lv1・2の演出 → Lv3・4の演出 の順に切り替える（見た目だけ。効果・時間・範囲はLvどおり）
+$("t-fxlv").onclick=()=>{ const v=window.taFxLvTest||0, nx=v===0?1:v===1?3:v===3?5:0; window.taFxLvTest=nx; const label=nx===0?"Lvどおり":nx===1?"Lv1・2の演出":nx===3?"Lv3・4の演出":"Lv5の演出"; $("t-fxlv").textContent="紅蒼の演出："+label; toast("紅蒼の演出を「"+label+"」にしました"); };
 $("t-glow").onclick=()=>{ forceGlow = true; toast("まもなく、「降る記憶」または「昇る想い」が現れます"); };
 $("t-reward-orb").onclick=()=>document.dispatchEvent(new Event("ta-reward-spawn-test"));
 $("t-fire-levelup").onclick=()=>taMastery.testLevelUp();
+$("t-orblv").onclick=()=>{ const lv=taMastery.testCycleOrbs(); $("t-orblv").textContent="紅蒼の玉Lv +1（今 Lv"+lv+"）"; toast("紅玉・蒼玉をLv"+lv+"にしました"); };
 $("t-word-levelup").onclick=()=>taWordMastery.testLevelUp();
 $("t-c100").onclick=()=>{ combo += 8; comboAt = Date.now(); bumpCombo(); toast("連鎖を9増やしました"); };
 $("t-c90").onclick=()=>{ combo += 89; comboAt = Date.now(); bumpCombo(); toast("連鎖を90増やしました"); };
+// Stress test: use the normal word creation and collection paths, including
+// the original entrance/exit animations. Overlap is intentionally allowed.
+// Ten words per frame avoids a single long synchronous insertion burst.
+$("t-spawn100").onclick=()=>{
+  if(!taRunning || taNightActive() || shattering || libOpen){
+    toast("通常プレイ中に使用してください");return;
+  }
+  const button=$("t-spawn100");
+  if(button.disabled)return;
+  button.disabled=true;
+  let created=0, attempts=0;
+  const addBatch=()=>{
+    if(!taRunning || taNightActive() || shattering || libOpen){button.disabled=false;return;}
+    for(let i=0;i<10 && created<100 && attempts<120;i++){
+      attempts++;
+      // Keep the original word CSS, animation, lifetime and click handler.
+      // No collision avoidance: words may overlap as requested.
+      if(spawnWord({force:true,plain:true}))created++;
+    }
+    if(created<100 && attempts<120)requestAnimationFrame(addBatch);
+    else {button.disabled=false;toast("言霊を"+created+"個追加しました");}
+  };
+  requestAnimationFrame(addBatch);
+};
 $("t-all").onclick=()=>{
   if(!confirm("得点ランキング・星の記憶・言霊Lv・赤青翠玉のLvとXPをすべて初期化しますか？"))return;
   try{localStorage.removeItem('ta-time-attack-records-v1');}catch(e){}
@@ -10057,6 +10109,8 @@ const taMastery=(()=>{
  window.taPlayMasteryLevelSound=levelSound;
  const announce=(k,lv,preview=false)=>{levelQueue.push({k,lv,preview});nextLevelFx();};
  const testLevelUp=()=>{render();announce('fire',Math.min(5,level('fire')+1),true);};
+ // テスト用：紅玉・蒼玉のLvをそろえて1段ずつ上げる。Lv5の次はLv1に戻る（経験値をその段の下限に合わせる）。
+ const testCycleOrbs=()=>{const next=Math.max(level('fire'),level('ice'))>=5?1:Math.max(level('fire'),level('ice'))+1;xp.fire=xp.ice=limits[next-1];try{localStorage.setItem(KEY,JSON.stringify(xp));}catch(_e){}render();return next;};
  // Dense elemental clears can award dozens of mastery points in one frame.
  // Coalesce storage, layout measurements and badge animation into one update.
  let masteryFlushRaf=0;
@@ -10085,7 +10139,7 @@ const taMastery=(()=>{
  document.addEventListener('ta-item-reset',()=>requestAnimationFrame(render));
  requestAnimationFrame(render);
  const reset=()=>{clearLevelFx();for(const k of Object.keys(xp))xp[k]=0;try{localStorage.removeItem(KEY);}catch(_e){}render();};
- return {level,value,add,render,xp,reset,testLevelUp};
+ return {level,value,add,render,xp,reset,testLevelUp,testCycleOrbs};
 })();
 window.taMastery=taMastery;
 function taStarRunValue(key){
@@ -10428,7 +10482,53 @@ function taStyleRewardOrb(orb,isTime,boosted=false){
   if(boosted)orb.classList.add('ta-reward-boost');
   return orb;
 }
-function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null,wordGrowth=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';let taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?taFeelingBoost():boostAtCollect)?2:1)):0;if(wordGrowth){if(isTime)taTimeGain=Math.round(taTimeGain*taWordMastery.timeRate()*100)/100;else pts=pts*taWordMastery.scoreRate();}if(isTime){taSeconds+=taTimeGain;taSessionTimeGain+=taTimeGain;}else {taScore+=pts;taScoreRefresh();}if(!window.taThunderBatchHud)taRender();if(suppressPlus){return;}const el=document.getElementById(id);taReplayCssAnimation(el,'ta-pop','taPulse');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}const r=taPlusRect(el,id),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+Number(taTimeGain.toFixed(2))+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
+// Dense reward-orb visual merger: scoring remains per-word and unchanged.
+const taOrbMergeFlights=[];
+const TA_ORB_MERGE_DISTANCE=40, TA_ORB_MERGE_WINDOW=100;
+function taFindMergedRewardFlight(x,y,isTime,boosted){
+  const now=performance.now();
+  for(let i=taOrbMergeFlights.length-1;i>=0;i--){
+    const f=taOrbMergeFlights[i];
+    if(now-f.at>TA_ORB_MERGE_WINDOW || !f.orb.isConnected){taOrbMergeFlights.splice(i,1);continue;}
+    if(f.isTime===isTime && f.boosted===boosted && Math.hypot(f.x-x,f.y-y)<=TA_ORB_MERGE_DISTANCE){
+      f.count++;
+      f.orb.dataset.mergedCount=String(f.count);
+      return true;
+    }
+  }
+  return false;
+}
+function taRegisterRewardFlight(orb,x,y,isTime,boosted){
+  taOrbMergeFlights.push({orb,x,y,isTime,boosted,count:1,at:performance.now()});
+}
+// Coalesce only HUD labels; each individual award is credited immediately.
+const taMergedRewardPlus={score:null,time:null};
+function taQueueMergedRewardPlus(isTime,amount){
+  const key=isTime?'time':'score';
+  let batch=taMergedRewardPlus[key];
+  const session=taFinishToken;
+  if(!batch || batch.session!==session){
+    batch={session,amount:0};taMergedRewardPlus[key]=batch;
+    setTimeout(()=>{
+      if(taMergedRewardPlus[key]!==batch)return;
+      taMergedRewardPlus[key]=null;
+      if(session!==taFinishToken||!taRunning)return;
+      const id=isTime?'taTime':'taScore',el=document.getElementById(id);
+      if(!el)return;
+      const r=taPlusRect(el,id),p=document.createElement('span');
+      p.className='ta-plus'+(isTime?' time':'');
+      p.textContent=isTime?'+'+Number(batch.amount.toFixed(2))+'秒':'+'+taScoreFormat(batch.amount);
+      p.style.left=(r.left+r.width/2)+'px';p.style.top=(r.top+r.height/2-24)+'px';
+      document.body.append(p);
+      if(!isTime){
+        const visual=taScoreGainVisual(batch.amount);p.style.fontSize=visual.fontPx+'px';p.style.animation='none';
+        p.animate([{transform:'translate(-50%,-50%)',opacity:1},{transform:'translate(-50%,-50%) translateY(-45px)',opacity:0}],{duration:visual.durationMs,easing:'ease-out',fill:'forwards'}).onfinish=()=>p.remove();
+      }else setTimeout(()=>p.remove(),1200);
+    },TA_ORB_MERGE_WINDOW);
+  }
+  batch.amount+=amount;
+}
+function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null,wordGrowth=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';let taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?taFeelingBoost():boostAtCollect)?2:1)):0;if(wordGrowth){if(isTime)taTimeGain=Math.round(taTimeGain*taWordMastery.timeRate()*100)/100;else pts=pts*taWordMastery.scoreRate();}if(isTime){taSeconds+=taTimeGain;taSessionTimeGain+=taTimeGain;}else {taScore+=pts;taScoreRefresh();}if(!window.taThunderBatchHud)taRender();if(window.__taMergeNextRewardPlus && !suppressPlus){taQueueMergedRewardPlus(isTime,isTime?taTimeGain:pts);return;}if(suppressPlus){return;}const el=document.getElementById(id);taReplayCssAnimation(el,'ta-pop','taPulse');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}const r=taPlusRect(el,id),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+Number(taTimeGain.toFixed(2))+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
 const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
@@ -11801,11 +11901,15 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // Keep the first eight impacts visible, then sample echoes during a burst.
   return n<8 || (n<24 && n%4===0);
  }
- function wordFx(w,type){if(!taWordFxAllowed())return;const r=taCrossRectCache.get(w)||w.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;const fx=document.createElement('span');fx.className='ta-element-word-fx';fx.textContent=w.textContent;fx.style.left=x+'px';fx.style.top=y+'px';fx.style.color=type==='fire'?'#ffba69':'#d9faff';fx.style.textShadow=type==='fire'?'0 0 10px #ff4b16,0 0 20px #f86a20':'0 0 10px #8ce6ff,0 0 20px #65b9ff';document.body.append(fx);
+ function wordFx(w,type){
+const __ta100Start=window.__ta100Profile.start();try {
+if(!taWordFxAllowed())return;const r=taCrossRectCache.get(w)||w.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;const fx=document.createElement('span');fx.className='ta-element-word-fx';fx.textContent=w.textContent;fx.style.left=x+'px';fx.style.top=y+'px';fx.style.color=type==='fire'?'#ffba69':'#d9faff';fx.style.textShadow=type==='fire'?'0 0 10px #ff4b16,0 0 20px #f86a20':'0 0 10px #8ce6ff,0 0 20px #65b9ff';document.body.append(fx);
  const k=type==='fire'?[{opacity:1,transform:'translate(-50%,-50%) scale(1)',filter:'brightness(1)'},{opacity:.95,transform:'translate(-50%,-75%) scale(1.14)',filter:'brightness(2)',offset:.4},{opacity:0,transform:'translate(-50%,-145%) scale(.25) rotate(-9deg)',filter:'blur(8px)'}]:[{opacity:1,transform:'translate(-50%,-50%) scale(1)',filter:'brightness(1)'},{opacity:1,transform:'translate(-50%,-50%) scale(1.25)',filter:'brightness(2.5)',offset:.22},{opacity:0,transform:'translate(-50%,-50%) scale(1.7) rotate(8deg)',filter:'blur(9px)'}];
  const anim=fx.animate(k,{duration:type==='fire'?650:470,easing:'ease-out',fill:'forwards'});anim.onfinish=()=>fx.remove();
  const hr=taCrossHeroRect||hero.getBoundingClientRect();spark(x-hr.left,y-hr.top,type,type==='fire'?18:24);
- }
+ 
+} finally {window.__ta100Profile.end('wordFx',__ta100Start)}
+}
  // Mobile ice visual budget: keep prominent orbs, avoid one DOM/RAF loop per overlapping word.
  let taIceVisualActive=0,taIceBurstStart=0,taIceBurstCount=0;
  function taIceVisualAllowed(){
@@ -11839,7 +11943,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // Throttle dense sweeps to avoid excessive simultaneous audio voices.
   if(typeof sfx.touch==='function')sfx.touch();
  }
- function collect(w,type){if(!valid(w)||w.dataset.taElementClaim)return;w.dataset.taElementClaim='1';taMastery.add(type,w);if(type==='ice')iceContactSound();if(type!=='ice')wordFx(w,type);
+ function collect(w,type){
+const __ta100Start=window.__ta100Profile.start();try {
+if(!valid(w)||w.dataset.taElementClaim)return;w.dataset.taElementClaim='1';taMastery.add(type,w);if(type==='ice')iceContactSound();if(type!=='ice')wordFx(w,type);
  // During time-stop, stationary words use the original deferred award mechanism.
  // Elemental effects can collect them without bypassing the time-stop scoring rules.
  if(flood&&w.classList.contains('still')){
@@ -11921,7 +12027,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   },1000);
  }
  else{if(type==='fire' && w.dataset.taTime!=='1')w.dataset.taFireScore='1';w.click();if(w.isConnected&&!w.classList.contains('got')){delete w.dataset.taElementClaim;delete w.dataset.taFireScore;}}
- }
+ 
+} finally {window.__ta100Profile.end('collect',__ta100Start)}
+}
  function near(x,y,a,b,r){const dx=b.x-a.x,dy=b.y-a.y,d=dx*dx+dy*dy,t=d?Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/d)):0;return Math.hypot(x-a.x-t*dx,y-a.y-t*dy)<=r}
  // Emerald word-summoning: atmospheric runic fragments converge, then real collectible words materialize.
  function summon(g){
@@ -11971,6 +12079,8 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(!(taMobileFx&&crossBursts.length)){const anchor=pts[Math.floor(pts.length/2)];summonBursts.push({x:anchor.x,y:anchor.y,start:performance.now(),wave:true,fragments:[]});}
  }
  function renderSummons(now){
+const __ta100Start=window.__ta100Profile.start();try {
+
   if(taMobileFx&&crossBursts.length){summonBursts=summonBursts.filter(b=>now-b.start<1000);return;}
   ctx.save();ctx.globalCompositeOperation='screen';
   for(const b of summonBursts){const age=(now-b.start)/1000;if(age<0||age>.95)continue;
@@ -11981,7 +12091,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    for(let fi=0;fi<b.fragments.length;fi++){if(taAdaptiveLevel===2&&fi%3!==0)continue;if(taAdaptiveLevel===1&&fi%2!==0)continue;const f=b.fragments[fi];const q=Math.min(1,Math.max(0,age/.48));const spiral=f.angle+(1-q)*2.4+f.phase*.12;const r=f.radius*(1-q)*(1-q);const x=b.x+Math.cos(spiral)*r,y=b.y+Math.sin(spiral)*r*.75;ctx.globalAlpha=fade*(.35+.65*q);ctx.fillStyle=f.kind==='glyph'?'#e7d4a0':'#8afac9';ctx.shadowColor=f.kind==='glyph'?'#f4cf84':'#6afac0';ctx.shadowBlur=taMobileFx?0:7;ctx.save();ctx.translate(x,y);ctx.rotate(spiral);if(f.kind==='glyph'){ctx.font='12px serif';ctx.fillText('✧',0,0);}else{ctx.fillRect(-f.size/2,-f.size/2,f.size*1.4,f.size*2.3);}ctx.restore();}
   }
   ctx.restore();if(summonBursts.length&&now-summonBursts[0].start>=1000)summonBursts=summonBursts.filter(b=>now-b.start<1000);
- }
+ 
+} finally {window.__ta100Profile.end('renderSummons',__ta100Start)}
+}
  // Fire x ice resonance: require a clean near-perpendicular cross around BOTH stroke centers.
  function crossCandidate(a,b){
   if(a.isTap||b.isTap||a.type===b.type)return null;
@@ -12277,12 +12389,29 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   taLastDualFinisher=now;
   const ultimateId=taUltimateShow("cross","全部なかったことに");
   window.taStars?.track("ultimateCross");
-  crossBursts.push({ultimateId,x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({points:taCrossBladePoints(f.path)})),rain:Array.from({length:taCompoundFxLevel()===2?12:(taMobileFx?18:105)},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taCompoundFxLevel()===2?9:(taMobileFx?12:30)},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?12:30)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
+  // 紅玉・蒼玉がともにLv5のときだけ：最後に十字の光の刃を足し、言霊が消える時間を1秒延ばす
+  let crossLv5=false;try{crossLv5=taMastery.level('fire')>=5&&taMastery.level('ice')>=5;}catch(_){}
+  const crossDirs=crossLv5?[a,b].map(f=>{const P=f.path,s0=P[0],z=P[P.length-1],l=Math.hypot(z.x-s0.x,z.y-s0.y)||1;return{x:(z.x-s0.x)/l,y:(z.y-s0.y)/l,type:f.type};}):null;
+  crossBursts.push({lv5:crossLv5,dirs:crossDirs,ultimateId,x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({points:taCrossBladePoints(f.path)})),rain:Array.from({length:taCompoundFxLevel()===2?12:(taMobileFx?18:105)},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taCompoundFxLevel()===2?9:(taMobileFx?12:30)},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?12:30)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
   spark(hit.x,hit.y,'fire',taMobileFx?5:10);spark(hit.x,hit.y,'ice',taMobileFx?5:10);
   playElementSound('cross');
   if(taPerfEnabled)taPerfCost('cross',performance.now()-taCrossStarted);
  }
+ // Cached radial core: pulse changes size/opacity, not the expensive gradient raster.
+ const taCrossHaloCanvas=document.createElement('canvas');
+ taCrossHaloCanvas.width=taCrossHaloCanvas.height=256;
+ const taCrossHaloCtx=taCrossHaloCanvas.getContext('2d');
+ if(taCrossHaloCtx){
+  const hg=taCrossHaloCtx.createRadialGradient(128,128,0,128,128,128);
+  hg.addColorStop(0,'rgba(255,255,249,.87)');
+  hg.addColorStop(.18,'rgba(214,246,255,.8)');
+  hg.addColorStop(.43,'rgba(132,224,234,.44)');
+  hg.addColorStop(1,'rgba(109,195,255,0)');
+  taCrossHaloCtx.fillStyle=hg;taCrossHaloCtx.fillRect(0,0,256,256);
+ }
  function renderCrossBursts(now){
+const __ta100Start=window.__ta100Profile.start();try {
+
   crossBursts=crossBursts.filter(b=>{if(now-b.start<7000)return true;taUltimateHide(b.ultimateId);return false;});
   for(const b of crossBursts){
    const t=(now-b.start)/1000;
@@ -12291,11 +12420,12 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    // New words spawned after the flash are also collected, at most every 80ms.
    // The final full-field collection continues for one second after the flash.
    // Grant skill grace only when that collection window has fully ended.
-   if(b.flashCollected&&t>=4.22&&!b.graceGranted){
+   const clearEnd=b.lv5?5.22:4.22; // 最後の爆発のあと言霊を消し続ける時間の終わり（両方Lv5なら1秒延長）
+   if(b.flashCollected&&t>=clearEnd&&!b.graceGranted){
     b.graceGranted=true;
     if(taRunning&&combo>=1)setComboSkillGrace('crossFinish');
    }
-   if(b.flashCollected&&t<4.22&&now-b.lastAfterCollect>=80){
+   if(b.flashCollected&&t<clearEnd&&now-b.lastAfterCollect>=80){
     b.lastAfterCollect=now;{const tm=taPerfEnabled?performance.now():0;finalFlashCollect(b);if(taPerfEnabled)taPerfCost('collect',performance.now()-tm);}
    }
    // Exactly three one-second pulses, including newly spawned words.
@@ -12333,12 +12463,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    if(orbAlpha>0){
     const growth=1+Math.min(3,Math.floor(t))*.22;
     const r=(taMobileFx?22:27)*growth*(1+beat*.65)+forming*18;
-    const halo=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,r*2.5);
-    halo.addColorStop(0,`rgba(255,255,249,${.87*orbAlpha})`);
-    halo.addColorStop(.18,`rgba(214,246,255,${.8*orbAlpha})`);
-    halo.addColorStop(.43,`rgba(132,224,234,${(.35+beat*.23)*orbAlpha})`);
-    halo.addColorStop(1,'rgba(109,195,255,0)');
-    ctx.fillStyle=halo;ctx.beginPath();ctx.arc(b.x,b.y,r*2.5,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=orbAlpha*(.88+beat*.12);
+    if(taCrossHaloCtx)ctx.drawImage(taCrossHaloCanvas,b.x-r*2.5,b.y-r*2.5,r*5,r*5);
+    else {ctx.fillStyle='rgba(180,235,255,.5)';ctx.beginPath();ctx.arc(b.x,b.y,r*1.7,0,Math.PI*2);ctx.fill();}
     ctx.globalAlpha=(.5+beat*.35)*orbAlpha;ctx.strokeStyle='#e5f9ff';ctx.lineWidth=1.5;
     ctx.beginPath();ctx.arc(b.x,b.y,r*.82,0,Math.PI*2);ctx.stroke();
    }
@@ -12355,11 +12482,19 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
     ctx.globalAlpha=Math.pow(1-u,1.4)*.9;ctx.strokeStyle='#ecfbff';ctx.lineWidth=5*(1-u)+.5;
     ctx.beginPath();ctx.arc(b.x,b.y,rr,0,Math.PI*2);ctx.stroke();
     if(flash>0){const glow=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,95+90*u);glow.addColorStop(0,`rgba(255,255,255,${flash*.85})`);glow.addColorStop(1,'rgba(120,225,255,0)');ctx.globalAlpha=1;ctx.fillStyle=glow;ctx.beginPath();ctx.arc(b.x,b.y,95+90*u,0,Math.PI*2);ctx.fill();}
+    // 両方Lv5のときだけ：2本の線の向きに、十字の光の刃が画面の端まで伸びる（紅の刃は朱、蒼の刃は水色の縁）
+    if(b.lv5&&b.dirs){const S=taMobileFx?.72:1,uu=Math.min(1,(t-3.22)/.6),e=1-Math.pow(1-Math.min(1,uu*2.5),3),fade=Math.pow(1-uu,1.4);
+     for(const d of b.dirs){const n={x:-d.y,y:d.x},L=60+760*e,fire=d.type==='fire';
+      for(const [w,al,col,op] of [[34,.55,fire?'rgba(230,50,30,.9)':'rgba(60,150,255,.9)','screen'],[16,.85,fire?'#ffc070':'#c8f4ff','screen'],[6,1,'#ffffff','lighter']]){
+       ctx.globalCompositeOperation=op;ctx.globalAlpha=al*fade;ctx.fillStyle=col;const ww=w*S*fade+.5;ctx.beginPath();ctx.moveTo(b.x+d.x*L,b.y+d.y*L);ctx.lineTo(b.x+n.x*ww,b.y+n.y*ww);ctx.lineTo(b.x-d.x*L,b.y-d.y*L);ctx.lineTo(b.x-n.x*ww,b.y-n.y*ww);ctx.closePath();ctx.fill();}}
+     ctx.globalCompositeOperation='screen';}
     for(let si=0;si<b.shards.length;si++){if(taCompoundFxLevel()===2&&si%3!==0)continue;const p=b.shards[si];const dist=p.speed*u,x=b.x+Math.cos(p.angle)*dist,y=b.y+Math.sin(p.angle)*dist;ctx.globalAlpha=(1-u)*.8;ctx.fillStyle=p.kind===0?'#ffc898':p.kind===1?'#bceeff':'#fff';ctx.beginPath();ctx.arc(x,y,p.size*(1-u*.6),0,Math.PI*2);ctx.fill();}
    }
    ctx.restore();
   }
- }
+ 
+} finally {window.__ta100Profile.end('renderCrossBursts',__ta100Start)}
+}
  // Lightweight directional border glow for all red/blue/green orb levels (test rollout).
  // One shared viewport canvas, painted only during an active 0.7s pulse.
  const taBorderCanvas=document.createElement('canvas');
@@ -12430,7 +12565,9 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   }
   taBorderFrame=requestAnimationFrame(taPaintBorderGlow);
  }
- function makeTrace(g){taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summon(g);return;}const pts=g.points;let len=0;for(let i=1;i<pts.length;i++)len+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
+ function makeTrace(g){
+const __ta100Start=window.__ta100Profile.start();try {
+taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summon(g);return;}const pts=g.points;let len=0;for(let i=1;i<pts.length;i++)len+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
  // A stationary tap places a round 68px-radius elemental field (not a short stroke).
  const isTap=len<22;
  // Clock creation is tied to a normal elemental tap. The opposite-color stroke
@@ -12459,10 +12596,17 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    const eclipseY=er.top+(hr.top+center.y)*er.height/(window.innerHeight||1);
    pullAll(eclipseX,eclipseY,null,true,g.type);
  }else if(isTap&&!soumatouTap&&(!clockDial||clockDial.type!==g.type)){clockDialFx(pts[0],g.type)}
- const segs=[];if(isTap){const c=pts[0];segs.push([c,{x:c.x+.01,y:c.y},94]);}
- else for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(Math.hypot(b.x-a.x,b.y-a.y)>1)segs.push([a,b,23]);}
+ // 文字を消せる範囲（紅・蒼共通）：Lv1・2は従来どおり、Lv3から1段ごとに少しずつ広げる。見た目の演出は変えない。
+ //   スワイプの線からの半径：Lv1・2＝23px、Lv3＝27px、Lv4＝31px、Lv5＝35px
+ //   タップの中心からの半径：Lv1・2＝94px、Lv3＝102px、Lv4＝110px、Lv5＝118px
+ let hitLv=1;try{if(g.type==='fire'||g.type==='ice')hitLv=taMastery.level(g.type);}catch(_){}
+ const hitStep=Math.max(0,Math.min(5,hitLv)-2),swipeR=23+4*hitStep,tapR=94+8*hitStep;
+ const segs=[];if(isTap){const c=pts[0];segs.push([c,{x:c.x+.01,y:c.y},tapR]);}
+ else for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(Math.hypot(b.x-a.x,b.y-a.y)>1)segs.push([a,b,swipeR]);}
  if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:(completed||eclipseTap)?.30:(typeof taStarRunValue==='function'?taStarRunValue((isTap?'tap'+(g.type==='fire'?'Fire':'Ice'):g.type)):3.1),total:(typeof taStarRunValue==='function'?taStarRunValue((isTap?'tap'+(g.type==='fire'?'Fire':'Ice'):g.type)):3.1),age:0,resonated:false,clockDissolve:completed||eclipseTap};traces.push(trace);if(!completed&&!eclipseTap&&!soumatouTap&&(g.type==='fire'||g.type==='ice'))window.taStars?.track(g.type);if(traces.length>2){for(const older of traces.slice(0,-2)){if(!older.clockDissolve){older.left=Math.min(older.left,1.85);older.total=3.1;older.retiring=true;}}}if(traces.length>6)traces.splice(0,traces.length-6);for(const other of traces){if(!completed&&!eclipseTap&&!soumatouTap&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed&&!eclipseTap)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
- checkWords();}
+ checkWords();
+} finally {window.__ta100Profile.end('makeTrace',__ta100Start)}
+}
  // Yellow orb: a one-charge test of the lightning miracle. The actual words are spawned
  // through the existing collector, so scores, flying orbs and combos stay native.
  // 黄玉：神聖な金の雷。触れた場所に金の魔法陣が描かれ、天から光の柱が落ち、
@@ -12815,30 +12959,52 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  field.addEventListener('lostpointercapture',taFinalizeInterruptedCast,true);
  field.addEventListener('pointercancel',taFinalizeInterruptedCast,true);
  field.addEventListener('pointermove',e=>{if(e.pointerId===consumedPointer){e.stopImmediatePropagation();e.preventDefault()}},false);
+ // Batch elemental hits over animation frames to prevent 100 synchronous DOM
+ // mutations, score updates and orb creations from blocking the main thread.
+ const taHitQueue=[];
+ let taHitFrame=0;
+ function taDrainHitQueue(){
+  taHitFrame=0;
+  const start=performance.now();let processed=0;
+  while(taHitQueue.length&&processed<7&&performance.now()-start<7){
+   const hit=taHitQueue.shift();
+   if(hit.w.isConnected&&valid(hit.w)){delete hit.w.dataset.taQueuedHit;collect(hit.w,hit.type);}
+   processed++;
+  }
+  if(taHitQueue.length)taHitFrame=requestAnimationFrame(taDrainHitQueue);
+ }
+ function taQueueHits(hits){
+  for(const hit of hits){
+   if(hit.w.dataset.taQueuedHit||hit.w.dataset.taElementClaim)continue;
+   hit.w.dataset.taQueuedHit='1';taHitQueue.push(hit);
+  }
+  if(taHitQueue.length&&!taHitFrame)taHitFrame=requestAnimationFrame(taDrainHitQueue);
+ }
  function checkWords(){
+const __ta100Start=window.__ta100Profile.start();try {
   if(!traces.length)return;
   const hr=hero.getBoundingClientRect();
-  // Calculate each segment's broad-phase bounds once instead of testing
-  // every word against every segment with the expensive distance function.
   const candidates=[];
-  for(const f of traces){
-   for(const seg of f.segs){
-    const a=seg[0],b=seg[1],radius=seg[2]+20;
-    candidates.push({f,a,b,radius,minX:Math.min(a.x,b.x)-radius,maxX:Math.max(a.x,b.x)+radius,minY:Math.min(a.y,b.y)-radius,maxY:Math.max(a.y,b.y)+radius});
-   }
-  }
+  for(const f of traces){for(const seg of f.segs){
+   const a=seg[0],b=seg[1],radius=seg[2]+20;
+   candidates.push({f,a,b,radius,minX:Math.min(a.x,b.x)-radius,maxX:Math.max(a.x,b.x)+radius,minY:Math.min(a.y,b.y)-radius,maxY:Math.max(a.y,b.y)+radius});
+  }}
   if(!candidates.length)return;
+  const hits=[];
+  // Finish all layout reads before collecting or modifying any word.
   for(const w of field.querySelectorAll('.word')){
-   if(!valid(w))continue;
+   if(!valid(w)||w.dataset.taQueuedHit||w.dataset.taElementClaim)continue;
    const r=w.getBoundingClientRect();if(!r.width||!r.height)continue;
    const x=r.left+r.width/2-hr.left,y=r.top+r.height/2-hr.top;
    const extra=Math.min(20,r.width*.24);
    for(const c of candidates){
     if(x<c.minX||x>c.maxX||y<c.minY||y>c.maxY)continue;
-    if(near(x,y,c.a,c.b,c.radius-20+extra)){collect(w,c.f.type);break;}
+    if(near(x,y,c.a,c.b,c.radius-20+extra)){hits.push({w,type:c.f.type});break;}
    }
   }
- }
+  taQueueHits(hits);
+} finally {window.__ta100Profile.end('checkWords',__ta100Start)}
+}
  // Stage 5: share stable math helpers across frames rather than allocating
  // three new function objects for every effect redraw.
  const fract=v=>v-Math.floor(v);
@@ -12876,6 +13042,116 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   taFxSchedulerStats.wakeCalls++;
   queueFxFrame();
  }
+ // 本物らしい炎：雑音で揺らぐ炎を小さな連番画像（12コマ）として一度だけ作り、輪の上で時間差再生する。
+ // 生成は待ち時間に1コマずつ行う（1コマ 48×112 画素）。できるまでは従来の型で代用する。
+ window.__taFlameAtlas=window.__taFlameAtlas||{frames:[],gold:[],F:12,W:48,H:112,busy:false};
+ function taFlameAtlasBuild(){
+  const taFlameAtlas=window.__taFlameAtlas;if(taFlameAtlas.busy)return;taFlameAtlas.busy=true;
+  const {F,W,H}=taFlameAtlas,P=8;
+  const lat=(ix,iy,per)=>{iy=((iy%per)+per)%per;let h=(ix*374761393+iy*668265263)|0;h=(h^(h>>>13))*1274126177|0;return((h^(h>>>16))>>>0)/4294967295;};
+  const vn=(x,y,per)=>{const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy);
+   const a=lat(ix,iy,per),b=lat(ix+1,iy,per),c=lat(ix,iy+1,per),d=lat(ix+1,iy+1,per);return a+(b-a)*ux+(c-a)*uy+(a-b-c+d)*ux*uy;};
+  const fbm=(x,y)=>vn(x,y,P)*.55+vn(x*2+17,y*2,P*2)*.3+vn(x*4+31,y*4,P*4)*.15;
+  const pal=I=>{ // 強さ→色（暗い紅→朱→金→白）。加算合成で重ねる前提で、弱いところは暗く。
+   if(I<.45){const k=I/.45;return[120+120*k,14+52*k,10];}
+   if(I<.78){const k=(I-.45)/.33;return[240+15*k,66+104*k,10+30*k];}
+   const k=Math.min(1,(I-.78)/.22);return[255,170+70*k,40+120*k];};
+  // Lv5用：金から白へ抜ける「神火」の色
+  const palGold=I=>{
+   if(I<.45){const k=I/.45;return[150+95*k,62+70*k,18+14*k];}
+   if(I<.78){const k=(I-.45)/.33;return[245+10*k,132+88*k,32+58*k];}
+   const k=Math.min(1,(I-.78)/.22);return[255,220+32*k,90+150*k];};
+  let f=0;
+  const one=()=>{
+   const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d'),img=g.createImageData(W,H),D=img.data,tt=f/F*P;
+   const c2=document.createElement('canvas');c2.width=W;c2.height=H;const g2=c2.getContext('2d'),img2=g2.createImageData(W,H),D2=img2.data;
+   for(let y=0;y<H;y++){const Y=(H-4-y)/(H-4);if(Y<0)continue;
+    for(let x=0;x<W;x++){
+     const nx=x/12,ny=(H-y)/12-tt;
+     const sway=(fbm(nx*.5+7.3,ny*.6)-.5)*(.25+1.6*Y*Y);
+     const cx=(x-W/2)/(W/2)-sway*.9;
+     const half=.95*Math.pow(Math.max(0,1-Y),.5)+.03;
+     const env=Math.max(0,1-Math.abs(cx)/half);if(!env)continue;
+     const n=fbm(nx*1.2+sway*2,ny*1.15);
+     let I=Math.pow(env,.7)*(1.2-1.05*Y)+(n-.5)*(.35+.85*Y);
+     I=Math.max(0,Math.min(1,I));if(I<.1)continue;
+     // 根元はなめらかに透かして、四角い切れ目が出ないようにする
+     const base=Math.min(1,Y/.16),fade=base*base*(3-2*base);
+     const [r,gg,b]=pal(I),a=fade*(k=>k*k*(3-2*k))(Math.min(1,(I-.1)/.4)),o=(y*W+x)*4;
+     D[o]=r;D[o+1]=gg;D[o+2]=b;D[o+3]=a*255;
+     const [r2,g2c,b2]=palGold(I);D2[o]=r2;D2[o+1]=g2c;D2[o+2]=b2;D2[o+3]=a*255;
+    }}
+   g.putImageData(img,0,0);g2.putImageData(img2,0,0);taFlameAtlas.frames.push(c);taFlameAtlas.gold.push(c2);
+   if(++f<F)(window.requestIdleCallback?requestIdleCallback(one,{timeout:400}):setTimeout(one,30));
+  };
+  one();
+ }
+ // 読み込み後の空き時間に作っておく（最初のタップから本物らしい炎を出すため）
+ setTimeout(taFlameAtlasBuild,1500);
+ // 本物らしい氷：透き通った結晶（面ごとの濃淡・内部のひび・霜のざらつき・反射）6種と、
+ // 線に沿って張る霜（樹氷のような細かい針）を、読み込み後の空き時間に一度だけ作っておく。
+ window.__taIceAtlas=window.__taIceAtlas||{shards:[],frost:null,busy:false,V:6};
+ function taIceAtlasBuild(){
+  const A=window.__taIceAtlas;if(A.busy)return;A.busy=true;
+  const lat=(ix,iy)=>{let h=(ix*374761393+iy*668265263)|0;h=(h^(h>>>13))*1274126177|0;return((h^(h>>>16))>>>0)/4294967295;};
+  const vn=(x,y)=>{const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy);
+   const a=lat(ix,iy),b=lat(ix+1,iy),c=lat(ix,iy+1),d=lat(ix+1,iy+1);return a+(b-a)*ux+(c-a)*uy+(a-b-c+d)*ux*uy;};
+  let v=0;const rnd=k=>{const x=Math.sin((v*97+k)*12.9898)*43758.5453;return x-Math.floor(x);};
+  const shard=()=>{
+   const W=44,H=120,c=document.createElement('canvas');c.width=W;c.height=H;const g0=c.getContext('2d');
+   const body=(g,sx,ox,tilt)=>{g.save();g.translate(W/2+ox,H);g.rotate(tilt);g.scale(sx,1);g.translate(-W/2,-H);
+   const slim=[1,.78,1.12,.9,1,.84][v%6],nar=x=>W/2+(x-W/2)*slim;
+   const tip=[nar(W/2+(rnd(1)-.5)*8),v%6===3?14:3],bl=[nar(5+rnd(2)*4),H-4],br=[nar(W-5-rnd(3)*4),H-4],ml=[nar(7+rnd(4)*5),H*(.45+rnd(5)*.15)],mr=[nar(W-7-rnd(6)*5),H*(.4+rnd(7)*.15)],rb=[nar(W/2+(rnd(8)-.5)*8),H-4];
+   const tip2=v%6===3?[tip[0]+5,8]:null;
+   const poly=pts=>{g.beginPath();pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.closePath();};
+   // 光の当たる面（明るく透ける）と影の面（深い青）
+   let gr=g.createLinearGradient(bl[0],0,rb[0],0);gr.addColorStop(0,'rgba(240,251,255,.95)');gr.addColorStop(.55,'rgba(190,230,252,.78)');gr.addColorStop(1,'rgba(160,212,244,.72)');
+   g.fillStyle=gr;poly(tip2?[tip,ml,bl,rb]:[tip,ml,bl,rb]);g.fill();if(tip2){g.fillStyle='rgba(170,215,245,.45)';poly([tip,tip2,mr,rb]);g.fill();}
+   gr=g.createLinearGradient(rb[0],0,br[0],0);gr.addColorStop(0,'rgba(96,160,222,.78)');gr.addColorStop(1,'rgba(28,78,160,.92)');
+   g.fillStyle=gr;poly([tip,mr,br,rb]);g.fill();
+   // 奥行き：先端はわずかに白く、根元は霜で白く濁る
+   g.globalCompositeOperation='source-atop';gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,'rgba(255,255,255,.28)');gr.addColorStop(.4,'rgba(255,255,255,0)');gr.addColorStop(.78,'rgba(230,246,255,.08)');gr.addColorStop(1,'rgba(240,250,255,.6)');
+   g.fillStyle=gr;g.fillRect(0,0,W,H);
+   // 内部のひび
+   g.strokeStyle='rgba(255,255,255,.42)';g.lineWidth=.7;
+   for(let k=0;k<3;k++){let x=W*(.3+rnd(10+k)*.4),y=H*(.35+rnd(20+k)*.45);g.beginPath();g.moveTo(x,y);for(let s=0;s<3;s++){x+=(rnd(30+k*5+s)-.5)*10;y+=(rnd(40+k*5+s)-.6)*16;g.lineTo(x,y);}g.stroke();}
+   // 反射のきらめき
+   const hx=tip[0]-5,hy=H*.28,rg=g.createRadialGradient(hx,hy,0,hx,hy,12);rg.addColorStop(0,'rgba(255,255,255,.6)');rg.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=rg;g.fillRect(0,0,W,H);
+   g.strokeStyle='rgba(255,255,255,.98)';g.lineWidth=1.6;g.lineJoin='miter';g.beginPath();g.moveTo(...bl);g.lineTo(...ml);g.lineTo(...tip);g.stroke();
+   g.strokeStyle='rgba(200,236,255,.7)';g.lineWidth=1.3;g.beginPath();g.moveTo(...tip);g.lineTo(...mr);g.lineTo(...br);g.stroke();
+   g.strokeStyle='rgba(255,255,255,.32)';g.lineWidth=.8;g.beginPath();g.moveTo(...tip);g.lineTo(...rb);g.stroke();
+   g.restore();};
+   const g=g0;
+   if(v%3===1)body(g,.42,-9,-.38);
+   body(g,1,0,0);
+   if(v%3===2)body(g,.38,10,.42);
+   // 霜のざらつき：画素ごとに明るさと透け具合をゆらし、細かな白い粒を散らす
+   const img=g.getImageData(0,0,W,H),D=img.data;
+   for(let y=0;y<H;y++)for(let x=0;x<W;x++){const o=(y*W+x)*4;if(!D[o+3])continue;
+    const n=vn(x/5+v*7,y/7),n2=vn(x/2+31,y/2+v*3),f=.82+.36*n;
+    D[o]=Math.min(255,D[o]*f);D[o+1]=Math.min(255,D[o+1]*f);D[o+2]=Math.min(255,D[o+2]*(.92+.16*n));D[o+3]=Math.min(255,D[o+3]*(.86+.24*n2));
+    if(lat(x+v*101,y)>.988){D[o]=D[o+1]=D[o+2]=255;D[o+3]=Math.max(D[o+3],215);}}
+   g.putImageData(img,0,0);
+   return c;
+  };
+  const frost=()=>{
+   const W=64,H=36,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+   const rg=g.createRadialGradient(W/2,H/2,0,W/2,H/2,W/2);rg.addColorStop(0,'rgba(150,210,255,.28)');rg.addColorStop(1,'rgba(150,210,255,0)');g.fillStyle=rg;g.fillRect(0,0,W,H);
+   g.lineCap='round';
+   for(let i=0;i<46;i++){const x=rnd(100+i)*W,y=H/2+(rnd(200+i)-.5)*6,up=rnd(300+i)<.5?-1:1,a=up*Math.PI/2+(rnd(400+i)-.5)*2.2,l=3+rnd(500+i)*11;
+    const ex=x+Math.cos(a)*l,ey=y+Math.sin(a)*l;g.strokeStyle=`rgba(235,248,255,${.3+.45*rnd(600+i)})`;g.lineWidth=.6+rnd(700+i)*.6;g.beginPath();g.moveTo(x,y);g.lineTo(ex,ey);
+    const mx=x+Math.cos(a)*l*.5,my=y+Math.sin(a)*l*.5;for(const s of [-.7,.7]){g.moveTo(mx,my);g.lineTo(mx+Math.cos(a+s)*l*.35,my+Math.sin(a+s)*l*.35);}g.stroke();}
+   for(let i=0;i<40;i++){g.fillStyle=`rgba(255,255,255,${.35+.4*rnd(800+i)})`;g.beginPath();g.arc(rnd(900+i)*W,H/2+(rnd(1000+i)-.5)*H*.8,.5+rnd(1100+i)*.8,0,Math.PI*2);g.fill();}
+   // 両端を透かして、並べたときに継ぎ目が出ないようにする
+   g.globalCompositeOperation='destination-in';const lg=g.createLinearGradient(0,0,W,0);lg.addColorStop(0,'rgba(0,0,0,0)');lg.addColorStop(.25,'#000');lg.addColorStop(.75,'#000');lg.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=lg;g.fillRect(0,0,W,H);
+   return c;
+  };
+  const one=()=>{if(v<A.V){A.shards.push(shard());v++;}else{A.frost=frost();return;}
+   (window.requestIdleCallback?requestIdleCallback(one,{timeout:400}):setTimeout(one,30));};
+  one();
+ }
+ setTimeout(taIceAtlasBuild,2600);
+
  function draw(now){
   taFxSchedulerStats.draws++;
   taFxSchedulerStats.peakTraces=Math.max(taFxSchedulerStats.peakTraces,traces.length);
@@ -12897,103 +13173,330 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // Cross+emerald overlap is dominated by FX paints (131ms observed).
   // Reduce decorative redraw frequency only; the hit/award logic is unchanged.
   const taDenseCombo=taMobileFx&&crossBursts.length>0&&(summonBursts.length>0||traces.some(f=>f.type==='summon')||taCompoundLevel===2);
-  const targetMs=taMobileFx?(crossBursts.length?50:40):16;
+  const targetMs=taMobileFx?(crossBursts.length?50:40):(crossBursts.length?33:16);
   if(now-lastFxPaint<targetMs){scheduleFxIdle(Math.max(8,Math.ceil(targetMs-(now-lastFxPaint))));return;}
   lastFxPaint=now;fxWasDrawing=true;const taPaintStart=taPerfEnabled?performance.now():0;
   const dt=Math.min(.05,(now-last)/1000);last=now;
- const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,taMobileFx?1:2),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}taFxSchedulerStats.canvasPixels=cw*ch;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);drawCompletedClock(now);renderSummons(now);
+ const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,taMobileFx?1:(crossBursts.length?1.25:2)),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}taFxSchedulerStats.canvasPixels=cw*ch;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);drawCompletedClock(now);renderSummons(now);
  if(gesture&&performance.now()-gesture.started>=GESTURE_MAX_MS){const g=gesture;gesture=null;makeTrace(g)}
  const paused=false; // Elemental traces remain active during time-stop.
 
- function renderFire(f,alpha){
+ // ── 紅A「居合の炎」／蒼A「一閃の凍結」 ─────────────────────────────
+ // 形は最初に1回だけ描いた型（スプライト）を押して並べる。毎コマのグラデーション生成をやめ、
+ // 面の塗り・線はまとめて1回で描くので、従来より描画の手数は少ない。当たり判定と残り時間は従来どおり。
+ const taFlameAtlas=window.__taFlameAtlas;
+ function taStyleSprites(){
+  // この関数は毎コマ呼ばれる描画処理の中にあるため、型は window に1度だけ保持する
+  if(window.__taStyleSpr)return window.__taStyleSpr;
+  const mk=(w,h,fn)=>{const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'));return c;};
+  const tongue=(g,ox,oy,k)=>{g.beginPath();g.moveTo(ox,oy);g.bezierCurveTo(ox-20*k,oy-12*k,ox-18*k,oy-46*k,ox-4*k,oy-68*k);g.bezierCurveTo(ox+2*k,oy-80*k,ox-2*k,oy-92*k,ox+4*k,oy-106*k);g.bezierCurveTo(ox+10*k,oy-86*k,ox+20*k,oy-64*k,ox+18*k,oy-38*k);g.bezierCurveTo(ox+17*k,oy-16*k,ox+12*k,oy-4*k,ox,oy);g.closePath();};
+  const flame=mk(48,112,g=>{
+   const gr=g.createLinearGradient(0,108,0,2);gr.addColorStop(0,'rgba(255,246,214,1)');gr.addColorStop(.22,'rgba(255,190,80,.96)');gr.addColorStop(.58,'rgba(228,48,26,.82)');gr.addColorStop(1,'rgba(110,8,20,0)');
+   g.fillStyle=gr;tongue(g,24,108,1);g.fill();
+   const cg=g.createLinearGradient(0,108,0,50);cg.addColorStop(0,'rgba(255,255,244,.95)');cg.addColorStop(1,'rgba(255,226,150,0)');g.fillStyle=cg;tongue(g,24,106,.5);g.fill();
+  });
+  const star=mk(48,48,g=>{const r=g.createRadialGradient(24,24,0,24,24,24);r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(.18,'rgba(200,245,255,.7)');r.addColorStop(1,'rgba(90,180,255,0)');g.fillStyle=r;g.fillRect(0,0,48,48);
+   g.fillStyle='rgba(255,255,255,.95)';g.beginPath();g.moveTo(24,0);g.lineTo(25.4,22.6);g.lineTo(48,24);g.lineTo(25.4,25.4);g.lineTo(24,48);g.lineTo(22.6,25.4);g.lineTo(0,24);g.lineTo(22.6,22.6);g.closePath();g.fill();});
+  const glow=mk(64,64,g=>{const r=g.createRadialGradient(32,32,0,32,32,32);r.addColorStop(0,'rgba(255,236,190,.9)');r.addColorStop(.35,'rgba(255,120,40,.45)');r.addColorStop(1,'rgba(200,20,10,0)');g.fillStyle=r;g.fillRect(0,0,64,64);});
+  const mist=mk(64,64,g=>{const r=g.createRadialGradient(32,32,0,32,32,32);r.addColorStop(0,'rgba(200,240,255,.7)');r.addColorStop(.5,'rgba(120,190,240,.25)');r.addColorStop(1,'rgba(80,150,220,0)');g.fillStyle=r;g.fillRect(0,0,64,64);});
+  return window.__taStyleSpr={flame,star,glow,mist};
+ }
+ // なぞった線を1本の折れ線にまとめ、各点の累積長・法線を一度だけ計算して保持する
+ function taStylePoly(segs){
+  if(segs._poly)return segs._poly;
+  const P=[segs[0][0]];for(const s of segs)P.push(s[1]);
+  const n=P.length,D=new Float32Array(n),NX=new Float32Array(n),NY=new Float32Array(n);
+  for(let i=1;i<n;i++)D[i]=D[i-1]+Math.hypot(P[i].x-P[i-1].x,P[i].y-P[i-1].y);
+  for(let i=0;i<n;i++){const a=P[Math.max(0,i-1)],b=P[Math.min(n-1,i+1)],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;NX[i]=-dy/L;NY[i]=dx/L;}
+  return segs._poly={P,D,NX,NY,n,len:D[n-1]||1};
+ }
+ // 累積長dの位置と法線（前から順に呼ぶので探索位置を引き継ぐ）
+ const taStyleAt={x:0,y:0,nx:0,ny:1,i:1};
+ function taStyleSample(poly,d){
+  const {P,D,NX,NY,n}=poly;if(n<2){taStyleAt.x=P[0].x;taStyleAt.y=P[0].y;return taStyleAt;}
+  let i=Math.max(1,taStyleAt.i);if(i>=n||D[i-1]>d)i=1;while(i<n-1&&D[i]<d)i++;
+  const t=Math.max(0,Math.min(1,(d-D[i-1])/((D[i]-D[i-1])||1)));const a=P[i-1],b=P[i];
+  taStyleAt.x=a.x+(b.x-a.x)*t;taStyleAt.y=a.y+(b.y-a.y)*t;taStyleAt.nx=NX[i-1]+(NX[i]-NX[i-1])*t;taStyleAt.ny=NY[i-1]+(NY[i]-NY[i-1])*t;
+  const nl=Math.hypot(taStyleAt.nx,taStyleAt.ny)||1;taStyleAt.nx/=nl;taStyleAt.ny/=nl;taStyleAt.i=i;return taStyleAt;
+ }
+ // 刃の形（両端が細く中央が太い）の帯を1つの多角形として塗る。円（タップ）は一定の太さ。uptoまでの長さだけ描く。
+ function taStyleBlade(poly,width,ring,upto){
+  const {P,D,NX,NY,n,len}=poly;const lim=upto==null?len:upto;if(lim<=0)return;
+  const W=i=>ring?width*.62:width*Math.pow(Math.sin(Math.PI*Math.min(1,Math.max(0,D[i]/len))),.65);
+  ctx.beginPath();let last=0;
+  for(let i=0;i<n;i++){if(D[i]>lim&&i>0)break;last=i;const w=W(i),x=P[i].x+NX[i]*w*.5,y=P[i].y+NY[i]*w*.5;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+  for(let i=last;i>=0;i--){const w=W(i);ctx.lineTo(P[i].x-NX[i]*w*.5,P[i].y-NY[i]*w*.5);}
+  ctx.closePath();ctx.fill();
+ }
+ const taEaseBack=t=>{const c=1.9;t=Math.max(0,Math.min(1,t))-1;return 1+(c+1)*t*t*t+c*t*t;};
+ // ── Lv3・4 共通の強化演出 ───────────────────────────────────────
+ // 紅：スワイプ＝「紅蓮の太刀」（二太刀＋本物らしい炎の壁が波打って立ち上がり、残っている間も周期的にうねる）
+ //     タップ＝「日輪」（回る炎の円＋中心の火柱＋内側の8本の光芒＋周期的な熱の波紋）
+ // 蒼：スワイプ＝「氷華の太刀」（2列の結晶＋氷の花＋2本の光＋垂れる冷気）
+ //     タップ＝「六花陣」（外向きの氷の冠＋内側に伸びる雪の結晶の紋＋円を回る光）
+ // 表示時間・範囲・当たり判定は元の仕様のまま。長く残るLv3・4の時間に合わせ、周期的な動きで見せ続ける。
+ // 重い演出と重なるとき（taDenseCombo）とスマホでは数を減らす。
+ const taFxAtlasReady=()=>taFlameAtlas&&taFlameAtlas.frames.length===taFlameAtlas.F;
+ function taRingCenter(poly){if(poly.c)return poly.c;let x=0,y=0;const n=poly.n-1;for(let i=0;i<n;i++){x+=poly.P[i].x;y+=poly.P[i].y;}return poly.c={x:x/n,y:y/n,r:poly.len/(2*Math.PI)};}
+ // 連番の炎を1本、根元(x,y)から角度ang（0＝真上）へ高さhで描く
+ function taFlameAt(m,fr,x,y,h,ws,ang){
+  const sc=h/108;
+  if(!ang){ctx.drawImage(fr,x-24*sc*ws,y-96*sc,48*sc*ws,112*sc);return;}
+  const ca=Math.cos(ang),sa=Math.sin(ang),la=ca*sc*ws,lb=sa*sc*ws,lc=-sa*sc,ld=ca*sc;
+  ctx.setTransform(m.a*la+m.c*lb,m.b*la+m.d*lb,m.a*lc+m.c*ld,m.b*lc+m.d*ld,m.a*x+m.c*y+m.e,m.b*x+m.d*y+m.f);
+  ctx.drawImage(fr,-24,-96);ctx.setTransform(m);
+ }
+ function renderFireStrong(f,alpha,spr,poly,age,ring,tier){
+  const top=tier>=5,gd=top&&taFlameAtlas.gold.length===taFlameAtlas.F?taFlameAtlas.gold:null;
+  const S=taFxScale,flash=Math.max(0,1-age/.12),settle=Math.min(1,age/.5),fr=taFlameAtlas.frames,F=taFlameAtlas.F,tick=Math.floor(now/55),m=ctx.getTransform();
+  const lite=taDenseCombo||taCompoundLevel>0;
   ctx.save();ctx.globalCompositeOperation='screen';
-  for(let si=0;si<f.segs.length;si++){
-   const seg=f.segs[si],a=seg[0],b=seg[1],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
-   const steps=Math.max(2,Math.ceil(L/(taDenseCombo?28:(taMobileFx?18:9))));
-   for(let j=0;j<=steps;j++){
-    const t=j/steps,ptX=a.x+dx*t,ptY=a.y+dy*t,seed=si*211+j*19;
-    const flick=Math.sin(now*.013+seed)*.5+.5;
-    const radius=seg[2]*(.7+hash(seed)*.55)*taFxScale,rise=(14+hash(seed+3)*31)*(0.65+flick*.7)*taFxScale;
-    // Smoky, low-opacity turbulent outer volume rather than a solid glowing stripe.
-    const smokeX=ptX+nx*(hash(seed+4)-.5)*radius*.7,smokeY=ptY-rise*.65;
-    // Stage 10: under overlapping effects, omit only the diffuse smoke layer.
-    // This avoids a per-sample radial gradient and full-area fill; core flames,
-    // ice shards, scoring, +value effects, hit tests and input remain unchanged.
-    if(!taMobileFx || taCompoundLevel===0){
-     const smoke=ctx.createRadialGradient(smokeX,smokeY,0,smokeX,smokeY,radius*1.6);
-     smoke.addColorStop(0,'rgba(100,73,65,.18)');smoke.addColorStop(.5,'rgba(60,54,58,.10)');smoke.addColorStop(1,'rgba(30,29,34,0)');
-     ctx.globalAlpha=alpha*.65;ctx.fillStyle=smoke;ctx.beginPath();ctx.arc(smokeX,smokeY,radius*1.6,0,Math.PI*2);ctx.fill();
-    }
-    for(let k=0;k<(taMobileFx?2:3);k++){
-     const wobble=Math.sin(now*.009+seed*1.7+k*2.8)*radius*.35;
-     const baseX=ptX+nx*(k-1)*radius*.35,baseY=ptY+ny*(k-1)*radius*.35;
-     const tipX=baseX+wobble+nx*(hash(seed+k+10)-.5)*radius;
-     const tipY=baseY-rise*(.45+k*.23);
-     const flame=ctx.createLinearGradient(baseX,baseY,tipX,tipY);
-     flame.addColorStop(0,k===1?'rgba(255,219,127,.78)':'rgba(255,111,23,.53)');
-     flame.addColorStop(.35,k===1?'rgba(255,155,43,.72)':'rgba(216,56,18,.44)');
-     flame.addColorStop(.72,'rgba(135,32,20,.19)');flame.addColorStop(1,'rgba(65,29,28,0)');
-     ctx.globalAlpha=alpha*(.65+flick*.3);ctx.fillStyle=flame;
-     ctx.beginPath();ctx.moveTo(baseX-radius*.42,baseY+radius*.25);
-     ctx.bezierCurveTo(baseX-radius*.9,baseY-rise*.38,tipX-radius*.35,tipY+rise*.15,tipX,tipY);
-     ctx.bezierCurveTo(tipX+radius*.25,tipY+rise*.2,baseX+radius*.8,baseY-rise*.22,baseX+radius*.45,baseY+radius*.2);
-     ctx.closePath();ctx.fill();
-    }
-    const hot=ctx.createRadialGradient(ptX,ptY,0,ptX,ptY,radius*.8);
-    hot.addColorStop(0,'rgba(255,239,176,.68)');hot.addColorStop(.28,'rgba(255,139,40,.35)');hot.addColorStop(1,'rgba(244,51,12,0)');
-    ctx.globalAlpha=alpha*.78;ctx.fillStyle=hot;ctx.beginPath();ctx.arc(ptX,ptY,radius*.8,0,Math.PI*2);ctx.fill();
-   }
-  }
-  // Trial visual pass: a single tapered-looking luminous spine per segment.
-  // Two strokes only, no additional particles or gradients per sample.
-  if(!taDenseCombo && taCompoundLevel===0){
-   ctx.globalAlpha=alpha*.72;ctx.lineCap='round';ctx.lineJoin='round';
-   ctx.shadowBlur=taMobileFx?0:5;ctx.shadowColor='#ff8b30';
-   ctx.strokeStyle='rgba(255,112,32,.48)';ctx.lineWidth=taMobileFx?3.2:4.4;
-   ctx.beginPath();for(const seg of f.segs){ctx.moveTo(seg[0].x,seg[0].y);ctx.lineTo(seg[1].x,seg[1].y)}ctx.stroke();
-   ctx.shadowBlur=0;ctx.strokeStyle='rgba(255,242,195,.78)';ctx.lineWidth=taMobileFx?0.85:1.25;
-   ctx.stroke();
+  if(!ring){
+   // 刃：白熱の芯が長く残り、ゆっくり脈打つ
+   const breathe=1+.08*Math.sin(now*.008),bw=24*S*(1+flash*.5);
+   ctx.globalAlpha=alpha*(.3-.08*settle);ctx.fillStyle=flash>0?'rgba(255,236,226,.9)':'rgba(190,16,30,.9)';taStyleBlade(poly,bw*2.7*breathe,false);
+   ctx.globalAlpha=alpha*(.66-.16*settle);ctx.fillStyle=flash>0?'rgba(255,240,230,.9)':'rgba(240,56,24,.9)';taStyleBlade(poly,bw*1.75*breathe,false);
+   ctx.globalAlpha=alpha*.88;ctx.fillStyle=flash>0?'#fff6ea':'rgba(255,160,48,.92)';taStyleBlade(poly,bw*(1.05-.3*settle),false);
+   ctx.globalCompositeOperation='lighter';ctx.globalAlpha=alpha;ctx.fillStyle='rgba(255,250,232,.98)';taStyleBlade(poly,bw*(.42-.12*settle)*breathe+1,false);
+   // 二太刀目：一瞬遅れてずれた位置にもう1本
+   if(age>.04&&age<.42){const k=1-(age-.04)/.38;ctx.save();ctx.translate(7*S,-9*S);ctx.globalAlpha=alpha*k*.85;ctx.fillStyle='rgba(255,226,170,.95)';taStyleBlade(poly,bw*.5,false);ctx.restore();}
+   ctx.globalCompositeOperation='screen';
+   // 炎の壁：始点から終点へ波のように立ち上がり、その後も1.7秒ごとにうねりが走る
+   const step=lite?22:(taMobileFx?15:11),N=Math.min(lite?30:64,Math.floor(poly.len/step));
+   for(let L=0;L<2;L++){taStyleAt.i=1;
+    for(let k=0;k<=N;k++){
+     const t=N?(k+L*.5)/N:0;if(t>1)break;const d=t*poly.len,pt=taStyleSample(poly,d),seed=k*31+L*97;
+     const grow=Math.min(1,Math.max(0,(age-t*.12)/.16));if(grow<=0)continue;
+     const w1=(age-.1-t*.35)/.13,w2=age>.9?(((age-.9)%1.7)-t*.55)/.14:9;
+     const surge=1+.75*Math.exp(-w1*w1)+.35*Math.exp(-w2*w2);
+     const taper=.32+.68*Math.pow(Math.sin(Math.PI*t),.5);
+     const h=(L?64+hash(seed)*40:92+hash(seed)*52)*S*taper*grow*surge*(.5+.5*alpha);
+     ctx.globalAlpha=alpha*(L?.92:.5);
+     taFlameAt(m,(L&&gd?gd:fr)[(tick+k*7+L*5)%F],pt.x,pt.y,h,.85+hash(seed+3)*.35,0);
+    }}
+   if(flash>0){const P=poly.P,e=P[P.length-1],z=(56+80*flash)*S;ctx.globalAlpha=alpha*flash;ctx.drawImage(spr.glow,e.x-z/2,e.y-z/2,z,z);}
+  }else{
+   const C=taRingCenter(poly),R=C.r;
+   // 円の線（細く明るい）
+   ctx.globalAlpha=alpha*.55;ctx.fillStyle='rgba(214,30,24,.9)';taStyleBlade(poly,24*S,true);
+   ctx.globalCompositeOperation='lighter';ctx.globalAlpha=alpha*(.8+.2*Math.sin(now*.009));ctx.fillStyle='rgba(255,236,190,.95)';taStyleBlade(poly,5*S+flash*6,true);ctx.globalCompositeOperation='screen';
+   // 熱の波紋：点火時と、その後1.6秒ごと
+   const rp=(age%1.6)/.6;if(rp<1){ctx.globalAlpha=alpha*(1-rp)*.7;ctx.strokeStyle='rgba(255,140,50,.8)';ctx.lineWidth=(5*(1-rp)+1)*S;ctx.beginPath();ctx.arc(C.x,C.y,R*(1+.55*rp),0,Math.PI*2);ctx.stroke();}
+   // 内側の光芒：8本の炎が外向きに伸び、円とは逆向きにゆっくり回る
+   const sg=Math.min(1,Math.max(0,(age-.12)/.3)),spokes=lite?6:8;
+   if(sg>0){const e=1-(1-sg)*(1-sg),rot=-age*.18;
+    for(let k=0;k<spokes;k++){const a=rot+k/spokes*Math.PI*2,r0=R*.28,x=C.x+Math.cos(a)*r0,y=C.y+Math.sin(a)*r0;
+     ctx.globalAlpha=alpha*.8;taFlameAt(m,(gd||fr)[(tick+k*3)%F],x,y,R*(top?.8:.7)*e*(.9+.1*Math.sin(now*.01+k)),.75,a+Math.PI/2);}
+    ctx.globalAlpha=alpha*.75*e;const z=R*1.1;ctx.drawImage(spr.glow,C.x-z/2,C.y-z/2,z,z);}
+   // 中心の火柱：点いた瞬間に立ち上がり、0.8秒で円に散る
+   if(age<.8){const up=Math.min(1,age/.22),down=1-Math.max(0,(age-.3)/.5),h=R*2.5*(1-(1-up)*(1-up));
+    ctx.globalAlpha=alpha*down*.7;taFlameAt(m,fr[tick%F],C.x,C.y+R*.25,h,1.5,0);ctx.globalAlpha=alpha*down;taFlameAt(m,fr[(tick+6)%F],C.x,C.y+R*.2,h*.7,1,0);}
+   // Lv5：中心に金白の神火が灯り続け、外側に金の炎の輪が逆向きに回る
+   if(top&&age>.5){const k=Math.min(1,(age-.5)/.4),h=R*.75*k*(.9+.1*Math.sin(now*.013));ctx.globalAlpha=alpha*.9;taFlameAt(m,(gd||fr)[(tick+3)%F],C.x,C.y+R*.18,h,1.1,0);}
+   if(top){const N2=lite?12:(taMobileFx?18:26),R2=R*1.24,og=Math.min(1,Math.max(0,(age-.25)/.35));
+    if(og>0)for(let k=0;k<N2;k++){const a=(k/N2-age*.06)*Math.PI*2,x=C.x+Math.cos(a)*R2,y=C.y+Math.sin(a)*R2,h=(34+hash(k*17)*22)*S*og*(.5+.5*alpha);
+     ctx.globalAlpha=alpha*.85;taFlameAt(m,(gd||fr)[(tick+k*5)%F],x,y,h,.8,0);}
+    ctx.globalCompositeOperation='lighter';ctx.globalAlpha=alpha*og*(.55+.25*Math.sin(now*.007));ctx.strokeStyle='rgba(255,214,120,.9)';ctx.lineWidth=2*S;ctx.beginPath();ctx.arc(C.x,C.y,R2,0,Math.PI*2);ctx.stroke();ctx.globalCompositeOperation='screen';}
+   // 回る炎の円（2層）
+   const N=lite?14:(taMobileFx?20:28),spin=age*.045;
+   for(let L=0;L<2;L++){taStyleAt.i=1;
+    for(let k=0;k<N;k++){
+     const a=((k+L*.5)/N+spin)%1,pt=taStyleSample(poly,a*poly.len),seed=k*29+L*101;
+     const grow=Math.min(1,Math.max(0,(age-((k+L*.5)/N)*.22)/.2));if(grow<=0)continue;const ease=1-(1-grow)*(1-grow);
+     const h=(L?54+hash(seed)*32:80+hash(seed)*38)*S*ease*(.5+.5*alpha);
+     ctx.globalAlpha=alpha*(L?.92:.5);taFlameAt(m,fr[(tick+k*7+L*5)%F],pt.x,pt.y,h,.85+hash(seed+3)*.35,0);
+    }}
   }
   ctx.restore();
  }
- function renderIce(f,alpha){
+ function renderIceStrong(f,alpha,spr,poly,age,ring,tier){
+  const top=tier>=5;
+  const S=taFxScale,flash=Math.max(0,1-age/.12),lite=taDenseCombo||taCompoundLevel>0;
+  const front=ring?poly.len*Math.min(1,age/.22):Math.min(1,age/.18)*poly.len,out=(1-alpha)*8*S;
   ctx.save();ctx.globalCompositeOperation='screen';
-  for(let si=0;si<f.segs.length;si++){
-   const seg=f.segs[si],a=seg[0],b=seg[1],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
-   const steps=Math.max(2,Math.ceil(L/(taDenseCombo?48:(taMobileFx?34:13))));
-   for(let j=0;j<=steps;j++){
-    const t=j/steps,pt=fxPoint(seg,t),seed=si*307+j*41,sz=(9+hash(seed+2)*23)*taFxScale;
-    const drift=Math.sin(now*.0018+seed)*1.8;
-    if(taMobileFx){ctx.globalAlpha=alpha*.16;ctx.fillStyle='#8bd8fa';ctx.beginPath();ctx.arc(pt.x,pt.y,sz*1.12,0,Math.PI*2);ctx.fill();}
-    else{const frost=ctx.createRadialGradient(pt.x,pt.y,0,pt.x,pt.y,sz*1.8);
-    frost.addColorStop(0,'rgba(205,242,255,.24)');frost.addColorStop(.48,'rgba(83,164,201,.12)');frost.addColorStop(1,'rgba(65,140,190,0)');
-    ctx.globalAlpha=alpha;ctx.fillStyle=frost;ctx.beginPath();ctx.arc(pt.x,pt.y,sz*1.8,0,Math.PI*2);ctx.fill();}
-    for(let side=-1;side<=1;side+=2){
-     const height=sz*(.65+hash(seed+side+10)*.85),lean=(hash(seed+side+30)-.5)*sz*.9;
-     const bx=pt.x+nx*side*sz*.18,by=pt.y+ny*side*sz*.18;
-     const tx=bx+nx*side*height+lean+drift,ty=by+ny*side*height-height*.26;
-     let shard;if(taMobileFx){shard='rgba(156,224,252,.52)';}
-     else{shard=ctx.createLinearGradient(bx,by,tx,ty);
-     shard.addColorStop(0,'rgba(188,239,255,.45)');shard.addColorStop(.45,'rgba(86,179,223,.32)');shard.addColorStop(1,'rgba(236,253,255,.75)');}
-     ctx.globalAlpha=alpha*.8;ctx.fillStyle=shard;ctx.strokeStyle='rgba(221,249,255,.55)';ctx.lineWidth=.6;
-     ctx.beginPath();ctx.moveTo(bx-sz*.35,by+sz*.12);ctx.lineTo(tx,ty);ctx.lineTo(bx+sz*.32,by-sz*.1);ctx.lineTo(bx+nx*side*sz*.24,by+ny*side*sz*.24);ctx.closePath();ctx.fill();ctx.stroke();
-     ctx.strokeStyle='rgba(245,255,255,.43)';ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(bx+nx*side*sz*.24,by+ny*side*sz*.24);ctx.stroke();
-    }
-    // Fine fractures, not an uninterrupted neon line.
-    ctx.globalAlpha=alpha*.55;ctx.strokeStyle='rgba(213,246,255,.55)';ctx.lineWidth=.65;
-    ctx.beginPath();ctx.moveTo(pt.x-sz*.4,pt.y+sz*.25);ctx.lineTo(pt.x+sz*.12,pt.y-sz*.25);ctx.lineTo(pt.x+sz*.48,pt.y-sz*.42);ctx.stroke();
+  ctx.globalAlpha=alpha*.42;ctx.fillStyle='rgba(110,200,255,.8)';taStyleBlade(poly,(ring?18:24)*S*(1+flash*.6),ring,front);
+  ctx.globalAlpha=alpha*.55;ctx.fillStyle='rgba(190,238,255,.8)';taStyleBlade(poly,(ring?7:10)*S,ring,front);
+  ctx.globalAlpha=alpha;ctx.fillStyle='rgba(245,254,255,.97)';taStyleBlade(poly,(ring?2.5:3.5)*S+flash*4,ring,front);
+  const C=ring?taRingCenter(poly):null;
+  // 冷気：線の下にゆっくり垂れ落ちる（スワイプ）
+  if(!ring&&!lite){const n=Math.min(10,Math.floor(poly.len/40));taStyleAt.i=1;
+   for(let k=0;k<n;k++){const d=(k+.5)/n*poly.len;if(d>front)break;const pt=taStyleSample(poly,d),ph=((age*.35+hash(k*13))%1),z=(34+20*hash(k*7))*S;
+    ctx.globalAlpha=alpha*.32*Math.sin(Math.PI*ph);ctx.drawImage(spr.mist,pt.x-z/2,pt.y+ph*26*S-z*.3,z,z*.7);}}
+  // Lv5「極光」：円の外に色の移ろう極光の輪（タップ）
+  if(top){const ag=Math.min(1,Math.max(0,(age-.15)/.5));
+   if(ag>0&&ring){const R=C.r*1.16,h=(195+45*Math.sin(now*.0012))|0;ctx.lineWidth=16*S;ctx.globalAlpha=alpha*ag*.3;ctx.strokeStyle=`hsl(${h},90%,68%)`;ctx.beginPath();ctx.arc(C.x,C.y,R,0,Math.PI*2);ctx.stroke();
+    ctx.lineWidth=2*S;ctx.globalAlpha=alpha*ag*.75;ctx.strokeStyle=`hsl(${h+30},95%,82%)`;ctx.stroke();}}
+  ctx.globalCompositeOperation='source-over';
+  // 結晶（ローポリ）：明るい面・暗い面・白いふちをまとめて3回で描く
+  // 本物らしい氷（型ができていれば）：線・円に霜が張り、透き通った結晶の型を押す。できるまでは従来のローポリ。
+  const real=taIceReady(),IA=window.__taIceAtlas,m0=ctx.getTransform();let si=0;
+  if(real){ctx.globalCompositeOperation='screen';taIceFrost(m0,poly,front,alpha,S,ring);ctx.globalCompositeOperation='source-over';}
+  const Lp=new Path2D(),Dk=new Path2D(),E=new Path2D();let any=false;
+  const shard=(ox,oy,nx,ny,h,lean)=>{if(real){ctx.globalAlpha=alpha*.95;taIceAt(m0,IA.shards[(si++ +poly.n)%IA.V],ox,oy,nx,ny,h*1.18,h*.24+3,lean);return;}const tx=-ny,ty=nx,bw=h*.22+2.5;
+   const b1x=ox-tx*bw,b1y=oy-ty*bw,b2x=ox+tx*bw,b2y=oy+ty*bw,Tx=ox+nx*h+tx*lean,Ty=oy+ny*h+ty*lean,Mx=ox+nx*h*.32+tx*bw*.25,My=oy+ny*h*.32+ty*bw*.25;
+   Lp.moveTo(b1x,b1y);Lp.lineTo(Mx,My);Lp.lineTo(Tx,Ty);Lp.closePath();Dk.moveTo(Mx,My);Dk.lineTo(b2x,b2y);Dk.lineTo(Tx,Ty);Dk.closePath();
+   E.moveTo(b1x,b1y);E.lineTo(Tx,Ty);E.lineTo(b2x,b2y);E.moveTo(Mx,My);E.lineTo(Tx,Ty);any=true;};
+  const step=(lite?34:(taMobileFx?22:15))*(ring?1.1:1),count=Math.min(70,Math.floor(poly.len/step));taStyleAt.i=1;
+  for(let k=0;k<=count;k++){
+   const d=count?poly.len*k/count:0;if(d>front)break;const seed=k*53+poly.n*7,pt=taStyleSample(poly,d),t=d/poly.len;
+   const grow=taEaseBack((age-(ring?t*.22:t*.18)-.02)/.16);if(grow<=0)continue;
+   let nx,ny;if(ring){const dx=pt.x-C.x,dy=pt.y-C.y,l=Math.hypot(dx,dy)||1;nx=dx/l;ny=dy/l;}else{const side=((k&1)?1:-1);nx=pt.nx*side;ny=pt.ny*side;}
+   const taper=ring?1:.4+.6*Math.pow(Math.sin(Math.PI*t),.5),ox=pt.x+nx*out,oy=pt.y+ny*out;
+   const h=(ring?26+hash(seed)*26:28+hash(seed)*34)*S*taper*grow*(top&&ring?1.3:1),lean=(hash(seed+3)-.5)*h*.4;
+   if(!ring&&k%5===2){ // 氷の花：3本の結晶が扇状に開く
+    for(const a of [-.5,0,.5]){const c=Math.cos(a),s=Math.sin(a);shard(ox,oy,nx*c-ny*s,nx*s+ny*c,h*(a?1:1.25),lean*.3);}
+   }else shard(ox,oy,nx,ny,h,lean);
+   // 内側（逆向き）の小さな結晶の列
+   if(!lite&&(k&1)===0)shard(pt.x-nx*out,pt.y-ny*out,-nx,-ny,h*.42,-lean*.5);
+  }
+  if(top&&!ring){const P=poly.P,g=taEaseBack((age-.2)/.25);if(g>0)for(const [a,b] of [[P[0],P[1]||P[0]],[P[P.length-1],P[P.length-2]||P[0]]]){let dx=a.x-b.x,dy=a.y-b.y;const l=Math.hypot(dx,dy)||1;dx/=l;dy/=l;for(const an of [-.8,-.4,0,.4,.8]){const c=Math.cos(an),s=Math.sin(an);shard(a.x,a.y,dx*c-dy*s,dx*s+dy*c,(an?52:70)*S*g*(1-Math.abs(an)*.25),0);}}}
+  if(real){ctx.setTransform(m0);
+   // Lv5：結晶の影の面にうっすら紫を重ねる（従来の色味を引き継ぐ）
+  }
+  if(any){ctx.globalAlpha=alpha*.8;ctx.fillStyle='rgba(214,244,255,.85)';ctx.fill(Lp);ctx.fillStyle=top?'rgba(88,72,196,.86)':'rgba(34,104,186,.88)';ctx.fill(Dk);
+   ctx.globalAlpha=alpha;ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=taMobileFx?1:1.2;ctx.lineJoin='miter';ctx.stroke(E);}
+  ctx.globalCompositeOperation='screen';
+  // 六花陣：中心から雪の結晶の枝が円のふちへ伸び、ゆっくり回る
+  if(ring){
+   const g=Math.min(1,Math.max(0,(age-.1)/.45)),e=1-(1-g)*(1-g)*(1-g),R=C.r,rot=age*.12,Lb=R*.84*e;
+   if(e>0){const Sf=new Path2D();
+    for(let i=0;i<6;i++){const a=rot+i*Math.PI/3,ux=Math.cos(a),uy=Math.sin(a);Sf.moveTo(C.x,C.y);Sf.lineTo(C.x+ux*Lb,C.y+uy*Lb);
+     for(const [s,l] of [[.34,.3],[.58,.24],[.8,.14]]){const bx=C.x+ux*Lb*s,by=C.y+uy*Lb*s,tl=Lb*l;
+      for(const sd of [-1,1]){const b=a+sd*Math.PI/3;Sf.moveTo(bx,by);Sf.lineTo(bx+Math.cos(b)*tl,by+Math.sin(b)*tl);}}}
+    const hx=R*.13*e;for(let i=0;i<=6;i++){const a=rot+i*Math.PI/3+Math.PI/6,x=C.x+Math.cos(a)*hx,y=C.y+Math.sin(a)*hx;i?Sf.lineTo(x,y):Sf.moveTo(x,y);}
+    if(top){const L2=Lb*.55,r2=-age*.2+Math.PI/6;for(let i=0;i<6;i++){const a=r2+i*Math.PI/3,ux=Math.cos(a),uy=Math.sin(a);Sf.moveTo(C.x,C.y);Sf.lineTo(C.x+ux*L2,C.y+uy*L2);
+      for(const sd of [-1,1]){const bx=C.x+ux*L2*.6,by=C.y+uy*L2*.6,b=a+sd*Math.PI/3;Sf.moveTo(bx,by);Sf.lineTo(bx+Math.cos(b)*L2*.3,by+Math.sin(b)*L2*.3);}}}
+    ctx.lineCap='round';ctx.globalAlpha=alpha*.45;ctx.strokeStyle=top?'rgba(150,140,255,.9)':'rgba(110,200,255,.9)';ctx.lineWidth=5*S;ctx.stroke(Sf);
+    ctx.globalAlpha=alpha*.9;ctx.strokeStyle='rgba(240,252,255,.95)';ctx.lineWidth=1.3*S;ctx.stroke(Sf);
+    // 枝先のきらめき
+    ctx.globalCompositeOperation='lighter';
+    for(let i=0;i<6;i++){const tw=.5+.5*Math.sin(now*.006+i*1.9);if(tw<.35)continue;const a=rot+i*Math.PI/3,z=(10+12*tw)*S;ctx.globalAlpha=alpha*e*tw;ctx.drawImage(spr.star,C.x+Math.cos(a)*Lb-z/2,C.y+Math.sin(a)*Lb-z/2,z,z);}
    }
   }
-  // Trial visual pass: crystalline spine and sparse facet highlights.
-  // Keep it to two batched strokes; skip under overlapping heavy effects.
-  if(!taDenseCombo && taCompoundLevel===0){
-   ctx.globalAlpha=alpha*.82;ctx.lineCap='round';ctx.lineJoin='miter';
-   ctx.shadowBlur=taMobileFx?0:5;ctx.shadowColor='#66d9ff';
-   ctx.strokeStyle='rgba(75,185,245,.48)';ctx.lineWidth=taMobileFx?3:4;
-   ctx.beginPath();for(const seg of f.segs){ctx.moveTo(seg[0].x,seg[0].y);ctx.lineTo(seg[1].x,seg[1].y)}ctx.stroke();
-   ctx.shadowBlur=0;ctx.strokeStyle='rgba(239,254,255,.92)';ctx.lineWidth=taMobileFx?.8:1.2;ctx.stroke();
-  }
+  // Lv5「雪華」：凍った線の上に小さな雪の結晶が浮かび、ゆっくり回りながら上下にただよう（スワイプ）
+  if(top&&!ring){const n=Math.max(2,Math.min(lite?4:8,Math.floor(poly.len/48))),Sf=new Path2D(),tips=[];taStyleAt.i=1;
+   for(let i=0;i<n;i++){const t=(i+.5)/n,d=t*poly.len;if(d>front)break;const pt=taStyleSample(poly,d),hs=hash(i*41+7);
+    const g=taEaseBack((age-.12-t*.18)/.3);if(g<=0)continue;
+    const r=(12+7*hs)*S*g,x=pt.x+(hs-.5)*14*S,y=pt.y-(30+16*hash(i*13+3))*S-4*S*Math.sin(now*.0016+i*1.7),rot=age*(hs>.5?.5:-.5)+hs*6;
+    for(let k=0;k<6;k++){const a=rot+k*Math.PI/3,ux=Math.cos(a),uy=Math.sin(a);Sf.moveTo(x,y);Sf.lineTo(x+ux*r,y+uy*r);
+     for(const sd of [-1,1]){const b=a+sd*Math.PI/3,bx=x+ux*r*.55,by=y+uy*r*.55;Sf.moveTo(bx,by);Sf.lineTo(bx+Math.cos(b)*r*.32,by+Math.sin(b)*r*.32);}}
+    tips.push([x,y,r,i]);}
+   if(tips.length){ctx.lineCap='round';ctx.globalCompositeOperation='screen';ctx.globalAlpha=alpha*.55;ctx.strokeStyle='rgba(150,140,255,.9)';ctx.lineWidth=3.4*S;ctx.stroke(Sf);
+    ctx.globalAlpha=alpha*.95;ctx.strokeStyle='rgba(244,252,255,.98)';ctx.lineWidth=1.1*S;ctx.stroke(Sf);
+    ctx.globalCompositeOperation='lighter';for(const [x,y,r,i] of tips){const tw=.5+.5*Math.sin(now*.005+i*2.3);if(tw<.6)continue;const z=r*1.6*tw;ctx.globalAlpha=alpha*tw;ctx.drawImage(spr.star,x-z/2,y-z/2,z,z);}}}
+  // 「キン」と走る光：2本が時間差で走り続ける
+  ctx.globalCompositeOperation='lighter';
+  for(const off of [0,.8]){const ga=age-.22-off,gp=ga>=0?(ga%1.6)/.42:2;if(gp<1){taStyleAt.i=1;const pt=taStyleSample(poly,gp*poly.len),z=(30+22*Math.sin(Math.PI*gp))*S;ctx.globalAlpha=alpha*Math.sin(Math.PI*gp);ctx.drawImage(spr.star,pt.x-z/2,pt.y-z/2,z,z);}}
   ctx.restore();
+ }
+ // 氷の結晶の型を、根元(x,y)から外向き(nx,ny)へ高さh・半幅wで押す（leanで先端を少し傾ける）
+ const taIceReady=()=>{const A=window.__taIceAtlas;return A&&A.frost&&A.shards.length===A.V;};
+ function taIceAt(m,img,x,y,nx,ny,h,w,lean){
+  const th=Math.atan2(nx,-ny)+lean/Math.max(1,h)*.8,sx=(2*w)/34,sy=h/116,ca=Math.cos(th),sa=Math.sin(th);
+  const la=ca*sx,lb=sa*sx,lc=-sa*sy,ld=ca*sy;
+  ctx.setTransform(m.a*la+m.c*lb,m.b*la+m.d*lb,m.a*lc+m.c*ld,m.b*lc+m.d*ld,m.a*x+m.c*y+m.e,m.b*x+m.d*y+m.f);
+  ctx.drawImage(img,-22,-116);
+ }
+ // 線に沿って霜（細かな針と粒）を張る。uptoまで。
+ function taIceFrost(m,poly,upto,alpha,S,ring){
+  const A=window.__taIceAtlas,fr=A.frost,step=(taMobileFx?30:24)*(ring?1.1:1),n=Math.min(60,Math.floor(Math.min(upto,poly.len)/step));taStyleAt.i=1;
+  for(let k=0;k<=n;k++){const d=k*step;if(d>upto)break;const pt=taStyleSample(poly,d),ang=Math.atan2(pt.ny,pt.nx)-Math.PI/2,ca=Math.cos(ang),sa=Math.sin(ang),fl=(k&1)?-1:1,sc=S*(ring?.9:1);
+   const la=ca*sc,lb=sa*sc,lc=-sa*sc*fl,ld=ca*sc*fl;
+   ctx.globalAlpha=alpha*.95;ctx.setTransform(m.a*la+m.c*lb,m.b*la+m.d*lb,m.a*lc+m.c*ld,m.b*lc+m.d*ld,m.a*pt.x+m.c*pt.y+m.e,m.b*pt.x+m.d*pt.y+m.f);ctx.drawImage(fr,-32,-18);}
+  ctx.setTransform(m);
+ }
+ function renderFire(f,alpha){
+const __ta100Start=window.__ta100Profile.start();try {
+ // 残り時間が短い線は最初から薄く始まるため、振り抜いた直後の0.4秒だけ不透明度を持ち上げて「決め」を見せる
+  const spr=taStyleSprites(),poly=taStylePoly(f.segs),age=f.age||0,ring=!!f.isTap;alpha=Math.min(1,alpha*2+Math.max(0,1-age/.5));
+  if(f.strong&&taFxAtlasReady()){renderFireStrong(f,alpha,spr,poly,age,ring,f.tier);return;}
+  const flash=Math.max(0,1-age/.11),settle=Math.min(1,age/.45),S=taFxScale;
+  const bw=(ring?9:26)*S*(1+flash*.5);
+  ctx.save();ctx.globalCompositeOperation='screen';
+  // 1) 居合の刃：最初の一瞬は白く、すぐに紅・金・白芯の3層に締まる
+  ctx.globalAlpha=alpha*(.42-.14*settle);ctx.fillStyle=flash>0?'rgba(255,236,226,.9)':'rgba(190,16,30,.9)';taStyleBlade(poly,bw*2.6,ring);
+  ctx.globalAlpha=alpha*(.62-.18*settle);ctx.fillStyle=flash>0?'rgba(255,240,230,.9)':'rgba(236,48,24,.9)';taStyleBlade(poly,bw*1.7,ring);
+  ctx.globalAlpha=alpha*.85;ctx.fillStyle=flash>0?'#fff6ea':'rgba(255,146,38,.9)';taStyleBlade(poly,bw*(1.05-.35*settle),ring);
+  ctx.globalCompositeOperation='lighter';ctx.globalAlpha=alpha;ctx.fillStyle='rgba(255,250,232,.98)';taStyleBlade(poly,bw*(.42-.2*settle)+1,ring);ctx.globalCompositeOperation='screen';
+  // 2a) タップの炎の円：本物らしく揺らぐ炎（連番画像）を円周に2層で並べ、時間差で再生する。
+  //     円周をなぞるように火が回って点き、奥の層は大きく淡く、手前の層は小さく明るく。
+  if(ring&&taFlameAtlas.frames.length===taFlameAtlas.F){
+   const fr=taFlameAtlas.frames,F=taFlameAtlas.F,N=taDenseCombo?14:(taMobileFx?18:26),tick=Math.floor(now/55);
+   for(let L=0;L<2;L++){taStyleAt.i=1;
+    for(let k=0;k<N;k++){
+     const a=(k+L*.5)/N,pt=taStyleSample(poly,a*poly.len),seed=k*29+L*101;
+     const grow=Math.min(1,Math.max(0,(age-a*.22)/.2));if(grow<=0)continue;const ease=1-(1-grow)*(1-grow);
+     const h=(L?40+hash(seed)*26:58+hash(seed)*30)*S*ease*(.5+.5*alpha),sc=h/108,ws=.85+hash(seed+3)*.35;
+     ctx.globalAlpha=alpha*(L?.92:.5);
+     ctx.drawImage(fr[(tick+k*7+L*5)%F],pt.x-24*sc*ws,pt.y-96*sc,48*sc*ws,112*sc);
+    }}
+  }else{
+  // 2) 切り口から立つ鋭い炎の舌（型を押すだけ）
+  const m=ctx.getTransform(),step=(taDenseCombo?30:(taMobileFx?19:13))*(ring?1.25:1);
+  const count=Math.min(70,Math.floor(poly.len/step));taStyleAt.i=1;
+  for(let k=0;k<=count;k++){
+   const d=count?poly.len*k/count:0,t=d/poly.len,seed=k*37+poly.n*13,pt=taStyleSample(poly,d);
+   const born=ring?0:t*.09,grow=taEaseBack((age-born)/.16);if(grow<=0)continue;
+   const taper=ring?1:.35+.65*Math.pow(Math.sin(Math.PI*t),.5);
+   const flick=.78+.22*Math.sin(now*.017+seed*1.3)+.12*Math.sin(now*.031+seed);
+   const h=(46+hash(seed)*50)*S*taper*grow*flick*(.45+.55*alpha);
+   const sc=h/106,lean=Math.sin(now*.006+seed*.7)*.12+(hash(seed+5)-.5)*.22,flip=(k&1)?-1:1;
+   const ca=Math.cos(lean)*sc,sa=Math.sin(lean)*sc,la=ca*flip,lb=sa*flip,lc=-sa,ld=ca;
+   ctx.setTransform(m.a*la+m.c*lb,m.b*la+m.d*lb,m.a*lc+m.c*ld,m.b*lc+m.d*ld,m.a*pt.x+m.c*pt.y+m.e,m.b*pt.x+m.d*pt.y+m.f);
+   ctx.globalAlpha=alpha*(.82+.18*Math.min(1,flick));ctx.drawImage(spr.flame,-24,-108);
+  }
+  ctx.setTransform(m);
+  }
+  // 3) 振り抜いた瞬間の光（終点の閃光）
+  if(flash>0&&!ring){const P=poly.P,e=P[P.length-1],z=(40+60*flash)*S;ctx.globalAlpha=alpha*flash;ctx.drawImage(spr.glow,e.x-z/2,e.y-z/2,z,z);}
+  ctx.restore();
+} finally {window.__ta100Profile.end('renderFire',__ta100Start)}
+ }
+ function renderIce(f,alpha){
+const __ta100Start=window.__ta100Profile.start();try {
+  const spr=taStyleSprites(),poly=taStylePoly(f.segs),age=f.age||0,ring=!!f.isTap,S=taFxScale;alpha=Math.min(1,alpha*2+Math.max(0,1-age/.5));
+  if(f.strong){renderIceStrong(f,alpha,spr,poly,age,ring,f.tier);return;}
+  // 始点から終点へ一瞬で凍っていく（0.16秒）
+  const front=Math.min(1,age/.16)*poly.len,flash=Math.max(0,1-age/.12);
+  ctx.save();ctx.globalCompositeOperation='screen';
+  ctx.globalAlpha=alpha*.5;ctx.fillStyle='rgba(110,200,255,.8)';taStyleBlade(poly,(ring?12:15)*S*(1+flash*.6),ring,front);
+  ctx.globalAlpha=alpha;ctx.fillStyle='rgba(240,253,255,.95)';taStyleBlade(poly,(ring?3:4)*S+flash*4,ring,front);
+  // 本物らしい氷（型ができていれば）：線に霜が張り、透き通った結晶が生える
+  if(taIceReady()){const A=window.__taIceAtlas,m=ctx.getTransform();
+   ctx.globalCompositeOperation='screen';taIceFrost(m,poly,front,alpha,S,ring);ctx.globalCompositeOperation='source-over';
+   const step=(taDenseCombo?40:(taMobileFx?28:16))*(ring?1.35:1),count=Math.min(60,Math.floor(poly.len/step)),out=(1-alpha)*7*S;taStyleAt.i=1;
+   for(let k=0;k<=count;k++){
+    const d=count?poly.len*k/count:0;if(d>front)break;const seed=k*53+poly.n*7,pt=taStyleSample(poly,d),t=d/poly.len;
+    const grow=taEaseBack((age-(ring?0:t*.16)-.02)/.15);if(grow<=0)continue;
+    const side=ring?1:((k&1)?1:-1)*(hash(seed+9)<.15?-1:1),taper=ring?1:.4+.6*Math.pow(Math.sin(Math.PI*t),.5);
+    const h=(32+hash(seed)*38)*S*taper*grow,lean=(hash(seed+3)-.5)*h*.45,bw=h*.22+3,nx=pt.nx*side,ny=pt.ny*side;
+    ctx.globalAlpha=alpha*.95;taIceAt(m,A.shards[(k+poly.n)%A.V],pt.x+nx*out,pt.y+ny*out,nx,ny,h,bw,lean);
+   }
+   ctx.setTransform(m);
+  }else{
+  ctx.globalCompositeOperation='source-over';
+  // ローポリの結晶：明るい面・暗い面・白いふちの3色。全結晶をまとめて3回で描く。
+  const step=(taDenseCombo?40:(taMobileFx?28:16))*(ring?1.35:1),count=Math.min(60,Math.floor(poly.len/step)),out=(1-alpha)*7*S;
+  const L=new Path2D(),Dk=new Path2D(),E=new Path2D();taStyleAt.i=1;let any=false;
+  for(let k=0;k<=count;k++){
+   const d=count?poly.len*k/count:0;if(d>front)break;const seed=k*53+poly.n*7,pt=taStyleSample(poly,d),t=d/poly.len;
+   const grow=taEaseBack((age-(ring?0:t*.16)-.02)/.15);if(grow<=0)continue;
+   const side=ring?1:((k&1)?1:-1)*(hash(seed+9)<.15?-1:1),taper=ring?1:.4+.6*Math.pow(Math.sin(Math.PI*t),.5);
+   const h=(24+hash(seed)*30)*S*taper*grow,lean=(hash(seed+3)-.5)*h*.45,bw=h*.22+2.5;
+   const nx=pt.nx*side,ny=pt.ny*side,tx=-pt.ny,ty=pt.nx,ox=pt.x+nx*out,oy=pt.y+ny*out;
+   const b1x=ox-tx*bw,b1y=oy-ty*bw,b2x=ox+tx*bw,b2y=oy+ty*bw,Tx=ox+nx*h+tx*lean,Ty=oy+ny*h+ty*lean,Mx=ox+nx*h*.32+tx*bw*.25,My=oy+ny*h*.32+ty*bw*.25;
+   L.moveTo(b1x,b1y);L.lineTo(Mx,My);L.lineTo(Tx,Ty);L.closePath();
+   Dk.moveTo(Mx,My);Dk.lineTo(b2x,b2y);Dk.lineTo(Tx,Ty);Dk.closePath();
+   E.moveTo(b1x,b1y);E.lineTo(Tx,Ty);E.lineTo(b2x,b2y);E.moveTo(Mx,My);E.lineTo(Tx,Ty);any=true;
+  }
+  if(any){ctx.globalAlpha=alpha*.8;ctx.fillStyle='rgba(214,244,255,.85)';ctx.fill(L);ctx.fillStyle='rgba(34,104,186,.88)';ctx.fill(Dk);
+   ctx.globalAlpha=alpha;ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=taMobileFx?1:1.2;ctx.lineJoin='miter';ctx.stroke(E);}
+  }
+  // 「キン」と線を走る光（凍りきった直後と、その後2.4秒ごと）
+  const ga=age-.2,gp=ga>=0?(ga%2.4)/.38:2;
+  if(gp<1){ctx.globalCompositeOperation='lighter';taStyleAt.i=1;const pt=taStyleSample(poly,gp*poly.len),z=(26+18*Math.sin(Math.PI*gp))*S;ctx.globalAlpha=alpha*Math.sin(Math.PI*gp);ctx.drawImage(spr.star,pt.x-z/2,pt.y-z/2,z,z);}
+  ctx.restore();
+} finally {window.__ta100Profile.end('renderIce',__ta100Start)}
  }
  // Stage 6-F2: read the clip rectangle once per paint, not once per trace.
  const traceClipRect=traces.length?field.getBoundingClientRect():null;
@@ -13004,6 +13507,10 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const renderSegs=f.renderSegs||f.segs;
   if(!f._stage6f2RenderView)f._stage6f2RenderView={segs:renderSegs};
   else f._stage6f2RenderView.segs=renderSegs;
+  f._stage6f2RenderView.age=f.age;f._stage6f2RenderView.isTap=f.isTap;
+  // Lv3以上は強化演出（線を引いた時点のLvで決める。テストバーで強制切り替え可）
+  if(f._tier===undefined){const o=window.taFxLvTest;let lv=1;try{lv=taMastery.level(f.type);}catch(_){}f._tier=o||(lv>=5?5:lv>=3?3:1);}
+  f._stage6f2RenderView.strong=f._tier>=3;f._stage6f2RenderView.tier=f._tier;
   ctx.save();ctx.beginPath();ctx.rect(traceClipRect.left-rect.left,traceClipRect.top-rect.top,traceClipRect.width,traceClipRect.height);ctx.clip();
   if(f.type==='fire')renderFire(f._stage6f2RenderView,alpha);else renderIce(f._stage6f2RenderView,alpha);ctx.restore();
   if(!f.clockDissolve&&Math.random()<(taMobileFx?.36:.85)){const v=f.renderSegs||f.segs,seg=v[Math.floor(Math.random()*v.length)],t=Math.random(),p=fxPoint(seg,t);spark(p.x,p.y,f.type,1)}
@@ -13059,7 +13566,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  // The unfinished clock face is intentionally invisible. Keep clockDial and
  // its expiry, center, eclipse tap, and hand recognition intact.
  traces=traces.filter(f=>f.left>0);checkWords();renderCrossBursts(now);
- for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){taRecycleSpark(p);particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy+=(p.type==='fire'?-24:18)*dt;if(p.type==='fire'){p.sway+=dt*12;p.vx+=Math.sin(p.sway)*dt*22;}if(taCompoundLevel===2&&i%4!==0)continue;if(taCompoundLevel===1&&i%2!==0)continue;const a=Math.min(1,p.life*2);ctx.save();ctx.globalAlpha=a;if(p.type==='fire'){const heat=p.heat??.5;const tint=heat>.76?'#fff0bd':heat>.4?'#ffba58':'#e95425';ctx.fillStyle=tint;ctx.shadowColor=heat>.4?'#ff9d36':'#b83819';ctx.shadowBlur=taCompoundLevel?0:(taMobileFx?2:(heat>.7?10:5));if(p.trail){ctx.strokeStyle=tint;ctx.globalAlpha=a*.42;ctx.lineWidth=Math.max(.5,p.r*.55);ctx.beginPath();ctx.moveTo(p.x-p.vx*.035,p.y-p.vy*.035);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.globalAlpha=a;}ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(.55,p.r*.58),Math.max(.8,p.r*(1.15+heat*.5)),Math.atan2(p.vy,p.vx)+Math.PI/2,0,Math.PI*2);ctx.fill();}else{ctx.fillStyle=Math.random()>.5?'#e3fbff':'#80d8ff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=taCompoundLevel?0:(taMobileFx?2:9);ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}if(p.type==='ice'){ctx.strokeStyle='#e6faff';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p.x-p.r*2,p.y);ctx.lineTo(p.x+p.r*2,p.y);ctx.moveTo(p.x,p.y-p.r*2);ctx.lineTo(p.x,p.y+p.r*2);ctx.stroke()}ctx.restore()}
+ for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){taRecycleSpark(p);particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy+=(p.type==='fire'?-24:18)*dt;if(p.type==='fire'){p.sway+=dt*12;p.vx+=Math.sin(p.sway)*dt*22;}if(taCompoundLevel===2&&i%4!==0)continue;if(taCompoundLevel===1&&i%2!==0)continue;const a=Math.min(1,p.life*2);ctx.save();ctx.globalAlpha=a;if(p.type==='fire'){const heat=p.heat??.5;const tint=heat>.76?'#fff0bd':heat>.4?'#ffba58':'#e95425';ctx.fillStyle=tint;ctx.shadowColor=heat>.4?'#ff9d36':'#b83819';ctx.shadowBlur=(crossBursts.length||taCompoundLevel)?0:(taMobileFx?2:(heat>.7?10:5));if(p.trail){ctx.strokeStyle=tint;ctx.globalAlpha=a*.42;ctx.lineWidth=Math.max(.5,p.r*.55);ctx.beginPath();ctx.moveTo(p.x-p.vx*.035,p.y-p.vy*.035);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.globalAlpha=a;}ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(.55,p.r*.58),Math.max(.8,p.r*(1.15+heat*.5)),Math.atan2(p.vy,p.vx)+Math.PI/2,0,Math.PI*2);ctx.fill();}else{ctx.fillStyle=Math.random()>.5?'#e3fbff':'#80d8ff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=(crossBursts.length||taCompoundLevel)?0:(taMobileFx?2:9);ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}if(p.type==='ice'){ctx.strokeStyle='#e6faff';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p.x-p.r*2,p.y);ctx.lineTo(p.x+p.r*2,p.y);ctx.moveTo(p.x,p.y-p.r*2);ctx.lineTo(p.x,p.y+p.r*2);ctx.stroke()}ctx.restore()}
  // Full-screen final white flash, followed by a gentle shower of white motes.
  // Draw in viewport coordinates, not field coordinates, so nothing is clipped.
  for(const b of crossBursts){
@@ -13074,11 +13581,11 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    const fall=after-.13,fade=Math.min(1,fall/.55)*Math.min(1,(3.7-after)/.85);
    // Three parallax layers: distant fine motes descend slowly, nearby
    // luminous flakes drift faster and appear larger, all in viewport space.
+   // Batch white motes by depth: three fills instead of up to 105 separate
+   // canvas fill operations. Keep per-mote drift, falling speed and twinkle.
+   const rainPaths=[new Path2D(),new Path2D(),new Path2D()];
+   const rainGlints=new Path2D();
    for(let pi=0;pi<b.rain.length;pi++){
-    // On mobile, draw fewer overlapping background motes during the busy middle;
-    // preserve the visible final flash and foreground finish unchanged.
-    // Multiple active bursts: old decorative rain is the first thing to thin.
-    // The white flash and all gameplay collection events are untouched.
     if(taCompoundLevel===2&&pi%4!==0)continue;
     if(taCompoundLevel===1&&pi%2!==0)continue;
     if(taMobileFx&&crossBursts.length&&after<2.8&&pi%3!==0)continue;
@@ -13089,15 +13596,20 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
     const x=(p.x+elapsed*p.drift+Math.sin(elapsed*.75+p.phase)*(.002+p.depth*.0018))*vw;
     if(x< -12||x>vw+12)continue;
     const shimmer=.72+.28*Math.sin(elapsed*(1.6+p.depth*.5)+p.twinkle);
-    ctx.globalAlpha=fade*shimmer*[.34,.57,.76][p.depth];
-    ctx.fillStyle=p.depth===0?'#dbeaff':p.depth===1?'#f0f8ff':'#ffffff';
-    ctx.beginPath();ctx.arc(x,y,p.r,0,Math.PI*2);ctx.fill();
+    rainPaths[p.depth].moveTo(x+p.r*shimmer,y);
+    rainPaths[p.depth].arc(x,y,p.r*shimmer,0,Math.PI*2);
     if(p.depth===2&&p.r>2.3){
-     ctx.globalAlpha*=.28;ctx.strokeStyle='#fff';ctx.lineWidth=.7;
-     ctx.beginPath();ctx.moveTo(x-p.r*2.2,y);ctx.lineTo(x+p.r*2.2,y);
-     ctx.moveTo(x,y-p.r*2.2);ctx.lineTo(x,y+p.r*2.2);ctx.stroke();
+     rainGlints.moveTo(x-p.r*2.2,y);rainGlints.lineTo(x+p.r*2.2,y);
+     rainGlints.moveTo(x,y-p.r*2.2);rainGlints.lineTo(x,y+p.r*2.2);
     }
    }
+   const rainColors=['#dbeaff','#f0f8ff','#ffffff'];
+   const rainAlpha=[.34,.57,.76];
+   for(let depth=0;depth<3;depth++){
+    ctx.globalAlpha=fade*rainAlpha[depth];
+    ctx.fillStyle=rainColors[depth];ctx.fill(rainPaths[depth]);
+   }
+   ctx.globalAlpha=fade*.20;ctx.strokeStyle='#fff';ctx.lineWidth=.7;ctx.stroke(rainGlints);
   }
   ctx.restore();
  }
@@ -13541,7 +14053,7 @@ window.__taDiagMark=(type,detail={})=>log(type,detail);
 function wordInfo(w){return {word:(w.textContent||'').trim().slice(0,25),thunder:w.dataset.thunderBorn==='1',blue:w.classList.contains('ta-blue'),classes:w.className.slice(0,100)}}
 let panel=null,stats=null,lines=null;
 function update(){if(!panel)return;stats.textContent=`FPS ${fps} | events ${seq} | records ${records.length}`;lines.textContent=records.slice(-22).map(e=>`${e.t.toFixed(1)} ${e.type} ${e.word||''} ${e.thunder?'[黄玉]':''} ${e.dt!=null?`delay=${e.dt}ms`:''} ${e.duration!=null?`duration=${e.duration}ms`:''} ${e.stage||''} ${e.elapsed!=null?e.elapsed+'ms':''}`).join('\n')}
-function exportText(){return JSON.stringify({build:BUILD,created:new Date().toISOString(),url:location.href,ua:navigator.userAgent,viewport:{w:innerWidth,h:innerHeight,dpr:devicePixelRatio},records},null,2)}
+function exportText(){return JSON.stringify({build:BUILD,created:new Date().toISOString(),url:location.href,ua:navigator.userAgent,viewport:{w:innerWidth,h:innerHeight,dpr:devicePixelRatio},profile100:window.__ta100Profile?.report(),records},null,2)}
 function makePanel(){panel=document.createElement('div');panel.id='ta-diagnostic-panel';panel.hidden=true;panel.style.cssText='position:fixed;z-index:2147483647;top:8px;right:8px;width:min(440px,92vw);max-height:75vh;overflow:auto;padding:12px;border:1px solid #b8c8dc;border-radius:9px;background:rgba(10,17,29,.96);color:#eef6ff;font:12px/1.5 monospace;box-shadow:0 6px 30px #0009;pointer-events:auto';panel.innerHTML='<div style="font-weight:bold;margin-bottom:8px">採集処理 詳細計測 v45 <span id="ta-diag-stats"></span></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><button type="button" id="ta-diag-download">ログ保存</button><button type="button" id="ta-diag-copy">コピー</button><button type="button" id="ta-diag-clear">消去</button><button type="button" id="ta-diag-close">閉じる</button></div><div style="margin-bottom:6px">通常文字を数個→黄玉文字を連続スワイプ→ログ保存。Ctrl+Shift+Dで開閉できます。</div><pre id="ta-diag-lines" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:48vh;overflow:auto;margin:0"></pre>';document.body.append(panel);stats=panel.querySelector('#ta-diag-stats');lines=panel.querySelector('#ta-diag-lines');
  panel.querySelectorAll('button').forEach(b=>b.style.cssText='padding:4px 7px;background:#344a64;color:white;border:1px solid #7289a5;border-radius:4px;cursor:pointer');
  panel.querySelector('#ta-diag-download').onclick=()=>{const blob=new Blob([exportText()],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ta_collect_diagnostic_'+Date.now()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500)};
