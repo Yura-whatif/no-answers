@@ -1923,7 +1923,9 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
 .ta-orb[aria-pressed=true]{transform:scale(1.1);outline:2px solid #f4dcaa;outline-offset:2px;box-shadow:0 0 17px #f3cf8a88}
 .ta-item-counter{display:flex;align-items:center;gap:2px;font:600 16px sans-serif;color:#f3dcac;font-variant-numeric:tabular-nums}.ta-item-counter small{font-size:10px;color:#b8a78f}.ta-item-pips{margin-left:6px;letter-spacing:2px;font-size:10px;color:#d7b878}.ta-orb:disabled{filter:grayscale(1);opacity:.35;cursor:default;box-shadow:none}.ta-items-empty .ta-item-counter{color:#8d929a}.ta-items-empty .ta-item-pips{color:#707784}
 /* Viewport FX overlay: elemental particles and shockwaves can escape the collection frame. */
-.ta-element-layer{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:35;overflow:visible;contain:layout style}
+/* スマホのブラウザでは 100vh がアドレスバーを除いた高さより大きくなり、描画が縦に引き伸ばされてずれる。
+   描画面は今見えている画面（inset:0）にぴったり合わせる（中身の解像度は innerWidth×innerHeight）。 */
+.ta-element-layer{position:fixed;inset:0;width:auto;height:auto;pointer-events:none;z-index:35;overflow:visible;contain:layout style}
 .ta-element-layer canvas{display:block;width:100%;height:100%}
 .ta-element-word-fx{position:fixed;z-index:95;pointer-events:none;transform-origin:center;white-space:nowrap;font-family:serif;font-weight:600;will-change:transform,opacity,filter}
 @media(max-width:500px){.ta-items{gap:9px}.ta-orb{width:32px;height:32px}}
@@ -4916,6 +4918,8 @@ const taCenturyDust=(()=>{
     // 描画領域はCSSピクセルに統一。毎回の高DPI画像生成を避ける。
     const w=Math.max(1,window.innerWidth),h=Math.max(1,window.innerHeight);
     if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
+    // 見た目の大きさも中身と同じにする（スマホでは 100vh が見えている高さより大きく、縦に引き伸ばされるため）
+    if(canvas.style.height!==h+'px'){canvas.style.width=w+'px';canvas.style.height=h+'px';}
   }
   function frame(now){
     raf=0;
@@ -5022,7 +5026,7 @@ function nextGlowKind(){
 }
 function glowName(kind){return kind === 'memory' ? '降る記憶' : '昇る想い';}
 function glowStagePalette(){
-  const n=combo>=800?11:combo>=700?10:combo>=600?9:combo>=500?8:combo>=400?7:combo>=300?6:combo>=200?5:combo>=100?4:1;
+  const lv=taStoryLevel(),n=lv>=800?11:lv>=700?10:lv>=600?9:lv>=500?8:lv>=400?7:lv>=300?6:lv>=200?5:lv>=100?4:1;
   const colors={
     1:['#C7DCFF','#FFD9A8'],4:['#B9D7FF','#FFE6C7'],5:['#C6B8FF','#FFF0C9'],
     6:['#8DDFFF','#FFC2D3'],7:['#E5D0FF','#FFE1A6'],8:['#E9C5FF','#FFD6A0'],
@@ -5600,36 +5604,11 @@ function taFadeChainScene(){
 
 function expireCombo(){
   if(taNightActive())return;
-  const taRoot50=document.documentElement;
-  const had800=taRoot50.classList.contains('ta-800-lit');
-  const hadMilestone=['ta-meteor-lit','ta-century-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit']
-    .some(c=>taRoot50.classList.contains(c));
-  // Return straight to stage_01 through one retained outgoing layer.
-  // Disable all intermediate-stage native transitions BEFORE removing milestone
-  // classes, otherwise the browser briefly paints a previous stage.
-  if(hadMilestone){
-    taFadeChainScene();
-    taRoot50.classList.remove('ta-native-return-all','ta-native-return-800');
-  }
-  // The snapshot handles the 500+ return too; do not run a second, competing
-  // void fade on the original layers.
-  taCancelVoidReturn();
-  taSilverDust.sync(false);taSilverMusic.stop();
-  taCancelLampPulse();
+  // 連鎖が切れても、物語（景色・BGM）は戻さない。連鎖の表示と上乗せだけを0に戻す。
   taCancelFloodResume();
-  taMeteorReset();
   combo=0;comboWindowMs=COMBO_MS;
-  taSyncDriftingGlowWords();
-  // Keep the old native stage visible until the snapshot has been painted.
-  // Then switch the native background to stage_01 underneath the snapshot,
-  // without showing any intermediate stage or altering the words/orbs.
-  const clearMilestones=()=>document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-600-lit","ta-700-lit","ta-800-lit","ta-word-300");
-  if(hadMilestone){
-    // The opaque snapshot keeps the outgoing image while stage_01 is exposed.
-  }
-  clearMilestones();
   const el=$("combo");el.classList.remove("on","x2","x3","run","heat","ta-skill-grace");
-  el.style.removeProperty("--heat");comboRush(false);taCenturyMusic.stop();
+  el.style.removeProperty("--heat");comboRush(false);
 }
 // Keep the scene unchanged during stopped time. On release, show only the
 // final chain milestone; stage_02 pulses at most once for 10-49 chains.
@@ -5655,6 +5634,67 @@ function taApplyComboBackground(finalCombo, resumeFromStop=false){
   if(finalCombo>=50)root.classList.remove("ta-meteor-skip");
   if(finalCombo>=100)taMeteorHadCentury=true;
 }
+// ── 物語の頁 ─────────────────────────────────────────
+// 背景・BGMは連鎖数ではなく「頁」で進む。頁は言霊を拾うたびにたまり、連鎖が切れても減らない。
+// 連鎖は頁のたまる速さ（上乗せ）として残る。最終章を読み終えるとボーナス区間（夜の終わり）へ。
+const TA_STORY_STEPS=[50,50,120,120,135,135,135,150,150];   // 各章を読み終えるのに必要な頁
+const TA_STORY_LEVEL=[0,50,100,200,300,400,500,600,700];    // 各章の景色（従来の連鎖数の段階にあたる）
+const taStory={pages:0,chapter:0,inChapter:0,lampMark:0,pendingAnnounce:false};
+function taStoryLevel(){return taStory.chapter>=TA_STORY_STEPS.length?800:TA_STORY_LEVEL[taStory.chapter];}
+function taStoryProgress(){return taStory.chapter>=TA_STORY_STEPS.length?1:Math.min(1,taStory.inChapter/TA_STORY_STEPS[taStory.chapter]);}
+function taStoryChainRate(){return combo>=600?1.5:combo>=300?1.35:combo>=100?1.2:1;}
+function taStoryReset(){
+  taStory.pages=0;taStory.chapter=0;taStory.inChapter=0;taStory.lampMark=0;taStory.pendingAnnounce=false;
+  try{window.taMoon?.update(false);}catch(_){}
+}
+// n頁を足す。章をまたいだら景色・BGMを進める（時止め中は、時が戻ったときにまとめて進める）。
+function taStoryAdd(n){
+  if(!taRunning||!(n>0))return;
+  if(typeof taNightActive==='function'&&taNightActive())return;
+  if(taStory.chapter>=TA_STORY_STEPS.length)return;
+  taStory.pages+=n;taStory.inChapter+=n;
+  // 第一章だけ：10頁ごとにランタンが灯る（一度に何段も進んでも1回だけ）
+  if(taStory.chapter===0){
+    const mark=Math.min(4,Math.floor(taStory.inChapter/10));
+    if(mark>taStory.lampMark){taStory.lampMark=mark;if(!flood&&taStory.inChapter<TA_STORY_STEPS[0])taPlayLampPulse();}
+  }
+  let advanced=false;
+  while(taStory.chapter<TA_STORY_STEPS.length&&taStory.inChapter>=TA_STORY_STEPS[taStory.chapter]){
+    taStory.inChapter-=TA_STORY_STEPS[taStory.chapter];taStory.chapter++;advanced=true;
+  }
+  if(taStory.chapter>=TA_STORY_STEPS.length)taStory.inChapter=0;
+  try{window.taMoon?.update(advanced);}catch(_){}
+  if(advanced){taStory.pendingAnnounce=true;if(!flood)taStoryApply(false);}
+}
+// 技などの上乗せ（言霊ごとの頁とは別に足す）
+function taStoryBonus(n){taStoryAdd(n);}
+// 今の章の景色・BGMを反映する
+function taStoryApply(resumeFromStop){
+  const lv=taStoryLevel();
+  taApplyComboBackground(lv,resumeFromStop);
+  if(lv>=100 && !taCenturyMusic.isActive() && !taSilverMusic.isActive())taCenturyMusic.start();
+  if(lv>=600 && !taSilverMusic.isActive())taSilverMusic.start();
+  if(taStory.pendingAnnounce){taStory.pendingAnnounce=false;if(lv<800)taStoryAnnounce();}
+  if(lv>=100 && !taStoryApply.prewarmed){
+    taStoryApply.prewarmed=true;
+    for(const name of ['stage_06.webp','stage_07.webp','stage_08.webp','stage_09.webp','stage_10.webp']){const im=new Image();im.decoding='async';im.src='img/'+name;if(im.decode)im.decode().catch(()=>{});}
+  }
+  if(lv>=800)taNightStart();
+}
+// 章の名前を浮かべる（その一瞬だけ言霊を薄くして読みやすくする）
+function taStoryAnnounce(){
+  const hero=document.querySelector('#viewMain>.hero');if(!hero)return;
+  hero.querySelectorAll('.ta-story-title').forEach(e=>e.remove());
+  const n=taStory.chapter+1,kanji=typeof taNightKanji==='function'?taNightKanji(n):String(n);
+  const t=document.createElement('div');t.className='ta-story-title';t.setAttribute('aria-hidden','true');t.textContent='第'+kanji+'章';
+  hero.append(t);
+  // 第二夜と同じ：表示から4.1秒でフェードアウトを始め、消えきったら外す
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+  setTimeout(()=>t.classList.add('fade'),4100);
+  setTimeout(()=>t.remove(),5300);
+  const field=document.getElementById('drift');
+  if(field){field.classList.add('ta-story-hush');clearTimeout(taStoryAnnounce.h);taStoryAnnounce.h=setTimeout(()=>field.classList.remove('ta-story-hush'),1500);}
+}
 // 100連のたびに、ヘッダーのゆらを一瞬明るく照らす
 function taYuraBright(){
   const el=document.querySelector('header>.brand.ta-face-header');if(!el)return;
@@ -5670,7 +5710,6 @@ function bumpCombo(){
   combo = (flood || comboPaused || now - comboAt <= comboWindowMs) ? combo + 1 : 1; comboAt = now;
   comboWindowMs=taWordMastery.comboGraceMs(); // Ordinary collection uses the current word-level grace.
   $("combo").classList.remove("ta-skill-grace");
-  if(combo===1 && taMeteorHadCentury)taMeteorReset();
   if(combo>taSessionMaxCombo) taSessionMaxCombo=combo;
   if(window.taStars){window.taStars.track('words');window.taStars.check();}if(typeof taWordMastery!=='undefined')taWordMastery.add(1);
   if(combo > maxCombo){ maxCombo = combo; store.set("ta-yura-maxcombo", maxCombo); }
@@ -5689,10 +5728,8 @@ function bumpCombo(){
   el.classList.toggle("on", combo >= 2); el.classList.toggle("x2", m >= 2 && m < 3); el.classList.toggle("x3", m >= 3); el.classList.toggle("hold", flood);
   comboRush(m === 3);
   // Chain rewards, audio and counters continue normally; scene transitions wait.
-  if(!flood){
-    if(combo===10 || combo===20 || combo===30 || combo===40)taPlayLampPulse();
-    taApplyComboBackground(combo);
-  }
+  // 景色・BGMは連鎖数ではなく頁で進む（言霊1つ＝1頁。連鎖が長いほど上乗せ）
+  taStoryAdd(taStoryChainRate());
   if(combo===100 || combo===1) taSyncDriftingGlowWords();
   // Start the special BGM at 100 chains; stop it if the chain resets.
   if(combo===100){
@@ -5701,9 +5738,6 @@ function bumpCombo(){
     const names=mobile?['stage_06.webp','stage_07.webp','stage_08.webp','stage_09.webp','stage_10.webp']:['stage_06.webp','stage_07.webp','stage_08.webp','stage_09.webp','stage_10.webp'];
     for(const name of names){const im=new Image();im.decoding='async';im.src='img/'+name;if(im.decode)im.decode().catch(()=>{});}
   }
-  if(combo>=100 && !taCenturyMusic.isActive() && !taSilverMusic.isActive())taCenturyMusic.start();
-  if(combo>=600 && !taSilverMusic.isActive())taSilverMusic.start();
-  else if(combo===1){taSilverMusic.stop();taCenturyMusic.stop();}
   // The previous offsetWidth read forced a full style/layout flush on EVERY
   // collection, especially expensive while multiple skills animate.
   // Replay the same 0.3 s pulse using WAAPI, without synchronous reflow.
@@ -5740,7 +5774,6 @@ function bumpCombo(){
   if(r > 90){ el.style.setProperty("--heat", ((r - 90) / 10).toFixed(2)); el.classList.add("heat"); }
   else { el.classList.remove("heat"); el.style.removeProperty("--heat"); }
   if(combo >= COMBO_STEP_FROM && combo % 10 === 0) comboStepBonus(combo);
-  if(combo===800)taNightStart();
   return m;
 }
 // 作品（最後の一行）を読むあいだは連鎖メーターを止め、「一時停止」を被せる。しまう演出が始まったら満タンから再開
@@ -5801,7 +5834,7 @@ function stopTap(w){
   bumpCombo(); // Time-stop word taps are intentionally silent.
   const g = yieldNow(), word = w.dataset.word || w.textContent, field = $("drift").getBoundingClientRect(), r = w.getBoundingClientRect();
   const cx = r.left + r.width/2 - field.left, cy = r.top + r.height/2 - field.top;
-  if(combo>=600)taCenturyDust.emit(r);
+  if(taStoryLevel()>=600)taCenturyDust.emit(r);
   // Time-stop: two halves are pulled in opposite random directions, stretched and torn apart.
   // Keep the effect centered on the tapped word; do not alter audio or scoring.
   const angle = Math.random() * Math.PI * 2;
@@ -6010,7 +6043,7 @@ function endFlood(){
   clearTimeout(startFlood.h);
   flood = false; document.documentElement.classList.remove("ta-sakura-time-frozen"); if(!taSilverMusic.isActive())taCenturyMusic.timeResume(); taSilverMusic.timeResume();
   // Apply the final stage once, without replaying intermediate milestones.
-  taApplyComboBackground(combo,true); clearTimeout(startFlood.tickDelay); clearInterval(startFlood.tk);
+  taStoryApply(true); clearTimeout(startFlood.tickDelay); clearInterval(startFlood.tk);
   // The transition back to normal rendering can take over a second on slower
   // Android devices. Do not consume the 3s combo window during that transition.
   // A new tap immediately restores the ordinary 2.2s rule in bumpCombo().
@@ -6739,7 +6772,7 @@ const __ta100Start=window.__ta100Profile.start();try {
     // Keep early hits expressive; omit overlapping effects after the fifth hit.
     const taDenseSwipe=taCoarse && combo<99 && !!w.dataset.swiped && taSwipeBurstCount>2; // 100+ always shows reward orbs
     // Do not start a separate oscillator for every word in a rapid swipe.
-    if(taRunning && combo>=600 && !flood){if(taNow-taSwipeLastTouch>95){sfx.goldTap();taSwipeLastTouch=taNow;}}else if(!taDenseSwipe || taNow-taSwipeLastTouch>210){sfx.touch();taSwipeLastTouch=taNow;}
+    if(taRunning && taStoryLevel()>=600 && !flood){if(taNow-taSwipeLastTouch>95){sfx.goldTap();taSwipeLastTouch=taNow;}}else if(!taDenseSwipe || taNow-taSwipeLastTouch>210){sfx.touch();taSwipeLastTouch=taNow;}
     // 300連鎖以降は専用のクリスタルSE。連鎖終了後は通常音へ戻る。
     // 黄玉の言葉は通常の採集演出で作る複数のコピー/飛行オーブが
     // 発動中のCanvas・引き寄せと競合して遅延するため、独立した軽量経路で採集する。
@@ -6766,6 +6799,7 @@ const __ta100Start=window.__ta100Profile.start();try {
     if(w.classList.contains("reso")){ const rr = w.getBoundingClientRect(); resonate(rr.left + rr.width/2, rr.top + rr.height/2, w); }
     if(w.classList.contains("multi")){ const fr = $("drift").getBoundingClientRect(), rr = w.getBoundingClientRect(); multiply(rr.left + rr.width/2 - fr.left, rr.top + rr.height/2 - fr.top, {boon: w.classList.contains("boon")}); }
     
+    if(w.matches('.special,.vortex,.crack,.petal,.multi,.pull,.glow,.reso,.odd'))taStoryBonus(5);   // 特別な言霊は物語を大きく進める
     const cm = nightResidual ? comboMult(combo) : bumpCombo(); if(cm>=100)window.taOrbDiag.mark("100+ hit");
     const g = isOdd ? ODD_PT : yieldNow() * cm;   // 時間停止中も連鎖倍率を引き継ぐ
     const wordText = w.dataset.word || w.textContent;
@@ -6808,7 +6842,7 @@ const __ta100Start=window.__ta100Profile.start();try {
     const r = thunderPickupRect || w.getBoundingClientRect(), t = (taTime ? $("taTime") : $("taScore")).getBoundingClientRect();
     // Capture the real glyph bounds before removing the original word.
     let centuryTextRect=null;
-    if(combo>=600 && plainWord && !thunderPickup){
+    if(taStoryLevel()>=600 && plainWord && !thunderPickup){
       const range=document.createRange();range.selectNodeContents(w);
       const tr=range.getBoundingClientRect();
       if(tr.width>0&&tr.height>0)centuryTextRect={left:tr.left,top:tr.top,width:tr.width,height:tr.height};
@@ -6830,12 +6864,12 @@ const __ta100Start=window.__ta100Profile.start();try {
     if(isGem){ f.getAnimations().forEach(x=>x.cancel()); gemBurst(r, f); } else {
     // 言葉が霧になってほどける：文字は広がりながらぼやけ、周りに淡い靄が立ちのぼって消える
     // あふれる時間は、ぼかしと字間の変化（重い）を省き、拡大と透明化だけで軽くほどく
-    const lite = flood || sakuraOn || combo>=600;   // 時止め・桜のあいだは、ぼかしを使わず軽くほどく
+    const lite = flood || sakuraOn || taStoryLevel()>=600;   // 時止め・桜のあいだは、ぼかしを使わず軽くほどく
     // Ordinary pre-century pickup: a quick silver outline flash, then a soft inward
     // contraction. Only transform/opacity animate; no new particles or blur filters.
     const silverPickup=plainWord && combo<600 && !lite;
     // 300+ only: gold glyph erodes from bottom upward while pooled sand rises.
-    const centuryEcho=combo>=600 && plainWord;
+    const centuryEcho=taStoryLevel()>=600 && plainWord;
     if(centuryEcho){
       // 300連鎖以降は移動せずフェードアウト。金砂は共用Canvasで描画する。
       f.style.borderColor='rgba(235,243,255,.82)';
@@ -9645,7 +9679,7 @@ const taNightActive=()=>taNightBonus.phase!=='idle';
 function taNightLater(fn,ms){const serial=taNightBonus.serial;const id=setTimeout(()=>{if(serial===taNightBonus.serial&&taRunning)fn();},ms);taNightBonus.timers.push(id);}
 function taNightClear(){document.querySelectorAll('.ta-night-echo').forEach(el=>el.remove());taNightBonus.serial++;taNightBonus.timers.forEach(clearTimeout);taNightBonus.timers=[];taNightBonus.phase='idle';taNightBonus.orbPending=false;taNightBonus.specialWordStarted=false;document.documentElement.classList.remove('ta-night-bonus');document.querySelectorAll('#drift .ta-night-word,#drift .ta-night-silver').forEach(el=>el.remove());taNightBonus.overlay?.remove();taNightBonus.overlay=null;taNightBonus.curtain?.remove();taNightBonus.curtain=null;}
 function taNightStart(){
- if(!taRunning||taNightActive()||combo<800)return;
+ if(!taRunning||taNightActive()||taStoryLevel()<800)return;
  taNightClear();taNightBonus.phase='intro';taNightBonus.born=performance.now();taNightBonus.spawned=0;taNightBonus.silverPicked=0;taNightBonus.unlockAtStart=!!window.taStars?.hasAward?.('chain800');
  document.documentElement.classList.add('ta-night-bonus');
  clearTimeout(bumpCombo.h);taCancelFloodResume();comboPaused=true;
@@ -9849,6 +9883,7 @@ function taNightReturn(){
      // New night starts at chain 0: restore the combo HUD for the next 800-chain run.
      document.documentElement.classList.remove('ta-night-chain-retired');
      combo=0;comboAt=0;comboPaused=false;comboWindowMs=COMBO_MS;clearTimeout(bumpCombo.h);
+     taStoryReset();   // 新しい夜は第一章から（得点はそのまま）
      const el=document.getElementById('combo');el?.classList.remove('on','x2','x3','run','heat','hold','paused','ta-skill-grace');if(el)el.style.removeProperty('--heat');
      document.getElementById('cbn').textContent='0';document.getElementById('cbx').textContent='';comboRush(false);
      document.documentElement.classList.remove('ta-century-lit','ta-meteor-lit','ta-night-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit','ta-word-300','ta-silver-music-started');
@@ -10252,8 +10287,8 @@ const taStars=(()=>{
  const sessionStarTotal=()=>session.reduce((sum,id)=>sum+(goals.find(g=>g.id===id)?.stars||0),0);
  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state));}catch(_e){}};
  const tray=()=>document.getElementById('taStarTray');
- // 右下に★を並べる表示は廃止（この場所は今後、月の満ち欠けの表示に使う）。場所（taStarTray）は空のまま残す。
- function draw(){const el=tray();if(el&&el.firstChild)el.replaceChildren();}
+ // 右下に★を並べる表示は廃止。この場所には物語の月（taMoon）を表示する。
+ function draw(){}
  let sequenceToken=0;
  const DISPLAY_MS=3100; // Read the achievement before the star starts moving.
  const FLIGHT_MS=1050;
@@ -10758,8 +10793,8 @@ function taFinish(manualExit=false){
   if(window.taOrbDiag)setTimeout(()=>window.taOrbDiag.report(),2100);
   if(!taRunning&&!taStarting)return;
   // Preserve the century track only when the finished score enters the top 20.
-  const wasSilver=combo>=600 && taSilverMusic.isActive();
-  const wasCentury=combo>=100 && taCenturyMusic.isActive();
+  const wasSilver=taStoryLevel()>=600 && taSilverMusic.isActive();
+  const wasCentury=taStoryLevel()>=100 && taCenturyMusic.isActive();
   clearTimeout(bumpCombo.h);
   // Visual cleanup is best-effort. A failed animation must never cancel
   // the Time Over title, outro audio or collection result.
@@ -10878,6 +10913,7 @@ function taBeginReady(){
   taCancelDemoReturn();
   taCancelVoidReturn();
   taMeteorReset();
+  taStoryReset();
   // DEMOでの操作履歴をゲーム本番へ持ち越さない。
   taCancelFloodResume();clearTimeout(bumpCombo.h);taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-600-lit","ta-700-lit","ta-800-lit","ta-word-300");
   const comboEl=document.getElementById("combo");
@@ -11854,7 +11890,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(!rewardOrb||!(active()||taNightBonus.phase==='collect'))return;
   const r=rewardOrb.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
   removeRewardOrb();rewardElapsed=0;rewardNext=(32+Math.random()*14)*(typeof taStarRunValue==='function'?taStarRunValue('silverRate')/100:1);
-  window.taStars?.track('silver');
+  window.taStars?.track('silver');taStoryBonus(3);
   if(taNightBonus.phase==='collect')taNightBonus.silverPicked=(taNightBonus.silverPicked||0)+1;
   rewardOrbBurst(x,y);
   try{sfx.boon();sfx.pickupShimmer();}catch(_){}
@@ -11987,6 +12023,7 @@ if(!valid(w)||w.dataset.taElementClaim)return;w.dataset.taElementClaim='1';taMas
  // Elemental contact activates the original special effect before destruction.
  // Keep the element available while its effect handler reads its position.
  const isSpecial=w.matches(specials);
+ if(isSpecial)taStoryBonus(5);
  if(isSpecial){
   const rr=taCrossRectCache.get(w)||w.getBoundingClientRect(),cx=rr.left+rr.width/2,cy=rr.top+rr.height/2;
   if(w.classList.contains('special')){startFlood(w);sfx.special();sfx.timeStop();}
@@ -12417,7 +12454,7 @@ const __ta100Start=window.__ta100Profile.start();try {
   const now=performance.now();
   taLastDualFinisher=now;
   const ultimateId=taUltimateShow("cross","全部なかったことに");
-  window.taStars?.track("ultimateCross");
+  window.taStars?.track("ultimateCross");taStoryBonus(15);
   // 紅玉・蒼玉がともにLv5のときだけ：最後に十字の光の刃を足し、言霊が消える時間を1秒延ばす
   let crossLv5=false;try{crossLv5=taMastery.level('fire')>=5&&taMastery.level('ice')>=5;}catch(_){}
   const crossDirs=crossLv5?[a,b].map(f=>{const P=f.path,s0=P[0],z=P[P.length-1],l=Math.hypot(z.x-s0.x,z.y-s0.y)||1;return{x:(z.x-s0.x)/l,y:(z.y-s0.y)/l,type:f.type};}):null;
@@ -12983,7 +13020,7 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
  }
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&thunderBusy)thunderClear();});
  // Capture the armed gesture before the normal word/tap collectors can consume it.
- field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<1||(selected==='thunder'&&thunderBusy)||gesture||consumedPointer!==null)return;if(selected==='thunder'){if(!thunderReady()){selected=null;sync();return;}usesLeft-=3;selected=null;sync();thunderCast(loc(e));e.stopImmediatePropagation();e.preventDefault();return;}playElementSound(selected);taMastery.add(selected==='summon'?'green':selected,null,2);usesLeft--;gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
+ field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<1||(selected==='thunder'&&thunderBusy)||gesture||consumedPointer!==null)return;if(selected==='thunder'){if(!thunderReady()){selected=null;sync();return;}usesLeft-=3;selected=null;sync();taStoryBonus(20);thunderCast(loc(e));e.stopImmediatePropagation();e.preventDefault();return;}playElementSound(selected);taMastery.add(selected==='summon'?'green':selected,null,2);usesLeft--;taStoryBonus(3);gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
  // Once the elemental stroke reaches its range/time budget, the same held
  // pointer continues as an ordinary word-collection swipe. The special trace
  // remains clipped to its range, so its visuals and elemental hits stay aligned.
@@ -13264,7 +13301,7 @@ const __ta100Start=window.__ta100Profile.start();try {
   if(now-lastFxPaint<targetMs){scheduleFxIdle(Math.max(8,Math.ceil(targetMs-(now-lastFxPaint))));return;}
   lastFxPaint=now;fxWasDrawing=true;const taPaintStart=taPerfEnabled?performance.now():0;
   const dt=Math.min(.05,(now-last)/1000);last=now;
- const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,taMobileFx?1:(crossBursts.length?1.25:2)),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}taFxSchedulerStats.canvasPixels=cw*ch;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);drawCompletedClock(now);renderSummons(now);
+ const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,taMobileFx?1:(crossBursts.length?1.25:2)),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.style.height!==vh+'px'){canvas.style.width=vw+'px';canvas.style.height=vh+'px';}if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}taFxSchedulerStats.canvasPixels=cw*ch;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);drawCompletedClock(now);renderSummons(now);
  if(gesture&&performance.now()-gesture.started>=GESTURE_MAX_MS){const g=gesture;gesture=null;makeTrace(g)}
  const paused=false; // Elemental traces remain active during time-stop.
 
@@ -14329,6 +14366,70 @@ header>.brand.ta-face-header.ta-yura-bright{animation:taYuraHalo 1.9s ease-out b
 @media(prefers-reduced-motion:reduce){header>.brand.ta-face-header.ta-yura-bright::after{animation-duration:1.2s}header>.brand.ta-face-header.ta-yura-bright::before{animation-duration:1.2s}}
 
 </style>
+<style id="ta-story-moon-css">
+/* 物語の月：もとは★が並んでいた右下に置く。章ごとに新月から満ちていき、満月で次の章へ */
+#viewMain>.hero .ta-moon{position:absolute;right:12px;bottom:10px;z-index:186;width:44px;height:44px;pointer-events:none;opacity:0;transition:opacity .6s ease}
+html.ta-active-moon #viewMain>.hero .ta-moon{opacity:1}
+#viewMain>.hero .ta-moon svg{width:100%;height:100%;overflow:visible;display:block}
+#viewMain>.hero .ta-moon .halo{transition:opacity .5s ease}
+#viewMain>.hero .ta-moon.ta-moon-full{animation:taMoonFull 1.6s cubic-bezier(.2,.7,.3,1) both}
+@keyframes taMoonFull{0%{transform:scale(1);filter:none}22%{transform:scale(1.55);filter:drop-shadow(0 0 12px rgba(255,224,160,.95))}100%{transform:scale(1);filter:none}}
+#viewMain>.hero .ta-moon.ta-moon-grow{animation:taMoonGrow .7s ease-out both}
+@keyframes taMoonGrow{0%{filter:none}30%{filter:drop-shadow(0 0 7px rgba(255,224,160,.85))}100%{filter:none}}
+/* 章の名前 */
+/* 章の名前：「第二夜」と同じ見た目・同じ動き（その場でフェードイン1.1秒 → 4.1秒まで静止 → フェードアウト1.1秒）。位置は動かさない */
+#viewMain>.hero .ta-story-title{position:absolute;z-index:187;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;
+ font:500 clamp(29px,7vw,48px)/1.5 var(--mincho);letter-spacing:.25em;color:#f5f8ff;white-space:nowrap;opacity:0;
+ text-shadow:0 0 12px rgba(241,248,255,.75),0 0 38px rgba(167,202,255,.45);transition:opacity 1.1s ease-in-out}
+#viewMain>.hero .ta-story-title.show{opacity:1}
+#viewMain>.hero .ta-story-title.show.fade{opacity:0}
+/* 章の名前が出ている一瞬だけ、言霊を薄くする */
+#drift.ta-story-hush .word{opacity:.32;transition:opacity .35s ease}
+@media(prefers-reduced-motion:reduce){#viewMain>.hero .ta-moon.ta-moon-full,#viewMain>.hero .ta-moon.ta-moon-grow{animation:none}#viewMain>.hero .ta-story-title{transition:none}}
+</style>
+<script id="ta-story-moon-js">
+// 物語の月：頁の進み（taStoryProgress）を満ち欠けで見せる。描き直すのは満ち具合が変わったときだけ。
+(()=>{
+ const R=12;let el=null,lit=null,halo=null,last=-1;
+ const build=()=>{
+  const hero=document.querySelector('#viewMain>.hero');if(!hero)return false;
+  el=document.createElement('div');el.className='ta-moon';el.setAttribute('aria-hidden','true');
+  el.innerHTML=`<svg viewBox="-22 -22 44 44"><defs>
+   <radialGradient id="taMoonFace" cx="40%" cy="38%"><stop offset="0" stop-color="#fffaf0"/><stop offset=".6" stop-color="#f3e2bd"/><stop offset="1" stop-color="#d9bf8e"/></radialGradient>
+   <radialGradient id="taMoonHalo"><stop offset=".5" stop-color="#ffe7b0" stop-opacity=".55"/><stop offset="1" stop-color="#ffd38a" stop-opacity="0"/></radialGradient>
+   <mask id="taMoonMask"><rect x="-22" y="-22" width="44" height="44" fill="black"/><path class="lit" fill="white"/></mask></defs>
+   <circle class="halo" r="21" fill="url(#taMoonHalo)" opacity=".2"/>
+   <circle r="${R}" fill="rgba(36,42,66,.78)" stroke="rgba(230,220,200,.3)" stroke-width=".6"/>
+   <g mask="url(#taMoonMask)"><circle r="${R}" fill="url(#taMoonFace)"/><circle cx="-3" cy="-2" r="1.7" fill="rgba(170,150,110,.25)"/><circle cx="4.2" cy="4" r="2.3" fill="rgba(170,150,110,.22)"/><circle cx="2" cy="-5.5" r="1.1" fill="rgba(170,150,110,.2)"/></g></svg>`;
+  hero.append(el);lit=el.querySelector('.lit');halo=el.querySelector('.halo');return true;
+ };
+ // f: 0（新月）→1（満月）。右から満ちていく。
+ const phase=f=>{
+  const k=Math.cos(Math.PI*f)*R;
+  return f<=0?'':`M0,${-R} A${R},${R} 0 0 1 0,${R} A${Math.abs(k).toFixed(2)},${R} 0 0 ${f<.5?0:1} 0,${-R} Z`;
+ };
+ const update=advanced=>{
+  if(!el&&!build())return;
+  const f=typeof taStoryProgress==='function'?taStoryProgress():0;
+  if(advanced){
+   // 満月に輝いてから、次の章の新月へ
+   lit.setAttribute('d',phase(1));halo.setAttribute('opacity','1');
+   el.classList.remove('ta-moon-full','ta-moon-grow');requestAnimationFrame(()=>el.classList.add('ta-moon-full'));
+   clearTimeout(update.t);update.t=setTimeout(()=>{update.t=0;el.classList.remove('ta-moon-full');last=-1;update(false);},1600);
+   return;
+  }
+  if(update.t)return;
+  const q=Math.round(f*48)/48;if(q===last)return;   // 48段階で十分なめらか
+  const jump=q-last>.12&&last>=0;last=q;
+  lit.setAttribute('d',phase(q));halo.setAttribute('opacity',(.2+.8*q*q).toFixed(2));
+  if(jump){el.classList.remove('ta-moon-grow');requestAnimationFrame(()=>el.classList.add('ta-moon-grow'));clearTimeout(update.g);update.g=setTimeout(()=>el.classList.remove('ta-moon-grow'),720);}
+ };
+ window.taMoon={update};
+ // 遊んでいる間（と夜のボーナス区間）だけ表示する
+ const syncVisible=()=>{const on=(typeof taRunning!=='undefined'&&taRunning);document.documentElement.classList.toggle('ta-active-moon',on);if(on&&!el)update(false);};
+ setInterval(syncVisible,500);
+})();
+</script>
 </body>
 <style>
 /* Readable thousand-point popup labels in the collection area. */
