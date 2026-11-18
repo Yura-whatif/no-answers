@@ -5655,6 +5655,12 @@ function taApplyComboBackground(finalCombo, resumeFromStop=false){
   if(finalCombo>=50)root.classList.remove("ta-meteor-skip");
   if(finalCombo>=100)taMeteorHadCentury=true;
 }
+// 100連のたびに、ヘッダーのゆらを一瞬明るく照らす
+function taYuraBright(){
+  const el=document.querySelector('header>.brand.ta-face-header');if(!el)return;
+  el.classList.remove('ta-yura-bright');void getComputedStyle(el).animationName;el.classList.add('ta-yura-bright');
+  clearTimeout(taYuraBright.t);taYuraBright.t=setTimeout(()=>el.classList.remove('ta-yura-bright'),2000);
+}
 function bumpCombo(){
   taCancelFloodResume();
   // DEMO / START演出中は連鎖を発生させない。
@@ -5677,6 +5683,7 @@ function bumpCombo(){
     number.getAnimations().forEach(a=>{if(a.effect && a.effect.target===number)a.cancel();});
     number.classList.remove('ta-chain-ten','ta-chain-hundred');
     number.classList.add(combo%100===0?'ta-chain-hundred':'ta-chain-ten');
+    if(combo%100===0)taYuraBright();
   }
   el.style.setProperty("--ct", comboWindowMs + "ms");
   el.classList.toggle("on", combo >= 2); el.classList.toggle("x2", m >= 2 && m < 3); el.classList.toggle("x3", m >= 3); el.classList.toggle("hold", flood);
@@ -14342,6 +14349,17 @@ window.taV54Report=function(){const p=window.__taV54Perf;return {
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
 })();
 </script>
+<style id="ta-yura-bright">
+/* 100連のたびに、ヘッダーのゆらが一瞬明るく照らされる（暗い覆いが引き、金の光がさす） */
+header>.brand.ta-face-header.ta-yura-bright::after{animation:taYuraUnveil 1.9s cubic-bezier(.2,.7,.3,1) both}
+header>.brand.ta-face-header.ta-yura-bright::before{animation:taYuraLight 1.9s cubic-bezier(.2,.7,.3,1) both}
+header>.brand.ta-face-header.ta-yura-bright{animation:taYuraHalo 1.9s ease-out both}
+@keyframes taYuraUnveil{0%{opacity:1}14%{opacity:.08}55%{opacity:.22}100%{opacity:1}}
+@keyframes taYuraLight{0%{filter:none}14%{filter:brightness(1.55) saturate(1.2) contrast(1.04)}55%{filter:brightness(1.3) saturate(1.12)}100%{filter:none}}
+@keyframes taYuraHalo{0%{box-shadow:inset 0 0 0 rgba(255,214,140,0)}14%{box-shadow:inset 0 0 26px rgba(255,214,140,.55)}100%{box-shadow:inset 0 0 0 rgba(255,214,140,0)}}
+@media(prefers-reduced-motion:reduce){header>.brand.ta-face-header.ta-yura-bright::after{animation-duration:1.2s}header>.brand.ta-face-header.ta-yura-bright::before{animation-duration:1.2s}}
+
+</style>
 </body>
 <style>
 /* Readable thousand-point popup labels in the collection area. */
