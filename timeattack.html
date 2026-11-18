@@ -10252,7 +10252,8 @@ const taStars=(()=>{
  const sessionStarTotal=()=>session.reduce((sum,id)=>sum+(goals.find(g=>g.id===id)?.stars||0),0);
  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state));}catch(_e){}};
  const tray=()=>document.getElementById('taStarTray');
- function draw(){const el=tray();if(!el)return;el.replaceChildren();session.forEach(id=>{const count=goals.find(g=>g.id===id)?.stars||1;for(let i=0;i<count;i++){const star=document.createElement('span');star.className='ta-star-glyph';star.textContent='★';el.append(star);}});}
+ // 右下に★を並べる表示は廃止（この場所は今後、月の満ち欠けの表示に使う）。場所（taStarTray）は空のまま残す。
+ function draw(){const el=tray();if(el&&el.firstChild)el.replaceChildren();}
  let sequenceToken=0;
  const DISPLAY_MS=3100; // Read the achievement before the star starts moving.
  const FLIGHT_MS=1050;
@@ -10278,43 +10279,11 @@ const taStars=(()=>{
   const detail=document.createElement('small');detail.textContent='「'+g.title.replace(/\s+(?:I|II|III|IV|V|VI)$/,'')+'」を獲得しました。';
   const emblem=document.createElement('span');emblem.className='ta-star-toast-emblem';emblem.textContent='★';emblem.setAttribute('aria-hidden','true');
   toast.append(emblem,detail);document.body.append(toast);playAwardSound();
-  // Keep the full message visible first, then launch the star.
+  // 達成の知らせを読める時間だけ表示し、そのまま上へ引っ込める（★を右下へ飛ばす演出は廃止）。
   setTimeout(()=>{
    if(token!==sequenceToken)return;
-   const dest=tray();
-   if(dest){
-    const a=toast.getBoundingClientRect(),b=dest.getBoundingClientRect();
-    const emblemRect=emblem.getBoundingClientRect();
-    const x=emblemRect.left+emblemRect.width/2,y=emblemRect.top+emblemRect.height/2;
-    const target=b.right-18, targetY=b.bottom-14;
-    const dx=target-x,dy=targetY-y;
-    // Launch as a recognizable star, then turn into a narrow comet-like line.
-    const fly=document.createElement('div');fly.className='ta-star-fly';fly.textContent='★';
-    fly.style.left=x+'px';fly.style.top=y+'px';document.body.append(fly);
-    const trail=document.createElement('div');trail.className='ta-star-trail';
-    trail.style.left=x+'px';trail.style.top=y+'px';document.body.append(trail);
-    const arcX=dx*.48,arcY=dy*.38-30;
-    const angle=Math.atan2(dy,dx)*180/Math.PI;
-    const flight=fly.animate([
-     {transform:'translate(-50%,-50%) translate(0px,0px) scale(1)',opacity:1,offset:0},
-     {transform:`translate(-50%,-50%) translate(${dx*.12}px,${dy*.08-9}px) scale(.48)`,opacity:.9,offset:.16},
-     {transform:`translate(-50%,-50%) translate(${arcX}px,${arcY}px) scale(.12)`,opacity:0,offset:.48},
-     {transform:`translate(-50%,-50%) translate(${dx}px,${dy}px) scale(.05)`,opacity:0,offset:1}
-    ],{duration:FLIGHT_MS,easing:'ease-in-out',fill:'forwards'});
-    const streak=trail.animate([
-     {transform:`translate(-50%,-50%) translate(0px,0px) rotate(${angle}deg) scaleX(.15)`,opacity:0,offset:0},
-     {transform:`translate(-50%,-50%) translate(${dx*.12}px,${dy*.08-9}px) rotate(${angle}deg) scaleX(.8)`,opacity:1,offset:.16},
-     {transform:`translate(-50%,-50%) translate(${arcX}px,${arcY}px) rotate(${angle}deg) scaleX(1.4)`,opacity:.95,offset:.48},
-     {transform:`translate(-50%,-50%) translate(${dx}px,${dy}px) rotate(${angle}deg) scaleX(.12)`,opacity:0,offset:1}
-    ],{duration:FLIGHT_MS,easing:'ease-in-out',fill:'forwards'});
-    Promise.allSettled([flight.finished,streak.finished]).then(()=>{
-     fly.remove();trail.remove();if(token!==sequenceToken)return;
-     draw();busy=false;notify();
-    });
-   }else{draw();busy=false;notify();}
-   // Slide the notification back upward while the star travels separately.
    toast.classList.add('ta-star-toast-out');
-   setTimeout(()=>toast.remove(),380);
+   setTimeout(()=>{toast.remove();if(token!==sequenceToken)return;busy=false;notify();},380);
   },DISPLAY_MS);
  }
  function award(g){if(state.earned.includes(g.id))return;state.earned.push(g.id);session.push(g.id);save();queue.push(g);notify();render();if(g.id==='chain800'){window.taThunderUnlockPending=true;document.dispatchEvent(new CustomEvent('ta-thunder-unlocked'));}}
