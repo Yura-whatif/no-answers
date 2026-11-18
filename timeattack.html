@@ -3227,7 +3227,7 @@ header>.hdr-r,header>.mode{position:relative;z-index:2}
               <div class="ta-guide-skill"><i class="ta-guide-dot red"></i><div><b>紅玉 ― 炎</b><p>言葉を燃やす効果を持ち、得点を大きく伸ばす場面で有効です。</p></div></div>
               <div class="ta-guide-skill"><i class="ta-guide-dot blue"></i><div><b>蒼玉 ― 氷</b><p>言葉を凍らせる効果を持ち、時間回復を狙う場面で有効です。</p></div></div>
               <div class="ta-guide-skill"><i class="ta-guide-dot green"></i><div><b>翠玉 ― 連鎖を広げる</b><p>言葉を増やす効果を持ち、連鎖を広げる場面で有効です。</p></div></div>
-              <div class="ta-guide-skill"><i class="ta-guide-dot yellow"></i><div><b>黄玉 ― 雷</b><p>雷を呼び寄せ、複数の言葉を生み出します。落雷は80%の確率で継続します。</p><p>「連鎖の芽Ⅵ」を達成すると解放され、白銀玉3個で使用できます。</p></div></div>
+              <div class="ta-guide-skill"><i class="ta-guide-dot yellow"></i><div><b>黄玉 ― 雷</b><p>雷を呼び寄せ、複数の言葉を生み出します。落雷は80%の確率で継続します。</p><p>「連鎖の芽Ⅴ」を達成すると解放され、白銀玉3個で使用できます。</p></div></div>
               <div class="ta-guide-skill"><i class="ta-guide-dot whitegold"></i><div><b>白銀玉 ― アイテム補充</b><p>採集エリアに時折現れる特別な玉。回収すると、右下の玉在庫を補充できます。</p></div></div>
               <p>玉の在庫は<strong>最大5個</strong>。得点の節目でも補充の機会があります。在庫がいっぱいのときは補充の余地がないため、使いどころを考えましょう。</p>
             </section>
@@ -5645,7 +5645,7 @@ function taStoryProgress(){return taStory.chapter>=TA_STORY_STEPS.length?1:Math.
 function taStoryChainRate(){return combo>=600?1.5:combo>=300?1.35:combo>=100?1.2:1;}
 function taStoryReset(){
   taStory.pages=0;taStory.chapter=0;taStory.inChapter=0;taStory.lampMark=0;taStory.pendingAnnounce=false;
-  try{window.taMoon?.update(false);}catch(_){}
+  try{window.taMoon?.reset();window.taMoon?.update(false);}catch(_){}
 }
 // n頁を足す。章をまたいだら景色・BGMを進める（時止め中は、時が戻ったときにまとめて進める）。
 function taStoryAdd(n){
@@ -5653,11 +5653,6 @@ function taStoryAdd(n){
   if(typeof taNightActive==='function'&&taNightActive())return;
   if(taStory.chapter>=TA_STORY_STEPS.length)return;
   taStory.pages+=n;taStory.inChapter+=n;
-  // 第一章だけ：10頁ごとにランタンが灯る（一度に何段も進んでも1回だけ）
-  if(taStory.chapter===0){
-    const mark=Math.min(4,Math.floor(taStory.inChapter/10));
-    if(mark>taStory.lampMark){taStory.lampMark=mark;if(!flood&&taStory.inChapter<TA_STORY_STEPS[0])taPlayLampPulse();}
-  }
   let advanced=false;
   while(taStory.chapter<TA_STORY_STEPS.length&&taStory.inChapter>=TA_STORY_STEPS[taStory.chapter]){
     taStory.inChapter-=TA_STORY_STEPS[taStory.chapter];taStory.chapter++;advanced=true;
@@ -5690,7 +5685,7 @@ function taStoryAnnounce(){
   hero.append(t);
   // 第二夜と同じ：表示から4.1秒でフェードアウトを始め、消えきったら外す
   requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
-  setTimeout(()=>t.classList.add('fade'),4100);
+  setTimeout(()=>{t.classList.add('fade');try{window.taMoon?.release();}catch(_){}},4100);   // 月も同じ瞬間に戻し始める
   setTimeout(()=>t.remove(),5300);
   const field=document.getElementById('drift');
   if(field){field.classList.add('ta-story-hush');clearTimeout(taStoryAnnounce.h);taStoryAnnounce.h=setTimeout(()=>field.classList.remove('ta-story-hush'),1500);}
@@ -5774,6 +5769,11 @@ function bumpCombo(){
   if(r > 90){ el.style.setProperty("--heat", ((r - 90) / 10).toFixed(2)); el.classList.add("heat"); }
   else { el.classList.remove("heat"); el.style.removeProperty("--heat"); }
   if(combo >= COMBO_STEP_FROM && combo % 10 === 0) comboStepBonus(combo);
+  // テストモード（#test）では、すでに解放済みでも、このプレイで初めて500連鎖に届いたときに黄玉解放の知らせを見せる
+  if(combo===500 && location.hash==='#test' && window.taThunderTestReplay && window.taThunderTestReplay.had && !window.taThunderTestReplay.shown){
+    window.taThunderTestReplay.shown=true;
+    setTimeout(()=>{if(taRunning&&!(typeof taNightActive==='function'&&taNightActive()))document.dispatchEvent(new Event('ta-thunder-unlock-show'));},500);
+  }
   return m;
 }
 // 作品（最後の一行）を読むあいだは連鎖メーターを止め、「一時停止」を被せる。しまう演出が始まったら満タンから再開
@@ -9680,7 +9680,7 @@ function taNightLater(fn,ms){const serial=taNightBonus.serial;const id=setTimeou
 function taNightClear(){document.querySelectorAll('.ta-night-echo').forEach(el=>el.remove());taNightBonus.serial++;taNightBonus.timers.forEach(clearTimeout);taNightBonus.timers=[];taNightBonus.phase='idle';taNightBonus.orbPending=false;taNightBonus.specialWordStarted=false;document.documentElement.classList.remove('ta-night-bonus');document.querySelectorAll('#drift .ta-night-word,#drift .ta-night-silver').forEach(el=>el.remove());taNightBonus.overlay?.remove();taNightBonus.overlay=null;taNightBonus.curtain?.remove();taNightBonus.curtain=null;}
 function taNightStart(){
  if(!taRunning||taNightActive()||taStoryLevel()<800)return;
- taNightClear();taNightBonus.phase='intro';taNightBonus.born=performance.now();taNightBonus.spawned=0;taNightBonus.silverPicked=0;taNightBonus.unlockAtStart=!!window.taStars?.hasAward?.('chain800');
+ taNightClear();taNightBonus.phase='intro';taNightBonus.born=performance.now();taNightBonus.spawned=0;taNightBonus.silverPicked=0;taNightBonus.unlockAtStart=!!window.taStars?.hasAward?.('chain700');
  document.documentElement.classList.add('ta-night-bonus');
  clearTimeout(bumpCombo.h);taCancelFloodResume();comboPaused=true;
  const gauge=document.getElementById('combo');gauge?.classList.add('paused');gauge?.classList.remove('run');
@@ -9889,8 +9889,8 @@ function taNightReturn(){
      document.documentElement.classList.remove('ta-century-lit','ta-meteor-lit','ta-night-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit','ta-word-300','ta-silver-music-started');
      taSyncDriftingGlowWords();taNightClear();document.dispatchEvent(new Event('ta-night-bonus-state'));
      window.taStars?.check?.();
-     const newlyUnlocked=!taNightBonus.unlockAtStart&&!!window.taStars?.hasAward?.('chain800');
-     if(newlyUnlocked||window.taThunderUnlockPending){
+     // 黄玉の解放は「連鎖の芽 V」（500連鎖）の達成直後に知らせるので、ここでは出さない（取りこぼしたときだけ出す）
+     if(window.taThunderUnlockPending){
       window.taThunderUnlockPending=false;
       requestAnimationFrame(()=>requestAnimationFrame(()=>document.dispatchEvent(new Event('ta-thunder-unlock-show'))));
      }
@@ -10040,7 +10040,7 @@ const taMastery=(()=>{
 
   }
   // Keep the lock as the only ornament until the achievement is earned.
-  const thunderIsUnlocked=!!window.taStars?.hasAward?.('chain800');
+  const thunderIsUnlocked=!!window.taStars?.hasAward?.('chain700');
   const thunderCost=bar.querySelector('.ta-thunder-cost');
   if(thunderCost)thunderCost.style.display=thunderIsUnlocked?'':'none';
   const existingThunderBadge=bar.querySelector('.ta-mastery-thunder');
@@ -10318,10 +10318,18 @@ const taStars=(()=>{
   setTimeout(()=>{
    if(token!==sequenceToken)return;
    toast.classList.add('ta-star-toast-out');
-   setTimeout(()=>{toast.remove();if(token!==sequenceToken)return;busy=false;notify();},380);
+   setTimeout(()=>{toast.remove();if(token!==sequenceToken)return;
+    // 「連鎖の芽 V」の知らせのあとに、黄玉解放の知らせを出す（そのあいだ次の★は待たせる）
+    if(g.id==='chain700'&&window.taThunderUnlockPending&&taRunning&&!(typeof taNightActive==='function'&&taNightActive())){
+     window.taThunderUnlockPending=false;document.dispatchEvent(new Event('ta-thunder-unlock-show'));
+     setTimeout(()=>{if(token!==sequenceToken)return;busy=false;notify();},2400);return;
+    }
+    busy=false;notify();},380);
   },DISPLAY_MS);
  }
- function award(g){if(state.earned.includes(g.id))return;state.earned.push(g.id);session.push(g.id);save();queue.push(g);notify();render();if(g.id==='chain800'){window.taThunderUnlockPending=true;document.dispatchEvent(new CustomEvent('ta-thunder-unlocked'));}}
+ function award(g){if(state.earned.includes(g.id))return;state.earned.push(g.id);session.push(g.id);save();
+  // 黄玉解放につながる「連鎖の芽 V」は、ほかの★の知らせより先に出す（何個も同時に獲得したとき、解放の知らせが遅れすぎないように）
+  if(g.id==='chain700')queue.unshift(g);else queue.push(g);notify();render();if(g.id==='chain700'){window.taThunderUnlockPending=true;document.dispatchEvent(new CustomEvent('ta-thunder-unlocked'));}}
  function check(){if(!taRunning||taScore<=0)return;
   state.bestChain=Math.max(state.bestChain,taSessionMaxCombo);state.bestScore=Math.max(state.bestScore,taScore);
   goals.forEach(g=>{
@@ -10399,7 +10407,7 @@ const taStars=(()=>{
     triple50:`【累計】紅玉・蒼玉・翠玉をそれぞれ${n}回発動する`,
     tricolor:g.goal===1?'【1プレイ】紅玉・蒼玉・翠玉をすべて発動する':'【1プレイ】紅玉・蒼玉・翠玉をそれぞれ3回以上発動する'
    };
-   small.textContent=(g.id==='chain800'?'【1プレイ】800連鎖を達成する ／ 黄玉解放':descriptions[g.kind]||`${n}${g.unit} 達成`);left.append(small);
+   small.textContent=(g.id==='chain700'?'【1プレイ】500連鎖を達成する ／ 黄玉解放':descriptions[g.kind]||`${n}${g.unit} 達成`);left.append(small);
    const mark=document.createElement('b');mark.textContent=achieved?`${'★'.repeat(g.stars)} 獲得済`:`☆ 未達成（★${g.stars}）`;
    row.append(left,mark);box.append(row);
   });
@@ -10914,6 +10922,8 @@ function taBeginReady(){
   taCancelVoidReturn();
   taMeteorReset();
   taStoryReset();
+  // テストモード用：このプレイの開始時点で、黄玉がすでに解放済みだったか
+  try{window.taThunderTestReplay={had:!!window.taStars?.hasAward?.('chain700'),shown:false};}catch(_){}
   // DEMOでの操作履歴をゲーム本番へ持ち越さない。
   taCancelFloodResume();clearTimeout(bumpCombo.h);taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-600-lit","ta-700-lit","ta-800-lit","ta-word-300");
   const comboEl=document.getElementById("combo");
@@ -11597,7 +11607,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const active=()=>typeof taRunning!=='undefined'&&taRunning&&!taNightActive()&&!document.hidden&&document.getElementById('taLaunch')?.hidden!==false;
  const specials='.special,.vortex,.crack,.petal,.multi,.pull,.glow,.reso,.odd';
  const valid=w=>w.matches('.word')&&!w.classList.contains('got')&&!w.classList.contains('late')&&(!w.classList.contains('still')||flood);
- const thunderUnlocked=()=>location.hash==='#test'||!!window.taStars?.hasAward('chain800');
+ const thunderUnlocked=()=>location.hash==='#test'||!!window.taStars?.hasAward('chain700');
  const thunderReady=()=>thunderUnlocked()&&usesLeft>=3&&!thunderBusy;
  const pipBox=ui.querySelector('.ta-item-pips');
  const pipNodes=Array.from({length:MAX_USES},()=>{const pip=document.createElement('span');pip.className='ta-item-pip';pipBox.appendChild(pip);return pip;});
@@ -14372,8 +14382,14 @@ header>.brand.ta-face-header.ta-yura-bright{animation:taYuraHalo 1.9s ease-out b
 html.ta-active-moon #viewMain>.hero .ta-moon{opacity:1}
 #viewMain>.hero .ta-moon svg{width:100%;height:100%;overflow:visible;display:block}
 #viewMain>.hero .ta-moon .halo{transition:opacity .5s ease}
-#viewMain>.hero .ta-moon.ta-moon-full{animation:taMoonFull 1.6s cubic-bezier(.2,.7,.3,1) both}
-@keyframes taMoonFull{0%{transform:scale(1);filter:none}22%{transform:scale(1.55);filter:drop-shadow(0 0 12px rgba(255,224,160,.95))}100%{transform:scale(1);filter:none}}
+/* 完成が近づくと、ゆっくり明るく点滅する */
+#viewMain>.hero .ta-moon.ta-moon-near{animation:taMoonNear 2.6s ease-in-out infinite}
+@keyframes taMoonNear{0%,100%{filter:brightness(1) drop-shadow(0 0 0 rgba(255,226,160,0))}50%{filter:brightness(1.3) drop-shadow(0 0 8px rgba(255,226,160,.85))}}
+/* 満月：大きさは変えず、明るく点灯する。章の名前が消えるのと同じ1.1秒で、次の章の月へ戻る */
+#viewMain>.hero .ta-moon .full,#viewMain>.hero .ta-moon .halo-full{opacity:0;transition:opacity 1.1s ease-in-out}
+#viewMain>.hero .ta-moon{transition:opacity .6s ease,filter 1.1s ease-in-out}
+#viewMain>.hero .ta-moon.ta-moon-lit{filter:brightness(1.22) drop-shadow(0 0 10px rgba(255,228,165,.95))}
+#viewMain>.hero .ta-moon.ta-moon-lit .full,#viewMain>.hero .ta-moon.ta-moon-lit .halo-full{opacity:1;transition:opacity .4s ease-out}
 #viewMain>.hero .ta-moon.ta-moon-grow{animation:taMoonGrow .7s ease-out both}
 @keyframes taMoonGrow{0%{filter:none}30%{filter:drop-shadow(0 0 7px rgba(255,224,160,.85))}100%{filter:none}}
 /* 章の名前 */
@@ -14385,12 +14401,12 @@ html.ta-active-moon #viewMain>.hero .ta-moon{opacity:1}
 #viewMain>.hero .ta-story-title.show.fade{opacity:0}
 /* 章の名前が出ている一瞬だけ、言霊を薄くする */
 #drift.ta-story-hush .word{opacity:.32;transition:opacity .35s ease}
-@media(prefers-reduced-motion:reduce){#viewMain>.hero .ta-moon.ta-moon-full,#viewMain>.hero .ta-moon.ta-moon-grow{animation:none}#viewMain>.hero .ta-story-title{transition:none}}
+@media(prefers-reduced-motion:reduce){#viewMain>.hero .ta-moon.ta-moon-near,#viewMain>.hero .ta-moon.ta-moon-grow{animation:none}#viewMain>.hero .ta-story-title{transition:none}}
 </style>
 <script id="ta-story-moon-js">
 // 物語の月：頁の進み（taStoryProgress）を満ち欠けで見せる。描き直すのは満ち具合が変わったときだけ。
 (()=>{
- const R=12;let el=null,lit=null,halo=null,last=-1;
+ const R=12;let el=null,litPath=null,halo=null,last=-1;
  const build=()=>{
   const hero=document.querySelector('#viewMain>.hero');if(!hero)return false;
   el=document.createElement('div');el.className='ta-moon';el.setAttribute('aria-hidden','true');
@@ -14400,31 +14416,46 @@ html.ta-active-moon #viewMain>.hero .ta-moon{opacity:1}
    <mask id="taMoonMask"><rect x="-22" y="-22" width="44" height="44" fill="black"/><path class="lit" fill="white"/></mask></defs>
    <circle class="halo" r="21" fill="url(#taMoonHalo)" opacity=".2"/>
    <circle r="${R}" fill="rgba(36,42,66,.78)" stroke="rgba(230,220,200,.3)" stroke-width=".6"/>
-   <g mask="url(#taMoonMask)"><circle r="${R}" fill="url(#taMoonFace)"/><circle cx="-3" cy="-2" r="1.7" fill="rgba(170,150,110,.25)"/><circle cx="4.2" cy="4" r="2.3" fill="rgba(170,150,110,.22)"/><circle cx="2" cy="-5.5" r="1.1" fill="rgba(170,150,110,.2)"/></g></svg>`;
-  hero.append(el);lit=el.querySelector('.lit');halo=el.querySelector('.halo');return true;
+   <g mask="url(#taMoonMask)"><circle r="${R}" fill="url(#taMoonFace)"/><circle cx="-3" cy="-2" r="1.7" fill="rgba(170,150,110,.25)"/><circle cx="4.2" cy="4" r="2.3" fill="rgba(170,150,110,.22)"/><circle cx="2" cy="-5.5" r="1.1" fill="rgba(170,150,110,.2)"/></g>
+   <circle class="halo-full" r="21" fill="url(#taMoonHalo)"/>
+   <g class="full"><circle r="${R}" fill="url(#taMoonFace)"/><circle cx="-3" cy="-2" r="1.7" fill="rgba(170,150,110,.25)"/><circle cx="4.2" cy="4" r="2.3" fill="rgba(170,150,110,.22)"/><circle cx="2" cy="-5.5" r="1.1" fill="rgba(170,150,110,.2)"/></g></svg>`;
+  hero.append(el);litPath=el.querySelector('.lit');halo=el.querySelector('.halo');return true;
  };
  // f: 0（新月）→1（満月）。右から満ちていく。
  const phase=f=>{
   const k=Math.cos(Math.PI*f)*R;
   return f<=0?'':`M0,${-R} A${R},${R} 0 0 1 0,${R} A${Math.abs(k).toFixed(2)},${R} 0 0 ${f<.5?0:1} 0,${-R} Z`;
  };
+ // 満月の点灯中か。章の名前が消え始めるとき（release）に、1.1秒かけて次の章の月へ戻す
+ let lit=false;
+ const draw=()=>{
+  const f=typeof taStoryProgress==='function'?taStoryProgress():0;
+  const q=Math.round(f*48)/48;
+  el.classList.toggle('ta-moon-near',!lit&&q>=.8&&q<1);
+  if(q===last)return;
+  const jump=q-last>.12&&last>=0;last=q;
+  litPath.setAttribute('d',phase(q));halo.setAttribute('opacity',(.2+.8*q*q).toFixed(2));
+  if(jump&&!lit){el.classList.remove('ta-moon-grow');requestAnimationFrame(()=>el.classList.add('ta-moon-grow'));clearTimeout(draw.g);draw.g=setTimeout(()=>el.classList.remove('ta-moon-grow'),720);}
+ };
  const update=advanced=>{
   if(!el&&!build())return;
-  const f=typeof taStoryProgress==='function'?taStoryProgress():0;
   if(advanced){
-   // 満月に輝いてから、次の章の新月へ
-   lit.setAttribute('d',phase(1));halo.setAttribute('opacity','1');
-   el.classList.remove('ta-moon-full','ta-moon-grow');requestAnimationFrame(()=>el.classList.add('ta-moon-full'));
-   clearTimeout(update.t);update.t=setTimeout(()=>{update.t=0;el.classList.remove('ta-moon-full');last=-1;update(false);},1600);
-   return;
+   // 満月を点灯する。下の層も満月のままにしておく（ここで次の章の新月に替えると、満月の層が光りきるまでの一瞬、月が黒く見えるため）
+   lit=true;el.classList.remove('ta-moon-near','ta-moon-grow');el.classList.add('ta-moon-lit');
+   litPath.setAttribute('d',phase(1));halo.setAttribute('opacity','1');last=-1;
   }
-  if(update.t)return;
-  const q=Math.round(f*48)/48;if(q===last)return;   // 48段階で十分なめらか
-  const jump=q-last>.12&&last>=0;last=q;
-  lit.setAttribute('d',phase(q));halo.setAttribute('opacity',(.2+.8*q*q).toFixed(2));
-  if(jump){el.classList.remove('ta-moon-grow');requestAnimationFrame(()=>el.classList.add('ta-moon-grow'));clearTimeout(update.g);update.g=setTimeout(()=>el.classList.remove('ta-moon-grow'),720);}
+  if(lit)return;
+  draw();
+  // 念のため：章の名前が出ないまま時間が経ったら戻す
+  if(advanced){clearTimeout(update.safety);update.safety=setTimeout(release,9000);}
  };
- window.taMoon={update};
+ const release=()=>{
+  clearTimeout(update.safety);if(!el||!lit)return;
+  // 下の層を次の章の月に替えてから、満月の層を1.1秒かけて消す
+  lit=false;last=-1;draw();el.classList.remove('ta-moon-lit');
+ };
+ const reset=()=>{if(!el)return;clearTimeout(update.safety);lit=false;el.classList.remove('ta-moon-lit','ta-moon-near','ta-moon-grow');last=-1;draw();};
+ window.taMoon={update,release,reset};
  // 遊んでいる間（と夜のボーナス区間）だけ表示する
  const syncVisible=()=>{const on=(typeof taRunning!=='undefined'&&taRunning);document.documentElement.classList.toggle('ta-active-moon',on);if(on&&!el)update(false);};
  setInterval(syncVisible,500);
