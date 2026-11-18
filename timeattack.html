@@ -5653,6 +5653,7 @@ function taStoryProgress(){return taStory.chapter>=TA_STORY_STEPS.length?1:Math.
 function taStoryChainRate(){return combo>=600?1.5:combo>=300?1.35:combo>=100?1.2:1;}
 function taStoryReset(){
   taStory.pages=0;taStory.chapter=0;taStory.inChapter=0;taStory.lampMark=0;taStory.pendingAnnounce=false;
+  document.querySelectorAll('#viewMain>.hero>.ta-story-cine').forEach(e=>e.remove());
   try{window.taMoon?.reset();window.taMoon?.update(false);}catch(_){}
 }
 // n頁を足す。章をまたいだら景色・BGMを進める（時止め中は、時が戻ったときにまとめて進める）。
@@ -5684,19 +5685,24 @@ function taStoryApply(resumeFromStop){
   }
   if(lv>=800)taNightStart();
 }
-// 章の名前を浮かべる（その一瞬だけ言霊を薄くして読みやすくする）
+// 章の名前：映画のように上下に黒帯をフェードインし、下の帯に「第〇章」をにじませて、ふわっと消す。
+// 帯は右下の月の上にもかぶさる。中央の言霊は隠さない。
 function taStoryAnnounce(){
   const hero=document.querySelector('#viewMain>.hero');if(!hero)return;
-  hero.querySelectorAll('.ta-story-title').forEach(e=>e.remove());
+  hero.querySelectorAll('.ta-story-cine').forEach(e=>e.remove());
+  clearTimeout(taStoryAnnounce.t1);clearTimeout(taStoryAnnounce.t2);clearTimeout(taStoryAnnounce.t3);clearTimeout(taStoryAnnounce.t4);
   const n=taStory.chapter+1,kanji=typeof taNightKanji==='function'?taNightKanji(n):String(n);
-  const t=document.createElement('div');t.className='ta-story-title';t.setAttribute('aria-hidden','true');t.textContent='第'+kanji+'章';
-  hero.append(t);
-  // 第二夜と同じ：表示から4.1秒でフェードアウトを始め、消えきったら外す
-  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
-  setTimeout(()=>{t.classList.add('fade');try{window.taMoon?.release();}catch(_){}},4100);   // 月も同じ瞬間に戻し始める
-  setTimeout(()=>t.remove(),5300);
-  const field=document.getElementById('drift');
-  if(field){field.classList.add('ta-story-hush');clearTimeout(taStoryAnnounce.h);taStoryAnnounce.h=setTimeout(()=>field.classList.remove('ta-story-hush'),1500);}
+  const w=document.createElement('div');w.className='ta-story-cine';w.setAttribute('aria-hidden','true');
+  const top=document.createElement('div');top.className='ta-story-cine-bar top';
+  const bot=document.createElement('div');bot.className='ta-story-cine-bar bottom';
+  const t=document.createElement('span');t.className='ta-story-cine-text';t.textContent='第'+kanji+'章';
+  bot.append(t);w.append(top,bot);hero.append(w);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>w.classList.add('on')));               // 帯：1.2秒でフェードイン
+  taStoryAnnounce.t1=setTimeout(()=>t.classList.add('in'),900);                               // 文字：にじむように浮かぶ
+  taStoryAnnounce.t2=setTimeout(()=>{t.classList.remove('in');t.classList.add('out');           // 文字：ぼけながら溶けて消える
+    try{window.taMoon?.release();}catch(_){}},3600);                                          // 月は帯の下で新しい満ち欠けへ戻す
+  taStoryAnnounce.t3=setTimeout(()=>w.classList.remove('on'),5000);                           // 帯：1.2秒でフェードアウト
+  taStoryAnnounce.t4=setTimeout(()=>w.remove(),6400);
 }
 // 100連のたびに、ヘッダーのゆらを一瞬明るく照らす
 function taYuraBright(){
@@ -14400,16 +14406,17 @@ html.ta-active-moon #viewMain>.hero .ta-moon{opacity:1}
 #viewMain>.hero .ta-moon.ta-moon-lit .full,#viewMain>.hero .ta-moon.ta-moon-lit .halo-full{opacity:1;transition:opacity .4s ease-out}
 #viewMain>.hero .ta-moon.ta-moon-grow{animation:taMoonGrow .7s ease-out both}
 @keyframes taMoonGrow{0%{filter:none}30%{filter:drop-shadow(0 0 7px rgba(255,224,160,.85))}100%{filter:none}}
-/* 章の名前 */
-/* 章の名前：「第二夜」と同じ見た目・同じ動き（その場でフェードイン1.1秒 → 4.1秒まで静止 → フェードアウト1.1秒）。位置は動かさない */
-#viewMain>.hero .ta-story-title{position:absolute;z-index:187;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;
- font:500 clamp(29px,7vw,48px)/1.5 var(--mincho);letter-spacing:.25em;color:#f5f8ff;white-space:nowrap;opacity:0;
- text-shadow:0 0 12px rgba(241,248,255,.75),0 0 38px rgba(167,202,255,.45);transition:opacity 1.1s ease-in-out}
-#viewMain>.hero .ta-story-title.show{opacity:1}
-#viewMain>.hero .ta-story-title.show.fade{opacity:0}
-/* 章の名前が出ている一瞬だけ、言霊を薄くする */
-#drift.ta-story-hush .word{opacity:.32;transition:opacity .35s ease}
-@media(prefers-reduced-motion:reduce){#viewMain>.hero .ta-moon.ta-moon-near,#viewMain>.hero .ta-moon.ta-moon-grow{animation:none}#viewMain>.hero .ta-story-title{transition:none}}
+/* 章の名前：映画風の黒帯（フェードイン）＋下の帯の文字。帯は月（z-index:186）より手前 */
+#viewMain>.hero .ta-story-cine{position:absolute;inset:0;z-index:187;pointer-events:none;overflow:hidden;border-radius:inherit}
+#viewMain>.hero .ta-story-cine-bar{position:absolute;left:0;right:0;height:13%;background:#030305;opacity:0;transition:opacity 1.2s ease-in-out}
+#viewMain>.hero .ta-story-cine-bar.top{top:0}
+#viewMain>.hero .ta-story-cine-bar.bottom{bottom:0;display:flex;align-items:center;justify-content:center}
+#viewMain>.hero .ta-story-cine.on .ta-story-cine-bar{opacity:1}
+#viewMain>.hero .ta-story-cine-text{font:500 clamp(20px,5.4vw,30px)/1 var(--mincho);letter-spacing:.42em;padding-left:.42em;color:#efe6d4;white-space:nowrap;
+ opacity:0;filter:blur(6px);transition:opacity 1.4s ease,filter 1.4s ease,letter-spacing 2.2s ease}
+#viewMain>.hero .ta-story-cine-text.in{opacity:1;filter:blur(0)}
+#viewMain>.hero .ta-story-cine-text.out{opacity:0;filter:blur(7px);letter-spacing:.6em;transition:opacity 1.8s ease,filter 1.8s ease,letter-spacing 2s ease}
+@media(prefers-reduced-motion:reduce){#viewMain>.hero .ta-moon.ta-moon-near,#viewMain>.hero .ta-moon.ta-moon-grow{animation:none}#viewMain>.hero .ta-story-cine-bar,#viewMain>.hero .ta-story-cine-text{transition-duration:.3s!important;filter:none!important}}
 </style>
 <script id="ta-story-moon-js">
 // 物語の月：頁の進み（taStoryProgress）を満ち欠けで見せる。描き直すのは満ち具合が変わったときだけ。
