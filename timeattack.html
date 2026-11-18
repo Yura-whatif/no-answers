@@ -446,6 +446,10 @@ html[data-yura="black"].ta-century-lit #viewMain>.hero.ta-active-visual>picture.
 #paneRank .ta-guide-intro{font-size:.88rem;line-height:2.05;text-align:center;margin:10px auto 23px;max-width:700px}
 #paneRank .ta-guide-index{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 0 28px}
 #paneRank .ta-guide-index a{font-size:.76rem;padding:6px 12px;border:1px solid rgba(139,114,79,.38);border-radius:15px;text-decoration:none;color:inherit}
+#paneRank .ta-guide-note-link{margin:6px 0 0;padding:22px 0 14px;border-top:1px solid rgba(139,114,79,.35);text-align:center;font-size:.84rem;letter-spacing:.1em}
+#paneRank .ta-guide-note-link a{color:inherit;text-decoration:none;border-bottom:1px solid rgba(216,176,117,.55);padding-bottom:2px;opacity:.88}
+#paneRank .ta-guide-note-link a::after{content:" ↗";font-size:.8em;opacity:.7}
+#paneRank .ta-guide-note-link a:hover,#paneRank .ta-guide-note-link a:focus-visible{opacity:1;border-bottom-color:rgba(236,200,140,.95)}
 #paneRank .ta-guide-section{padding:22px 0 24px;border-top:1px solid rgba(139,114,79,.35);scroll-margin-top:18px}
 #paneRank .ta-guide-section h4{font-size:1.03rem;font-weight:600;letter-spacing:.12em;margin:0 0 16px}
 #paneRank .ta-guide-section h4 span{font-size:.72rem;opacity:.65;margin-right:10px}
@@ -2265,7 +2269,8 @@ html[data-yura="black"] #viewMain>.hero>picture.ta-bg-picture.ta-original-night{
    All picture elements have identical geometry, avoiding movement on crossfade. */
 html[data-yura="black"] #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.b{opacity:0!important;}
 html[data-yura="black"] #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-dark-start{opacity:1!important;}
-/* Stage 02 is now a brief pulse at 10/20/30/40; never a persistent background. */
+/* 第二章：ランタンの灯る書斎（stage_02）を章の景色として表示する。 */
+html[data-yura="black"].ta-lamp-lit:not(.ta-meteor-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-original-night{opacity:1!important;transition:opacity 3s ease-in-out!important;}
 html[data-yura="black"].ta-meteor-lit:not(.ta-century-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-meteor50{opacity:1!important;}
 html[data-yura="black"].ta-century-lit:not(.ta-200-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.castle-dim{opacity:1!important;}
 html[data-yura="black"].ta-200-lit:not(.ta-300-lit) #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-day300{opacity:1!important;}
@@ -2396,6 +2401,7 @@ html[data-yura="black"].ta-800-lit #viewMain>.hero.ta-active-visual>.ta-stage9-v
 <style id="ta-stage-exit-no-flash-20261106">
 /* On combo expiration / Time Over, hide old milestone layers immediately.
    Keep the original 5-second fade when ENTERING a milestone. */
+html[data-yura="black"]:not(.ta-lamp-lit) #viewMain>.hero>picture.ta-bg-picture.ta-original-night,
 html:not(.ta-meteor-lit) #viewMain>.hero>picture.ta-bg-picture.ta-meteor50,
 html:not(.ta-century-lit) #viewMain>.hero>picture.ta-bg-picture.castle-dim,
 html:not(.ta-200-lit) #viewMain>.hero>picture.ta-bg-picture.ta-day300,
@@ -2978,7 +2984,7 @@ html.ta-night-chain-retired #viewMain>.hero #combo{opacity:0!important;visibilit
 #taNightStageLabel.ta-night-seal-settled.ta-night-arrival-flash{visibility:visible!important;opacity:1!important}
 .ta-night-echo.approach.handoff .ta-night-echo-seal{opacity:0!important;transition:opacity 520ms ease-in-out!important}
 #drift .ta-night-final-word{white-space:nowrap;}
-.ta-record-score .ta-rank-night{display:inline-block;margin-left:.65em;font:500 .67em/1.3 var(--mincho);letter-spacing:.06em;color:#d8e5f5;text-shadow:0 0 6px rgba(216,231,255,.3);vertical-align:baseline;white-space:nowrap}
+.ta-record-score .ta-rank-night{display:inline-block;margin-left:.7em;padding:.08em .5em .1em;border:1px solid rgba(52,66,98,.35);border-radius:3px;font:500 .6em/1.3 var(--mincho);letter-spacing:.12em;color:#34425f;text-shadow:none;vertical-align:.18em;white-space:nowrap}
 </style>
 <style id="ta-full-silver-stock-pulse">
 /* Stronger contrast at full stock; preserve the existing 2.8-second rhythm. */
@@ -3249,6 +3255,7 @@ header>.hdr-r,header>.mode{position:relative;z-index:2}
               <div class="ta-guide-tip"><b>上級｜奥義の順番を研究</b><p>炎と氷を重ねる順序、「置き忘れたもの」で言葉を引き寄せるタイミングや、「全部なかったことに」を使う場面によって、同じ盤面でも回収の結果が変わります。</p></div>
               <p class="ta-guide-ending">一つの言葉が、次の言葉へ。<br>あなたは、どこまでその軌跡をつなげられるでしょうか。</p>
             </section>
+            <p class="ta-guide-note-link"><a href="https://note.com/whatif_lab" target="_blank" rel="noopener">ユラ｜思考実験の記録</a></p>
           </section>
         </div></div>
       </div>
@@ -5507,7 +5514,7 @@ var taMeteorHadCentury=false;
 function taMeteorReset(){
   taCancelLampPulse();
   const doc=document.documentElement;
-  doc.classList.remove('ta-meteor-lit','ta-night-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit');
+  doc.classList.remove('ta-lamp-lit','ta-meteor-lit','ta-night-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit');
   if(taMeteorHadCentury)doc.classList.add('ta-meteor-skip');
   taMeteorHadCentury=false;
 }
@@ -5615,10 +5622,11 @@ function expireCombo(){
 function taApplyComboBackground(finalCombo, resumeFromStop=false){
   const root=document.documentElement;
   if(finalCombo>=50){taClearChainSceneReturn();root.classList.remove('ta-native-return-50','ta-native-return-all','ta-native-return-800','ta-direct-stage01-return');}
-  if(resumeFromStop && finalCombo>=10 && finalCombo<50)taPlayLampPulse();
+  if(resumeFromStop && finalCombo>=10 && finalCombo<20)taPlayLampPulse();
   else if(finalCombo>=50)taCancelLampPulse();
   if(finalCombo>=1 && document.querySelector('#viewMain>.hero>.ta-chain-scene-snapshot')){taClearChainSceneReturn();root.classList.remove('ta-direct-stage01-return');}
   root.classList.toggle("ta-night-lit",false);
+  root.classList.toggle("ta-lamp-lit",finalCombo>=20);
   root.classList.toggle("ta-meteor-lit",finalCombo>=50);
   root.classList.toggle("ta-century-lit",finalCombo>=100);
   root.classList.toggle("ta-200-lit",finalCombo>=200);
@@ -5637,8 +5645,8 @@ function taApplyComboBackground(finalCombo, resumeFromStop=false){
 // ── 物語の頁 ─────────────────────────────────────────
 // 背景・BGMは連鎖数ではなく「頁」で進む。頁は言霊を拾うたびにたまり、連鎖が切れても減らない。
 // 連鎖は頁のたまる速さ（上乗せ）として残る。最終章を読み終えるとボーナス区間（夜の終わり）へ。
-const TA_STORY_STEPS=[50,50,120,120,135,135,135,150,150];   // 各章を読み終えるのに必要な頁
-const TA_STORY_LEVEL=[0,50,100,200,300,400,500,600,700];    // 各章の景色（従来の連鎖数の段階にあたる）
+const TA_STORY_STEPS=[60,70,90,120,120,135,135,135,150,150];   // 各章を読み終えるのに必要な頁
+const TA_STORY_LEVEL=[0,20,50,100,200,300,400,500,600,700];    // 20＝ランタンの灯る書斎（stage_02）    // 各章の景色（従来の連鎖数の段階にあたる）
 const taStory={pages:0,chapter:0,inChapter:0,lampMark:0,pendingAnnounce:false};
 function taStoryLevel(){return taStory.chapter>=TA_STORY_STEPS.length?800:TA_STORY_LEVEL[taStory.chapter];}
 function taStoryProgress(){return taStory.chapter>=TA_STORY_STEPS.length?1:Math.min(1,taStory.inChapter/TA_STORY_STEPS[taStory.chapter]);}
@@ -9886,7 +9894,7 @@ function taNightReturn(){
      taStoryReset();   // 新しい夜は第一章から（得点はそのまま）
      const el=document.getElementById('combo');el?.classList.remove('on','x2','x3','run','heat','hold','paused','ta-skill-grace');if(el)el.style.removeProperty('--heat');
      document.getElementById('cbn').textContent='0';document.getElementById('cbx').textContent='';comboRush(false);
-     document.documentElement.classList.remove('ta-century-lit','ta-meteor-lit','ta-night-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit','ta-word-300','ta-silver-music-started');
+     document.documentElement.classList.remove('ta-century-lit','ta-lamp-lit','ta-meteor-lit','ta-night-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit','ta-word-300','ta-silver-music-started');
      taSyncDriftingGlowWords();taNightClear();document.dispatchEvent(new Event('ta-night-bonus-state'));
      window.taStars?.check?.();
      // 黄玉の解放は「連鎖の芽 V」（500連鎖）の達成直後に知らせるので、ここでは出さない（取りこぼしたときだけ出す）
@@ -10688,7 +10696,7 @@ function taFadeCollectionAtTimeOver(){
   if(!hero)return;
   document.querySelectorAll('.ta-timeover-scene-ghost').forEach(el=>el.remove());
   const root=document.documentElement;
-  const hasMilestone=['ta-meteor-lit','ta-century-lit','ta-200-lit','ta-300-lit',
+  const hasMilestone=['ta-lamp-lit','ta-meteor-lit','ta-century-lit','ta-200-lit','ta-300-lit',
     'ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit']
     .some(cls=>root.classList.contains(cls));
   // Do not restart a running combo-expiry fade: that would jump back to the
@@ -10817,7 +10825,7 @@ function taFinish(manualExit=false){
   taRunning=false;taStarting=false;
   taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;
   taFloodComboRemaining=null;
-  document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-600-lit","ta-700-lit","ta-800-lit","ta-word-300");
+  document.documentElement.classList.remove("ta-century-lit","ta-lamp-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-600-lit","ta-700-lit","ta-800-lit","ta-word-300");
   const finishedComboEl=document.getElementById('combo');
   if(finishedComboEl){
     finishedComboEl.classList.remove('on','x2','x3','run','heat','hold','paused','hit','up','ta-skill-grace');
@@ -10925,7 +10933,7 @@ function taBeginReady(){
   // テストモード用：このプレイの開始時点で、黄玉がすでに解放済みだったか
   try{window.taThunderTestReplay={had:!!window.taStars?.hasAward?.('chain700'),shown:false};}catch(_){}
   // DEMOでの操作履歴をゲーム本番へ持ち越さない。
-  taCancelFloodResume();clearTimeout(bumpCombo.h);taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-600-lit","ta-700-lit","ta-800-lit","ta-word-300");
+  taCancelFloodResume();clearTimeout(bumpCombo.h);taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-lamp-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-600-lit","ta-700-lit","ta-800-lit","ta-word-300");
   const comboEl=document.getElementById("combo");
   if(comboEl){comboEl.classList.remove("on","x2","x3","run","heat","paused","hold","ta-skill-grace");comboEl.style.removeProperty("--heat");}
   document.getElementById("cbn").textContent="0";document.getElementById("cbx").textContent="";comboRush(false);
