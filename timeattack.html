@@ -5645,7 +5645,7 @@ function taApplyComboBackground(finalCombo, resumeFromStop=false){
 // ── 物語の頁 ─────────────────────────────────────────
 // 背景・BGMは連鎖数ではなく「頁」で進む。頁は言霊を拾うたびにたまり、連鎖が切れても減らない。
 // 連鎖は頁のたまる速さ（上乗せ）として残る。最終章を読み終えるとボーナス区間（夜の終わり）へ。
-const TA_STORY_STEPS=[60,70,90,120,120,135,135,135,150,150];   // 各章を読み終えるのに必要な頁
+const TA_STORY_STEPS=[80,90,100,120,120,135,135,135,150,150];   // 各章を読み終えるのに必要な頁
 const TA_STORY_LEVEL=[0,20,50,100,200,300,400,500,600,700];    // 20＝ランタンの灯る書斎（stage_02）    // 各章の景色（従来の連鎖数の段階にあたる）
 const taStory={pages:0,chapter:0,inChapter:0,lampMark:0,pendingAnnounce:false};
 function taStoryLevel(){return taStory.chapter>=TA_STORY_STEPS.length?800:TA_STORY_LEVEL[taStory.chapter];}
@@ -12478,7 +12478,7 @@ const __ta100Start=window.__ta100Profile.start();try {
   const now=performance.now();
   taLastDualFinisher=now;
   const ultimateId=taUltimateShow("cross","全部なかったことに");
-  window.taStars?.track("ultimateCross");taStoryBonus(15);
+  window.taStars?.track("ultimateCross");taStoryBonus(10);
   // 紅玉・蒼玉がともにLv5のときだけ：最後に十字の光の刃を足し、言霊が消える時間を1秒延ばす
   let crossLv5=false;try{crossLv5=taMastery.level('fire')>=5&&taMastery.level('ice')>=5;}catch(_){}
   const crossDirs=crossLv5?[a,b].map(f=>{const P=f.path,s0=P[0],z=P[P.length-1],l=Math.hypot(z.x-s0.x,z.y-s0.y)||1;return{x:(z.x-s0.x)/l,y:(z.y-s0.y)/l,type:f.type};}):null;
@@ -13044,7 +13044,7 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
  }
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&thunderBusy)thunderClear();});
  // Capture the armed gesture before the normal word/tap collectors can consume it.
- field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<1||(selected==='thunder'&&thunderBusy)||gesture||consumedPointer!==null)return;if(selected==='thunder'){if(!thunderReady()){selected=null;sync();return;}usesLeft-=3;selected=null;sync();taStoryBonus(20);thunderCast(loc(e));e.stopImmediatePropagation();e.preventDefault();return;}playElementSound(selected);taMastery.add(selected==='summon'?'green':selected,null,2);usesLeft--;taStoryBonus(3);gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
+ field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<1||(selected==='thunder'&&thunderBusy)||gesture||consumedPointer!==null)return;if(selected==='thunder'){if(!thunderReady()){selected=null;sync();return;}usesLeft-=3;selected=null;sync();taStoryBonus(10);thunderCast(loc(e));e.stopImmediatePropagation();e.preventDefault();return;}playElementSound(selected);taMastery.add(selected==='summon'?'green':selected,null,2);usesLeft--;taStoryBonus(3);gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
  // Once the elemental stroke reaches its range/time budget, the same held
  // pointer continues as an ordinary word-collection swipe. The special trace
  // remains clipped to its range, so its visuals and elemental hits stay aligned.
