@@ -7749,6 +7749,13 @@ function vortexRelease(){
     // v54: avoid forced layout for words already collected or unavailable.
     // A rect is only measured after all cheap eligibility checks pass.
     const entries=swipeHitSnapshot || Array.from(field.querySelectorAll('.word'),w=>({w,r:null}));
+    // 負荷対策：対象になりうる言霊の位置は、拾う処理（DOMの書き換え）を始める前にまとめて読む。
+    // 1語拾うごとに次の言霊の位置を読むと、そのたびに画面全体の再計算が走るため（言霊が多いと重い）。
+    for(const entry of entries){
+      if(entry.r)continue;const w=entry.w;
+      if(!w.isConnected || w.classList.contains('got') || w.dataset.swiped || !isSwipeable(w) || w.classList.contains('late'))continue;
+      entry.r=w.getBoundingClientRect();
+    }
     for(const entry of entries){
       const w=entry.w;
       if(!w.isConnected || w.classList.contains('got') || w.dataset.swiped || !isSwipeable(w) || w.classList.contains('late'))continue;
@@ -14084,7 +14091,8 @@ function tick(now){
   if(!s.button.isConnected||!s.ctx||!atlas[s.kind])continue;
   // Hidden orbs do not need repeated canvas uploads to the GPU.
   // 負荷対策：表示されているかの確認（画面の再計算を伴う）は0.4秒ごとにまとめる
-  if(!s.visAt||now-s.visAt>400){s.visAt=now;s.vis=s.button.getClientRects().length>0;}
+  // 表示されているか（非表示＝箱がない）を、位置の計算をせずに確かめる（checkVisibility は見た目の計算だけで済む）
+  if(!s.visAt||now-s.visAt>400){s.visAt=now;s.vis=s.button.checkVisibility?s.button.checkVisibility():s.button.getClientRects().length>0;}
   if(!s.vis)continue;
   const frame=s.button.disabled?0:idx;
   if(frame===s.last||!atlas[s.kind][frame])continue;
@@ -14281,6 +14289,55 @@ window.taV54Report=function(){const p=window.__taV54Perf;return {
   new MutationObserver(launch).observe(document.body,{childList:true});
   const slip=document.querySelector('#viewMain>.slip');
   if(slip){const hud=()=>{const on=!!slip.querySelector('#taHud');if(slip.classList.contains('ta-has-hud')!==on)slip.classList.toggle('ta-has-hud',on);};hud();new MutationObserver(hud).observe(slip,{childList:true,subtree:true});}
+ };
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+})();
+</script>
+<style id="ta-perf-dense-words">
+/* 負荷対策（スマホのみ）：言霊が多いとき（18個以上）に現れた言霊は、背景のぼかし（backdrop-filter）を使わない。
+   ぼかしは1語ごとに毎コマ背景を読み直すため、数十個が漂うとスマホの描画が追いつかなくなる。
+   代わりに地の色を少しだけ濃くして、文字の読みやすさと見た目の印象をそろえる。すでに出ている言霊は変えない。 */
+#drift .word.ta-lite-word{-webkit-backdrop-filter:none;backdrop-filter:none}
+#drift .word.ta-lite-word:not(.special,.multi,.odd,.petal,.crack,.vortex,.sk-fall,.pull,.reso,.glow,.still){background:color-mix(in srgb,var(--paper) 80%,transparent)}
+</style>
+<script id="ta-perf-dense-words-js">
+// 負荷対策（スマホのみ）：言霊が18個以上漂っている間に現れた言霊に ta-lite-word を付ける（14個以下に減ったら付けない）。
+// 付けるのは現れた瞬間（描画前）だけなので、表示中の言霊の見た目が途中で切り替わることはない。PCでは何もしない。
+(()=>{
+ if(!(window.matchMedia&&matchMedia('(pointer:coarse)').matches))return;
+ const ON=18,OFF=14;let dense=false;
+ const run=()=>{
+  const field=document.getElementById('drift');if(!field)return;
+  const words=field.getElementsByClassName('word');   // 常に最新の数を返す一覧
+  new MutationObserver(list=>{
+   const count=words.length;
+   if(!dense&&count>=ON)dense=true;else if(dense&&count<=OFF)dense=false;
+   if(!dense)return;
+   for(const m of list)for(const n of m.addedNodes)if(n.nodeType===1&&n.classList.contains('word'))n.classList.add('ta-lite-word');
+  }).observe(field,{childList:true});
+ };
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+})();
+</script>
+<script id="ta-perf-click-rects">
+// 負荷対策：言霊をタップして拾う処理は、拾った言霊・得点や時間の表示・採集エリアの位置を何度も読み直していた。
+// 言霊が多いと、そのたびに画面全体の再計算（1回あたり数ms〜十数ms）が走る。
+// タップを処理する間だけ、これらの位置を最初に1回で読んだ値で答える（同じタップの処理の中なので値は同じ）。
+// 処理が終わったら（同じイベントの後段・次のタスク）すぐに元へ戻す。外れた要素は本来の読み取りに任せる。
+(()=>{
+ const native=Element.prototype.getBoundingClientRect;let pinned=[];
+ const unpin=()=>{for(const el of pinned)delete el.getBoundingClientRect;pinned=[];};
+ const pin=el=>{if(!el||!el.isConnected||Object.prototype.hasOwnProperty.call(el,'getBoundingClientRect'))return;const r=native.call(el);el.getBoundingClientRect=function(){return this.isConnected?r:native.call(this);};pinned.push(el);};
+ const run=()=>{
+  const field=document.getElementById('drift');if(!field)return;
+  field.addEventListener('click',e=>{
+   const w=e.target&&e.target.closest?e.target.closest('.word'):null;if(!w||w.classList.contains('got'))return;
+   unpin();
+   pin(w);for(const id of ['taTime','taScore','taTimeBox'])pin(document.getElementById(id));
+   try{document.querySelector('#viewMain>.hero')?.getBoundingClientRect();field.getBoundingClientRect();}catch(_){}
+   setTimeout(unpin,0);
+  },{capture:true});
+  field.addEventListener('click',unpin);   // 言霊自身の処理が終わった直後に戻す
  };
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
 })();
