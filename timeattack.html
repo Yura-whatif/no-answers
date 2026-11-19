@@ -2569,6 +2569,34 @@ html.ta-native-return-all.ta-native-return-800 #viewMain>.hero.ta-active-visual>
 #taStarOutcome .ta-star-unlock-heading{display:block;margin:14px 0 8px;padding:8px 3px;font-size:19px;color:#ffe4a5;text-shadow:0 0 12px #e2ad6188;}
 #taStarOutcome .ta-star-unlock{margin:7px 0;padding:10px 6px;font-size:16px;font-weight:bold;border:1px solid #b28b56;border-radius:8px;background:#8d683524;color:#ffe3a2;}
 </style>
+<style id="ta-orbframe-css">
+/* 紅・蒼 Lv5：炎・氷が出ている間の枠の光 */
+.ta-orbframe{position:absolute;inset:0;z-index:64;pointer-events:none;border-radius:inherit;overflow:hidden;opacity:0;transition:opacity .6s ease}
+.ta-orbframe.on{opacity:1}
+.ta-orbframe:not(.on) *{animation-play-state:paused!important}
+.ta-orbframe i,.ta-orbframe b{position:absolute;display:block;pointer-events:none}
+/* 紅：揺らめく炎の灯り */
+.ta-orbframe.fire .fa,.ta-orbframe.fire .fb{inset:0;border-radius:inherit}
+.ta-orbframe.fire .fa{box-shadow:inset 0 0 0 1.5px rgba(255,170,90,.85),inset 0 0 16px 3px rgba(255,105,35,.55),inset 0 -14px 26px 2px rgba(255,70,20,.35);animation:taFrameFlickA 1.9s linear infinite}
+.ta-orbframe.fire .fb{box-shadow:inset 0 0 0 2px rgba(255,214,140,.7),inset 0 0 24px 6px rgba(255,140,40,.42),inset 0 -22px 34px 4px rgba(255,90,25,.38);animation:taFrameFlickB 2.6s linear infinite}
+.ta-orbframe.fire .ft{left:-10%;right:-10%;bottom:-4px;height:46px;
+ background:radial-gradient(ellipse 14px 30px at 50% 100%,rgba(255,190,90,.75),rgba(255,90,30,.32) 55%,transparent 72%) 0 100%/38px 46px repeat-x;
+ -webkit-mask:linear-gradient(0deg,#000 20%,transparent);mask:linear-gradient(0deg,#000 20%,transparent);
+ mix-blend-mode:screen;animation:taFrameTongue 1.4s ease-in-out infinite alternate}
+@keyframes taFrameFlickA{0%{opacity:.55}11%{opacity:.95}19%{opacity:.62}33%{opacity:.88}47%{opacity:.5}58%{opacity:1}71%{opacity:.66}86%{opacity:.9}100%{opacity:.55}}
+@keyframes taFrameFlickB{0%{opacity:.7}14%{opacity:.35}29%{opacity:.82}41%{opacity:.48}63%{opacity:.9}77%{opacity:.4}100%{opacity:.7}}
+@keyframes taFrameTongue{0%{transform:translate3d(0,6px,0) scaleY(.82);opacity:.7}50%{transform:translate3d(-9px,1px,0) scaleY(1.08);opacity:1}100%{transform:translate3d(-19px,4px,0) scaleY(.92);opacity:.8}}
+/* 蒼：煌めく氷の縁 */
+.ta-orbframe.ice .ia{inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1.5px rgba(214,244,255,.9),inset 0 0 14px 3px rgba(105,200,255,.45),inset 0 0 34px 6px rgba(70,150,235,.22);animation:taFrameIceBreath 3.2s ease-in-out infinite}
+.ta-orbframe.ice .ig{top:-1px;left:0;width:28%;height:3px;background:linear-gradient(90deg,transparent,rgba(240,252,255,.95),transparent);filter:blur(.6px);animation:taFrameIceGlint 3.4s cubic-bezier(.45,0,.4,1) infinite}
+.ta-orbframe.ice b{width:20px;height:20px;margin:-10px 0 0 -10px;filter:drop-shadow(0 0 3px rgba(170,225,255,.9));opacity:0;
+ background:linear-gradient(90deg,transparent 42%,rgba(240,252,255,.95) 50%,transparent 58%),linear-gradient(0deg,transparent 42%,rgba(240,252,255,.95) 50%,transparent 58%),radial-gradient(circle,rgba(255,255,255,.95) 0,rgba(150,215,255,.55) 22%,transparent 46%);
+ animation:taFrameIceTwinkle 2.4s ease-in-out infinite}
+@keyframes taFrameIceBreath{0%,100%{opacity:.72}50%{opacity:1}}
+@keyframes taFrameIceGlint{0%{transform:translateX(-110%);opacity:0}12%{opacity:1}55%{opacity:1}70%{transform:translateX(400%);opacity:0}100%{transform:translateX(400%);opacity:0}}
+@keyframes taFrameIceTwinkle{0%,100%{opacity:0;transform:scale(.3) rotate(0deg)}18%{opacity:1;transform:scale(1) rotate(20deg)}36%{opacity:0;transform:scale(.4) rotate(40deg)}}
+@media(prefers-reduced-motion:reduce){.ta-orbframe *{animation:none!important}}
+</style>
 <style id="ta-result-hint-fixed-height">
 /* 結果画面のヒント画像：絵の種類によらず高さを固定し、少し小さめにそろえる */
 #taLaunch .ta-result-hint-group .ta-book-scene,#taLaunch .ta-result-hint-group .ta-special-hint-art{height:112px!important;min-height:0!important;max-height:none!important;aspect-ratio:auto!important;overflow:hidden!important}
@@ -12512,6 +12540,33 @@ const __ta100Start=window.__ta100Profile.start();try {
  document.body.appendChild(taBorderCanvas);
  const taBorderCtx=taBorderCanvas.getContext('2d',{alpha:true});
  let taBorderPulse=null,taBorderFrame=0;
+ // 紅・蒼 Lv5：炎や氷が画面に出ている間、採集エリアの枠に光を灯し続ける。
+ //   紅＝炎が揺らめく光（重ねた2枚の灯りを交互に明滅させ、下辺から炎の舌が立つ）
+ //   蒼＝氷が煌めく光（冷たい縁取りに、枠のあちこちで星のような煌めきが瞬く）
+ // 透明度と位置の変化だけで動かすので軽い。状態が変わったときだけ表示を切り替える。
+ const taOrbFrames={};
+ function taOrbFrameEl(type){
+  if(taOrbFrames[type]?.isConnected)return taOrbFrames[type];
+  const host=field.parentElement;if(!host)return null;
+  const el=document.createElement('div');el.className='ta-orbframe '+type;el.setAttribute('aria-hidden','true');
+  if(type==='fire'){el.innerHTML='<i class="fa"></i><i class="fb"></i><i class="ft"></i>';}
+  else{let h='<i class="ia"></i><i class="ig"></i>';
+   // 煌めきは枠の4辺に散らす（位置は固定、瞬きの間合いだけをずらす）
+   const spots=[[8,0],[27,0],[49,0],[71,0],[90,0],[100,14],[100,38],[100,63],[100,86],[84,100],[60,100],[37,100],[14,100],[0,77],[0,52],[0,27]];
+   spots.forEach(([x,y],i)=>{h+=`<b style="left:${x}%;top:${y}%;animation-delay:${(i*0.37)%2.6}s;animation-duration:${1.9+(i*0.53)%1.6}s"></b>`;});
+   el.innerHTML=h;}
+  host.append(el);taOrbFrames[type]=el;return el;
+ }
+ const taOrbFrameState={fire:false,ice:false};
+ setInterval(()=>{
+  const live=active()&&!document.hidden;
+  for(const type of ['fire','ice']){
+   let on=false;
+   if(live&&traces.length){try{on=taMastery.level(type)>=5&&traces.some(t=>t.type===type);}catch(_){on=false;}}
+   if(on===taOrbFrameState[type])continue;
+   taOrbFrameState[type]=on;const el=taOrbFrameEl(type);if(el)el.classList.toggle('on',on);
+  }
+ },150);
  function taBorderGlow(g){
   if(!taBorderCtx||!g||!g.points?.length||document.hidden)return;
   // Directional border glow is a mastery Lv5-only visual reward.
