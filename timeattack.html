@@ -12600,8 +12600,9 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
  // 文字を消せる範囲（紅・蒼共通）：Lv1・2は従来どおり、Lv3から1段ごとに少しずつ広げる。見た目の演出は変えない。
  //   スワイプの線からの半径：Lv1・2＝23px、Lv3＝27px、Lv4＝31px、Lv5＝35px
  //   タップの中心からの半径：Lv1・2＝94px、Lv3＝102px、Lv4＝110px、Lv5＝118px
+ //   紅玉はさらに、線の半径+7px・タップの半径+16px（Lv1・2＝30px／110px … Lv5＝42px／134px）
  let hitLv=1;try{if(g.type==='fire'||g.type==='ice')hitLv=taMastery.level(g.type);}catch(_){}
- const hitStep=Math.max(0,Math.min(5,hitLv)-2),swipeR=23+4*hitStep,tapR=94+8*hitStep;
+ const hitStep=Math.max(0,Math.min(5,hitLv)-2),fireBoost=g.type==='fire',swipeR=23+4*hitStep+(fireBoost?7:0),tapR=94+8*hitStep+(fireBoost?16:0);   // 紅玉は範囲を少し広げて強化（線+7px・円+16px）
  const segs=[];if(isTap){const c=pts[0];segs.push([c,{x:c.x+.01,y:c.y},tapR]);}
  else for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(Math.hypot(b.x-a.x,b.y-a.y)>1)segs.push([a,b,swipeR]);}
  if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:(completed||eclipseTap)?.30:(typeof taStarRunValue==='function'?taStarRunValue((isTap?'tap'+(g.type==='fire'?'Fire':'Ice'):g.type)):3.1),total:(typeof taStarRunValue==='function'?taStarRunValue((isTap?'tap'+(g.type==='fire'?'Fire':'Ice'):g.type)):3.1),age:0,resonated:false,clockDissolve:completed||eclipseTap};traces.push(trace);if(!completed&&!eclipseTap&&!soumatouTap&&(g.type==='fire'||g.type==='ice'))window.taStars?.track(g.type);if(traces.length>2){for(const older of traces.slice(0,-2)){if(!older.clockDissolve){older.left=Math.min(older.left,1.85);older.total=3.1;older.retiring=true;}}}if(traces.length>6)traces.splice(0,traces.length-6);for(const other of traces){if(!completed&&!eclipseTap&&!soumatouTap&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed&&!eclipseTap)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
@@ -12698,7 +12699,9 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
   const centers=ringPts(rxIn,ryIn,0),outerCenters=ringPts(rx,ry,Math.PI/10);   // 外側は内側の言葉のあいだに来るよう半分ずらす
   // 描画面：奥（言葉の後ろ）と手前（閃光だけ）
   // PCの大きな採集エリアではCanvas画素数を抑える。スマホは従来の密度を維持。
-  const dpr=Math.min(devicePixelRatio||1, fw>=700?Math.min(1,960/fw,540/fh):1.5);
+  // スマホは描画面を等倍に（光の演出なので解像度を落としても見た目はほぼ変わらず、転送量は約半分）
+  const thMobile=matchMedia('(pointer:coarse)').matches;
+  const dpr=Math.min(devicePixelRatio||1, fw>=700?Math.min(1,960/fw,540/fh):(thMobile?1:1.5));
   const mk=(cls)=>{const c=document.createElement('canvas');c.className=cls;c.width=Math.round(fw*dpr);c.height=Math.round(fh*dpr);return c;};
   const back=mk('ta-thunder-back'),stage=document.createElement('div');stage.className='ta-thunder-stage';const front=mk('ta-thunder-front');stage.append(front);
   field.insertBefore(back,field.firstChild);field.append(stage);stage._back=back;thunderStage=stage;
@@ -12812,8 +12815,9 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
    rings.push({born:t,life:850,max:rippleRadius,w:1.8*power},
               {born:t+130,life:1050,max:rippleRadius*1.08,w:1.1*power});
    const top=addBolt(cx+(Math.random()-.5)*30,-10,cx,cy,reduce?350:480,{width:1.9*power,regen:3,rough:.16,branchy:.55});
-   burst(cx,cy,reduce?0:Math.round(26*power),150);thunderSound('strike',2);   // 落雷の音だけ（鐘の和音なし）
-   if(!reduce)field.animate([{transform:'translate(0,0)'},{transform:'translate(2px,-1px)'},{transform:'translate(-2px,1px)'},{transform:'translate(0,0)'}],{duration:180,easing:'ease-out'});};
+   burst(cx,cy,reduce?0:Math.round((thMobile?14:26)*power),150);thunderSound('strike',2);   // 落雷の音だけ（鐘の和音なし）
+   // 採集エリア全体を揺らすと、スマホでは言霊ごと描き直しになって落雷の瞬間に詰まるため、PCだけ揺らす
+   if(!reduce&&!thMobile)field.animate([{transform:'translate(0,0)'},{transform:'translate(2px,-1px)'},{transform:'translate(-2px,1px)'},{transform:'translate(0,0)'}],{duration:180,easing:'ease-out'});};
   // 魔法陣が描かれる溜め：光の粒が中心へ吸い込まれる
   for(let k=0;k<(reduce?0:34);k++){const a=Math.random()*Math.PI*2,d=R*(1.6+Math.random()*1.6);motes.push({kind:'in',x0:cx+Math.cos(a)*d,y0:cy+Math.sin(a)*d,born:Math.random()*160,life:360+Math.random()*120,r:.8+Math.random()*1.2});}
   thunderSound('summon');   // 魔法陣が描かれる音
@@ -12827,11 +12831,11 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
    // RAF自体は維持し、既存の効果タイマーや採集処理には手を加えない。
    // v53: while dragging, prioritize hit handling over the decorative
    // thunder canvas. The rotating glyph remains CSS-composited.
-   const frameMs=window.__taSwipeActive ? 66 : (fw>=700?(idle?50:40):(idle?50:20));
+   const frameMs=window.__taSwipeActive ? 66 : (fw>=700?(idle?50:40):(idle?50:(thMobile?33:20)));
    if(t-(draw.last||-1e9)<frameMs){raf=requestAnimationFrame(draw);stage._raf=raf;return;}draw.last=t;
    // In the 10-second idle gaps only the central glyph changes. Repaint a tiny
    // dirty rectangle instead of uploading a full-screen canvas on every frame.
-   const localIdle=idle&&fw>=700;
+   const localIdle=idle&&(fw>=700||thMobile);
    bx.setTransform(1,0,0,1,0,0);
    if(localIdle){const pad=(R*3.1+24)*dpr;bx.clearRect(Math.floor(cx*dpr-pad),Math.floor(cy*dpr-pad),Math.ceil(pad*2),Math.ceil(pad*2));}
    else bx.clearRect(0,0,back.width,back.height);
@@ -12928,7 +12932,7 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
    const a=Math.atan2(p.y-cy,p.x-cx);
    addBolt(cx+Math.cos(a)*R,cy+Math.sin(a)*R,p.x,p.y,reduce?240:430,
      {width:.9,regen:1,rough:.17,branchy:.17});
-   burst(p.x,p.y,reduce?0:5,55);
+   burst(p.x,p.y,reduce||thMobile?0:5,55);
   }
   function scatter(n,gap){circleBoost=1;
    placed.length=0;scatterSpots(n).forEach((c,i)=>later(()=>{circleBoost=Math.max(circleBoost,.5);fling(c,i);},i*gap));}
@@ -14124,6 +14128,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 }
 @keyframes taThunderRimSmooth{
  0%{opacity:1} 18%{opacity:.98} 50%{opacity:.65} 78%{opacity:.25} 100%{opacity:0}
+}
+
+/* スマホの黄玉：言霊の影をまとめて省き、描画の負担を下げる（金の縁取りは残す） */
+@media (pointer:coarse){
+ html.ta-thunder-running #viewMain .drift .word{box-shadow:none!important}
+ #viewMain .drift .word[data-thunder-born="1"]:not(.got){box-shadow:0 0 0 1px rgba(255,211,115,.5)!important}
+ #drift .word.ta-thunder-word{text-shadow:0 0 6px #ffd877!important}
+ #viewMain .drift .word.ta-thunder-bloom:not(.got)::after{box-shadow:0 0 8px 2px rgba(255,210,100,.8)!important}
 }
 </style>
 <script id="ta-diagnostic-v43">
