@@ -2569,6 +2569,15 @@ html.ta-native-return-all.ta-native-return-800 #viewMain>.hero.ta-active-visual>
 #taStarOutcome .ta-star-unlock-heading{display:block;margin:14px 0 8px;padding:8px 3px;font-size:19px;color:#ffe4a5;text-shadow:0 0 12px #e2ad6188;}
 #taStarOutcome .ta-star-unlock{margin:7px 0;padding:10px 6px;font-size:16px;font-weight:bold;border:1px solid #b28b56;border-radius:8px;background:#8d683524;color:#ffe3a2;}
 </style>
+<style id="ta-result-hint-fixed-height">
+/* 結果画面のヒント画像：絵の種類によらず高さを固定し、少し小さめにそろえる */
+#taLaunch .ta-result-hint-group .ta-book-scene,#taLaunch .ta-result-hint-group .ta-special-hint-art{height:112px!important;min-height:0!important;max-height:none!important;aspect-ratio:auto!important;overflow:hidden!important}
+#taLaunch .ta-result-hint-group .ta-book-photo{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important}
+#taLaunch .ta-result-hint-group .ta-special-hint-art{display:grid!important;align-items:center!important;justify-items:center!important}
+#taLaunch .ta-result-hint-group .ta-special-hint-art[hidden],#taLaunch .ta-result-hint-group .ta-book-scene[hidden]{display:none!important}
+#taLaunch .ta-result-hint-group .ta-special-hint-art img{width:100%!important;height:104px!important;max-height:104px!important;object-fit:contain!important}
+@media(max-height:650px){#taLaunch .ta-result-hint-group .ta-book-scene,#taLaunch .ta-result-hint-group .ta-special-hint-art{height:84px!important}#taLaunch .ta-result-hint-group .ta-special-hint-art img{height:78px!important;max-height:78px!important}}
+</style>
 <style id="ta-direct-stage01-return-20261109">
 /* Stage_01 is always the base. Do not animate any intermediate stage while
    the retained outgoing stage is fading above it. Keep words above z-index:1. */
@@ -10410,7 +10419,7 @@ function taSaveRecord(){
   if(taScore<=0){taRenderRecords();return;}
   const records=taGetRecords();
   taSessionRecordAt=Date.now();
-  records.push({score:taScore,maxCombo:taSessionMaxCombo,timeGain:taSessionTimeGain,night:taNightNumber,at:taSessionRecordAt});
+  records.push({score:taScore,maxCombo:taSessionMaxCombo,timeGain:taSessionTimeGain,night:taNightNumber,chapter:Math.min(taStory.chapter+1,TA_STORY_STEPS.length),at:taSessionRecordAt});
   try{localStorage.setItem(TA_RECORD_KEY,JSON.stringify(records.slice(-500)))}catch(e){}
   taRenderRecords();
 }
@@ -10428,7 +10437,7 @@ function taRenderRecords(){
     const row=document.createElement('div');row.className='ta-record-row';
     const pos=document.createElement('span');pos.className='ta-record-pos';pos.textContent=String(i+1).padStart(2,'0');
     const score=document.createElement('strong');score.className='ta-record-score';score.textContent=taScoreFormat(r.score)+' 点';
-    if(Number.isFinite(Number(r.night))&&Number(r.night)>=1){const night=document.createElement('span');night.className='ta-rank-night';night.textContent='第'+taNightKanji(Number(r.night))+'夜';score.append(night);}
+    if(Number.isFinite(Number(r.night))&&Number(r.night)>=1){const night=document.createElement('span');night.className='ta-rank-night';night.textContent='第'+taNightKanji(Number(r.night))+'夜'+(Number.isFinite(Number(r.chapter))&&Number(r.chapter)>=1?'・第'+taNightKanji(Number(r.chapter))+'章':'');score.append(night);}
     const chain=document.createElement('span');chain.className='ta-record-chain';chain.textContent=(Number.isFinite(r.maxCombo)?'最大連鎖 '+r.maxCombo.toLocaleString('ja-JP')+'連鎖':'最大連鎖 —')+' ｜ '+(Number.isFinite(r.timeGain)?'延長時間 +'+taFormatTimeGain(r.timeGain)+'秒':'延長時間 —');
     const date=document.createElement('time');date.className='ta-record-date';date.dateTime=new Date(r.at).toISOString();date.textContent=taRecordDate(r.at);
     row.append(pos,score,chain,date);rankBox.append(row);
