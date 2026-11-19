@@ -5684,10 +5684,12 @@ const taCine=(()=>{
   function release(){holds=Math.max(0,holds-1);if(holds)return;
     clearTimeout(offT);clearTimeout(remT);const el=w;
     offT=setTimeout(()=>el?.classList.remove('on'),1400);                 // 文字が消えてから帯を1.2秒でフェードアウト
-    remT=setTimeout(()=>{el?.remove();if(w===el)w=null;},2700);}
+    remT=setTimeout(()=>{el?.remove();if(w===el)w=null;mark(false);},2700);}
   // slot: 'top'（奥義名）／'bottom'（章）。inAt＝文字が浮かぶまで、outAt＝文字が消え始めるまで（ms）
+  // 帯が出ている間は、連鎖ゲージを帯より手前に出す（hero に印を付ける）
+  const mark=on=>document.querySelector('#viewMain>.hero')?.classList.toggle('ta-cine-on',on);
   function show(slot,text,inAt,outAt){
-    const el=ensure();if(!el)return;
+    const el=ensure();if(!el)return;mark(true);
     clearTimeout(offT);clearTimeout(remT);if(el.isConnected&&!el.classList.contains('on'))requestAnimationFrame(()=>el.classList.add('on'));
     const t=el.querySelector('.ta-story-cine-bar.'+slot+' .ta-story-cine-text');
     if(t._held){clearTimeout(t._a);clearTimeout(t._b);holds--;}
@@ -5695,7 +5697,7 @@ const taCine=(()=>{
     t._a=setTimeout(()=>t.classList.add('in'),inAt);
     t._b=setTimeout(()=>{t.classList.remove('in');t.classList.add('out');t._held=false;release();},outAt);
   }
-  function clear(){clearTimeout(offT);clearTimeout(remT);holds=0;
+  function clear(){clearTimeout(offT);clearTimeout(remT);holds=0;mark(false);
     document.querySelectorAll('#viewMain>.hero>.ta-story-cine').forEach(e=>{e.querySelectorAll('.ta-story-cine-text').forEach(t=>{clearTimeout(t._a);clearTimeout(t._b);});e.remove();});w=null;}
   return{show,clear};
 })();
@@ -14393,6 +14395,7 @@ html.ta-active-moon #viewMain>.hero .ta-moon{opacity:1}
 #viewMain>.hero .ta-moon.ta-moon-grow{animation:taMoonGrow .7s ease-out both}
 @keyframes taMoonGrow{0%{filter:none}30%{filter:drop-shadow(0 0 7px rgba(255,224,160,.85))}100%{filter:none}}
 /* 章の名前：映画風の黒帯（フェードイン）＋下の帯の文字。帯は月（z-index:186）より手前 */
+#viewMain>.hero.ta-cine-on #combo{z-index:189}
 #viewMain>.hero .ta-story-cine{position:absolute;inset:0;z-index:187;pointer-events:none;overflow:hidden;border-radius:inherit}
 #viewMain>.hero .ta-story-cine-bar{position:absolute;left:0;right:0;height:13%;background:#030305;opacity:0;transition:opacity 1.2s ease-in-out}
 #viewMain>.hero .ta-story-cine-bar{display:flex;align-items:center;justify-content:center}
