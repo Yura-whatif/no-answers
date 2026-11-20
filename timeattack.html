@@ -3052,6 +3052,10 @@ header>.hdr-r,header>.mode{position:relative;z-index:2}
 header>.brand.ta-face-header{margin-left:-16px}
 header>.brand.ta-face-header::before{background-position:center,-76px center}
 @media(max-width:600px){header>.brand.ta-face-header::before{background-position:center,calc(35% - 24px) center}}
+/* ユラをさらに左へ寄せ、顔の半分ほどを画面の端で切る（ひとこと・チュートリアルの台詞の場所をつくる） */
+header>.brand.ta-face-header{width:min(36vw,250px)!important}
+header>.brand.ta-face-header::before{background-position:center,-118px center!important}
+@media(max-width:600px){header>.brand.ta-face-header{width:min(34vw,150px)!important}header>.brand.ta-face-header::before{background-position:center,-100px center!important}}
 </style>
 <div id="taTitleScreen" role="region" aria-label="No Answers タイトル画面"><div class="ta-title-art"><picture class="ta-title-picture"><source media="(max-aspect-ratio:3/4)" srcset="img/ta_title_mobile.jpg?v=title1106"><img src="img/ta_title_no_petals.jpg?v=title1106" alt="No Answers ―言葉の残響― タイトルイラスト"></picture><button type="button" class="ta-title-start" id="taTitleStart" aria-label="はじめる">はじめる</button><div class="ta-title-progress" id="taTitleProgress" hidden><div class="ta-title-progress-fill" id="taTitleProgressFill"></div></div></div></div>
 
@@ -3253,7 +3257,7 @@ header>.brand.ta-face-header::before{background-position:center,-76px center}
             <section class="ta-guide-section" id="taGuideOrbs"><h4><span>02</span> 4色の玉と白銀玉</h4>
               <div class="ta-guide-skill"><i class="ta-guide-dot red"></i><div><b>紅玉 ― 炎</b><p>言霊を燃やす効果を持ち、得点を大きく伸ばす場面で有効です。燃やした言霊は月を速く満たします。</p></div></div>
               <div class="ta-guide-skill"><i class="ta-guide-dot blue"></i><div><b>蒼玉 ― 氷</b><p>言霊を凍らせる効果を持ち、時間回復を狙う場面で有効です。</p></div></div>
-              <div class="ta-guide-skill"><i class="ta-guide-dot green"></i><div><b>翠玉 ― 連鎖を広げる</b><p>言霊を増やす効果を持ち、連鎖を広げる場面で有効です。</p></div></div>
+              <div class="ta-guide-skill"><i class="ta-guide-dot green"></i><div><b>翠玉 ― 連鎖を広げる</b><p>言霊を増やす効果を持ち、連鎖を広げる場面で有効です。</p><p>練習（チュートリアル）を最後まで終え、「はじまりの栞」を得ると解放されます。</p></div></div>
               <div class="ta-guide-skill"><i class="ta-guide-dot yellow"></i><div><b>黄玉 ― 雷</b><p>雷を呼び寄せ、複数の言霊を生み出します。落雷は80%の確率で継続します。</p><p>「連鎖の芽Ⅴ」を達成すると解放され、白銀玉4個で使用できます。</p></div></div>
               <div class="ta-guide-skill"><i class="ta-guide-dot whitegold"></i><div><b>白銀玉 ― アイテム補充</b><p>採集エリアに時折現れる特別な玉。回収すると、右下の玉在庫を補充できます。</p></div></div>
               <p>玉の在庫は<strong>最大5個</strong>。得点の節目でも補充の機会があります。在庫がいっぱいのときは補充の余地がないため、使いどころを考えましょう。</p>
@@ -5640,7 +5644,7 @@ function taStoryReset(){
 }
 // n頁を足す。章をまたいだら景色・BGMを進める（時止め中は、時が戻ったときにまとめて進める）。
 function taStoryAdd(n){
-  if(!taRunning||!(n>0))return;
+  if(!taRunning||!(n>0)||taTutOn())return;
   if(typeof taNightActive==='function'&&taNightActive())return;
   if(taStory.chapter>=TA_STORY_STEPS.length)return;
   taStory.pages+=n;taStory.inChapter+=n;
@@ -5650,7 +5654,7 @@ function taStoryAdd(n){
   }
   if(taStory.chapter>=TA_STORY_STEPS.length)taStory.inChapter=0;
   try{window.taMoon?.update(advanced);}catch(_){}
-  if(!advanced&&taStory.chapter<TA_STORY_STEPS.length&&taStory.inChapter>=TA_STORY_STEPS[taStory.chapter]*.85)taYuraSay((window.taItemStock?.()||0)>=1?'moonFire':'moonNear');
+  if(!advanced&&taStory.chapter<TA_STORY_STEPS.length&&taStory.inChapter>=TA_STORY_STEPS[taStory.chapter]*.85)taYuraSay('moonNear');
   if(advanced){taStory.pendingAnnounce=true;if(!flood)taStoryApply(false);}
 }
 // 技などの上乗せ（言霊ごとの頁とは別に足す）
@@ -5687,7 +5691,7 @@ const taCine=(()=>{
     remT=setTimeout(()=>{el?.remove();if(w===el)w=null;mark(false);},2700);}
   // slot: 'top'（奥義名）／'bottom'（章）。inAt＝文字が浮かぶまで、outAt＝文字が消え始めるまで（ms）
   // 帯が出ている間は、連鎖ゲージを帯より手前に出す（hero に印を付ける）
-  const mark=on=>document.querySelector('#viewMain>.hero')?.classList.toggle('ta-cine-on',on);
+  const mark=on=>document.querySelector('#viewMain>.hero')?.classList.toggle('ta-cine-on',on||(typeof taTutOn==='function'&&taTutOn()));
   function show(slot,text,inAt,outAt){
     const el=ensure();if(!el)return;mark(true);
     clearTimeout(offT);clearTimeout(remT);if(el.isConnected&&!el.classList.contains('on'))requestAnimationFrame(()=>el.classList.add('on'));
@@ -5728,7 +5732,6 @@ const TA_YURA_LINES={
   skillEclipse:['みんな、戻ってきた'],
   glowFeeling:['時間を、延ばせる','蒼い玉、今だよ'],
   glowMemory:['燃やすなら、今','得点が、二倍'],
-  moonFire:['燃やせば、次の章へ'],
   fireBig:['今なら、大きく燃える'],
   thunderBet:['賭けて、みる？'],
   thunderLong:['まだ、降る','賭けに|勝ったね'],
@@ -5740,21 +5743,13 @@ const TA_YURA_LINES={
   idle:['答えは、ないのに','この言葉、知ってる','少し、違和感']
 };
 // 優先度：節目 3 ＞ 困っているとき 2 ＞ 上手にできたとき 1 ＞ 独り言 0
-const TA_YURA_PRIO={skillCross:3,skillEclipse:3,glowFeeling:3,glowMemory:3,skillStop:3,moonNear:3,moonFire:3,chapter:3,finalChapter:3,nightBonus:3,nightAgain:3,lowTime:2,chainBreak:2,stockFull:2,fireBig:2,silver:2,thunderReady:2,thunderBet:2,chain100:1,issen:1,gessen:1,shingan:1,thunderLong:1,idle:0};
+const TA_YURA_PRIO={skillCross:3,skillEclipse:3,glowFeeling:3,glowMemory:3,skillStop:3,moonNear:3,chapter:3,finalChapter:3,nightBonus:3,nightAgain:3,lowTime:2,chainBreak:2,stockFull:2,fireBig:2,silver:2,thunderReady:2,thunderBet:2,chain100:1,issen:1,gessen:1,shingan:1,thunderLong:1,idle:0};
 const taYura={used:new Set(),lastAt:-1e9,lastFireAt:0,startAt:0,el:null,timer:0};
 function taYuraReset(){taYura.used.clear();taYura.lastAt=-1e9;taYura.startAt=taYura.lastFireAt=performance.now();taYura.el?.remove();taYura.el=null;}
-function taYuraSay(key){
+// ひとことを表示する（判定なしで、渡された言葉をそのまま出す）
+function taYuraShow(text,holdMs=5000){
   try{
-    if(typeof taRunning==='undefined'||!taRunning)return false;
-    const lines=TA_YURA_LINES[key];if(!lines)return false;
-    const prio=TA_YURA_PRIO[key]??0,now=performance.now(),since=now-taYura.lastAt;
-    if(since<(prio>=3?6000:prio===2?15000:25000))return false;                  // 一度話したら、しばらく黙る
-    if(document.querySelector('#viewMain>.hero>.ta-story-cine.on'))return false;     // 黒帯の間は話さない（帯が引き始めたら話してよい）
-    if(taNightActive()&&key!=='nightBonus')return false;
-    const pick=lines.filter(t=>!taYura.used.has(t));if(!pick.length)return false;
-    const text=pick[Math.floor(Math.random()*pick.length)];
     const brand=document.querySelector('header>.brand.ta-face-header');if(!brand)return false;
-    taYura.used.add(text);taYura.lastAt=now;
     taYura.el?.remove();clearTimeout(taYura.timer);
     const el=document.createElement('span');el.className='ta-yura-say';el.setAttribute('aria-hidden','true');
     // 読点（、）の後ろか「|」で改行し、言葉の途中では折り返さない
@@ -5763,11 +5758,27 @@ function taYuraSay(key){
     const header=brand.parentElement;header.append(el);taYura.el=el;
     const hr=header.getBoundingClientRect(),br=brand.getBoundingClientRect();
     const btnL=Math.min(...[...header.querySelectorAll('button')].filter(b=>b.offsetParent).map(b=>b.getBoundingClientRect().left),hr.right);
-    const left=Math.min(br.left-hr.left+br.width*.8,btnL-hr.left-el.offsetWidth-12);
-    el.style.left=Math.max(br.left-hr.left+br.width*.45,left)+'px';el.style.top=(br.top-hr.top+br.height/2)+'px';
+    const left=Math.min(br.right-hr.left-6,btnL-hr.left-el.offsetWidth-12);
+    el.style.left=Math.max(br.left-hr.left+br.width*.5,left)+'px';el.style.top=(br.top-hr.top+br.height/2)+'px';
     requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('in')));
-    taYura.timer=setTimeout(()=>{el.classList.remove('in');el.classList.add('out');setTimeout(()=>{el.remove();if(taYura.el===el)taYura.el=null;},1300);},5000);   // 約5秒表示
+    taYura.timer=setTimeout(()=>{el.classList.remove('in');el.classList.add('out');setTimeout(()=>{el.remove();if(taYura.el===el)taYura.el=null;},1300);},holdMs);   // 約5秒表示
     return true;
+  }catch(_){return false;}
+}
+function taTutOn(){return !!(window.taTut&&window.taTut.on);}
+function taYuraSay(key){
+  try{
+    if(typeof taRunning==='undefined'||!taRunning)return false;
+    if(taTutOn())return false;   // 練習中はチュートリアルの言葉だけ
+    const lines=TA_YURA_LINES[key];if(!lines)return false;
+    const prio=TA_YURA_PRIO[key]??0,now=performance.now(),since=now-taYura.lastAt;
+    if(since<(prio>=3?6000:prio===2?15000:25000))return false;                  // 一度話したら、しばらく黙る
+    if(document.querySelector('#viewMain>.hero>.ta-story-cine.on'))return false;     // 黒帯の間は話さない（帯が引き始めたら話してよい）
+    if(taNightActive()&&key!=='nightBonus')return false;
+    const pick=lines.filter(t=>!taYura.used.has(t));if(!pick.length)return false;
+    const text=pick[Math.floor(Math.random()*pick.length)];
+    taYura.used.add(text);taYura.lastAt=now;
+    return taYuraShow(text);
   }catch(_){return false;}
 }
 // 少し遅れて話す（黒帯が消えてからなど）
@@ -5793,6 +5804,7 @@ function bumpCombo(){
   taCancelFloodResume();
   // DEMO / START演出中は連鎖を発生させない。
   if(!taRunning) return 1;
+  if(taTutOn())document.dispatchEvent(new CustomEvent('ta-tut',{detail:{kind:'collect'}}));
   const now = Date.now();
   if(comboPaused && !taNightActive() && !flood && !open && !charging && !window.taSoumatou?.active()) resumeCombo();   // 念のため：読んでいないのに止まっていたら、触れた時点で戻す
   combo = (flood || comboPaused || now - comboAt <= comboWindowMs) ? combo + 1 : 1; comboAt = now;
@@ -6775,6 +6787,7 @@ let taSwipeBurstWindow=0,taSwipeBurstCount=0,taSwipeLastTouch=0,taSwipeLastArriv
 // Mobile: a dense sweep needs fewer overlapping visual/audio voices. Gameplay stays synchronous.
 let taMobileSwipeSoundWindow=0;
 function spawnWord(opt = {}){
+  if(!taRunning||taTutOn())opt={...opt,plain:true};   // DEMO PLAY・練習中は特殊な言霊を出さない
 const __ta100Start=window.__ta100Profile.start();try {
 
   if(taNightActive()&&!opt.nightBonus)return;
@@ -7949,6 +7962,7 @@ function vortexRelease(){
     setComboSkillGrace("issen");
     if(!gessenAwarded)flash(first,last,tier,collected.size,bonus);
     if(tier===3)taYuraSay('issen');
+    if(taTutOn())document.dispatchEvent(new CustomEvent('ta-tut',{detail:{kind:'issen',count:collected.size}}));
   }
  function finish(){
     if(!active)return;
@@ -8031,6 +8045,7 @@ function vortexRelease(){
         blink.style.left=c.cx+'px';blink.style.top=c.cy+'px';document.body.append(blink);
         blink.animate([{opacity:0},{opacity:.95,offset:.15},{opacity:.12,offset:.45},{opacity:.9,offset:.63},{opacity:0,transform:'translate(-50%,-50%) scale(.84)'}],{duration:320,easing:'ease-out'}).onfinish=()=>blink.remove();
         taYuraSay('shingan');
+        if(taTutOn())document.dispatchEvent(new CustomEvent('ta-tut',{detail:{kind:'shingan'}}));
         const heart=document.createElement('span');heart.className='ta-shingan-label';heart.textContent='心眼';
         heart.style.left=c.cx+'px';heart.style.top=(c.cy-36)+'px';document.body.append(heart);
         heart.animate([{opacity:0,transform:'translate(-50%,0)'},{opacity:1,transform:'translate(-50%,-8px)',offset:.2},{opacity:0,transform:'translate(-50%,-26px)'}],{duration:900,easing:'ease-out'}).onfinish=()=>heart.remove();
@@ -10017,7 +10032,7 @@ const taWordMastery=(()=>{
   },750);
   setTimeout(()=>{title.remove();fxBusy=false;nextFx();},2700);
  };
- const add=(n=1)=>{if(!taRunning)return;const prev=level();count+=n;try{localStorage.setItem(KEY,String(count));}catch(_e){}render();if(level()>prev){const bar=document.getElementById('taWordMastery');if(bar){bar.classList.remove('ta-word-levelup');void bar.offsetWidth;bar.classList.add('ta-word-levelup');setTimeout(()=>bar.classList.remove('ta-word-levelup'),1000);}for(let lv=prev+1;lv<=level();lv++)fxQueue.push({lv,preview:false});nextFx();}};
+ const add=(n=1)=>{if(!taRunning||taTutOn())return;const prev=level();count+=n;try{localStorage.setItem(KEY,String(count));}catch(_e){}render();if(level()>prev){const bar=document.getElementById('taWordMastery');if(bar){bar.classList.remove('ta-word-levelup');void bar.offsetWidth;bar.classList.add('ta-word-levelup');setTimeout(()=>bar.classList.remove('ta-word-levelup'),1000);}for(let lv=prev+1;lv<=level();lv++)fxQueue.push({lv,preview:false});nextFx();}};
  let testLv=1;
  const testLevelUp=()=>{testLv=testLv>=10?2:testLv+1;fxQueue.push({lv:testLv,preview:true});nextFx();};
  const reset=()=>{count=0;fxQueue=[];try{localStorage.removeItem(KEY);}catch(_e){}render();};
@@ -10035,7 +10050,7 @@ const taMastery=(()=>{
  const taSetHtmlIfChanged=(el,html)=>{if(el.__taHtml!==html){el.__taHtml=html;el.innerHTML=html;}};
  // 負荷対策：言葉を拾ったときの更新は、ゲージの長さと「Lv」の文字と記録欄だけを書き換える。
  // バッジの位置合わせ（位置の読み取りが必要で重い）は、画面の大きさが変わったときなど従来のきっかけで行う。
- const taRecordHtml=()=>Object.keys(xp).map(k=>{const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[4],pct=lv===5?100:Math.max(0,Math.min(100,xp[k]/next*100));const effect=k==='green'?'言霊の発生数を強化':k==='fire'?'効果時間・スワイプ距離・得点倍率を強化':'効果時間・スワイプ距離・時間倍率を強化';return `<div class="ta-growth-orb ta-growth-${k}"><div class="ta-growth-head"><strong>${names[k]}</strong><b>${lv===5?'MAX':'Lv'+lv+' / 5'}</b></div><div class="ta-growth-track"><i style="width:${pct}%"></i></div><div class="ta-growth-meta"><span>${lv===5?'累計 '+xp[k]+' XP':xp[k]+' / '+next+' XP'}</span><span>${lv===5?'MAX':'次まで '+(next-xp[k])+' XP'}</span></div><div class="ta-growth-effect">${effect}</div></div>`;}).join('');
+ const taRecordHtml=()=>Object.keys(xp).map(k=>{const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[4],pct=lv===5?100:Math.max(0,Math.min(100,(xp[k]-base)/(next-base)*100));const effect=k==='green'?'言霊の発生数を強化':k==='fire'?'効果時間・スワイプ距離・得点倍率を強化':'効果時間・スワイプ距離・時間倍率を強化';return `<div class="ta-growth-orb ta-growth-${k}"><div class="ta-growth-head"><strong>${names[k]}</strong><b>${lv===5?'MAX':'Lv'+lv+' / 5'}</b></div><div class="ta-growth-track"><i style="width:${pct}%"></i></div><div class="ta-growth-meta"><span>${lv===5?'累計 '+xp[k]+' XP':(xp[k]-base)+' / '+(next-base)+' XP'}</span><span>${lv===5?'MAX':'次まで '+(next-xp[k])+' XP'}</span></div><div class="ta-growth-effect">${effect}</div></div>`;}).join('');
  const renderData=()=>{
   const bar=document.querySelector('#viewMain>.ta-items');if(!bar)return;
   let missing=false;
@@ -10045,8 +10060,9 @@ const taMastery=(()=>{
   if(record)taSetHtmlIfChanged(record,taRecordHtml());
   for(const k of Object.keys(xp)){
    const badge=bar.querySelector('.ta-mastery-'+k);if(!badge)continue;
-   const lv=level(k),next=limits[lv]??limits[4];
-   const w=(lv===5?100:Math.max(0,Math.min(100,xp[k]/next*100)))+'%',t=lv===5?'MAX':'Lv'+lv,i=badge.querySelector('i'),b=badge.querySelector('b');
+   // ゲージは次のLvまでの進み具合
+   const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[4];
+   const w=(lv===5?100:Math.max(0,Math.min(100,(xp[k]-base)/(next-base)*100)))+'%',t=lv===5?'MAX':'Lv'+lv,i=badge.querySelector('i'),b=badge.querySelector('b');
    if(i&&i.style.width!==w)i.style.width=w;if(b&&b.textContent!==t)b.textContent=t;
   }
  };
@@ -10091,7 +10107,7 @@ const taMastery=(()=>{
    if(!badge){badge=document.createElement('span');badge.className='ta-mastery-badge ta-mastery-'+k;badge.innerHTML='<span class="ta-mastery-track"><i></i></span><b></b>';bar.append(badge);}
    const lv=level(k),base=limits[lv-1],next=limits[lv]??limits[4];
    const br=button.getBoundingClientRect(),pr=bar.getBoundingClientRect();badge.style.left=(br.left-pr.left)+'px';badge.style.top=(br.top-pr.top)+'px';badge.style.width=br.width+'px';badge.style.height=br.height+'px';
-   badge.querySelector('i').style.width=(lv===5?100:Math.max(0,Math.min(100,xp[k]/next*100)))+'%';
+   badge.querySelector('i').style.width=(lv===5?100:Math.max(0,Math.min(100,(xp[k]-base)/(next-base)*100)))+'%';
    badge.querySelector('b').textContent=lv===5?'MAX':'Lv'+lv;
   }
  };
@@ -10228,7 +10244,7 @@ const taMastery=(()=>{
   masteryPendingPulse.clear();
  }
  const add=(k,word,n=1)=>{
-  if(!taRunning||!Object.hasOwn(xp,k)||!Number.isFinite(n)||n<=0)return;
+  if(!taRunning||taTutOn()||!Object.hasOwn(xp,k)||!Number.isFinite(n)||n<=0)return;
   const prev=level(k);xp[k]=Math.min(limits[4],xp[k]+n);
   const current=level(k);
   if(current>prev){
@@ -10248,8 +10264,9 @@ const taMastery=(()=>{
 })();
 window.taMastery=taMastery;
 function taStarRunValue(key){
- if(key==='fire'||key==='ice')return taMastery.value(key).seconds;
- if(key==='tapFire'||key==='tapIce')return taMastery.value(key==='tapFire'?'fire':'ice').seconds+1;
+ // 練習中は炎・氷を長めに残し、交差を試しやすくする（見た目と範囲は今のLvのまま）
+ if(key==='fire'||key==='ice')return taTutOn()?Math.max(4,taMastery.value(key).seconds):taMastery.value(key).seconds;
+ if(key==='tapFire'||key==='tapIce')return (taTutOn()?Math.max(4,taMastery.value(key==='tapFire'?'fire':'ice').seconds):taMastery.value(key==='tapFire'?'fire':'ice').seconds)+1;
  if(key==='swipeFire')return taMastery.value('fire').distance;
  if(key==='swipeIce')return taMastery.value('ice').distance;
  if(key==='green')return taMastery.value('green').extra;
@@ -10262,6 +10279,7 @@ function taStarRunValue(key){
 const taStars=(()=>{
  const KEY='ta-star-memories-v2-50'; // Keep saved progress when expanding to 67 stars.
  const goals=[
+  {id:'tutorial',title:'はじまりの栞',kind:'tutorial',goal:1,stars:1,unit:'回'},
   {id:'chain30',title:'連鎖の芽 I',kind:'chain',goal:30,stars:1,unit:'連鎖'},
   {id:'chain100',title:'連鎖の芽 II',kind:'chain',goal:100,stars:1,unit:'連鎖'},
   {id:'chain300',title:'連鎖の芽 III',kind:'chain',goal:200,stars:1,unit:'連鎖'},
@@ -10345,13 +10363,21 @@ const taStars=(()=>{
      window.taThunderUnlockPending=false;document.dispatchEvent(new Event('ta-thunder-unlock-show'));
      setTimeout(()=>{if(token!==sequenceToken)return;busy=false;notify();},2400);return;
     }
+    // 「はじまりの栞」の知らせのあとに、翠玉解放の知らせを出す
+    if(g.id==='tutorial'&&window.taSummonUnlockPending){
+     window.taSummonUnlockPending=false;document.dispatchEvent(new Event('ta-summon-unlock-show'));
+     setTimeout(()=>{if(token!==sequenceToken)return;busy=false;notify();},2400);return;
+    }
     busy=false;notify();},380);
   },DISPLAY_MS);
  }
  function award(g){if(state.earned.includes(g.id))return;state.earned.push(g.id);session.push(g.id);save();
   // 黄玉解放につながる「連鎖の芽 V」は、ほかの★の知らせより先に出す（何個も同時に獲得したとき、解放の知らせが遅れすぎないように）
-  if(g.id==='chain700')queue.unshift(g);else queue.push(g);notify();render();if(g.id==='chain700'){window.taThunderUnlockPending=true;document.dispatchEvent(new CustomEvent('ta-thunder-unlocked'));}}
- function check(){if(!taRunning||taScore<=0)return;
+  if(g.id==='chain700'||g.id==='tutorial')queue.unshift(g);else queue.push(g);notify();render();if(g.id==='chain700'){window.taThunderUnlockPending=true;document.dispatchEvent(new CustomEvent('ta-thunder-unlocked'));}
+  if(g.id==='tutorial'){window.taSummonUnlockPending=true;document.dispatchEvent(new CustomEvent('ta-summon-unlocked'));}}
+ // 練習の完了など、プレイの判定によらず★を渡す
+ function awardById(id){const g=goals.find(x=>x.id===id);if(g)award(g);}
+ function check(){if(!taRunning||taScore<=0||taTutOn())return;
   state.bestChain=Math.max(state.bestChain,taSessionMaxCombo);state.bestScore=Math.max(state.bestScore,taScore);
   goals.forEach(g=>{
    let v=0;
@@ -10370,7 +10396,7 @@ const taStars=(()=>{
   });
  }
  function track(kind, amount=1){
-  if(!taRunning)return;
+  if(!taRunning||taTutOn())return;
   if(Object.hasOwn(runSpecial,kind)){runSpecial[kind]+=Number.isFinite(amount)?amount:1;check();return;}
   if(!['fire','ice','green','silver','words'].includes(kind))return;
   state[kind]+=Number.isFinite(amount)?Math.max(0,amount):1;
@@ -10428,14 +10454,14 @@ const taStars=(()=>{
     triple50:`【累計】紅玉・蒼玉・翠玉をそれぞれ${n}回発動する`,
     tricolor:g.goal===1?'【1プレイ】紅玉・蒼玉・翠玉をすべて発動する':'【1プレイ】紅玉・蒼玉・翠玉をそれぞれ3回以上発動する'
    };
-   small.textContent=(g.id==='chain700'?'【1プレイ】500連鎖を達成する ／ 黄玉解放':descriptions[g.kind]||`${n}${g.unit} 達成`);left.append(small);
+   small.textContent=(g.id==='chain700'?'【1プレイ】500連鎖を達成する ／ 黄玉解放':g.id==='tutorial'?'【練習】チュートリアルを最後まで終える ／ 翠玉解放':descriptions[g.kind]||`${n}${g.unit} 達成`);left.append(small);
    const mark=document.createElement('b');mark.textContent=achieved?`${'★'.repeat(g.stars)} 獲得済`:`☆ 未達成（★${g.stars}）`;
    row.append(left,mark);box.append(row);
   });
  }
  function demo(){clearEffects();session=[];draw();}
  function reset(){clearEffects();state={earned:[],plays:0,bestChain:0,bestScore:0,fire:0,ice:0,green:0,silver:0,words:0,totalTime:0};runColors={fire:0,ice:0,green:0};runSpecial={ultimateCross:0,ultimateEclipse:0,ultimateStop:0,gessen3:0,gessen4:0,gessen5:0,stop20:0};session=[];sessionStartStars=0;try{localStorage.removeItem(KEY);}catch(_e){}draw();render();const result=document.getElementById('taStarResult');if(result){result.hidden=true;result.textContent='';}}
- return{check,track,start,finish,render,demo,reset,playAwardSound,hasSessionAwards:()=>sessionStarTotal()>0,hasAward:id=>state.earned.includes(id)};
+ return{check,track,start,finish,render,demo,reset,playAwardSound,awardById,hasSessionAwards:()=>sessionStarTotal()>0,hasAward:id=>state.earned.includes(id)};
 })();
 window.taStars=taStars;
 
@@ -10703,21 +10729,22 @@ function taSyncDemo(){
   taInvalidatePlusRects();
   const hero=document.querySelector('#viewMain > .hero');
   if(hero)hero.classList.toggle('ta-active-visual',taRunning||taStarting||(!taRunning&&!taStarting));
+  const demoLook=(!taRunning&&!taStarting)||taTutOn();   // 練習中も DEMO PLAY の見た目
   const slip=document.getElementById('slip');
-  if(slip){slip.classList.toggle('ta-demo-frame',!taRunning&&!taStarting);if(!taRunning&&!taStarting)slip.classList.remove('ta-game-frame');}
+  if(slip){slip.classList.toggle('ta-demo-frame',demoLook);if(demoLook)slip.classList.remove('ta-game-frame');}
   const hud=document.getElementById('taHud');
-  if(hud)hud.classList.toggle('ta-hud-demo',!taRunning&&!taStarting);
+  if(hud)hud.classList.toggle('ta-hud-demo',demoLook);
   const demo=document.getElementById('taDemoPlay');
   const result=document.getElementById('taLaunch');
   const library=document.getElementById('viewLib');
   if(demo)demo.hidden=taDemoLabelPending||taRunning||taStarting||(result&&!result.hidden)||!document.getElementById('taStarOutcome')?.hidden||(library&&!library.hidden);
   const play=document.getElementById('taPlay');
-  if(play)play.classList.toggle('ta-demo-pulse',!taRunning&&!taStarting&&!(result&&!result.hidden)&&document.getElementById('taStarOutcome')?.hidden&&!(library&&!library.hidden));
+  if(play)play.classList.toggle('ta-demo-pulse',demoLook&&!(result&&!result.hidden)&&document.getElementById('taStarOutcome')?.hidden&&!(library&&!library.hidden));
 }
 function taUpdatePlay(){
   if(taRunning||taStarting)document.body.classList.remove('ta-timeover-finished');
   const btn=document.getElementById('taPlay');
-  const active=taRunning||taStarting;
+  const active=(taRunning||taStarting)&&!taTutOn();
   btn.classList.toggle('ta-is-running',active);
   if(!active)btn.classList.remove('ta-start-button-silver');
   if(active)btn.classList.remove('ta-demo-pulse');
@@ -10780,7 +10807,22 @@ function taPickResultHint(){
  taShowResultHint(index);
  try{sessionStorage.setItem('taResultHintRecent',JSON.stringify([...recent,index].slice(-3)))}catch(_e){}
 }
+// 練習の終わり：Time Over の演出や結果画面を出さず、そのまま DEMO PLAY に戻す
+function taTutQuietFinish(){
+  try{if(typeof flood!=='undefined'&&flood&&typeof endFlood==='function')endFlood();}catch(_){}
+  ++taFinishToken;cancelAnimationFrame(taRaf);clearTimeout(bumpCombo.h);
+  taRunning=false;taStarting=false;
+  taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;
+  const cb=document.getElementById('combo');if(cb){cb.classList.remove('on','x2','x3','run','heat','hold','paused','hit','up','ta-skill-grace');cb.style.removeProperty('--heat');cb.style.removeProperty('--ct');}
+  const cn=document.getElementById('cbn');if(cn){cn.classList.remove('ta-chain-ten','ta-chain-hundred');cn.textContent='0';}
+  comboRush(false);taCine.clear();
+  document.dispatchEvent(new Event('ta-item-reset'));
+  taScore=0;taScoreReset();taSeconds=60;taRender();
+  try{taYura.el?.remove();taYura.el=null;}catch(_){}
+  taUpdatePlay();taSyncDemo();
+}
 function taFinish(manualExit=false){
+  if(taTutOn()){taTutQuietFinish();return;}   // 練習は記録に残さない
   taNightClear();
   taUpdateNightHud();
   window.taSoumatou?.stop();
@@ -10887,7 +10929,7 @@ function taFinish(manualExit=false){
     if(qualified)document.getElementById('taResultClose').focus();
   },2450);
 }
-function taTick(now){if(!taRunning)return;const delta=Math.min(0.1,(now-taLast)/1000);taLast=now;if(typeof flood!=='undefined'&&!flood&&!window.taSoumatou?.active()&&!taNightActive()){taSeconds-=delta*taNightTimeRate();}if(taSeconds<=0){taSeconds=0;taFinish();}taRender();if(taRunning)taRaf=requestAnimationFrame(taTick)}
+function taTick(now){if(!taRunning)return;const delta=Math.min(0.1,(now-taLast)/1000);taLast=now;if(typeof flood!=='undefined'&&!flood&&!window.taSoumatou?.active()&&!taNightActive()&&!taTutOn()){taSeconds-=delta*taNightTimeRate();}if(taSeconds<=0){taSeconds=0;taFinish();}taRender();if(taRunning)taRaf=requestAnimationFrame(taTick)}
 // Android Chrome: prevent a downward field swipe from triggering pull-to-refresh.
 document.addEventListener('touchmove',e=>{
   if(!taRunning || !e.cancelable)return;
@@ -10895,6 +10937,7 @@ document.addEventListener('touchmove',e=>{
 },{passive:false});
 let taStarting=false;
 function taBeginReady(){
+  const quiet=taTutOn();   // 練習：DEMO PLAY の見た目のまま静かに始める
   taNightClear();
   document.documentElement.classList.remove('ta-night-chain-retired');
   taNightNumber=1;document.getElementById('taNightStageLabel')?.classList.remove('ta-night-seal-settled');taUpdateNightHud();
@@ -10921,6 +10964,14 @@ function taBeginReady(){
   document.getElementById("cbn").textContent="0";document.getElementById("cbx").textContent="";comboRush(false);
   document.body.classList.remove('ta-timeover-finished');
   taStarting=true;++taFinishToken;
+  if(quiet){
+   document.getElementById('taLaunch').hidden=true;
+   taSeconds=60;taScore=0;taScoreReset();taSessionMaxCombo=0;taSessionTimeGain=0;taSessionRecordAt=null;
+   document.dispatchEvent(new Event('ta-item-reset'));
+   taRender();cancelAnimationFrame(taRaf);taSyncDemo();
+   const qt=taFinishToken;setTimeout(()=>{if(qt!==taFinishToken||!taStarting)return;taStarting=false;taRunning=true;document.dispatchEvent(new Event('ta-item-start-activate'));taUpdatePlay();taLast=performance.now();taRaf=requestAnimationFrame(taTick);},300);
+   return;
+  }
   // Keep DEMO styling until reveal classes are ready, avoiding a one-frame flash.
   // Keep the existing START text fade; softly illuminate only the manuscript frame.
   const manuscript=document.getElementById('slip');
@@ -11120,6 +11171,7 @@ document.getElementById('taTitleStart').addEventListener('click',async()=>{
   title.classList.remove('ta-title-fading');
 });
 document.getElementById('taPlay').addEventListener('click',()=>{
+  if(taTutOn()){window.taTutorialStop?.();setTimeout(()=>{if(!taRunning&&!taStarting){if(taTitlePrepared)taBeginReady();else taBegin();}},120);return;}   // 練習中のSTART＝練習をやめて本番へ
   if(taRunning||taStarting){
     // The X button must end an active time stop immediately, not leave
     // its countdown, ticking sound, frozen animations or veil running.
@@ -11157,7 +11209,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
 /* Residual elemental traces: fire collects; ice instantly shatters for +0.5s. */
 (()=>{
  const field=document.getElementById('drift'),hero=field&&field.closest('.hero');if(!field||!hero)return;
- const ui=document.createElement('div');ui.className='ta-items';ui.innerHTML='<span class="ta-items-label">ITEM</span><button class="ta-orb fire" type="button" data-orb="fire" aria-label="紅玉・炎" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>🔥</button><button class="ta-orb ice" type="button" data-orb="ice" aria-label="蒼玉・氷" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>❄</button><button class="ta-orb summon" type="button" data-orb="summon" aria-label="翠玉・言霊召喚" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>✧</button><button class="ta-orb thunder" type="button" data-orb="thunder" aria-label="黄玉・雷の言霊（連鎖の芽Ⅴ達成で解放・白銀玉4個）" aria-pressed="false">⚡</button><span class="ta-item-counter" aria-live="polite"><b id="taItemRemaining">5</b><small>/5</small><span class="ta-item-pips" aria-hidden="true"></span></span>';
+ const ui=document.createElement('div');ui.className='ta-items';ui.innerHTML='<span class="ta-items-label">ITEM</span><button class="ta-orb fire" type="button" data-orb="fire" aria-label="紅玉・炎" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>🔥</button><button class="ta-orb ice" type="button" data-orb="ice" aria-label="蒼玉・氷" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>❄</button><button class="ta-orb summon" type="button" data-orb="summon" aria-label="翠玉・言霊召喚（はじまりの栞で解放）" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>✧</button><button class="ta-orb thunder" type="button" data-orb="thunder" aria-label="黄玉・雷の言霊（連鎖の芽Ⅴ達成で解放・白銀玉4個）" aria-pressed="false">⚡</button><span class="ta-item-counter" aria-live="polite"><b id="taItemRemaining">5</b><small>/5</small><span class="ta-item-pips" aria-hidden="true"></span></span>';
  hero.insertAdjacentElement('afterend',ui);
  // The initial fit runs before the orb bar exists; fit again after insertion.
  requestAnimationFrame(()=>{ if(typeof fitLayout==='function') fitLayout(); });
@@ -11569,13 +11621,15 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const specials='.special,.vortex,.crack,.petal,.multi,.pull,.glow,.reso,.odd';
  const valid=w=>w.matches('.word')&&!w.classList.contains('got')&&!w.classList.contains('late')&&(!w.classList.contains('still')||flood);
  const thunderUnlocked=()=>location.hash==='#test'||!!window.taStars?.hasAward('chain700');
+ const summonUnlocked=()=>!!window.taStars?.hasAward('tutorial');   // 翠玉は「はじまりの栞」（練習の完了）で解放
  const THUNDER_COST=4;   // 黄玉に必要な白銀玉の数
  const thunderReady=()=>thunderUnlocked()&&usesLeft>=THUNDER_COST&&!thunderBusy;
  const pipBox=ui.querySelector('.ta-item-pips');
  const pipNodes=Array.from({length:MAX_USES},()=>{const pip=document.createElement('span');pip.className='ta-item-pip';pipBox.appendChild(pip);return pip;});
  const sync=()=>{
-  ui.querySelectorAll('button').forEach(b=>{b.setAttribute('aria-pressed',String(selected===b.dataset.orb));b.disabled=usesLeft<1||!active()||(b.dataset.orb==='thunder'&&!thunderReady());});
+  ui.querySelectorAll('button').forEach(b=>{b.setAttribute('aria-pressed',String(selected===b.dataset.orb));b.disabled=usesLeft<1||!active()||(b.dataset.orb==='thunder'&&!thunderReady())||(b.dataset.orb==='summon'&&!summonUnlocked());});
   ui.classList.toggle('ta-thunder-locked',!thunderUnlocked());
+  ui.classList.toggle('ta-summon-locked',!summonUnlocked());
   ui.classList.toggle('ta-thunder-insufficient',thunderUnlocked()&&usesLeft<THUNDER_COST);
   const displayUses=(active()||taNightActive())?usesLeft:0;
   const count=ui.querySelector('#taItemRemaining');if(count)count.textContent=displayUses;
@@ -11602,6 +11656,25 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const seal=document.createElement('span');seal.className='ta-thunder-seal';seal.setAttribute('aria-hidden','true');
  seal.innerHTML='<svg viewBox="0 0 32 36" width="29" height="33" fill="none"><path d="M8 16V11a8 8 0 0 1 16 0v5" stroke="#fff2c2" stroke-width="4" stroke-linecap="round"/><rect x="4" y="15" width="24" height="19" rx="4" fill="#30263d" stroke="#f8df94" stroke-width="2"/><circle cx="16" cy="23" r="2.5" fill="#ffdf81"/><path d="M16 25v4" stroke="#ffdf81" stroke-width="2"/></svg>';
  thunderButton.append(seal);
+ // 翠玉にも黄玉と同じ鍵をかけ、解放の演出も黄玉と同じにする
+ const summonButton=ui.querySelector('.ta-orb.summon');
+ if(summonButton){const sseal=seal.cloneNode(true);sseal.classList.add('ta-summon-seal');summonButton.append(sseal);}
+ document.addEventListener('ta-summon-unlocked',()=>{sync();window.taMastery?.render?.();});
+ document.addEventListener('ta-summon-unlock-show',()=>{
+   sync();window.taMastery?.render?.();if(!summonButton)return;
+   const heroRect=hero.getBoundingClientRect(),orbRect=summonButton.getBoundingClientRect();
+   const color='#8ff0b4',title=document.createElement('div');title.className='ta-level-announcement ta-thunder-unlock-title';title.style.setProperty('--level-color',color);
+   title.style.left=(heroRect.left+heroRect.width/2)+'px';title.style.top=(heroRect.top+heroRect.height/2)+'px';
+   title.innerHTML='<span class="ta-level-number">翠玉解放</span><span class="ta-level-upgrades">言霊を呼ぶ力が使用可能になりました</span>';
+   document.body.append(title);
+   title.animate([{opacity:0,transform:'translate(-50%,-50%) translateY(8px)'},{opacity:1,transform:'translate(-50%,-50%) translateY(-8px)',offset:.25},{opacity:1,transform:'translate(-50%,-50%) translateY(-18px)',offset:.65},{opacity:0,transform:'translate(-50%,-50%) translateY(-40px)'}],{duration:2700,easing:'ease-out',fill:'forwards'}).onfinish=()=>title.remove();
+   try{if(typeof window.taPlayMasteryLevelSound==='function')window.taPlayMasteryLevelSound();else if(typeof sfx!=='undefined'&&sfx.comboMilestone)sfx.comboMilestone(true);}catch(_e){}
+   const halo=document.createElement('div');halo.className='ta-level-halo';halo.style.setProperty('--level-color',color);
+   halo.style.setProperty('--halo-size',Math.max(160,Math.min(310,heroRect.width*.55))+'px');
+   halo.style.left=(orbRect.left+orbRect.width/2)+'px';halo.style.top=(orbRect.top+orbRect.height/2)+'px';document.body.append(halo);
+   halo.animate([{opacity:0,transform:'translate(-50%,-50%) scale(1.5)'},{opacity:.9,transform:'translate(-50%,-50%) scale(1.1)',offset:.28},{opacity:0,transform:'translate(-50%,-50%) scale(.12)'}],{duration:1300,easing:'ease-out',fill:'forwards'}).onfinish=()=>halo.remove();
+   summonButton.classList.add('ta-summon-unseal');setTimeout(()=>summonButton.classList.remove('ta-summon-unseal'),1600);
+ });
  document.addEventListener('ta-thunder-unlocked',()=>{
    sync();window.taMastery?.render?.();
  });
@@ -11624,7 +11697,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  // Select on pointerdown so a fast swipe-to-orb transition does not lose the first tap.
  // Suppress the synthetic click following that pointerdown to avoid toggling selection off.
  let lastOrbPointerAt=-Infinity;
- function selectOrb(b){if(!b||!active()||usesLeft<1||(b.dataset.orb==='thunder'&&!thunderReady()))return;selected=selected===b.dataset.orb?null:b.dataset.orb;sync();}
+ function selectOrb(b){if(!b||!active()||usesLeft<1||(b.dataset.orb==='thunder'&&!thunderReady())||(b.dataset.orb==='summon'&&!summonUnlocked()))return;selected=selected===b.dataset.orb?null:b.dataset.orb;sync();}
  // PC-only elemental orb shortcuts. Reuse the pointer selection path so
  // toggling, visual feedback, and automatic deselection after use stay identical.
  document.addEventListener('keydown',e=>{
@@ -11682,7 +11755,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   const generation=startupGeneration;
   // START: grant the initial reserve together, so yellow (cost 3) becomes
   // available at the same instant as red/blue/green, not after the third pip.
-  const initialReserve=Math.min(MAX_USES,(typeof taStarRunValue==='function'?taStarRunValue('white'):3));
+  const initialReserve=taTutOn()?MAX_USES:Math.min(MAX_USES,(typeof taStarRunValue==='function'?taStarRunValue('white'):3));
   startupTimers.push(setTimeout(()=>{
    if(generation!==startupGeneration||!active())return;
    usesLeft=initialReserve;sync();
@@ -11820,6 +11893,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   rewardVisibleElapsed=0;
  }
  function spawnRewardOrb(force=false){
+  if(taTutOn())return false;
   if(!(active()||taNightBonus.phase==='collect')||rewardOrb||(!force&&(flood||comboPaused)))return false;
   const r=field.getBoundingClientRect(),h=hero.getBoundingClientRect();if(r.width<80||r.height<100)return false;
   const existing=[...field.querySelectorAll('.word')].map(w=>w.getBoundingClientRect());
@@ -12428,6 +12502,7 @@ const __ta100Start=window.__ta100Profile.start();try {
   taLastDualFinisher=now;
   const ultimateId=taUltimateShow("cross","全部なかったことに");taSkillAnnounce("全部なかったことに");
   window.taStars?.track("ultimateCross");taStoryBonus(10);
+  if(taTutOn())document.dispatchEvent(new CustomEvent('ta-tut',{detail:{kind:'cross'}}));
   // 紅玉・蒼玉がともにLv5のときだけ：最後に十字の光の刃を足し、言霊が消える時間を1秒延ばす
   let crossLv5=false;try{crossLv5=taMastery.level('fire')>=5&&taMastery.level('ice')>=5;}catch(_){}
   const crossDirs=crossLv5?[a,b].map(f=>{const P=f.path,s0=P[0],z=P[P.length-1],l=Math.hypot(z.x-s0.x,z.y-s0.y)||1;return{x:(z.x-s0.x)/l,y:(z.y-s0.y)/l,type:f.type};}):null;
@@ -13025,7 +13100,7 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
  }
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&thunderBusy)thunderClear();});
  // Capture the armed gesture before the normal word/tap collectors can consume it.
- field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<1||(selected==='thunder'&&thunderBusy)||gesture||consumedPointer!==null)return;if(selected==='thunder'){if(!thunderReady()){selected=null;sync();return;}usesLeft-=THUNDER_COST;selected=null;sync();taStoryBonus(10);taYuraSay('thunderBet');thunderCast(loc(e));e.stopImmediatePropagation();e.preventDefault();return;}playElementSound(selected);if(selected==='fire')taYura.lastFireAt=performance.now();taMastery.add(selected==='summon'?'green':selected,null,2);usesLeft--;taStoryBonus(3);gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
+ field.addEventListener('pointerdown',e=>{if(!active()||!selected||usesLeft<1||(selected==='thunder'&&thunderBusy)||gesture||consumedPointer!==null)return;if(selected==='thunder'){if(!thunderReady()){selected=null;sync();return;}usesLeft-=THUNDER_COST;selected=null;sync();taStoryBonus(10);taYuraSay('thunderBet');thunderCast(loc(e));e.stopImmediatePropagation();e.preventDefault();return;}playElementSound(selected);if(selected==='fire')taYura.lastFireAt=performance.now();taMastery.add(selected==='summon'?'green':selected,null,2);if(!taTutOn())usesLeft--;else document.dispatchEvent(new CustomEvent('ta-tut',{detail:{kind:'orb',type:selected}}));taStoryBonus(3);gesture={id:e.pointerId,type:selected,points:[loc(e)],started:performance.now(),distance:0};wakeFx();consumedPointer=e.pointerId;selected=null;sync();try{field.setPointerCapture(e.pointerId)}catch(_){}e.stopImmediatePropagation();e.preventDefault();},true);
  // Once the elemental stroke reaches its range/time budget, the same held
  // pointer continues as an ordinary word-collection swipe. The special trace
  // remains clipped to its range, so its visuals and elemental hits stay aligned.
@@ -14265,6 +14340,16 @@ window.taV54Report=function(){const p=window.__taV54Perf;return {
 .ta-thunder-unlock-title{z-index:2147483600!important;pointer-events:none}
 </style>
 
+<style id="ta-green-lock">
+/* 翠玉：「はじまりの栞」で解放されるまで、黄玉と同じ鍵と暗さ */
+#viewMain>.ta-items .ta-orb.summon{position:relative!important}
+#viewMain>.ta-items .ta-orb.summon .ta-summon-seal{position:absolute;inset:0;z-index:80;display:none;align-items:center;justify-content:center;pointer-events:none;background:rgba(13,17,30,.48);border-radius:50%;box-shadow:inset 0 0 14px rgba(0,0,0,.65)}
+#viewMain>.ta-items.ta-summon-locked .ta-orb.summon .ta-summon-seal{display:flex!important;opacity:1!important;filter:none!important}
+#viewMain>.ta-items.ta-summon-locked .ta-orb.summon{filter:grayscale(1) brightness(.48)!important;opacity:.58!important;pointer-events:none!important;cursor:not-allowed!important}
+#viewMain>.ta-items.ta-summon-locked .ta-mastery-green{display:none!important}
+#viewMain>.ta-items .ta-orb.summon.ta-summon-unseal{animation:taSummonUnseal 1.5s ease-out!important}
+@keyframes taSummonUnseal{0%{filter:brightness(2.8) drop-shadow(0 0 25px #9ff5c0)}55%{filter:brightness(2) drop-shadow(0 0 18px #84ecae)}100%{filter:none}}
+</style>
 <style id="ta-yellow-lock-final-fix">
 /* Sealed yellow orb: DEMO-like dimming and lock only, no mastery/cost labels. */
 #viewMain>.ta-items.ta-thunder-locked .ta-orb.thunder{
@@ -14395,7 +14480,7 @@ html.ta-active-moon #viewMain>.hero .ta-moon{opacity:1}
 #viewMain>.hero .ta-moon.ta-moon-grow{animation:taMoonGrow .7s ease-out both}
 @keyframes taMoonGrow{0%{filter:none}30%{filter:drop-shadow(0 0 7px rgba(255,224,160,.85))}100%{filter:none}}
 /* 章の名前：映画風の黒帯（フェードイン）＋下の帯の文字。帯は月（z-index:186）より手前 */
-#viewMain>.hero.ta-cine-on #combo{z-index:189}
+#viewMain>.hero.ta-cine-on #combo{z-index:189;background:transparent!important;border-color:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}   /* 黒帯の上では枠を消して文字だけに */
 #viewMain>.hero .ta-story-cine{position:absolute;inset:0;z-index:187;pointer-events:none;overflow:hidden;border-radius:inherit}
 #viewMain>.hero .ta-story-cine-bar{position:absolute;left:0;right:0;height:13%;background:#030305;opacity:0;transition:opacity 1.2s ease-in-out}
 #viewMain>.hero .ta-story-cine-bar{display:flex;align-items:center;justify-content:center}
@@ -14477,6 +14562,194 @@ header>.ta-yura-say.out{opacity:0;filter:blur(3px);transition:opacity 1.2s ease,
  // 遊んでいる間（と夜のボーナス区間）だけ表示する
  const syncVisible=()=>{const on=(typeof taRunning!=='undefined'&&taRunning);document.documentElement.classList.toggle('ta-active-moon',on);if(on&&!el)update(false);};
  setInterval(syncVisible,500);
+})();
+</script>
+<style id="ta-tutorial-css">
+/* チュートリアルの入口：DEMO PLAY 中、採集エリア右上（ゲーム中は「第〇夜」が出る場所）に「練習する」 */
+#taTutStart{position:absolute;top:6px;right:6px;z-index:31;cursor:pointer;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;
+ padding:0 6px;background:none;border:0;-webkit-tap-highlight-color:transparent}
+#taTutStart span{font:500 13px/1 var(--mincho);letter-spacing:.16em;padding:6px 9px 6px 11px;border-radius:4px;color:#f2dfba;
+ background:rgba(5,6,12,.45);border:1px solid rgba(232,200,140,.45);text-shadow:0 0 6px rgba(0,0,0,.8);transition:box-shadow .4s ease,border-color .4s ease}
+#taTutStart:hover span{border-color:rgba(240,214,160,.85)}
+#taTutStart.glow span{animation:taTutEntryGlow 1.8s ease-in-out infinite}
+@keyframes taTutEntryGlow{0%,100%{box-shadow:0 0 0 rgba(255,220,150,0);border-color:rgba(232,200,140,.45)}50%{box-shadow:0 0 14px rgba(255,220,150,.75);border-color:rgba(255,232,180,.95)}}
+#taTutStart[hidden]{display:none}
+/* 練習中の指示の帯（採集エリアの上部） */
+/* 章・奥義の黒帯と同じ、上下の黒い帯（上に指示、下に進み具合） */
+#taTutPanel,#taTutBottom{position:absolute;left:0;right:0;z-index:186;pointer-events:none;display:flex;align-items:center;justify-content:center;gap:10px;
+ min-height:13%;box-sizing:border-box;background:#030305;opacity:0;transition:opacity 1.2s ease-in-out}
+#taTutPanel{top:0;padding:8px 74px 8px 14px}
+#taTutBottom{bottom:0;height:13%}
+#taTutPanel.on,#taTutBottom.on{opacity:1}
+#taTutPanel .t{font:500 clamp(13px,3.6vw,16px)/1.55 var(--mincho);letter-spacing:.08em;color:#efe6d4;text-align:center;transition:opacity .35s ease}
+#taTutPanel .t.swap{opacity:0}
+#taTutPanel .t small{display:block;font-size:.78em;letter-spacing:.14em;color:rgba(232,210,170,.75)}
+#taTutBottom .dots{display:flex;gap:8px}
+#taTutBottom .dots i{width:5px;height:5px;border-radius:50%;background:rgba(240,225,190,.25)}
+#taTutBottom .dots i.done{background:#f0d9a8}
+#taTutPanel .skip{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:auto;cursor:pointer;
+ font:500 .72rem/1 var(--mincho);letter-spacing:.14em;color:rgba(240,225,190,.8);background:transparent;border:1px solid rgba(240,225,190,.35);border-radius:999px;padding:6px 10px}
+/* 心眼の的：言霊の真ん中に小さな光の輪 */
+#taTutMark{position:absolute;z-index:185;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;pointer-events:none;
+ border:1.5px solid rgba(255,236,190,.95);box-shadow:0 0 10px rgba(255,220,150,.8),inset 0 0 6px rgba(255,220,150,.6);animation:taTutMark 1.2s ease-in-out infinite}
+@keyframes taTutMark{0%,100%{transform:scale(.8);opacity:.7}50%{transform:scale(1.15);opacity:1}}
+/* 一閃の手本：2つの言霊を結ぶ光の線 */
+#taTutLine{position:absolute;z-index:185;height:3px;margin-top:-1.5px;transform-origin:0 50%;pointer-events:none;border-radius:2px;
+ background:linear-gradient(90deg,rgba(255,236,190,0),rgba(255,236,190,.95) 30%,rgba(255,236,190,.95) 70%,rgba(255,236,190,0));
+ box-shadow:0 0 8px rgba(255,220,150,.7);animation:taTutLine 1.6s ease-in-out infinite}
+@keyframes taTutLine{0%{clip-path:inset(0 100% 0 0);opacity:.2}55%{clip-path:inset(0 0 0 0);opacity:1}100%{clip-path:inset(0 0 0 0);opacity:0}}
+html.ta-tut .ta-items .ta-orb{pointer-events:none!important;filter:grayscale(.7) brightness(.7)!important;opacity:.38!important}
+html.ta-tut.ta-tut-allow-fire .ta-items .ta-orb.fire,html.ta-tut.ta-tut-allow-ice .ta-items .ta-orb.ice{pointer-events:auto!important;filter:none!important;opacity:1!important;animation:taTutOrb 1.6s ease-in-out infinite}
+@keyframes taTutOrb{0%,100%{box-shadow:0 0 0 rgba(255,220,150,0)}50%{box-shadow:0 0 14px 3px rgba(255,220,150,.75)}}
+/* 交差の手本：中央に紅の横線と蒼の縦線（うっすら） */
+.ta-tut-cross{position:absolute;z-index:185;pointer-events:none;left:50%;top:55%;width:58%;height:3px;margin:-1.5px 0 0 -29%;border-radius:2px;
+ background:repeating-linear-gradient(90deg,rgba(255,140,80,.85) 0 10px,transparent 10px 18px);box-shadow:0 0 8px rgba(255,120,60,.6);animation:taTutCross 1.8s ease-in-out infinite}
+.ta-tut-cross.v{width:3px;height:42%;margin:0 0 0 -1.5px;top:34%;background:repeating-linear-gradient(180deg,rgba(130,205,255,.9) 0 10px,transparent 10px 18px);box-shadow:0 0 8px rgba(110,190,255,.6);animation-delay:.9s}
+@keyframes taTutCross{0%,100%{opacity:.35}50%{opacity:1}}
+</style>
+<script id="ta-tutorial-js">
+// チュートリアル（第一段階）：DEMO PLAY 画面から入る練習。
+//   言霊を消す → 心眼（言霊の真ん中をタップ）→ 一閃（2つを一筆で）
+// 練習中は時間が減らず、得点・記録・★・玉や言霊の経験値・物語の頁には残らない（taTutOn() で各所が止まる）。
+(()=>{
+ const KEY='ta-tutorial-v1';
+ const STEPS=[
+  {say:'少し、練習しよう',text:'漂う言霊を、タップして消してみて',sub:'3つ消してみよう',hint:'触れるだけで、いい',need:'collect',count:3},
+  {say:'次は、心眼',text:'言霊の真ん中を、そっとタップ',sub:'光の輪が目印（心眼）',hint:'真ん中を、狙って',need:'shingan',mark:true},
+  {say:'次は、一閃',text:'指を滑らせて、2つの言霊を一度に',sub:'まっすぐなぞる（一閃）',hint:'まっすぐ、なぞって',need:'issen',line:true},
+  {say:'次は、紅玉',text:'紅玉を押して、言霊をなぞる',sub:'炎が言霊を燃やす（タップなら炎の輪）',hint:'紅い玉を、押してから',need:'fire',allow:['fire']},
+  {say:'最後は、交差',text:'紅玉でなぞり、蒼玉で交差させる',sub:'二つの線が交われば「全部なかったことに」',hint:'紅のあと、すぐ蒼を',need:'cross',allow:['fire','ice'],cross:true}
+ ];
+ const PRAISE=['上手','よく見てる','きれいな線','燃えたね','奇麗に消えたね'];
+ const T=window.taTut={on:false,step:-1,count:0};
+ let panel=null,bottom=null,mark=null,line=null,raf=0,hintTimer=0,target=null,pair=null,advancing=false;
+ const hero=()=>document.querySelector('#viewMain>.hero');
+ // 入口ボタン：DEMO PLAY が見えている間だけ出す
+ const startBtn=document.createElement('button');startBtn.type='button';startBtn.id='taTutStart';startBtn.innerHTML='<span>練習する</span>';startBtn.setAttribute('aria-label','練習する（チュートリアル）');startBtn.hidden=true;
+ const demo=document.getElementById('taDemoPlay');
+ hero()?.append(startBtn);
+ // 初めての人には、DEMO PLAY に入ったときユラが一度だけ声をかけ、入口を光らせる（このページを開いている間に一度）
+ let invited=false;
+ const invite=()=>{
+  let doneBefore=false;try{doneBefore=!!localStorage.getItem(KEY);}catch(_){}
+  if(invited||doneBefore||startBtn.hidden)return;invited=true;
+  setTimeout(()=>{if(startBtn.hidden||T.on)return;taYuraShow('練習するなら|右上を押してね',6000);startBtn.classList.add('glow');setTimeout(()=>startBtn.classList.remove('glow'),9000);},1500);
+ };
+ const titleUp=()=>{const t=document.getElementById('taTitleScreen');return !!t&&!t.hidden;};   // タイトル画面が出ている間は出さない
+ const syncBtn=()=>{startBtn.hidden=!demo||demo.hidden||titleUp()||taRunning||taStarting||T.on;if(!startBtn.hidden)invite();};
+ if(demo)new MutationObserver(syncBtn).observe(demo,{attributes:true,attributeFilter:['hidden']});
+ {const t=document.getElementById('taTitleScreen');if(t)new MutationObserver(syncBtn).observe(t,{attributes:true,attributeFilter:['hidden']});}
+ setInterval(syncBtn,800);syncBtn();
+ startBtn.addEventListener('click',e=>{e.stopPropagation();begin();});
+ function begin(){
+  if(taRunning||taStarting||T.on)return;
+  T.on=true;T.step=-1;T.count=0;
+  document.documentElement.classList.add('ta-tut');startBtn.hidden=true;startBtn.classList.remove('glow');
+  // DEMO PLAY の見た目のまま、裏でゲームの仕組みを動かす（判定を本番と同じにするため）。
+  // 初回は画像などの準備を先に済ませてから始める。
+  (async()=>{try{if(!taTitlePrepared)await taBegin(true);}catch(_){}
+   if(T.on&&!taRunning&&!taStarting)taBeginReady();})();
+  const wait=setInterval(()=>{if(!T.on){clearInterval(wait);return;}if(taRunning){clearInterval(wait);setTimeout(()=>{buildPanel();next();},1400);}},100);
+ }
+ function buildPanel(){
+  const h=hero();if(!h)return;
+  panel=document.createElement('div');panel.id='taTutPanel';
+  panel.innerHTML='<div class="t"></div><button type="button" class="skip">スキップ</button>';
+  bottom=document.createElement('div');bottom.id='taTutBottom';bottom.innerHTML='<div class="dots">'+STEPS.map(()=>'<i></i>').join('')+'</div>';
+  h.append(panel,bottom);h.classList.add('ta-cine-on');   // 連鎖ゲージは帯より手前にpanel.querySelector('.skip').addEventListener('click',e=>{e.stopPropagation();finish(false);});
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{panel.classList.add('on');bottom.classList.add('on');}));
+ }
+ function setText(st){
+  const t=panel?.querySelector('.t');if(!t)return;t.classList.add('swap');
+  setTimeout(()=>{t.innerHTML='';t.append(document.createTextNode(st.text));const sm=document.createElement('small');sm.textContent=st.sub;t.append(sm);t.classList.remove('swap');},350);
+  bottom?.querySelectorAll('.dots i').forEach((d,i)=>d.classList.toggle('done',i<T.step));
+ }
+ function next(){
+  advancing=false;clearGuides();clearTimeout(hintTimer);
+  T.step++;T.count=0;
+  if(T.step>=STEPS.length){complete();return;}
+  const st=STEPS[T.step];
+  taYuraShow(st.say,4200);setText(st);
+  const root=document.documentElement;root.classList.toggle('ta-tut-allow-fire',!!st.allow?.includes('fire'));root.classList.toggle('ta-tut-allow-ice',!!st.allow?.includes('ice'));
+  if(st.cross){const h=hero();if(h){for(const v of ['','v']){const g=document.createElement('div');g.className='ta-tut-cross '+v;h.append(g);}}}
+  if(st.mark||st.line)guideLoop();
+  const hint=()=>{if(!T.on||STEPS[T.step]!==st)return;taYuraShow(st.hint,4000);hintTimer=setTimeout(hint,14000);};
+  hintTimer=setTimeout(hint,14000);
+ }
+ function done(){
+  if(advancing)return;advancing=true;clearGuides();clearTimeout(hintTimer);
+  taYuraShow(PRAISE[T.step]||'上手',2600);
+  bottom?.querySelectorAll('.dots i').forEach((d,i)=>d.classList.toggle('done',i<=T.step));
+  setTimeout(()=>{if(T.on)next();},2200);
+ }
+ document.addEventListener('ta-tut',e=>{
+  if(!T.on||advancing||T.step<0)return;const st=STEPS[T.step];if(!st)return;
+  if(st.need==='collect'&&e.detail.kind==='collect'){if(++T.count>=st.count)done();}
+  else if(st.need==='fire'&&e.detail.kind==='orb'&&e.detail.type==='fire'){if(!T.fireWait){T.fireWait=true;setTimeout(()=>{T.fireWait=false;if(T.on&&STEPS[T.step]===st)done();},1600);}}
+  else if(st.need==='cross'&&e.detail.kind==='cross'){if(!T.crossWait){T.crossWait=true;setTimeout(()=>{T.crossWait=false;if(T.on&&STEPS[T.step]===st)done();},4300);}}   // 奥義の黒帯が引いてから褒める
+  else if(st.need==='shingan'&&e.detail.kind==='shingan')done();
+  else if(st.need==='issen'&&e.detail.kind==='issen'&&(e.detail.count||0)>=2)done();
+ });
+ // 目印：心眼は言霊の真ん中に輪、一閃は近い2つを結ぶ線（言霊の動きに合わせて追う）
+ const plain=w=>w&&w.isConnected&&!w.classList.contains('got')&&!w.matches('.special,.petal,.pull,.glow,.reso,.multi,.vortex,.crack,.still,.late');
+ function guideLoop(){
+  cancelAnimationFrame(raf);
+  const tick=()=>{
+   if(!T.on||advancing){clearGuides();return;}
+   const st=STEPS[T.step];if(!st)return;const h=hero();if(!h)return;const hr=h.getBoundingClientRect();
+   const words=[...document.querySelectorAll('#drift .word')].filter(plain);
+   const c=w=>{const r=w.getBoundingClientRect();return {x:r.left+r.width/2-hr.left,y:r.top+r.height/2-hr.top};};
+   const inside=p=>p.x>20&&p.x<hr.width-20&&p.y>hr.height*.18&&p.y<hr.height-30;
+   if(st.mark){
+    if(!plain(target)||!inside(c(target)))target=words.filter(w=>inside(c(w))).sort((a,b)=>{const A=c(a),B=c(b);return Math.hypot(A.x-hr.width/2,A.y-hr.height/2)-Math.hypot(B.x-hr.width/2,B.y-hr.height/2);})[0]||null;
+    if(target){if(!mark){mark=document.createElement('div');mark.id='taTutMark';h.append(mark);}const p=c(target);mark.style.left=p.x+'px';mark.style.top=p.y+'px';mark.hidden=false;}
+    else if(mark)mark.hidden=true;
+   }
+   if(st.line){
+    if(!pair||!plain(pair[0])||!plain(pair[1])||!inside(c(pair[0]))||!inside(c(pair[1]))){
+     pair=null;let best=1e9;const ws=words.filter(w=>inside(c(w)));
+     for(let i=0;i<ws.length;i++)for(let j=i+1;j<ws.length;j++){const a=c(ws[i]),b=c(ws[j]),d=Math.hypot(a.x-b.x,a.y-b.y);if(d>60&&d<best){best=d;pair=[ws[i],ws[j]];}}
+    }
+    if(pair){if(!line){line=document.createElement('div');line.id='taTutLine';h.append(line);}
+     let a=c(pair[0]),b=c(pair[1]);if(a.x>b.x)[a,b]=[b,a];
+     const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)+40,ang=Math.atan2(dy,dx);
+     line.style.left=(a.x-Math.cos(ang)*20)+'px';line.style.top=(a.y-Math.sin(ang)*20)+'px';line.style.width=len+'px';line.style.transform='rotate('+ang+'rad)';line.hidden=false;}
+    else if(line)line.hidden=true;
+   }
+   raf=requestAnimationFrame(tick);
+  };
+  raf=requestAnimationFrame(tick);
+ }
+ function clearGuides(){cancelAnimationFrame(raf);mark?.remove();mark=null;line?.remove();line=null;target=null;pair=null;document.querySelectorAll('.ta-tut-cross').forEach(e=>e.remove());}
+ function complete(){
+  try{localStorage.setItem(KEY,'done');}catch(_){}
+  taYuraShow('今日は、ここまで',4000);
+  // ★「はじまりの栞」→ 翠玉解放の知らせを見せてから DEMO PLAY に戻る（取得済みなら、そのまま戻る）
+  const first=!window.taStars?.hasAward?.('tutorial');
+  if(first){
+   let doneShow=false;const go=()=>{if(doneShow)return;doneShow=true;setTimeout(()=>finish(),3200);};
+   document.addEventListener('ta-summon-unlock-show',go,{once:true});setTimeout(go,9000);
+   setTimeout(()=>{try{window.taStars?.awardById?.('tutorial');}catch(_){go();}},900);
+   const t=panel?.querySelector('.t');if(t){t.innerHTML='練習はここまで<small>本番は START から</small>';}
+   bottom?.querySelectorAll('.dots i').forEach(d=>d.classList.add('done'));
+   return;
+  }
+  const t=panel?.querySelector('.t');if(t){t.innerHTML='練習はここまで<small>本番は START から</small>';}
+  bottom?.querySelectorAll('.dots i').forEach(d=>d.classList.add('done'));
+  setTimeout(()=>finish(true),3600);
+ }
+ function finish(){
+  if(!T.on)return;clearGuides();clearTimeout(hintTimer);
+  panel?.classList.remove('on');bottom?.classList.remove('on');const p=panel,b=bottom;setTimeout(()=>{p?.remove();b?.remove();},1300);panel=null;bottom=null;
+  document.querySelector('#viewMain>.hero')?.classList.remove('ta-cine-on');
+  if(taRunning||taStarting)taFinish(true);   // 練習中は静かに DEMO PLAY へ戻る（記録には残さない）
+  try{taScore=0;taScoreRefresh?.();taRender();}catch(_){}
+  T.on=false;T.step=-1;document.documentElement.classList.remove('ta-tut','ta-tut-allow-fire','ta-tut-allow-ice');
+  syncBtn();
+ }
+ // 練習中に×ボタンで終えたときも後片付けする
+ setInterval(()=>{if(T.on&&T.step>=0&&!taRunning&&!taStarting)finish();},500);
+ window.taTutorialStart=begin;window.taTutorialStop=()=>finish();
 })();
 </script>
 </body>
