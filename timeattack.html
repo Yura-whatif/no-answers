@@ -10737,7 +10737,9 @@ function taSyncDemo(){
   const demo=document.getElementById('taDemoPlay');
   const result=document.getElementById('taLaunch');
   const library=document.getElementById('viewLib');
-  if(demo)demo.hidden=taDemoLabelPending||taRunning||taStarting||(result&&!result.hidden)||!document.getElementById('taStarOutcome')?.hidden||(library&&!library.hidden);
+  // 練習中は DEMO PLAY と同じ見た目で「TUTORIAL」と出す
+  const tutLabel=typeof taTutOn==='function'&&taTutOn();
+  if(demo){demo.textContent=tutLabel?'TUTORIAL':'DEMO PLAY';demo.hidden=tutLabel?!!(library&&!library.hidden):(taDemoLabelPending||taRunning||taStarting||(result&&!result.hidden)||!document.getElementById('taStarOutcome')?.hidden||(library&&!library.hidden));}
   const play=document.getElementById('taPlay');
   if(play)play.classList.toggle('ta-demo-pulse',demoLook&&!(result&&!result.hidden)&&document.getElementById('taStarOutcome')?.hidden&&!(library&&!library.hidden));
 }
@@ -14583,6 +14585,13 @@ header>.ta-yura-say.out{opacity:0;filter:blur(3px);transition:opacity 1.2s ease,
 #taTutPanel.on,#taTutBottom.on{opacity:1}
 #taTutPanel .t{font:500 clamp(13px,3.6vw,16px)/1.55 var(--mincho);letter-spacing:.08em;color:#efe6d4;text-align:center;transition:opacity .35s ease}
 #taTutPanel .t.swap{opacity:0}
+/* CLEAR の印：朱の枠で押した判子のように */
+.ta-tut-stamp{position:absolute;left:50%;top:52%;z-index:188;pointer-events:none;padding:6px 18px 7px 22px;border:3px solid rgba(232,82,62,.92);border-radius:8px;
+ box-shadow:0 0 0 2px rgba(232,82,62,.35) inset,0 0 18px rgba(232,82,62,.35);background:rgba(20,6,6,.28)}
+.ta-tut-stamp span{display:block;font:700 clamp(30px,9vw,46px)/1 var(--mincho);letter-spacing:.24em;color:rgba(240,92,70,.95);text-shadow:0 0 10px rgba(240,92,70,.45)}
+#taTutPanel .ta-tut-count{font-weight:700;color:#ffe2a6;margin-left:.4em;display:inline-block}
+#taTutPanel .ta-tut-count.hit{animation:taTutCountHit .7s ease-out}
+@keyframes taTutCountHit{0%{transform:scale(1.6);text-shadow:0 0 12px #ffd98a}100%{transform:scale(1);text-shadow:none}}
 #taTutPanel .t small{display:block;font-size:.78em;letter-spacing:.14em;color:rgba(232,210,170,.75)}
 #taTutBottom .dots{display:flex;gap:8px}
 #taTutBottom .dots i{width:5px;height:5px;border-radius:50%;background:rgba(240,225,190,.25)}
@@ -14615,8 +14624,8 @@ html.ta-tut.ta-tut-allow-fire .ta-items .ta-orb.fire,html.ta-tut.ta-tut-allow-ic
  const KEY='ta-tutorial-v1';
  const STEPS=[
   {say:'少し、練習しよう',text:'漂う言霊を、タップして消してみて',sub:'3つ消してみよう',hint:'触れるだけで、いい',need:'collect',count:3},
-  {say:'次は、心眼',text:'言霊の真ん中を、そっとタップ',sub:'光の輪が目印（心眼）',hint:'真ん中を、狙って',need:'shingan',mark:true},
-  {say:'次は、一閃',text:'指を滑らせて、2つの言霊を一度に',sub:'まっすぐなぞる（一閃）',hint:'まっすぐ、なぞって',need:'issen',line:true},
+  {say:'次は、心眼',text:'言霊の真ん中を、そっとタップ',sub:'光の輪が目印（心眼）',hint:'真ん中を、狙って',need:'shingan',count:3,mark:true},
+  {say:'次は、一閃',text:'指を滑らせて、2つの言霊を一度に',sub:'まっすぐなぞる（一閃）',hint:'まっすぐ、なぞって',need:'issen',count:3,line:true},
   {say:'次は、紅玉',text:'紅玉を押して、言霊をなぞる',sub:'炎が言霊を燃やす（タップなら炎の輪）',hint:'紅い玉を、押してから',need:'fire',allow:['fire']},
   {say:'最後は、交差',text:'紅玉でなぞり、蒼玉で交差させる',sub:'二つの線が交われば「全部なかったことに」',hint:'紅のあと、すぐ蒼を',need:'cross',allow:['fire','ice'],cross:true}
  ];
@@ -14636,7 +14645,7 @@ html.ta-tut.ta-tut-allow-fire .ta-items .ta-orb.fire,html.ta-tut.ta-tut-allow-ic
   setTimeout(()=>{if(startBtn.hidden||T.on)return;taYuraShow('練習するなら|右上を押してね',6000);startBtn.classList.add('glow');setTimeout(()=>startBtn.classList.remove('glow'),9000);},1500);
  };
  const titleUp=()=>{const t=document.getElementById('taTitleScreen');return !!t&&!t.hidden;};   // タイトル画面が出ている間は出さない
- const syncBtn=()=>{startBtn.hidden=!demo||demo.hidden||titleUp()||taRunning||taStarting||T.on;if(!startBtn.hidden)invite();};
+ const syncBtn=()=>{startBtn.hidden=!demo||(demo.hidden&&!T.on)||titleUp()||taRunning||taStarting||T.on;if(!startBtn.hidden)invite();};
  if(demo)new MutationObserver(syncBtn).observe(demo,{attributes:true,attributeFilter:['hidden']});
  {const t=document.getElementById('taTitleScreen');if(t)new MutationObserver(syncBtn).observe(t,{attributes:true,attributeFilter:['hidden']});}
  setInterval(syncBtn,800);syncBtn();
@@ -14656,12 +14665,15 @@ html.ta-tut.ta-tut-allow-fire .ta-items .ta-orb.fire,html.ta-tut.ta-tut-allow-ic
   panel=document.createElement('div');panel.id='taTutPanel';
   panel.innerHTML='<div class="t"></div><button type="button" class="skip">スキップ</button>';
   bottom=document.createElement('div');bottom.id='taTutBottom';bottom.innerHTML='<div class="dots">'+STEPS.map(()=>'<i></i>').join('')+'</div>';
-  h.append(panel,bottom);h.classList.add('ta-cine-on');   // 連鎖ゲージは帯より手前にpanel.querySelector('.skip').addEventListener('click',e=>{e.stopPropagation();finish(false);});
+  h.append(panel,bottom);h.classList.add('ta-cine-on');   // 連鎖ゲージは帯より手前に
+  panel.querySelector('.skip').addEventListener('click',e=>{e.stopPropagation();finish(false);});
   requestAnimationFrame(()=>requestAnimationFrame(()=>{panel.classList.add('on');bottom.classList.add('on');}));
  }
  function setText(st){
   const t=panel?.querySelector('.t');if(!t)return;t.classList.add('swap');
-  setTimeout(()=>{t.innerHTML='';t.append(document.createTextNode(st.text));const sm=document.createElement('small');sm.textContent=st.sub;t.append(sm);t.classList.remove('swap');},350);
+  setTimeout(()=>{t.innerHTML='';t.append(document.createTextNode(st.text));const sm=document.createElement('small');sm.textContent=st.sub;
+   if(st.count>1){const n=document.createElement('b');n.className='ta-tut-count';n.textContent=' '+T.count+' / '+st.count;sm.append(n);}
+   t.append(sm);t.classList.remove('swap');},350);
   bottom?.querySelectorAll('.dots i').forEach((d,i)=>d.classList.toggle('done',i<T.step));
  }
  function next(){
@@ -14676,19 +14688,35 @@ html.ta-tut.ta-tut-allow-fire .ta-items .ta-orb.fire,html.ta-tut.ta-tut-allow-ic
   const hint=()=>{if(!T.on||STEPS[T.step]!==st)return;taYuraShow(st.hint,4000);hintTimer=setTimeout(hint,14000);};
   hintTimer=setTimeout(hint,14000);
  }
+ // ステップを満たしたら、採集エリアの中央に「CLEAR」の印を押す
+ function stamp(){
+  const h=hero();if(!h)return;
+  const el=document.createElement('div');el.className='ta-tut-stamp';el.innerHTML='<span>CLEAR</span>';h.append(el);
+  try{sfx.boon?.();}catch(_){}
+  el.animate([{opacity:0,transform:'translate(-50%,-50%) rotate(-12deg) scale(2.2)'},{opacity:1,transform:'translate(-50%,-50%) rotate(-12deg) scale(.94)',offset:.16},{opacity:1,transform:'translate(-50%,-50%) rotate(-12deg) scale(1)',offset:.24},{opacity:1,transform:'translate(-50%,-50%) rotate(-12deg) scale(1)',offset:.78},{opacity:0,transform:'translate(-50%,-50%) rotate(-12deg) scale(1.04)'}],{duration:1900,easing:'ease-out',fill:'forwards'}).onfinish=()=>el.remove();
+ }
+ // 回数を数えるステップ：1回ごとに数字を更新して光らせ、目印を次の言霊へ移す
+ function bump(){
+  const st=STEPS[T.step],n=panel?.querySelector('.ta-tut-count');
+  if(n&&st){n.textContent=' '+Math.min(T.count,st.count)+' / '+st.count;n.classList.remove('hit');void n.offsetWidth;n.classList.add('hit');}
+  target=null;pair=null;clearTimeout(hintTimer);
+  const hint=()=>{if(!T.on||STEPS[T.step]!==st)return;taYuraShow(st.hint,4000);hintTimer=setTimeout(hint,14000);};hintTimer=setTimeout(hint,14000);
+ }
  function done(){
-  if(advancing)return;advancing=true;clearGuides();clearTimeout(hintTimer);
+  if(advancing)return;advancing=true;clearGuides();clearTimeout(hintTimer);stamp();
+  {const st=STEPS[T.step],n=panel?.querySelector('.ta-tut-count');if(n&&st)n.textContent=' '+st.count+' / '+st.count;}
   taYuraShow(PRAISE[T.step]||'上手',2600);
   bottom?.querySelectorAll('.dots i').forEach((d,i)=>d.classList.toggle('done',i<=T.step));
   setTimeout(()=>{if(T.on)next();},2200);
  }
  document.addEventListener('ta-tut',e=>{
   if(!T.on||advancing||T.step<0)return;const st=STEPS[T.step];if(!st)return;
-  if(st.need==='collect'&&e.detail.kind==='collect'){if(++T.count>=st.count)done();}
+  if(st.need==='collect'&&e.detail.kind==='collect'){if(++T.count>=st.count)done();else bump();}
   else if(st.need==='fire'&&e.detail.kind==='orb'&&e.detail.type==='fire'){if(!T.fireWait){T.fireWait=true;setTimeout(()=>{T.fireWait=false;if(T.on&&STEPS[T.step]===st)done();},1600);}}
   else if(st.need==='cross'&&e.detail.kind==='cross'){if(!T.crossWait){T.crossWait=true;setTimeout(()=>{T.crossWait=false;if(T.on&&STEPS[T.step]===st)done();},4300);}}   // 奥義の黒帯が引いてから褒める
-  else if(st.need==='shingan'&&e.detail.kind==='shingan')done();
-  else if(st.need==='issen'&&e.detail.kind==='issen'&&(e.detail.count||0)>=2)done();
+  else if(st.need==='shingan'&&e.detail.kind==='shingan'){if(++T.count>=st.count)done();else bump();}
+  else if(st.need==='issen'&&e.detail.kind==='issen'&&(e.detail.count||0)>=2){const now=performance.now();if(now-(T.lastIssen||0)<700)return;T.lastIssen=now;   // ひとなでで2回数えない
+   if(++T.count>=st.count)done();else bump();}
  });
  // 目印：心眼は言霊の真ん中に輪、一閃は近い2つを結ぶ線（言霊の動きに合わせて追う）
  const plain=w=>w&&w.isConnected&&!w.classList.contains('got')&&!w.matches('.special,.petal,.pull,.glow,.reso,.multi,.vortex,.crack,.still,.late');
@@ -14745,6 +14773,7 @@ html.ta-tut.ta-tut-allow-fire .ta-items .ta-orb.fire,html.ta-tut.ta-tut-allow-ic
   if(taRunning||taStarting)taFinish(true);   // 練習中は静かに DEMO PLAY へ戻る（記録には残さない）
   try{taScore=0;taScoreRefresh?.();taRender();}catch(_){}
   T.on=false;T.step=-1;document.documentElement.classList.remove('ta-tut','ta-tut-allow-fire','ta-tut-allow-ice');
+  try{taSyncDemo();}catch(_){}   // 「TUTORIAL」を「DEMO PLAY」に戻す
   syncBtn();
  }
  // 練習中に×ボタンで終えたときも後片付けする
