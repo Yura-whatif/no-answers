@@ -3164,7 +3164,7 @@ header>.brand.ta-face-header::before{background-position:center,-118px center!im
       <button type="button" id="t-reward-orb">白銀玉出現</button>
       <button type="button" id="t-fire-levelup">紅玉Lvアップ</button>
       <button type="button" id="t-word-levelup">言霊Lvアップ</button>
-      <button type="button" id="t-night2">第二夜へ進む</button>
+      <button type="button" id="t-pages">頁追加</button>
       <button type="button" id="t-orblv">紅蒼の玉Lv +1</button>
       <button type="button" id="t-fxlv">紅蒼の演出：Lvどおり</button>
     </div>
@@ -3250,7 +3250,7 @@ header>.brand.ta-face-header::before{background-position:center,-118px center!im
             <nav class="ta-guide-index" aria-label="手引きの目次"><a href="#taGuideBasics">基本</a><a href="#taGuideOrbs">玉と補充</a><a href="#taGuideSkills">奥義</a><a href="#taGuideDaybreak">光と月</a><a href="#taGuideTips">攻略</a></nav>
             <section class="ta-guide-section" id="taGuideBasics"><h4><span>01</span> 遊び方と月の満ち欠け</h4>
               <p>ゲームは<strong>残り時間60秒</strong>から始まります。採集エリアに漂う言霊をタップ、またはスワイプして回収しましょう。</p>
-              <p>右下の<strong>月は、物語の頁</strong>を表しています。言霊を集め、玉の技を使うたびに月は満ちていき、満月になると次の章が始まります。十の章を越えた先には、特別な夜が待っています。</p>
+              <p>右下の<strong>月は、物語の頁</strong>を表しています。言霊を集め、玉の技を使うたびに月は満ちていき、満月になると次の章が始まります。その夜の最後の章を越えた先には、特別な夜が待っています。</p>
               <div class="ta-guide-tip"><b>攻略の鍵</b><p>月を満たす近道は、玉の技です。言霊に当たらなくても、使えば月は少し満ちます。</p></div>
               <p>間を空けずに集め続けると「連鎖」が伸び、言霊一つの得点も大きくなります。</p>
             </section>
@@ -3258,7 +3258,7 @@ header>.brand.ta-face-header::before{background-position:center,-118px center!im
               <div class="ta-guide-skill"><i class="ta-guide-dot red"></i><div><b>紅玉 ― 炎</b><p>言霊を燃やす効果を持ち、得点を大きく伸ばす場面で有効です。燃やした言霊は月を速く満たします。</p></div></div>
               <div class="ta-guide-skill"><i class="ta-guide-dot blue"></i><div><b>蒼玉 ― 氷</b><p>言霊を凍らせる効果を持ち、時間回復を狙う場面で有効です。</p></div></div>
               <div class="ta-guide-skill"><i class="ta-guide-dot green"></i><div><b>翠玉 ― 連鎖を広げる</b><p>言霊を増やす効果を持ち、連鎖を広げる場面で有効です。</p><p>練習（チュートリアル）を最後まで終え、「はじまりの栞」を得ると解放されます。</p></div></div>
-              <div class="ta-guide-skill"><i class="ta-guide-dot yellow"></i><div><b>黄玉 ― 雷</b><p>雷を呼び寄せ、複数の言霊を生み出します。落雷は80%の確率で継続します。</p><p>「連鎖の芽Ⅴ」を達成すると解放され、白銀玉4個で使用できます。</p></div></div>
+              <div class="ta-guide-skill"><i class="ta-guide-dot yellow"></i><div><b>黄玉 ― 雷</b><p>雷を呼び寄せ、複数の言霊を生み出します。落雷は80%の確率で継続します。</p><p>紅玉・蒼玉・翠玉をすべてLv4に育て、「雷を招く者」を得ると解放され、白銀玉4個で使用できます。</p></div></div>
               <div class="ta-guide-skill"><i class="ta-guide-dot whitegold"></i><div><b>白銀玉 ― アイテム補充</b><p>採集エリアに時折現れる特別な玉。回収すると、右下の玉在庫を補充できます。</p></div></div>
               <p>玉の在庫は<strong>最大5個</strong>。得点の節目でも補充の機会があります。在庫がいっぱいのときは補充の余地がないため、使いどころを考えましょう。</p>
             </section>
@@ -5278,8 +5278,9 @@ function comboStepBonus(n){
 }
 // 100-chain BGM.  Keep its state independent of ranking/result music.
 const taCenturyMusic=(()=>{
-  const src='audio/Upon_the_Silent_Threshold.mp3?v=20261102';
-  let audio=null,active=false,stoppedForTime=false,fadeId=0,fadeTimer=0,serial=0;
+  // 第四章の曲は夜ごとに変える: 第一夜=Granite / 第二夜=Threshold / 第三夜以降=Pendulum
+  function srcForNight(){const n=typeof taNightNumber==='number'?taNightNumber:1;return n<=1?'audio/Beneath_the_Granite_Sky.mp3?v=20261121':n===2?'audio/Upon_the_Silent_Threshold.mp3?v=20261102':'audio/chain100-weight-of-the-pendulum.mp3?v=20261024';}
+  let audio=null,curSrc='',active=false,stoppedForTime=false,fadeId=0,fadeTimer=0,serial=0;
   const volume=.38; // Lower level; preserve existing fade and timing
   let heartbeatDuck=false,duckTimer=0;
   function clearDuck(){if(duckTimer){clearInterval(duckTimer);duckTimer=0;}}
@@ -5299,7 +5300,7 @@ const taCenturyMusic=(()=>{
     if(audio && !audio.paused)fadeVolume(on?volume*.28:volume,on?350:restoreMs);
   }
   function clearFade(){++fadeId;if(fadeTimer){cancelAnimationFrame(fadeTimer);fadeTimer=0;}}
-  function ensure(){if(!audio){audio=new Audio(src);audio.loop=true;audio.preload='auto';audio.volume=0;}return audio;}
+  function ensure(){const want=srcForNight();if(!audio){audio=new Audio(want);curSrc=want;audio.loop=true;audio.preload='auto';audio.volume=0;}else if(curSrc!==want&&audio.paused){audio.src=want;curSrc=want;try{audio.currentTime=0;}catch(e){}}return audio;}
   function play(){
     if(!active||stoppedForTime||!taRunning||!sfx.on||document.hidden)return;
     const a=ensure();clearFade();
@@ -5634,8 +5635,10 @@ function taApplyComboBackground(finalCombo, resumeFromStop=false){
 const TA_STORY_STEPS=[80,90,100,120,120,135,135,135,150,150];   // 各章を読み終えるのに必要な頁
 const TA_STORY_LEVEL=[0,20,50,100,200,300,400,500,600,700];    // 20＝ランタンの灯る書斎（stage_02）    // 各章の景色（従来の連鎖数の段階にあたる）
 const taStory={pages:0,chapter:0,inChapter:0,pendingAnnounce:false};
-function taStoryLevel(){return taStory.chapter>=TA_STORY_STEPS.length?800:TA_STORY_LEVEL[taStory.chapter];}
-function taStoryProgress(){return taStory.chapter>=TA_STORY_STEPS.length?1:Math.min(1,taStory.inChapter/TA_STORY_STEPS[taStory.chapter]);}
+// 夜ごとの章の数：第一夜は八章、第二夜は九章、第三夜以降は十章まで（読み終えると夜のボーナスへ）
+function taStoryChapters(){const n=typeof taNightNumber==='number'?taNightNumber:1;return Math.min(TA_STORY_STEPS.length,n<=1?8:n===2?9:10);}
+function taStoryLevel(){return taStory.chapter>=taStoryChapters()?800:TA_STORY_LEVEL[taStory.chapter];}
+function taStoryProgress(){return taStory.chapter>=taStoryChapters()?1:Math.min(1,taStory.inChapter/TA_STORY_STEPS[taStory.chapter]);}
 function taStoryChainRate(){return combo>=600?1.5:combo>=300?1.35:combo>=100?1.2:1;}
 function taStoryReset(){
   taStory.pages=0;taStory.chapter=0;taStory.inChapter=0;taStory.pendingAnnounce=false;
@@ -5646,15 +5649,15 @@ function taStoryReset(){
 function taStoryAdd(n){
   if(!taRunning||!(n>0)||taTutOn())return;
   if(typeof taNightActive==='function'&&taNightActive())return;
-  if(taStory.chapter>=TA_STORY_STEPS.length)return;
+  if(taStory.chapter>=taStoryChapters())return;
   taStory.pages+=n;taStory.inChapter+=n;
   let advanced=false;
-  while(taStory.chapter<TA_STORY_STEPS.length&&taStory.inChapter>=TA_STORY_STEPS[taStory.chapter]){
+  while(taStory.chapter<taStoryChapters()&&taStory.inChapter>=TA_STORY_STEPS[taStory.chapter]){
     taStory.inChapter-=TA_STORY_STEPS[taStory.chapter];taStory.chapter++;advanced=true;
   }
-  if(taStory.chapter>=TA_STORY_STEPS.length)taStory.inChapter=0;
+  if(taStory.chapter>=taStoryChapters())taStory.inChapter=0;
   try{window.taMoon?.update(advanced);}catch(_){}
-  if(!advanced&&taStory.chapter<TA_STORY_STEPS.length&&taStory.inChapter>=TA_STORY_STEPS[taStory.chapter]*.85)taYuraSay('moonNear');
+  if(!advanced&&taStory.chapter<taStoryChapters()&&taStory.inChapter>=TA_STORY_STEPS[taStory.chapter]*.85)taYuraSay('moonNear');
   if(advanced){taStory.pendingAnnounce=true;if(!flood)taStoryApply(false);}
 }
 // 技などの上乗せ（言霊ごとの頁とは別に足す）
@@ -5708,7 +5711,7 @@ const taCine=(()=>{
 window.taCine=taCine;
 function taStoryAnnounce(){
   const n=taStory.chapter+1,kanji=typeof taNightKanji==='function'?taNightKanji(n):String(n);
-  taYuraSayLater(taStory.chapter===TA_STORY_STEPS.length-1?'finalChapter':'chapter',6800);   // 黒帯が消えてから
+  taYuraSayLater(taStory.chapter===taStoryChapters()-1?'finalChapter':'chapter',6800);   // 黒帯が消えてから
   taCine.show('bottom','第'+kanji+'章',900,3600);
   clearTimeout(taStoryAnnounce.m);
   taStoryAnnounce.m=setTimeout(()=>{try{window.taMoon?.release();}catch(_){}},3600);   // 月は帯の下で新しい満ち欠けへ戻す
@@ -5740,10 +5743,34 @@ const TA_YURA_LINES={
   stockFull:['玉、使わないの？'],
   silver:['白銀、拾って'],
   thunderReady:['雷、呼べるよ'],
-  idle:['答えは、ないのに','この言葉、知ってる','少し、違和感']
+  idle:['答えは、ないのに','この言葉、知ってる','少し、違和感'],
+  // 玉の効果のヒント（解放前の玉は出さない）
+  hintFire:['紅玉は、燃やして稼ぐ','紅は連鎖が|長いほど強い'],
+  hintIce:['蒼玉は、凍らせて時を','凍った言霊は、時を延ばす'],
+  hintGreen:['翠玉は、言霊を呼ぶ','言霊が少ないなら、翠を'],
+  hintThunder:['黄玉は、雷の賭け','雷が続くかは、運しだい'],
+  hintThunderLocked:['三つの玉を育てると、雷が'],
+  hintSilver:['白銀は、玉を満たす'],
+  hintTap:['ひと押しで円、なぞれば線'],
+  // 2つ以上の玉で描く技のヒント
+  comboCross:['紅と蒼を、十字に重ねて'],
+  comboClock:['円をひとつ、針を一筆で','円と針で、時が止まる'],
+  comboEclipse:['紅と蒼の円を、重ねてみて','氷を上なら時、炎を上なら得点']
 };
+// DEMO PLAY 中だけの雑談（癒し・ちょっとした肩すかしも）
+const TA_YURA_CHAT=['今夜は、静かだね','月が、きれい','この言葉、どこかで','答えは、まだ遠い','誰かの、独り言みたい','本は、まだ途中',
+  'お茶、冷めちゃった','猫が、こっちを見てる','今日も、えらいね','たまには、休んでね','靴下、片方ない'];
+// いま出してよいヒントの種類（解放前の玉の効果は出さない）
+function taYuraHintKeys(){
+  const has=id=>!!window.taStars?.hasAward?.(id);
+  const thunder=location.hash==='#test'||has('orbs4'),green=has('tutorial');
+  const keys=['hintFire','hintIce','hintSilver','hintTap','comboCross','comboClock','comboEclipse'];
+  if(green)keys.push('hintGreen');
+  keys.push(thunder?'hintThunder':'hintThunderLocked');
+  return keys;
+}
 // 優先度：節目 3 ＞ 困っているとき 2 ＞ 上手にできたとき 1 ＞ 独り言 0
-const TA_YURA_PRIO={skillCross:3,skillEclipse:3,glowFeeling:3,glowMemory:3,skillStop:3,moonNear:3,chapter:3,finalChapter:3,nightBonus:3,nightAgain:3,lowTime:2,chainBreak:2,stockFull:2,fireBig:2,silver:2,thunderReady:2,thunderBet:2,chain100:1,issen:1,gessen:1,shingan:1,thunderLong:1,idle:0};
+const TA_YURA_PRIO={skillCross:3,skillEclipse:3,glowFeeling:3,glowMemory:3,skillStop:3,moonNear:3,chapter:3,finalChapter:3,nightBonus:3,nightAgain:3,lowTime:2,chainBreak:2,stockFull:2,fireBig:2,silver:2,thunderReady:2,thunderBet:2,chain100:1,issen:1,gessen:1,shingan:1,thunderLong:1,idle:0,hintFire:0,hintIce:0,hintGreen:0,hintThunder:0,hintThunderLocked:0,hintSilver:0,hintTap:0,comboCross:0,comboClock:0,comboEclipse:0};
 const taYura={used:new Set(),lastAt:-1e9,lastFireAt:0,startAt:0,el:null,timer:0};
 function taYuraReset(){taYura.used.clear();taYura.lastAt=-1e9;taYura.startAt=taYura.lastFireAt=performance.now();taYura.el?.remove();taYura.el=null;}
 // ひとことを表示する（判定なしで、渡された言葉をそのまま出す）
@@ -5781,6 +5808,20 @@ function taYuraSay(key){
     return taYuraShow(text);
   }catch(_){return false;}
 }
+// DEMO PLAY 中：20〜40秒に一度ほど、雑談か、玉や技のヒントを話す（同じ言葉は DEMO PLAY に戻るたびに一度まで）
+const taYuraDemo={used:new Set(),next:0,wasDemo:false};
+setInterval(()=>{
+  const demo=document.getElementById('taDemoPlay'),title=document.getElementById('taTitleScreen'),lib=document.getElementById('viewLib');
+  const isDemo=!!demo&&!demo.hidden&&!taRunning&&!taStarting&&!taTutOn()&&!(title&&!title.hidden)&&!(lib&&!lib.hidden)&&!document.hidden;
+  const now=performance.now();
+  if(!isDemo){taYuraDemo.wasDemo=false;return;}
+  if(!taYuraDemo.wasDemo){taYuraDemo.wasDemo=true;taYuraDemo.used.clear();taYuraDemo.next=now+14000+Math.random()*8000;return;}   // 戻ってすぐは話さない（練習の誘いと重ねない）
+  if(now<taYuraDemo.next||taYura.el)return;
+  taYuraDemo.next=now+20000+Math.random()*20000;
+  const pool=Math.random()<.5?TA_YURA_CHAT.map(t=>[t]):taYuraHintKeys().map(k=>TA_YURA_LINES[k]);
+  const lines=pool.flat().filter(t=>!taYuraDemo.used.has(t));if(!lines.length)return;
+  const text=lines[Math.floor(Math.random()*lines.length)];taYuraDemo.used.add(text);taYuraShow(text,5000);
+},1000);
 // 少し遅れて話す（黒帯が消えてからなど）
 function taYuraSayLater(key,ms){setTimeout(()=>taYuraSay(key),ms);}
 // 状況の見回り：残り時間・玉の在庫・紅玉の使用・独り言
@@ -5791,8 +5832,12 @@ setInterval(()=>{
   const stock=typeof window.taItemStock==='function'?window.taItemStock():0;
   if(stock>=5&&now-taYura.startAt>15000&&Math.random()<.25){taYuraSay('stockFull');return;}
   if(stock>=1&&combo>=300&&Math.random()<.15){taYuraSay('fireBig');return;}
-  if(stock>=4&&window.taStars?.hasAward?.('chain700')&&Math.random()<.15){taYuraSay('thunderReady');return;}
-  if(now-taYura.lastAt>45000&&now-taYura.startAt>20000&&Math.random()<.08)taYuraSay('idle');
+  if(stock>=4&&window.taStars?.hasAward?.('orbs4')&&Math.random()<.15){taYuraSay('thunderReady');return;}
+  if(now-taYura.lastAt>45000&&now-taYura.startAt>20000&&Math.random()<.08){
+    // 何も起きていない時間に、独り言か、玉や技のヒントをまれに話す
+    const keys=['idle',...taYuraHintKeys()].sort(()=>Math.random()-.5);
+    for(const k of keys){if(taYuraSay(k))break;}
+  }
 },1000);
 // 100連のたびに、ヘッダーのゆらを一瞬明るく照らす
 function taYuraBright(){
@@ -5874,11 +5919,6 @@ function bumpCombo(){
   if(r > 90){ el.style.setProperty("--heat", ((r - 90) / 10).toFixed(2)); el.classList.add("heat"); }
   else { el.classList.remove("heat"); el.style.removeProperty("--heat"); }
   if(combo >= COMBO_STEP_FROM && combo % 10 === 0) comboStepBonus(combo);
-  // テストモード（#test）では、すでに解放済みでも、このプレイで初めて500連鎖に届いたときに黄玉解放の知らせを見せる
-  if(combo===500 && location.hash==='#test' && window.taThunderTestReplay && window.taThunderTestReplay.had && !window.taThunderTestReplay.shown){
-    window.taThunderTestReplay.shown=true;
-    setTimeout(()=>{if(taRunning&&!(typeof taNightActive==='function'&&taNightActive()))document.dispatchEvent(new Event('ta-thunder-unlock-show'));},500);
-  }
   return m;
 }
 // 作品（最後の一行）を読むあいだは連鎖メーターを止め、「一時停止」を被せる。しまう演出が始まったら満タンから再開
@@ -9629,8 +9669,11 @@ $("pgnext").addEventListener("click", ()=>turn(1));
 window.addEventListener("resize", ()=>{ if(libOpen && !turning) renderShelf(); });
 
 // テスト用
-// 第二夜の確認：第一夜の最終章まで一気に進め、夜のボーナス→夜明け→第二夜の流れを見る
-$("t-night2").onclick=()=>{ if(!taRunning){toast("ゲーム中に押すと、夜のボーナスから第二夜へ進みます");return;} if(taNightActive()){toast("いまは夜のボーナス中です");return;} if(typeof flood!=="undefined"&&flood){toast("時が止まっている間は進めません");return;} taStoryAdd(99999); };
+// 演出テスト用：今の章を「あと1頁」の状態にする（言霊を一つ消せば次の章へ。最後の章なら夜のボーナスへ）
+$("t-pages").onclick=()=>{ if(!taRunning){toast("ゲーム中に押すと、今の章があと1頁になります");return;} if(taNightActive()){toast("いまは夜のボーナス中です");return;}
+  if(taStory.chapter>=taStoryChapters()){toast("この夜の章はすべて読み終えています");return;}
+  const need=TA_STORY_STEPS[taStory.chapter]-taStory.inChapter-1; if(need>0)taStoryAdd(need);
+  toast("第"+taNightKanji(taStory.chapter+1)+"章：あと1頁（言霊を一つ消すと次へ）"); };
 // 紅・蒼の演出の見比べ：Lvどおり → Lv1・2の演出 → Lv3・4の演出 の順に切り替える（見た目だけ。効果・時間・範囲はLvどおり）
 $("t-fxlv").onclick=()=>{ const v=window.taFxLvTest||0, nx=v===0?1:v===1?3:v===3?5:0; window.taFxLvTest=nx; const label=nx===0?"Lvどおり":nx===1?"Lv1・2の演出":nx===3?"Lv3・4の演出":"Lv5の演出"; $("t-fxlv").textContent="紅蒼の演出："+label; toast("紅蒼の演出を「"+label+"」にしました"); };
 $("t-reward-orb").onclick=()=>document.dispatchEvent(new Event("ta-reward-spawn-test"));
@@ -9749,7 +9792,7 @@ function taNightLater(fn,ms){const serial=taNightBonus.serial;const id=setTimeou
 function taNightClear(){document.querySelectorAll('.ta-night-echo').forEach(el=>el.remove());taNightBonus.serial++;taNightBonus.timers.forEach(clearTimeout);taNightBonus.timers=[];taNightBonus.phase='idle';taNightBonus.orbPending=false;taNightBonus.specialWordStarted=false;document.documentElement.classList.remove('ta-night-bonus');document.querySelectorAll('#drift .ta-night-word,#drift .ta-night-silver').forEach(el=>el.remove());taNightBonus.overlay?.remove();taNightBonus.overlay=null;taNightBonus.curtain?.remove();taNightBonus.curtain=null;}
 function taNightStart(){
  if(!taRunning||taNightActive()||taStoryLevel()<800)return;
- taNightClear();taNightBonus.phase='intro';taNightBonus.born=performance.now();taNightBonus.spawned=0;taNightBonus.silverPicked=0;taNightBonus.unlockAtStart=!!window.taStars?.hasAward?.('chain700');
+ taNightClear();taNightBonus.phase='intro';taNightBonus.born=performance.now();taNightBonus.spawned=0;taNightBonus.silverPicked=0;taNightBonus.unlockAtStart=!!window.taStars?.hasAward?.('orbs4');
  document.documentElement.classList.add('ta-night-bonus');
  taYuraSayLater('nightBonus',1200);
  clearTimeout(bumpCombo.h);taCancelFloodResume();comboPaused=true;
@@ -10078,7 +10121,7 @@ const taMastery=(()=>{
 
   }
   // Keep the lock as the only ornament until the achievement is earned.
-  const thunderIsUnlocked=!!window.taStars?.hasAward?.('chain700');
+  const thunderIsUnlocked=!!window.taStars?.hasAward?.('orbs4');
   const thunderCost=bar.querySelector('.ta-thunder-cost');
   if(thunderCost)thunderCost.style.display=thunderIsUnlocked?'':'none';
   const existingThunderBadge=bar.querySelector('.ta-mastery-thunder');
@@ -10250,6 +10293,7 @@ const taMastery=(()=>{
   if(current>prev){
    masteryPendingPulse.delete(k);
    for(let lv=prev+1;lv<=current;lv++)announce(k,lv);
+   if(current>=4)setTimeout(()=>window.taStars?.check?.(),2600);   // Lvの知らせのあとで「雷を招く者」を判定
   }else masteryPendingPulse.add(k);
   if(!masteryFlushRaf)masteryFlushRaf=requestAnimationFrame(()=>{
    flushMastery();
@@ -10310,6 +10354,7 @@ const taStars=(()=>{
   {id:'nightEnd',title:'夜を越えた者',kind:'nightEnd',goal:1,stars:2,unit:'回'},
   {id:'fire1',title:'紅の目覚め',kind:'fire',goal:1,stars:1,unit:'回'},
   {id:'ice1',title:'蒼の目覚め',kind:'ice',goal:1,stars:1,unit:'回'},
+  {id:'orbs4',title:'雷を招く者',kind:'orbLv4',goal:1,stars:2,unit:'回'},
   {id:'green1',title:'翠の目覚め',kind:'green',goal:1,stars:1,unit:'回'},
   {id:'silver60',title:'白銀の導き III',kind:'silver',goal:60,stars:1,unit:'個'},
   {id:'achievements10',title:'星を追う者',kind:'achievements',goal:30,stars:1,unit:'件'},
@@ -10358,8 +10403,8 @@ const taStars=(()=>{
    if(token!==sequenceToken)return;
    toast.classList.add('ta-star-toast-out');
    setTimeout(()=>{toast.remove();if(token!==sequenceToken)return;
-    // 「連鎖の芽 V」の知らせのあとに、黄玉解放の知らせを出す（そのあいだ次の★は待たせる）
-    if(g.id==='chain700'&&window.taThunderUnlockPending&&taRunning&&!(typeof taNightActive==='function'&&taNightActive())){
+    // 「雷を招く者」の知らせのあとに、黄玉解放の知らせを出す（そのあいだ次の★は待たせる）
+    if(g.id==='orbs4'&&window.taThunderUnlockPending&&taRunning&&!(typeof taNightActive==='function'&&taNightActive())){
      window.taThunderUnlockPending=false;document.dispatchEvent(new Event('ta-thunder-unlock-show'));
      setTimeout(()=>{if(token!==sequenceToken)return;busy=false;notify();},2400);return;
     }
@@ -10373,7 +10418,7 @@ const taStars=(()=>{
  }
  function award(g){if(state.earned.includes(g.id))return;state.earned.push(g.id);session.push(g.id);save();
   // 黄玉解放につながる「連鎖の芽 V」は、ほかの★の知らせより先に出す（何個も同時に獲得したとき、解放の知らせが遅れすぎないように）
-  if(g.id==='chain700'||g.id==='tutorial')queue.unshift(g);else queue.push(g);notify();render();if(g.id==='chain700'){window.taThunderUnlockPending=true;document.dispatchEvent(new CustomEvent('ta-thunder-unlocked'));}
+  if(g.id==='orbs4'||g.id==='tutorial')queue.unshift(g);else queue.push(g);notify();render();if(g.id==='orbs4'){window.taThunderUnlockPending=true;document.dispatchEvent(new CustomEvent('ta-thunder-unlocked'));}
   if(g.id==='tutorial'){window.taSummonUnlockPending=true;document.dispatchEvent(new CustomEvent('ta-summon-unlocked'));}}
  // 練習の完了など、プレイの判定によらず★を渡す
  function awardById(id){const g=goals.find(x=>x.id===id);if(g)award(g);}
@@ -10389,6 +10434,7 @@ const taStars=(()=>{
    else if(g.kind==='achievements')v=goals.filter(x=>x.id!==g.id&&state.earned.includes(x.id)).length;
    else if(g.kind==='fireIce')v=Math.min(state.fire,state.ice);
    else if(g.kind==='triple50')v=Math.min(state.fire,state.ice,state.green);
+   else if(g.kind==='orbLv4')v=['fire','ice','green'].every(k=>taMastery.level(k)>=4)?1:0;   // 紅・蒼・翠すべてLv4で黄玉解放
    else if(g.kind==='nightEnd')v=(taSessionMaxCombo>=800&&taScore*TA_SCORE_UNIT>=5000000)?1:0;
    else if(Object.hasOwn(runSpecial,g.kind))v=runSpecial[g.kind];
    else v=state[g.kind]||0;
@@ -10454,7 +10500,7 @@ const taStars=(()=>{
     triple50:`【累計】紅玉・蒼玉・翠玉をそれぞれ${n}回発動する`,
     tricolor:g.goal===1?'【1プレイ】紅玉・蒼玉・翠玉をすべて発動する':'【1プレイ】紅玉・蒼玉・翠玉をそれぞれ3回以上発動する'
    };
-   small.textContent=(g.id==='chain700'?'【1プレイ】500連鎖を達成する ／ 黄玉解放':g.id==='tutorial'?'【練習】チュートリアルを最後まで終える ／ 翠玉解放':descriptions[g.kind]||`${n}${g.unit} 達成`);left.append(small);
+   small.textContent=(g.id==='orbs4'?'【累計】紅玉・蒼玉・翠玉をすべてLv4にする ／ 黄玉解放':g.id==='tutorial'?'【練習】チュートリアルを最後まで終える ／ 翠玉解放':descriptions[g.kind]||`${n}${g.unit} 達成`);left.append(small);
    const mark=document.createElement('b');mark.textContent=achieved?`${'★'.repeat(g.stars)} 獲得済`:`☆ 未達成（★${g.stars}）`;
    row.append(left,mark);box.append(row);
   });
@@ -10475,7 +10521,7 @@ function taSaveRecord(){
   if(taScore<=0){taRenderRecords();return;}
   const records=taGetRecords();
   taSessionRecordAt=Date.now();
-  records.push({score:taScore,maxCombo:taSessionMaxCombo,timeGain:taSessionTimeGain,night:taNightNumber,chapter:Math.min(taStory.chapter+1,TA_STORY_STEPS.length),at:taSessionRecordAt});
+  records.push({score:taScore,maxCombo:taSessionMaxCombo,timeGain:taSessionTimeGain,night:taNightNumber,chapter:Math.min(taStory.chapter+1,taStoryChapters()),at:taSessionRecordAt});
   try{localStorage.setItem(TA_RECORD_KEY,JSON.stringify(records.slice(-500)))}catch(e){}
   taRenderRecords();
 }
@@ -10958,7 +11004,7 @@ function taBeginReady(){
   taStoryReset();
   taYuraReset();
   // テストモード用：このプレイの開始時点で、黄玉がすでに解放済みだったか
-  try{window.taThunderTestReplay={had:!!window.taStars?.hasAward?.('chain700'),shown:false};}catch(_){}
+  try{window.taThunderTestReplay={had:!!window.taStars?.hasAward?.('orbs4'),shown:false};}catch(_){}
   // DEMOでの操作履歴をゲーム本番へ持ち越さない。
   taCancelFloodResume();clearTimeout(bumpCombo.h);taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;document.documentElement.classList.remove("ta-century-lit","ta-lamp-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-600-lit","ta-700-lit","ta-800-lit","ta-word-300");
   const comboEl=document.getElementById("combo");
@@ -10967,6 +11013,7 @@ function taBeginReady(){
   document.body.classList.remove('ta-timeover-finished');
   taStarting=true;++taFinishToken;
   if(quiet){
+   try{sfx.toggle();}catch(_){}   // 練習の開始も、プレイ開始と同じ音
    document.getElementById('taLaunch').hidden=true;
    taSeconds=60;taScore=0;taScoreReset();taSessionMaxCombo=0;taSessionTimeGain=0;taSessionRecordAt=null;
    document.dispatchEvent(new Event('ta-item-reset'));
@@ -11140,7 +11187,7 @@ async function taBegin(prepareOnly=false){
     if(!taBegin.audioWarm){
       taBegin.audioWarm=true;
       await Promise.allSettled([
-        taPrepareAudio('audio/chain100-weight-of-the-pendulum.mp3?v=20261024')
+        taPrepareAudio('audio/Beneath_the_Granite_Sky.mp3?v=20261121')
       ]);
     }
     progress(100,'準備が整いました');
@@ -11211,7 +11258,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
 /* Residual elemental traces: fire collects; ice instantly shatters for +0.5s. */
 (()=>{
  const field=document.getElementById('drift'),hero=field&&field.closest('.hero');if(!field||!hero)return;
- const ui=document.createElement('div');ui.className='ta-items';ui.innerHTML='<span class="ta-items-label">ITEM</span><button class="ta-orb fire" type="button" data-orb="fire" aria-label="紅玉・炎" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>🔥</button><button class="ta-orb ice" type="button" data-orb="ice" aria-label="蒼玉・氷" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>❄</button><button class="ta-orb summon" type="button" data-orb="summon" aria-label="翠玉・言霊召喚（はじまりの栞で解放）" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>✧</button><button class="ta-orb thunder" type="button" data-orb="thunder" aria-label="黄玉・雷の言霊（連鎖の芽Ⅴ達成で解放・白銀玉4個）" aria-pressed="false">⚡</button><span class="ta-item-counter" aria-live="polite"><b id="taItemRemaining">5</b><small>/5</small><span class="ta-item-pips" aria-hidden="true"></span></span>';
+ const ui=document.createElement('div');ui.className='ta-items';ui.innerHTML='<span class="ta-items-label">ITEM</span><button class="ta-orb fire" type="button" data-orb="fire" aria-label="紅玉・炎" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>🔥</button><button class="ta-orb ice" type="button" data-orb="ice" aria-label="蒼玉・氷" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>❄</button><button class="ta-orb summon" type="button" data-orb="summon" aria-label="翠玉・言霊召喚（はじまりの栞で解放）" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>✧</button><button class="ta-orb thunder" type="button" data-orb="thunder" aria-label="黄玉・雷の言霊（雷を招く者で解放・白銀玉4個）" aria-pressed="false">⚡</button><span class="ta-item-counter" aria-live="polite"><b id="taItemRemaining">5</b><small>/5</small><span class="ta-item-pips" aria-hidden="true"></span></span>';
  hero.insertAdjacentElement('afterend',ui);
  // The initial fit runs before the orb bar exists; fit again after insertion.
  requestAnimationFrame(()=>{ if(typeof fitLayout==='function') fitLayout(); });
@@ -11622,7 +11669,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const active=()=>typeof taRunning!=='undefined'&&taRunning&&!taNightActive()&&!document.hidden&&document.getElementById('taLaunch')?.hidden!==false;
  const specials='.special,.vortex,.crack,.petal,.multi,.pull,.glow,.reso,.odd';
  const valid=w=>w.matches('.word')&&!w.classList.contains('got')&&!w.classList.contains('late')&&(!w.classList.contains('still')||flood);
- const thunderUnlocked=()=>location.hash==='#test'||!!window.taStars?.hasAward('chain700');
+ const thunderUnlocked=()=>location.hash==='#test'||!!window.taStars?.hasAward('orbs4');
  const summonUnlocked=()=>!!window.taStars?.hasAward('tutorial');   // 翠玉は「はじまりの栞」（練習の完了）で解放
  const THUNDER_COST=4;   // 黄玉に必要な白銀玉の数
  const thunderReady=()=>thunderUnlocked()&&usesLeft>=THUNDER_COST&&!thunderBusy;
@@ -14490,6 +14537,15 @@ html.ta-active-moon #viewMain>.hero .ta-moon{opacity:1}
 #viewMain>.hero .ta-story-cine-bar.bottom{bottom:0}
 /* 時が止まっている間は画面全体が反転するので、帯だけ反転し返して黒帯のまま見せる */
 html.ta-stopveil-on #viewMain>.hero .ta-story-cine{filter:invert(1) hue-rotate(180deg)}
+/* 帯の上の連鎖も、時間停止の反転を打ち消して帯と同じ黒地に見せる */
+html.ta-stopveil-on #viewMain>.hero.ta-cine-on #combo{filter:invert(1) hue-rotate(180deg)}
+#viewMain>.hero.ta-cine-on #combo .cpause{background:transparent!important}
+/* 夜のボーナス中も、連鎖は枠を消して文字だけにし背景に溶け込ませる */
+html.ta-night-bonus #viewMain>.hero #combo{background:transparent!important;border-color:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html.ta-night-bonus #viewMain>.hero #combo .cpause{background:transparent!important}
+/* 枠を消すと「一時停止」と連鎖の数字が重なるので、一時停止中は「一時停止」だけを見せる */
+html.ta-night-bonus #viewMain>.hero #combo.paused,#viewMain>.hero.ta-cine-on #combo.paused{color:transparent!important;text-shadow:none!important}
+html.ta-night-bonus #viewMain>.hero #combo.paused>:not(.cpause),#viewMain>.hero.ta-cine-on #combo.paused>:not(.cpause){visibility:hidden!important}
 /* ユラのひとこと：顔の右に、文字だけをふわっと浮かべる */
 header>.ta-yura-say{position:absolute;z-index:3;pointer-events:none;transform:translateY(-50%);
  font:500 13px/1.45 var(--mincho);letter-spacing:.08em;color:#efe6d4;text-align:left;white-space:nowrap!important;text-overflow:clip!important;overflow:visible!important;max-height:none!important;
