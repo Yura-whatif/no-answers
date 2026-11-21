@@ -3165,6 +3165,7 @@ header>.brand.ta-face-header::before{background-position:center,-118px center!im
       <button type="button" id="t-fire-levelup">紅玉Lvアップ</button>
       <button type="button" id="t-word-levelup">言霊Lvアップ</button>
       <button type="button" id="t-pages">頁追加</button>
+      <button type="button" id="t-density">言霊:章連動</button>
       <button type="button" id="t-orblv">紅蒼の玉Lv +1</button>
       <button type="button" id="t-fxlv">紅蒼の演出：Lvどおり</button>
     </div>
@@ -6774,13 +6775,20 @@ function naturalSpawnPosition(){
   lastNaturalSpawn={x,y};
   return {summonX:x,summonY:y};
 }
+// 章が進むほど言霊が増える：同時に出る最大数（スマホ／PC）と、出る間隔の倍率。章は夜ごとに第一章から。
+const TA_DENSITY_MOBILE=[5,5,6,6,7,7,8,8,9,9];
+const TA_DENSITY_PC=[6,6,7,7,8,8,9,9,10,10];
+const TA_DENSITY_GAP=[1,.95,.9,.85,.8,.76,.72,.68,.64,.6];
+let taDensityFlat=false;   // テストモード：章による増加を切って、以前の量（5／6個）で比べる
+function taDensityChapter(){if(taDensityFlat||!taRunning)return 0;const c=taStory&&typeof taStory.chapter==='number'?taStory.chapter:0;return Math.max(0,Math.min(TA_DENSITY_GAP.length-1,c));}
 function spawnLoop(){
   if(!flood&&!taNightActive()){
     const field = $("drift");
     const count = field.querySelectorAll(".word:not(.got):not(.late):not(.sk-fall)").length;
     // Keep natural arrivals at 75% cadence during Sakura, independent of falling words.
     const sakuraNatural = sakuraOn && taRunning;
-    const target = taRunning ? (matchMedia("(pointer:coarse)").matches ? 5 : 6) : 4;
+    const dCh = taDensityChapter();
+    const target = taRunning ? (matchMedia("(pointer:coarse)").matches ? TA_DENSITY_MOBILE[dCh] : TA_DENSITY_PC[dCh]) : 4;
     const now = performance.now();
     // At <=1 remaining word, bring forward the next single spawn without clustering.
     if(taRunning && count<=1 && nextNaturalSpawnAt>now+260)nextNaturalSpawnAt=now+110;
@@ -6816,10 +6824,10 @@ function spawnLoop(){
           }, staggerMs);
         }
       }
-      nextNaturalSpawnAt = now + (taRunning ? (400+Math.random()*450)*(sakuraNatural ? 4/3 : 1) : 720+Math.random()*700);
+      nextNaturalSpawnAt = now + (taRunning ? (400+Math.random()*450)*TA_DENSITY_GAP[dCh]*(sakuraNatural ? 4/3 : 1) : 720+Math.random()*700);
     }
   }
-  setTimeout(spawnLoop, flood ? 430 : (taRunning ? 180+Math.random()*150 : 520+Math.random()*340));
+  setTimeout(spawnLoop, flood ? 430 : (taRunning ? (180+Math.random()*150)*TA_DENSITY_GAP[taDensityChapter()] : 520+Math.random()*340));
 }
 
 // Shared across spawned words: dense-swipe detection must not reset for each word.
@@ -9670,6 +9678,7 @@ window.addEventListener("resize", ()=>{ if(libOpen && !turning) renderShelf(); }
 
 // テスト用
 // 演出テスト用：今の章を「あと1頁」の状態にする（言霊を一つ消せば次の章へ。最後の章なら夜のボーナスへ）
+$("t-density").onclick=()=>{taDensityFlat=!taDensityFlat;$("t-density").textContent=taDensityFlat?"言霊:以前の量":"言霊:章連動";toast(taDensityFlat?"言霊の量を以前の量（スマホ5／PC6）に固定しました":"言霊の量を章に合わせて増やします");};
 $("t-pages").onclick=()=>{ if(!taRunning){toast("ゲーム中に押すと、今の章があと1頁になります");return;} if(taNightActive()){toast("いまは夜のボーナス中です");return;}
   if(taStory.chapter>=taStoryChapters()){toast("この夜の章はすべて読み終えています");return;}
   const need=TA_STORY_STEPS[taStory.chapter]-taStory.inChapter-1; if(need>0)taStoryAdd(need);
