@@ -14543,6 +14543,10 @@ html.ta-stopveil-on #viewMain>.hero.ta-cine-on #combo{filter:invert(1) hue-rotat
 /* 夜のボーナス中も、連鎖は枠を消して文字だけにし背景に溶け込ませる */
 html.ta-night-bonus #viewMain>.hero #combo{background:transparent!important;border-color:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 html.ta-night-bonus #viewMain>.hero #combo .cpause{background:transparent!important}
+/* 玉の欄：ITEMの文字はどの幅でも出さず玉を左に寄せる。白銀玉の在庫は「0/5」の下に●を並べる二段にして幅を詰める */
+#viewMain>.ta-items .ta-items-label{display:none!important}
+#viewMain>.ta-items .ta-item-counter{display:flex!important;flex-wrap:wrap;justify-content:center;align-items:baseline;row-gap:4px!important;column-gap:2px!important;width:min-content;margin-left:auto!important;line-height:1}
+#viewMain>.ta-items .ta-item-counter .ta-item-pips{flex:0 0 100%;display:flex;justify-content:center;margin-left:0!important;line-height:1;white-space:nowrap}
 /* 枠を消すと「一時停止」と連鎖の数字が重なるので、一時停止中は「一時停止」だけを見せる */
 html.ta-night-bonus #viewMain>.hero #combo.paused,#viewMain>.hero.ta-cine-on #combo.paused{color:transparent!important;text-shadow:none!important}
 html.ta-night-bonus #viewMain>.hero #combo.paused>:not(.cpause),#viewMain>.hero.ta-cine-on #combo.paused>:not(.cpause){visibility:hidden!important}
