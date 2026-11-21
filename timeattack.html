@@ -5604,7 +5604,7 @@ function expireCombo(){
   if(combo>=30)taYuraSay('chainBreak');
   combo=0;comboWindowMs=COMBO_MS;
   const el=$("combo");el.classList.remove("on","x2","x3","run","heat","ta-skill-grace");
-  el.style.removeProperty("--heat");comboRush(false);
+  el.style.removeProperty("--heat");   // 縁の光は章で決まるので、連鎖が切れても消さない
 }
 // Keep the scene unchanged during stopped time. On release, show only the
 // final chain milestone; stage_02 pulses at most once for 10-49 chains.
@@ -5667,6 +5667,7 @@ function taStoryBonus(n){taStoryAdd(n);}
 function taStoryApply(resumeFromStop){
   const lv=taStoryLevel();
   taApplyComboBackground(lv,resumeFromStop);
+  comboRush(lv>=100);   // 採集エリアの縁は章ごとの色だけで光る（連鎖の数は関係しない）。第一〜三章は消灯
   if(lv>=100 && !taCenturyMusic.isActive() && !taSilverMusic.isActive())taCenturyMusic.start();
   if(lv>=600 && !taSilverMusic.isActive())taSilverMusic.start();
   if(taStory.pendingAnnounce){taStory.pendingAnnounce=false;if(lv<800)taStoryAnnounce();}
@@ -5872,7 +5873,6 @@ function bumpCombo(){
   }
   el.style.setProperty("--ct", comboWindowMs + "ms");
   el.classList.toggle("on", combo >= 2); el.classList.toggle("x2", m >= 2 && m < 3); el.classList.toggle("x3", m >= 3); el.classList.toggle("hold", flood);
-  comboRush(m === 3);
   // Chain rewards, audio and counters continue normally; scene transitions wait.
   // 景色・BGMは連鎖数ではなく頁で進む（言霊1つ＝1頁。連鎖が長いほど上乗せ）
   taStoryAdd(taStoryChainRate());
@@ -9778,6 +9778,7 @@ setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
   else window.addEventListener('load',()=>setTimeout(run,700),{once:true});
 })();
 /* Rules only. All original FX remain in the original inline script. */
+const TA_TIME_MAX=80;   // 残り時間の上限（秒）
 let taRunning=false,taSeconds=60,taScore=0,taLast=0,taRaf=0,taFinishToken=0;
 // Night advances only after a completed 800-chain interlude. Acceleration caps at Lv5.
 let taNightNumber=1;
@@ -9973,7 +9974,7 @@ function taNightReturn(){
      // 連鎖は夜を越えて引き継ぐ。夜明け後は止まったまま待ち、次に言霊へ触れた時点で続きから再開する。
      document.documentElement.classList.remove('ta-night-chain-retired');
      comboPaused=true;comboWindowMs=COMBO_MS;clearTimeout(bumpCombo.h);
-     taStoryReset();   // 新しい夜は第一章から（得点・連鎖はそのまま）
+     taStoryReset();comboRush(false);   // 新しい夜は第一章から（得点・連鎖はそのまま）。縁は第一章の色（消灯）に戻す
      taYuraSayLater('nightAgain',1800);
      const el=document.getElementById('combo');el?.classList.remove('run','hold','ta-skill-grace');el?.classList.add('paused');
      document.getElementById('cbn').textContent=String(combo);
@@ -10003,7 +10004,7 @@ const taWordMastery=(()=>{
  const timeRate=()=>[1,1.01,1.02,1.03,1.04,1.05,1.06,1.07,1.08,1.10][level()-1];
  const comboGraceMs=()=>2200+(level()-1)*50;
  const silverStart=()=>1+(level()>=3?1:0)+(level()>=5?1:0)+(level()>=8?1:0)+(level()>=10?1:0);
- const silverInterval=()=>[100,100,95,90,85,85,80,80,75,75][level()-1];
+ const silverInterval=()=>[100,100,97,94,91,91,88,88,85,85][level()-1];   // 高Lvでの白銀玉の出現を少し控えめに（最短75%→85%）
  let fxQueue=[],fxBusy=false;
  const render=()=>{
   const fill=document.getElementById('taWordMasteryFill'),badge=document.getElementById('taWordMasteryBadge');
@@ -10312,6 +10313,11 @@ const taMastery=(()=>{
  if(typeof ResizeObserver!=='undefined'){const bar=document.querySelector('#viewMain>.ta-items');if(bar){const ro=new ResizeObserver(()=>requestAnimationFrame(render));ro.observe(bar);bar.querySelectorAll('.ta-orb').forEach(b=>ro.observe(b));}}
  document.addEventListener('ta-item-reset',()=>requestAnimationFrame(render));
  requestAnimationFrame(render);
+ // 大きなファイルでは、後ろの方にある見た目の指定が読み込まれる前に位置を測ってしまう（ITEMの文字がある状態など）。
+ // 読み込み完了・フォント確定のあとにも測り直して、ゲージが玉の下からずれないようにする。
+ window.addEventListener('load',()=>{requestAnimationFrame(render);setTimeout(render,600);});
+ try{document.fonts&&document.fonts.ready.then(()=>requestAnimationFrame(render));}catch(_e){}
+ window.addEventListener('pageshow',()=>requestAnimationFrame(render));
  const reset=()=>{clearLevelFx();for(const k of Object.keys(xp))xp[k]=0;try{localStorage.removeItem(KEY);}catch(_e){}render();};
  return {level,value,add,render,xp,reset,testLevelUp,testCycleOrbs};
 })();
@@ -10674,7 +10680,7 @@ function taQueueMergedRewardPlus(isTime,amount){
   }
   batch.amount+=amount;
 }
-function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null,wordGrowth=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';let taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?taFeelingBoost():boostAtCollect)?2:1)):0;if(wordGrowth){if(isTime)taTimeGain=Math.round(taTimeGain*taWordMastery.timeRate()*100)/100;else pts=pts*taWordMastery.scoreRate();}if(!isTime)pts=pts*taNightScoreRate();if(isTime){taSeconds+=taTimeGain;taSessionTimeGain+=taTimeGain;}else {taScore+=pts;taScoreRefresh();}if(!window.taThunderBatchHud)taRender();if(window.__taMergeNextRewardPlus && !suppressPlus){taQueueMergedRewardPlus(isTime,isTime?taTimeGain:pts);return;}if(suppressPlus){return;}const el=document.getElementById(id);taReplayCssAnimation(el,'ta-pop','taPulse');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}const r=taPlusRect(el,id),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?'+'+Number(taTimeGain.toFixed(2))+'秒':'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
+function taAward(isTime,pts,skipFrameFlash=false,boostAtCollect=null,suppressPlus=false,timeGainOverride=null,wordGrowth=false){if(!taRunning)return;const id=isTime?'taTime':'taScore';let taTimeGain=isTime?(timeGainOverride!==null?timeGainOverride:((boostAtCollect===null?taFeelingBoost():boostAtCollect)?2:1)):0;if(wordGrowth){if(isTime)taTimeGain=Math.round(taTimeGain*taWordMastery.timeRate()*100)/100;else pts=pts*taWordMastery.scoreRate();}if(!isTime)pts=pts*taNightScoreRate();const taWasCapped=isTime&&taSeconds>=TA_TIME_MAX-0.001;if(isTime){taSeconds+=taTimeGain;taSessionTimeGain+=taTimeGain;}else {taScore+=pts;taScoreRefresh();}if(!window.taThunderBatchHud)taRender();if(window.__taMergeNextRewardPlus && !suppressPlus){taQueueMergedRewardPlus(isTime,isTime?taTimeGain:pts);return;}if(suppressPlus){return;}const el=document.getElementById(id);taReplayCssAnimation(el,'ta-pop','taPulse');const frame=document.getElementById(isTime?'taTimeBox':'taScoreBox');if(frame&&!skipFrameFlash){taReplayCssAnimation(frame,'ta-frame-flash','taFrameFlash');}const r=taPlusRect(el,id),p=document.createElement('span');p.className='ta-plus'+(isTime?' time':'');p.textContent=isTime?(taWasCapped?'MAX':'+'+Number(taTimeGain.toFixed(2))+'秒'):'+'+taScoreFormat(pts);// Closely spaced arrivals fan out so each collected orb remains visible.
 const arrivalNow=performance.now();
 if(arrivalNow-taPlusLastArrival>420)taPlusArrivalCount=0;
 const n=taPlusArrivalCount++;
@@ -10715,7 +10721,7 @@ function taHeartbeatStart(){
   if(attempt && typeof attempt.catch === 'function')attempt.catch(()=>{});
 }
 let taLastCountdownNumber=null;
-function taRender(){taUpdateNightHud();
+function taRender(){if(taSeconds>TA_TIME_MAX){taSessionTimeGain=Math.max(0,taSessionTimeGain-(taSeconds-TA_TIME_MAX));taSeconds=TA_TIME_MAX;}taUpdateNightHud();
   if(taRunning && window.taStars)window.taStars.check();
   const timeEl=document.getElementById('taTime');
   const seconds=Math.max(0,taSeconds);
@@ -11267,7 +11273,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
 /* Residual elemental traces: fire collects; ice instantly shatters for +0.5s. */
 (()=>{
  const field=document.getElementById('drift'),hero=field&&field.closest('.hero');if(!field||!hero)return;
- const ui=document.createElement('div');ui.className='ta-items';ui.innerHTML='<span class="ta-items-label">ITEM</span><button class="ta-orb fire" type="button" data-orb="fire" aria-label="紅玉・炎" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>🔥</button><button class="ta-orb ice" type="button" data-orb="ice" aria-label="蒼玉・氷" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>❄</button><button class="ta-orb summon" type="button" data-orb="summon" aria-label="翠玉・言霊召喚（はじまりの栞で解放）" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>✧</button><button class="ta-orb thunder" type="button" data-orb="thunder" aria-label="黄玉・雷の言霊（雷を招く者で解放・白銀玉4個）" aria-pressed="false">⚡</button><span class="ta-item-counter" aria-live="polite"><b id="taItemRemaining">5</b><small>/5</small><span class="ta-item-pips" aria-hidden="true"></span></span>';
+ const ui=document.createElement('div');ui.className='ta-items';ui.innerHTML='<button class="ta-orb fire" type="button" data-orb="fire" aria-label="紅玉・炎" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>🔥</button><button class="ta-orb ice" type="button" data-orb="ice" aria-label="蒼玉・氷" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>❄</button><button class="ta-orb summon" type="button" data-orb="summon" aria-label="翠玉・言霊召喚（はじまりの栞で解放）" aria-pressed="false"><span class="ta-orb-rotating-art" aria-hidden="true"></span>✧</button><button class="ta-orb thunder" type="button" data-orb="thunder" aria-label="黄玉・雷の言霊（雷を招く者で解放・白銀玉4個）" aria-pressed="false">⚡</button><span class="ta-item-counter" aria-live="polite"><b id="taItemRemaining">5</b><small>/5</small><span class="ta-item-pips" aria-hidden="true"></span></span>';
  hero.insertAdjacentElement('afterend',ui);
  // The initial fit runs before the orb bar exists; fit again after insertion.
  requestAnimationFrame(()=>{ if(typeof fitLayout==='function') fitLayout(); });
@@ -14467,13 +14473,19 @@ window.taV54Report=function(){const p=window.__taV54Perf;return {
    代わりに地の色を少しだけ濃くして、文字の読みやすさと見た目の印象をそろえる。すでに出ている言霊は変えない。 */
 #drift .word.ta-lite-word{-webkit-backdrop-filter:none;backdrop-filter:none}
 #drift .word.ta-lite-word:not(.special,.multi,.odd,.petal,.crack,.vortex,.sk-fall,.pull,.reso,.glow,.still){background:color-mix(in srgb,var(--paper) 80%,transparent)}
+/* スマホ：漂う言霊の外側の光を1重にして、1語ごとの描画範囲を小さくする（見た目の色味はほぼ同じ） */
+@media (pointer:coarse){
+#drift .word.ta-lite-word:not(.special,.multi,.odd,.got,.petal,.crack,.vortex,.sk-fall,.ta-blue){box-shadow:0 0 10px 2px color-mix(in srgb,var(--accent) 24%,transparent)}
+#drift .word.ta-lite-word.ta-blue:not(.got,.special,.crack,.vortex,.sk-fall){box-shadow:0 0 11px 3px rgba(99,178,255,.36)}
+}
 </style>
 <script id="ta-perf-dense-words-js">
 // 負荷対策（スマホのみ）：言霊が18個以上漂っている間に現れた言霊に ta-lite-word を付ける（14個以下に減ったら付けない）。
 // 付けるのは現れた瞬間（描画前）だけなので、表示中の言霊の見た目が途中で切り替わることはない。PCでは何もしない。
 (()=>{
  if(!(window.matchMedia&&matchMedia('(pointer:coarse)').matches))return;
- const ON=18,OFF=14;let dense=false;
+ // 章が進むと言霊が増えるため、スマホでは数にかかわらず、現れる言霊すべてをぼかしなしにする（ON=0）。
+ const ON=0,OFF=-1;let dense=false;
  const run=()=>{
   const field=document.getElementById('drift');if(!field)return;
   const words=field.getElementsByClassName('word');   // 常に最新の数を返す一覧
