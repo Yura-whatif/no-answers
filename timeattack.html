@@ -5755,6 +5755,7 @@ const TA_YURA_LINES={
   hintThunderLocked:['三つの玉を育てると、雷が'],
   hintSilver:['白銀は、玉を満たす'],
   hintTap:['ひと押しで円、なぞれば線'],
+  hintShingan:['真ん中を射抜けば、|硬いものでも一突き','硬い言霊も、|心眼なら一突き'],
   // 2つ以上の玉で描く技のヒント
   comboCross:['紅と蒼を、十字に重ねて'],
   comboClock:['円をひとつ、針を一筆で','円と針で、時が止まる'],
@@ -5767,13 +5768,13 @@ const TA_YURA_CHAT=['今夜は、静かだね','月が、きれい','この言�
 function taYuraHintKeys(){
   const has=id=>!!window.taStars?.hasAward?.(id);
   const thunder=location.hash==='#test'||has('orbs4'),green=has('tutorial');
-  const keys=['hintFire','hintIce','hintSilver','hintTap','comboCross','comboClock','comboEclipse'];
+  const keys=['hintFire','hintIce','hintSilver','hintTap','hintShingan','comboCross','comboClock','comboEclipse'];
   if(green)keys.push('hintGreen');
   keys.push(thunder?'hintThunder':'hintThunderLocked');
   return keys;
 }
 // 優先度：節目 3 ＞ 困っているとき 2 ＞ 上手にできたとき 1 ＞ 独り言 0
-const TA_YURA_PRIO={skillCross:3,skillEclipse:3,glowFeeling:3,glowMemory:3,skillStop:3,moonNear:3,chapter:3,finalChapter:3,nightBonus:3,nightAgain:3,lowTime:2,chainBreak:2,stockFull:2,fireBig:2,silver:2,thunderReady:2,thunderBet:2,chain100:1,issen:1,gessen:1,shingan:1,thunderLong:1,idle:0,hintFire:0,hintIce:0,hintGreen:0,hintThunder:0,hintThunderLocked:0,hintSilver:0,hintTap:0,comboCross:0,comboClock:0,comboEclipse:0};
+const TA_YURA_PRIO={skillCross:3,skillEclipse:3,glowFeeling:3,glowMemory:3,skillStop:3,moonNear:3,chapter:3,finalChapter:3,nightBonus:3,nightAgain:3,lowTime:2,chainBreak:2,stockFull:2,fireBig:2,silver:2,thunderReady:2,thunderBet:2,chain100:1,issen:1,gessen:1,shingan:1,thunderLong:1,idle:0,hintFire:0,hintIce:0,hintGreen:0,hintThunder:0,hintThunderLocked:0,hintSilver:0,hintTap:0,hintShingan:0,comboCross:0,comboClock:0,comboEclipse:0};
 const taYura={used:new Set(),lastAt:-1e9,lastFireAt:0,startAt:0,el:null,timer:0};
 function taYuraReset(){taYura.used.clear();taYura.lastAt=-1e9;taYura.startAt=taYura.lastFireAt=performance.now();taYura.el?.remove();taYura.el=null;}
 // ひとことを表示する（判定なしで、渡された言葉をそのまま出す）
@@ -6782,14 +6783,25 @@ function naturalSpawnPosition(){
 // 出現率：第三章から混ざり始め、章が進むほど増える（終盤で約3割）。章は夜ごとに第一章から。
 const TA_METAL_RATE=[0,0,.08,.12,.15,.18,.21,.24,.27,.3];
 let taMetalTestRate=null;   // テストモードの切替（null＝章連動、0＝なし、数値＝その割合で固定）
-function taMetalRate(){if(taMetalTestRate!=null)return taMetalTestRate;const c=taStory&&typeof taStory.chapter==='number'?taStory.chapter:0;return TA_METAL_RATE[Math.max(0,Math.min(TA_METAL_RATE.length-1,c))];}
+// 第二夜以降はゆるやかに上乗せ（第二夜+4%、第三夜+8%、第四夜以降+12%）。上限40%。
+const TA_METAL_NIGHT_ADD=[0,0,.04,.08,.12];
+function taMetalBlackShare(){
+ const c=taStory&&typeof taStory.chapter==='number'?taStory.chapter:0,n=typeof taNightNumber==='number'?taNightNumber:1;
+ if(taMetalTestRate!=null&&taMetalTestRate>0)return .35;   // テストモードで出しているときは黒も混ぜて確かめられるように
+ if(n<=1||(n===2&&c<3))return 0;
+ if(n===2)return Math.min(.45,.15+.05*(c-3));   // 第二夜：第四章15% → 第九章40%
+ if(n===3)return Math.min(.6,.25+.04*c);        // 第三夜：25% → 61%（上限60%）
+ return Math.min(.7,.35+.04*c);                 // 第四夜以降：35% → 上限70%
+}
+function taMetalRate(){if(taMetalTestRate!=null)return taMetalTestRate;const c=taStory&&typeof taStory.chapter==='number'?taStory.chapter:0;const n=typeof taNightNumber==='number'?taNightNumber:1;
+ return Math.min(.4,TA_METAL_RATE[Math.max(0,Math.min(TA_METAL_RATE.length-1,c))]+TA_METAL_NIGHT_ADD[Math.max(0,Math.min(TA_METAL_NIGHT_ADD.length-1,n))]);}
 // プレイが終わってDEMOに戻るとき、残っている金属文字はふつうの言霊に戻す（DEMOには出さない）
-function taMetalClear(){document.querySelectorAll('#drift .word.ta-metal').forEach(w=>{w.classList.remove('ta-metal','ta-metal-dmg','ta-metal-frozen');delete w.dataset.metalHp;delete w.dataset.metalIce;});}
+function taMetalClear(){document.querySelectorAll('#drift .word.ta-metal').forEach(w=>{w.classList.remove('ta-metal','ta-metal-black','ta-metal-dmg','ta-metal-dmg2','ta-metal-frozen');delete w.dataset.metalHp;delete w.dataset.metalIce;});}
 const taMetalPendingFx=new Set();let taMetalTapHit=false;
 function taMetalHitFx(w){
   if(w._metalBroke||!w.isConnected||w.classList.contains('got'))return;
   try{if(typeof sfx!=='undefined'&&sfx.on&&sfx.metalClink)sfx.metalClink();}catch(_){}
-  w.classList.add('ta-metal-dmg');
+  w.classList.add('ta-metal-dmg');if(+w.dataset.metalHp<=1&&w.classList.contains('ta-metal-black'))w.classList.add('ta-metal-dmg2');
   const r=w.getBoundingClientRect();
   const sp=document.createElement('span');sp.className='ta-metal-spark';sp.style.left=(r.left+r.width/2)+'px';sp.style.top=(r.top+r.height/2)+'px';document.body.append(sp);
   sp.animate([{opacity:1,transform:'translate(-50%,-50%) scale(.4)'},{opacity:.9,transform:'translate(-50%,-50%) scale(1.15)',offset:.35},{opacity:0,transform:'translate(-50%,-50%) scale(1.5)'}],{duration:320,easing:'ease-out'}).onfinish=()=>sp.remove();
@@ -6938,7 +6950,8 @@ const __ta100Start=window.__ta100Profile.start();try {
   const plainWord = !special && !odd && !multi && !pull && !glowW && !petalW && !reso && !vortex && !crack && (!opt.force || opt.thunderBorn) && !flood && !sakuraOn;
   // 金属文字（HP2）：黄・翠が生み出す言霊、練習・DEMO・夜のボーナス・時間停止中には出さない。いまはテストモードの切替でのみ出現。
   if(plainWord && !opt.plain && !opt.force && !opt.thunderBorn && taRunning && !taStarting && !flood && !taNightActive() && !(typeof taTutOn==='function'&&taTutOn()) && Math.random() < taMetalRate()){
-    w.classList.add('ta-metal'); w.dataset.metalHp = '2'; w.style.setProperty('--ta-metal-delay', (-Math.random()*3.4).toFixed(2)+'s'); w.setAttribute('aria-label', (w.dataset.word||w.textContent) + '（金属：2回で消える）');
+    const black = Math.random() < taMetalBlackShare();   // 黒い金属（HP3）：第二夜の第四章から、金属文字の中での割合を少しずつ増やす
+    w.classList.add('ta-metal'); if(black) w.classList.add('ta-metal-black'); w.dataset.metalHp = black ? '3' : '2'; w.style.setProperty('--ta-metal-delay', (-Math.random()*3.4).toFixed(2)+'s'); w.setAttribute('aria-label', (w.dataset.word||w.textContent) + (black ? '（黒い金属：3回で消える）' : '（金属：2回で消える）'));
   }
   if(plainWord && !opt.thunderBorn){ const r = Math.random();
     if(r < .1){ const d = 3.4 + Math.random() * .8; w.style.animationDuration = d.toFixed(2) + "s"; w.dataset.quick = "1"; lifeMs = d * 1000 + 300; }   // 早く消える（見えているのは約2.5〜3秒）
@@ -7007,10 +7020,11 @@ const __ta100Start=window.__ta100Profile.start();try {
     const taTime = w.dataset.taTime === "1";
     const fireScore = w.dataset.taFireScore === "1" && !taTime;
     // 紅玉：連鎖の倍率と掛け合わせる（Lv1 ×1.5 〜 Lv5 ×2.5）。燃やした言霊は頁も2倍（月が速く満ちる）。
-    const metalWord = w.classList.contains('ta-metal');   // 金属文字は手間に見合うよう得点も頁も2倍
-    const taPoints = (fireScore ? taMastery.value('fire').rewardMultiplier : 1) * Math.max(1,cm) * (taMemoryBoost()?2:1) * (metalWord ? 2 : 1);
+    const metalWord = w.classList.contains('ta-metal');   // 金属文字は手間に見合うよう得点も頁も2倍（黒い金属は3倍）
+    const metalMul = metalWord ? (w.classList.contains('ta-metal-black') ? 3 : 2) : 1;
+    const taPoints = (fireScore ? taMastery.value('fire').rewardMultiplier : 1) * Math.max(1,cm) * (taMemoryBoost()?2:1) * metalMul;
     if(fireScore && !nightResidual)taStoryAdd(taStoryChainRate());
-    if(metalWord && !nightResidual)taStoryAdd(taStoryChainRate());
+    for(let k=1;k<metalMul && !nightResidual;k++)taStoryAdd(taStoryChainRate());
     const moonBoostAtCollect=taFeelingBoost();
     const arrive = () => {
       // All points and seconds are credited. Dense, overlapping arrivals
@@ -8152,10 +8166,10 @@ function vortexRelease(){
         blink.style.left=c.cx+'px';blink.style.top=c.cy+'px';document.body.append(blink);
         blink.animate([{opacity:0},{opacity:.95,offset:.15},{opacity:.12,offset:.45},{opacity:.9,offset:.63},{opacity:0,transform:'translate(-50%,-50%) scale(.84)'}],{duration:320,easing:'ease-out'}).onfinish=()=>blink.remove();
         taYuraSay('shingan');
-        if(taTutOn())document.dispatchEvent(new CustomEvent('ta-tut',{detail:{kind:'shingan'}}));
-        // 心眼のダメージは3：押した瞬間のタップで1入っているので、残り2を加える
+        if(taTutOn())document.dispatchEvent(new CustomEvent('ta-tut',{detail:{kind:'shingan',metal:!!(c.w&&c.w.classList.contains('ta-metal'))}}));
+        // 心眼のダメージは5：押した瞬間のタップで1入っているので、残り4を加える
         if(c.w && c.w.classList.contains('ta-metal') && c.w.isConnected && !c.w.classList.contains('got') && +c.w.dataset.metalHp > 0){
-          c.w.dataset.metalHp = String(Math.max(0, +c.w.dataset.metalHp - 2));
+          c.w.dataset.metalHp = String(Math.max(0, +c.w.dataset.metalHp - 4));
           if(+c.w.dataset.metalHp <= 0) c.w.click();
         }
         const heart=document.createElement('span');heart.className='ta-shingan-label';heart.textContent='心眼';
@@ -10928,6 +10942,7 @@ const taResultHints = [
   '残り時間が少ないとき、特殊技が逆転の鍵になるかもしれない。',
   '言霊が現れた瞬間を逃さなければ、「神速」が応える。',
   '言霊の真ん中を射抜けば、「心眼」が目覚め、時がわずかに延びる。',
+  '「心眼」は硬いものも貫く。金属の言霊も、真ん中を射抜けば一突きで砕ける。',
   '二つ、三つ、四つ……まとめて消すほど「一閃」は鋭くなる。',
   '同じ言霊でも、消し方によって得点が変わる。',
   '特殊技の一撃は、大量得点のきっかけになる。',
@@ -12218,8 +12233,8 @@ if(!taWordFxAllowed())return;const r=taCrossRectCache.get(w)||w.getBoundingClien
  function collect(w,type,dmgOverride){
 const __ta100Start=window.__ta100Profile.start();try {
 if(!valid(w)||w.dataset.taElementClaim)return;
-// 金属文字：紅Lv1〜4はダメージ2、紅Lv5は4、交差の爆発は5、蒼は全Lvで1（凍って止まったまま残る）
-if(w.classList.contains('ta-metal')){const dmg=dmgOverride!=null?dmgOverride:(type==='fire'?(taMastery.level('fire')>=5?4:2):1);if(!taMetalStrike(w,dmg,type))return;}w.dataset.taElementClaim='1';taMastery.add(type,w);if(type==='ice')iceContactSound();if(type!=='ice')wordFx(w,type);
+// 金属文字：紅Lv1〜3はダメージ2・Lv4は3・Lv5は4、交差の爆発は5、蒼は全Lvで1（凍って止まったまま残る）
+if(w.classList.contains('ta-metal')){const fl=type==='fire'?taMastery.level('fire'):0;const dmg=dmgOverride!=null?dmgOverride:(type==='fire'?(fl>=5?4:fl>=4?3:2):1);if(!taMetalStrike(w,dmg,type))return;}w.dataset.taElementClaim='1';taMastery.add(type,w);if(type==='ice')iceContactSound();if(type!=='ice')wordFx(w,type);
  // During time-stop, stationary words use the original deferred award mechanism.
  // Elemental effects can collect them without bypassing the time-stop scoring rules.
  if(flood&&w.classList.contains('still')){
@@ -14700,6 +14715,20 @@ html.ta-night-bonus #viewMain>.hero #combo .cpause{background:transparent!import
 #viewMain .drift .word.ta-metal.ta-metal-frozen:not(.got){opacity:1!important;border-color:#c9f4ff!important;color:#0d2430!important;
  box-shadow:0 0 0 1px rgba(12,30,40,.85),inset 0 0 12px rgba(215,248,255,.95),0 0 14px rgba(120,210,255,.75)!important;
  filter:hue-rotate(-8deg) saturate(1.3)}
+/* 黒い金属（HP3）：黒鉄のような暗い金属。紫と赤茶がわずかに混じる粒状の地。文字は明るく、縁は鈍い銀で見失わないように */
+#viewMain .drift .word.ta-metal.ta-metal-black:not(.got){color:#f6f0ea!important;border-color:#a99ca3!important;
+ background:radial-gradient(circle at 18% 30%,rgba(120,80,110,.35) 0 1.2px,transparent 1.6px) 0 0/9px 7px,
+  radial-gradient(circle at 70% 65%,rgba(140,90,70,.3) 0 1px,transparent 1.5px) 0 0/11px 8px,
+  linear-gradient(180deg,#6a6164 0%,#4a4346 18%,#332e31 46%,#252124 54%,#38322f 70%,#4d4547 88%,#625a5c 100%)!important;
+ box-shadow:0 0 0 1px rgba(8,6,8,.9),inset 0 1px 0 rgba(255,240,245,.38),inset 0 -1.5px 0 rgba(0,0,0,.6),0 2px 6px rgba(0,0,0,.6),0 0 12px rgba(170,135,160,.45)!important;
+ text-shadow:0 1px 1px rgba(0,0,0,.85),0 0 6px rgba(0,0,0,.5)!important}
+#viewMain .drift .word.ta-metal.ta-metal-black:not(.got)::after{opacity:.5}
+#viewMain .drift .word.ta-metal.ta-metal-black.ta-metal-dmg:not(.got){color:#efe7e0!important;border-color:#8f8288!important;
+ background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cpath d='M48 0 L44 13 L52 19 L46 28 L50 40 M44 13 L33 17 M52 19 L64 15' fill='none' stroke='rgba(230,200,215,.75)' stroke-width='1.2' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center/100% 100% no-repeat,
+  linear-gradient(180deg,#5a5255 0%,#3f393c 18%,#2b272a 46%,#1f1c1e 54%,#302b29 70%,#423b3d 88%,#544c4e 100%)!important}
+#viewMain .drift .word.ta-metal.ta-metal-black.ta-metal-dmg2:not(.got){
+ background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cpath d='M48 0 L44 13 L52 19 L46 28 L50 40 M44 13 L33 17 M52 19 L64 15 L71 22 M46 28 L36 33 M20 0 L24 10 L16 20 L22 31 M80 40 L76 28 L84 18 L78 6' fill='none' stroke='rgba(240,205,220,.85)' stroke-width='1.3' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center/100% 100% no-repeat,
+  linear-gradient(180deg,#4e4649 0%,#363033 18%,#252124 46%,#1a1719 54%,#2a2523 70%,#3a3335 88%,#4a4244 100%)!important}
 .ta-metal-spark{position:fixed;z-index:60;width:46px;height:46px;border-radius:50%;pointer-events:none;
  background:radial-gradient(circle,rgba(255,255,255,.95) 0 8%,rgba(220,232,248,.7) 16%,rgba(170,190,220,.2) 42%,transparent 66%)}
 /* 枠を消すと「一時停止」と連鎖の数字が重なるので、一時停止中は「一時停止」だけを見せる */
@@ -14867,7 +14896,8 @@ html.ta-tut.ta-tut-allow-fire .ta-items .ta-orb.fire,html.ta-tut.ta-tut-allow-ic
  startBtn.addEventListener('click',e=>{e.stopPropagation();begin();});
  function begin(){
   if(taRunning||taStarting||T.on)return;
-  T.on=true;T.step=-1;T.count=0;
+  T.on=true;T.step=-1;T.count=0;T.metalSaid=false;T.metalDone=false;
+  STEPS.forEach(x=>{if(x._orig){Object.assign(x,x._orig);delete x._orig;}x._metalNoted=false;});   // 前回の練習で差し替えた説明を元に戻す
   document.documentElement.classList.add('ta-tut');startBtn.hidden=true;startBtn.classList.remove('glow');
   // DEMO PLAY の見た目のまま、裏でゲームの仕組みを動かす（判定を本番と同じにするため）。
   // 初回は画像などの準備を先に済ませてから始める。
@@ -14894,6 +14924,7 @@ html.ta-tut.ta-tut-allow-fire .ta-items .ta-orb.fire,html.ta-tut.ta-tut-allow-ic
  function next(){
   advancing=false;clearGuides();clearTimeout(hintTimer);
   T.step++;T.count=0;
+  if(typeof taMetalClear==='function')taMetalClear();   // 心眼の練習で残った金属の言霊は、次の段では普通に戻す
   if(T.step>=STEPS.length){complete();return;}
   const st=STEPS[T.step];
   taYuraShow(st.say,4200);setText(st);
@@ -14902,6 +14933,12 @@ html.ta-tut.ta-tut-allow-fire .ta-items .ta-orb.fire,html.ta-tut.ta-tut-allow-ic
   if(st.mark||st.line)guideLoop();
   const hint=()=>{if(!T.on||STEPS[T.step]!==st)return;taYuraShow(st.hint,4000);hintTimer=setTimeout(hint,14000);};
   hintTimer=setTimeout(hint,14000);
+ }
+ // 心眼の練習：金属の言霊を狙うよう、説明を差し替える（迷わないように）
+ function metalNote(st){
+  if(st._metalNoted)return;st._metalNoted=true;st._orig={text:st.text,sub:st.sub,hint:st.hint};
+  st.text='光の輪の、金属の言霊を狙って';st.sub='硬い言霊も、真ん中を射抜けば一突き（心眼）';st.hint='金属の、真ん中を';
+  setText(st);
  }
  // ステップを満たしたら、採集エリアの中央に「CLEAR」の印を押す
  function stamp(){
@@ -14929,7 +14966,12 @@ html.ta-tut.ta-tut-allow-fire .ta-items .ta-orb.fire,html.ta-tut.ta-tut-allow-ic
   if(st.need==='collect'&&e.detail.kind==='collect'){if(++T.count>=st.count)done();else bump();}
   else if(st.need==='fire'&&e.detail.kind==='orb'&&e.detail.type==='fire'){if(!T.fireWait){T.fireWait=true;setTimeout(()=>{T.fireWait=false;if(T.on&&STEPS[T.step]===st)done();},1600);}}
   else if(st.need==='cross'&&e.detail.kind==='cross'){if(!T.crossWait){T.crossWait=true;setTimeout(()=>{T.crossWait=false;if(T.on&&STEPS[T.step]===st)done();},4300);}}   // 奥義の黒帯が引いてから褒める
-  else if(st.need==='shingan'&&e.detail.kind==='shingan'){if(++T.count>=st.count)done();else bump();}
+  else if(st.need==='shingan'&&e.detail.kind==='shingan'){
+   if(e.detail.metal){T.metalDone=true;if(st._orig){Object.assign(st,st._orig);setText(st);}}   // 金属を射抜いたら、説明を元に戻す
+   T.count++;
+   // 金属の言霊を一度も心眼で射抜いていなければ、最後の1回は金属を狙ってもらう（クリアにしない）
+   if(T.count>=st.count&&!T.metalDone){T.count=st.count-1;bump();metalNote(st);return;}
+   if(T.count>=st.count)done();else{bump();if(!T.metalDone&&T.count>=1)metalNote(st);}}
   else if(st.need==='issen'&&e.detail.kind==='issen'&&(e.detail.count||0)>=2){const now=performance.now();if(now-(T.lastIssen||0)<700)return;T.lastIssen=now;   // ひとなでで2回数えない
    if(++T.count>=st.count)done();else bump();}
  });
@@ -14944,7 +14986,16 @@ html.ta-tut.ta-tut-allow-fire .ta-items .ta-orb.fire,html.ta-tut.ta-tut-allow-ic
    const c=w=>{const r=w.getBoundingClientRect();return {x:r.left+r.width/2-hr.left,y:r.top+r.height/2-hr.top};};
    const inside=p=>p.x>20&&p.x<hr.width-20&&p.y>hr.height*.18&&p.y<hr.height-30;
    if(st.mark){
-    if(!plain(target)||!inside(c(target)))target=words.filter(w=>inside(c(w))).sort((a,b)=>{const A=c(a),B=c(b);return Math.hypot(A.x-hr.width/2,A.y-hr.height/2)-Math.hypot(B.x-hr.width/2,B.y-hr.height/2);})[0]||null;
+    if(!plain(target)||!inside(c(target))){
+     target=words.filter(w=>inside(c(w))).sort((a,b)=>{const A=c(a),B=c(b);return Math.hypot(A.x-hr.width/2,A.y-hr.height/2)-Math.hypot(B.x-hr.width/2,B.y-hr.height/2);})[0]||null;
+     // 心眼の2つ目からは金属の言霊を的にする（金属を心眼で射抜くまで）：硬いものも、心眼なら一突きで貫けることを体験してもらう
+     if(st.need==='shingan'&&T.count>=1&&!T.metalDone){
+      const m=words.find(w=>w.classList.contains('ta-metal')&&inside(c(w)));
+      if(m)target=m;
+      else if(target){target.classList.add('ta-metal');target.dataset.metalHp='2';target.classList.remove('ta-metal-dmg');}
+      if(target&&!T.metalSaid){T.metalSaid=true;taYuraShow('硬い言霊も、|心眼なら一突き',3200);}
+     }
+    }
     if(target){if(!mark){mark=document.createElement('div');mark.id='taTutMark';h.append(mark);}const p=c(target);mark.style.left=p.x+'px';mark.style.top=p.y+'px';mark.hidden=false;}
     else if(mark)mark.hidden=true;
    }
