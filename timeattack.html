@@ -1,6 +1,34 @@
 <!doctype html>
 <html lang="ja">
 <head>
+<script id="ta-media-release">
+// Android のロック画面・通知に再生カードが残るのを防ぐ。一時停止しただけの音声要素でもカードは残るため、
+// 止まってしばらく経った音声要素や、画面を離れたときの音声要素は、中身（src）をいったん外して解放する。
+// 次にその要素を再生しようとしたときは、自動で中身を戻してから再生する（ゲーム側の処理は変えない）。
+(function(){
+  const used=new Set(),saved=new Map(),pausedAt=new Map();window.__taMediaUsed=used;
+  const origPlay=HTMLMediaElement.prototype.play;
+  function restoreOne(m){
+    const st=saved.get(m);if(!st)return;saved.delete(m);
+    try{m.src=st.src;m.loop=st.loop;if(st.time>0)m.addEventListener('loadedmetadata',()=>{try{m.currentTime=st.time;}catch(_){}},{once:true});}catch(_){}
+  }
+  HTMLMediaElement.prototype.play=function(){
+    if(!used.has(this)){used.add(this);this.addEventListener('pause',()=>pausedAt.set(this,performance.now()));this.addEventListener('playing',()=>pausedAt.delete(this));}
+    restoreOne(this);pausedAt.delete(this);
+    return origPlay.apply(this,arguments);
+  };
+  function releaseOne(m){
+    try{
+      if(saved.has(m))return;const src=m.currentSrc||m.getAttribute('src');if(!src)return;
+      saved.set(m,{src,time:m.currentTime||0,loop:m.loop});
+      m.pause();m.removeAttribute('src');m.load();
+    }catch(_){}
+  }
+  window.taMediaRelease=function(){for(const m of used)releaseOne(m);};
+  // 止まってから4秒以上たった音声要素は解放する（ゲームを終えてタイトルに戻ったときなど）
+  setInterval(()=>{const now=performance.now();for(const m of used){if(m.paused&&!saved.has(m)&&now-(pausedAt.get(m)||now)>4000)releaseOne(m);}},2000);
+})();
+</script>
 <script id="ta-100-profiler">
 (function(){const buckets=Object.create(null);window.__ta100Profile={start:()=>performance.now(),end:function(name,t){const ms=performance.now()-t;let b=buckets[name];if(!b)b=buckets[name]={count:0,totalMs:0,maxMs:0,over16:0,over50:0};b.count++;b.totalMs+=ms;b.maxMs=Math.max(ms,b.maxMs);if(ms>=16.7)b.over16++;if(ms>=50)b.over50++},report:function(){const out={};for(const k in buckets){const b=buckets[k];out[k]={count:b.count,totalMs:+b.totalMs.toFixed(2),avgMs:+(b.totalMs/b.count).toFixed(3),maxMs:+b.maxMs.toFixed(2),over16:b.over16,over50:b.over50}}return out},reset:function(){for(const k in buckets)delete buckets[k]}}})();
 </script>
@@ -837,8 +865,9 @@ html,body{overscroll-behavior-y:none;}
 .glow-fx.sun .smote{position:absolute;bottom:-6%;width:4px;height:4px;border-radius:50%;
   background:radial-gradient(circle,#fff7df 0%,#f3c24a 55%,rgba(230,160,40,0) 100%);
   box-shadow:0 0 7px 1px rgba(255,205,105,.9);scale:var(--s,1);
-  animation:smoteRise var(--d,8s) linear infinite, smoteTw 1.6s ease-in-out infinite}
-@keyframes smoteRise{0%{transform:translate(0,0);opacity:0}14%{opacity:1}82%{opacity:.9}100%{transform:translate(var(--dx,0),var(--rise,-320px));opacity:0}}
+  animation:smoteRise var(--d,8s) linear infinite}
+
+@keyframes smoteRise{0%{transform:translate(0,0);opacity:0}14%{opacity:1}23%{opacity:.45}32%{opacity:1}41%{opacity:.5}50%{opacity:1}59%{opacity:.45}68%{opacity:1}75%{opacity:.55}82%{opacity:.9}100%{transform:translate(var(--dx,0),var(--rise,-320px));opacity:0}}
 @keyframes smoteTw{0%,100%{filter:brightness(.75)}50%{filter:brightness(1.75)}}
 .glow-fx.moon{background:radial-gradient(ellipse 80% 70% at 22% 8%,rgba(205,220,255,.30),rgba(150,175,235,.12) 50%,transparent 80%),rgba(40,60,120,.16)}
 .glow-fx.moon .mote{position:absolute;top:-6%;width:3px;height:3px;border-radius:50%;background:#eef3ff;box-shadow:0 0 6px 1px rgba(200,215,255,.9);
@@ -852,7 +881,7 @@ html,body{overscroll-behavior-y:none;}
 .glow-fx.glow-fx-front{z-index:3;background:none!important;opacity:1;isolation:isolate;}
 .glow-fx-front .mote,.glow-fx-front .smote{width:6px;height:6px;filter:blur(.7px);box-shadow:0 0 12px 3px var(--glow-halo);}
 .glow-fx-front.moon .mote{animation-duration:var(--d,7s);}
-.glow-fx-front.sun .smote{animation-duration:var(--d,8s),1.6s;}
+.glow-fx-front.sun .smote{animation-duration:var(--d,8s);}
 
 /* Falling Memory / Rising Feelings: stage-aware, independent from background
    transitions and collection-frame glow. All colors affect this FX only. */
@@ -874,13 +903,10 @@ html,body{overscroll-behavior-y:none;}
  box-shadow:0 0 7px 1px var(--glow-halo);
 }
 .glowbar.glowbar.moon,.glowbar.glowbar.sun{border-color:var(--glow-particle,#b9d7ff)}
-/* 処理落ち対策：スマホでは昇る想いの粒の明滅（filterのアニメーションは毎コマ描き直しになる）をやめる */
-@media (pointer:coarse){.glow-fx.sun .smote,.glow-fx-front.sun .smote{animation:smoteRise var(--d,8s) linear infinite!important}.glow-fx.sun .ray{filter:blur(4px)}}
-/* 重い状態が重なってコマが落ちたときだけ（html.ta-lowfx）、飾りの粒と光をいったん間引く。ゲームの判定・得点は変えない */
-html.ta-lowfx .glow-fx.sun .smote{animation:smoteRise var(--d,8s) linear infinite!important}
-html.ta-lowfx .glow-fx .mote:nth-of-type(n+11),html.ta-lowfx .glow-fx .smote:nth-of-type(n+11){display:none}
-html.ta-lowfx .glow-fx-front{display:none}
-html.ta-lowfx .glow-fx.sun .ray{filter:none;opacity:.35!important}
+/* 処理落ち対策（粒の数は減らさない）：スマホでは光の筋のぼかしを弱める */
+@media (pointer:coarse){.glow-fx.sun .ray{filter:blur(4px)}}
+/* 重い状態が重なってコマが落ちたときだけ（html.ta-lowfx）、ぼかしなど重い飾りだけを外す。粒の数・判定・得点は変えない */
+html.ta-lowfx .glow-fx.sun .ray{filter:none;opacity:.45!important}
 html.ta-lowfx .glow-fx-front .mote,html.ta-lowfx .glow-fx-front .smote{filter:none}
 html.ta-lowfx .ta-night-hud-visible{animation:none!important}
 .glowbar.glowbar.moon i,.glowbar.glowbar.sun i{background:linear-gradient(90deg,#fff,var(--glow-particle,#b9d7ff))}
@@ -7421,13 +7447,14 @@ function startGlow(silent, collectedName){
   fx = document.createElement("div"); fx.className = "glow-fx " + (moon ? "moon" : "sun");
   const color=glowStagePalette()[moon?0:1];
   glowSetPalette(fx,color,moon?'memory':'feeling');
-  if(moon) for(let i=0;i<22;i++){ const d = document.createElement("i"); d.className = "mote";
+  // 粒は見せ場なので多めに（明滅を軽い方式にしたぶん、1.5倍にしても負荷はほぼ変わらない）
+  if(moon) for(let i=0;i<33;i++){ const d = document.createElement("i"); d.className = "mote";
       d.style.left = (Math.random() * 100).toFixed(1) + "%"; d.style.animationDelay = (-Math.random() * 6).toFixed(2) + "s"; d.style.animationDuration = (5 + Math.random() * 4).toFixed(2) + "s";
       d.style.setProperty("--s", (.6 + Math.random() * 1.2).toFixed(2)); d.style.setProperty("--dx", ((Math.random() - .5) * 40).toFixed(0) + "px"); fx.append(d); }
   else { for(let i=0;i<5;i++){ const r = document.createElement("i"); r.className = "ray";
       r.style.right = (-10 + i * 13 + Math.random() * 6).toFixed(1) + "%"; r.style.width = (8 + Math.random() * 10).toFixed(1) + "%";
       r.style.animationDelay = (-Math.random() * 4).toFixed(2) + "s"; r.style.opacity = (.5 + Math.random() * .5).toFixed(2); fx.append(r); }
-    for(let i=0;i<24;i++){ const d = document.createElement("i"); d.className = "smote";
+    for(let i=0;i<36;i++){ const d = document.createElement("i"); d.className = "smote";
       d.style.left = (Math.random() * 100).toFixed(1) + "%"; d.style.setProperty("--d", (6 + Math.random() * 5).toFixed(2) + "s");
       d.style.animationDelay = (-Math.random() * 8).toFixed(2) + "s, " + (-Math.random() * 1.6).toFixed(2) + "s";
       d.style.setProperty("--s", (.6 + Math.random() * 1.3).toFixed(2)); d.style.setProperty("--dx", ((Math.random() - .5) * 50).toFixed(0) + "px"); fx.append(d); }
@@ -7439,7 +7466,7 @@ function startGlow(silent, collectedName){
   const front=document.createElement("div");
   front.className="glow-fx glow-fx-front " + (moon ? "moon" : "sun");
   glowSetPalette(front,color,moon?'memory':'feeling');
-  const frontCount=moon?8:9;
+  const frontCount=moon?12:13;
   for(let i=0;i<frontCount;i++){
     const d=document.createElement("i");
     d.className=moon?"mote":"smote";
@@ -8181,7 +8208,7 @@ function vortexRelease(){
       taShinganPendingWord=null;
       if(shinganNow){
         taScore+=.5*taNightScoreRate();taScoreRefresh();taRender();
-        taAward(true,1,false,null,false,.5);   // 心眼：残り時間 +0.5秒
+        taAward(true,1,false,null,false,.2);   // 心眼：残り時間 +0.2秒（+0.5秒だとゲームが終わらなくなるため）
         setComboSkillGrace("shingan");
         const blink=document.createElement('span');blink.className='ta-center-hit-flash';
         blink.style.width=c.width+'px';blink.style.height=c.height+'px';blink.style.borderRadius=c.radius||'999px';
@@ -9812,6 +9839,7 @@ function taReleaseMediaSession(){
 }
 function taSuspendBackgroundAudio(){
   taCenturyMusic.stop(true);
+  try{taSilverMusic.stop(true);}catch(_){}
   sfx.bgmStop(true);
   for(const player of [window.taResultAudio]){
     if(!player)continue;
@@ -9820,9 +9848,12 @@ function taSuspendBackgroundAudio(){
   sfx.resultStop(true);
   if(typeof taHeartbeatStop==='function')taHeartbeatStop();
   taReleaseMediaSession();
+  // 止めただけでは通知の再生カードが残るので、少し待ってから音声要素の中身を外す（各BGMの停止処理のあと）
+  setTimeout(()=>{if(document.hidden||document.visibilityState!=='visible')window.taMediaRelease&&window.taMediaRelease();},60);
 }
 document.addEventListener('visibilitychange',()=>{if(document.hidden)taSuspendBackgroundAudio();});
 window.addEventListener('pagehide',taSuspendBackgroundAudio);
+window.addEventListener('pagehide',()=>{window.taMediaRelease&&window.taMediaRelease();});
 document.addEventListener('pointerdown',()=>{taCenturyMusic.retry();taSilverMusic.retry();},{passive:true});
 
 
