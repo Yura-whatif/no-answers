@@ -3166,6 +3166,7 @@ header>.brand.ta-face-header::before{background-position:center,-118px center!im
       <button type="button" id="t-word-levelup">言霊Lvアップ</button>
       <button type="button" id="t-pages">頁追加</button>
       <button type="button" id="t-density">言霊:章連動</button>
+      <button type="button" id="t-metal">金属:章連動</button>
       <button type="button" id="t-orblv">紅蒼の玉Lv +1</button>
       <button type="button" id="t-fxlv">紅蒼の演出：Lvどおり</button>
     </div>
@@ -6775,6 +6776,45 @@ function naturalSpawnPosition(){
   lastNaturalSpawn={x,y};
   return {summonX:x,summonY:y};
 }
+// ── 金属文字（HP2） ───────────────────────────────
+// ダメージ：タップ・神速・スワイプ1／心眼3／紅Lv1〜4は2・Lv5は4／交差の爆発5／蒼1。
+// HPが残ったときは「キン」と鳴ってひびが入り、その場に残る。蒼で残ったときは凍って数秒止まる。
+// 出現率：第三章から混ざり始め、章が進むほど増える（終盤で約3割）。章は夜ごとに第一章から。
+const TA_METAL_RATE=[0,0,.08,.12,.15,.18,.21,.24,.27,.3];
+let taMetalTestRate=null;   // テストモードの切替（null＝章連動、0＝なし、数値＝その割合で固定）
+function taMetalRate(){if(taMetalTestRate!=null)return taMetalTestRate;const c=taStory&&typeof taStory.chapter==='number'?taStory.chapter:0;return TA_METAL_RATE[Math.max(0,Math.min(TA_METAL_RATE.length-1,c))];}
+// プレイが終わってDEMOに戻るとき、残っている金属文字はふつうの言霊に戻す（DEMOには出さない）
+function taMetalClear(){document.querySelectorAll('#drift .word.ta-metal').forEach(w=>{w.classList.remove('ta-metal','ta-metal-dmg','ta-metal-frozen');delete w.dataset.metalHp;delete w.dataset.metalIce;});}
+const taMetalPendingFx=new Set();let taMetalTapHit=false;
+function taMetalHitFx(w){
+  if(w._metalBroke||!w.isConnected||w.classList.contains('got'))return;
+  try{if(typeof sfx!=='undefined'&&sfx.on&&sfx.metalClink)sfx.metalClink();}catch(_){}
+  w.classList.add('ta-metal-dmg');
+  const r=w.getBoundingClientRect();
+  const sp=document.createElement('span');sp.className='ta-metal-spark';sp.style.left=(r.left+r.width/2)+'px';sp.style.top=(r.top+r.height/2)+'px';document.body.append(sp);
+  sp.animate([{opacity:1,transform:'translate(-50%,-50%) scale(.4)'},{opacity:.9,transform:'translate(-50%,-50%) scale(1.15)',offset:.35},{opacity:0,transform:'translate(-50%,-50%) scale(1.5)'}],{duration:320,easing:'ease-out'}).onfinish=()=>sp.remove();
+  w.animate([{filter:'brightness(2.2)'},{filter:'brightness(1)'}],{duration:220,easing:'ease-out'});
+}
+function taMetalFlushPending(){if(!taMetalPendingFx.size)return;const ws=[...taMetalPendingFx];taMetalPendingFx.clear();ws.forEach(taMetalHitFx);}
+function taMetalBreakFx(w){if(w._metalBroke)return;w._metalBroke=true;try{if(typeof sfx!=='undefined'&&sfx.on&&sfx.metalBreak)sfx.metalBreak();}catch(_){}}
+function taMetalStrike(w,dmg,src){
+  let hp=+w.dataset.metalHp;if(!(hp>0)){taMetalBreakFx(w);return true;}   // すでに0なら、そのまま消える（心眼など）
+  if(src==='ice'&&w.dataset.metalIce==='1')return false;   // 凍ったままの間は、同じ蒼で何度も削らない
+  const now=performance.now();
+  if((src==='fire'||src==='ice')&&w._metalHitAt&&w._metalHitAt[src]&&now-w._metalHitAt[src]<900)return false;   // 同じ軌跡で毎コマ削らない
+  (w._metalHitAt||(w._metalHitAt={}))[src]=now;
+  hp-=dmg;w.dataset.metalHp=String(Math.max(0,hp));
+  if(hp<=0){taMetalBreakFx(w);return true;}
+  // 割れなかった：音・火花・ひび。タップは指を離すまで待つ（心眼で一発で割れたら「キン」は鳴らさず、割れる音だけにする）。
+  if(src==='tap')taMetalPendingFx.add(w);else taMetalHitFx(w);
+  // 連鎖は途切れないように受付時間だけ延ばす（数は増えない）
+  if(typeof combo!=='undefined'&&combo>0&&taRunning){comboAt=Date.now();clearTimeout(bumpCombo.h);bumpCombo.h=setTimeout(expireCombo,comboWindowMs);}
+  if(src==='ice'){
+    w.dataset.metalIce='1';w.dataset.frozen='1';w.classList.add('ta-metal-frozen');
+    setTimeout(()=>{if(!w.isConnected)return;delete w.dataset.metalIce;delete w.dataset.frozen;w.classList.remove('ta-metal-frozen');},3200);
+  }
+  return false;
+}
 // 章が進むほど言霊が増える：同時に出る最大数（スマホ／PC）と、出る間隔の倍率。章は夜ごとに第一章から。
 const TA_DENSITY_MOBILE=[5,5,6,6,7,7,8,8,9,9];
 const TA_DENSITY_PC=[6,6,7,7,8,8,9,9,10,10];
@@ -6896,6 +6936,10 @@ const __ta100Start=window.__ta100Profile.start();try {
   // 連鎖をシビアに：通常の言葉のうち、たまに「早く消える言葉」と「遅れて現れる言葉」を混ぜる（見た目は同じ）
   let lifeMs = flood ? 6000 : 9500;
   const plainWord = !special && !odd && !multi && !pull && !glowW && !petalW && !reso && !vortex && !crack && (!opt.force || opt.thunderBorn) && !flood && !sakuraOn;
+  // 金属文字（HP2）：黄・翠が生み出す言霊、練習・DEMO・夜のボーナス・時間停止中には出さない。いまはテストモードの切替でのみ出現。
+  if(plainWord && !opt.plain && !opt.force && !opt.thunderBorn && taRunning && !taStarting && !flood && !taNightActive() && !(typeof taTutOn==='function'&&taTutOn()) && Math.random() < taMetalRate()){
+    w.classList.add('ta-metal'); w.dataset.metalHp = '2'; w.style.setProperty('--ta-metal-delay', (-Math.random()*3.4).toFixed(2)+'s'); w.setAttribute('aria-label', (w.dataset.word||w.textContent) + '（金属：2回で消える）');
+  }
   if(plainWord && !opt.thunderBorn){ const r = Math.random();
     if(r < .1){ const d = 3.4 + Math.random() * .8; w.style.animationDuration = d.toFixed(2) + "s"; w.dataset.quick = "1"; lifeMs = d * 1000 + 300; }   // 早く消える（見えているのは約2.5〜3秒）
     else if(r < .18){ const dl = 1.5 + Math.random() * .6; w.style.animationDelay = dl.toFixed(2) + "s"; w.style.animationFillMode = "both"; w.classList.add("late"); w.dataset.late = "1";   // 遅れて現れる（1.5〜2.1秒は見えず、触れない）
@@ -6918,6 +6962,8 @@ const __ta100Start=window.__ta100Profile.start();try {
     if(isGem){ startFlood(w); sfx.special(); sfx.timeStop(); return; }
     if(w.classList.contains("petal")){ sakuraBloom(w); return; }   // ひとひらの花びらに触れると、桜吹雪／夜桜が始まる      // 懐中時計に触れると時間が止まる（時計はその場で静止）
     if(w.classList.contains("still")){ stopTap(w); return; }   // 止まった時間の中の言葉は、霧になってその場に止まる
+    // 金属文字：タップ・神速・スワイプ（一閃を含む）はダメージ1。HPが残ればその場に残る。
+    if(w.classList.contains('ta-metal') && !taMetalStrike(w, 1, taMetalTapHit ? 'tap' : 'swipe')) return;
     window.__taPickupTraceEnabled && window.__taDiagMark?.('word-handler-main',{word:(w.dataset.word||w.textContent||'').slice(0,24)});
     const taCoarse=window.matchMedia&&matchMedia('(pointer:coarse)').matches;
     const taNow=performance.now();
@@ -6961,8 +7007,10 @@ const __ta100Start=window.__ta100Profile.start();try {
     const taTime = w.dataset.taTime === "1";
     const fireScore = w.dataset.taFireScore === "1" && !taTime;
     // 紅玉：連鎖の倍率と掛け合わせる（Lv1 ×1.5 〜 Lv5 ×2.5）。燃やした言霊は頁も2倍（月が速く満ちる）。
-    const taPoints = (fireScore ? taMastery.value('fire').rewardMultiplier : 1) * Math.max(1,cm) * (taMemoryBoost()?2:1);
+    const metalWord = w.classList.contains('ta-metal');   // 金属文字は手間に見合うよう得点も頁も2倍
+    const taPoints = (fireScore ? taMastery.value('fire').rewardMultiplier : 1) * Math.max(1,cm) * (taMemoryBoost()?2:1) * (metalWord ? 2 : 1);
     if(fireScore && !nightResidual)taStoryAdd(taStoryChainRate());
+    if(metalWord && !nightResidual)taStoryAdd(taStoryChainRate());
     const moonBoostAtCollect=taFeelingBoost();
     const arrive = () => {
       // All points and seconds are credited. Dense, overlapping arrivals
@@ -7171,7 +7219,8 @@ function pullAll(x, y, self, eclipse=false, eclipseElement=null){
   ring.animate([{transform:"translate(-50%,-50%) scale(0)", opacity:.3},{transform:"translate(-50%,-50%) scale(1)", opacity:1}], {duration:GROW, easing:"cubic-bezier(.5,1,.89,1)", fill:"forwards"});
   const snd = sfx.inhale(duration / 1000 + .3);
   let sum = 0, n = 0, pending = 0, open = true, done = false; const collected = [];
-  const skip = ".got,.special,.crack,.vortex,.pull,.glow,.multi,.odd,.petal,.reso,.still,.late,.flying";
+  // 金属文字は「引き寄せ」では動かない。「置き忘れたもの」では他の言霊と同じように吸い込んで回収する（HPは関係なし）
+  const skip = ".got,.special,.crack,.vortex,.pull,.glow,.multi,.odd,.petal,.reso,.still,.late,.flying" + (eclipse ? "" : ",.ta-metal");
   const suck = w => {
     const r = w.getBoundingClientRect(), word = w.dataset.word || w.textContent;
     w.classList.add("got"); pending++;
@@ -7925,6 +7974,13 @@ function vortexRelease(){
     const entries=swipeHitSnapshot || Array.from(field.querySelectorAll('.word'),w=>({w,r:null}));
     // 負荷対策：対象になりうる言霊の位置は、拾う処理（DOMの書き換え）を始める前にまとめて読む。
     // 1語拾うごとに次の言霊の位置を読むと、そのたびに画面全体の再計算が走るため（言霊が多いと重い）。
+    // 金属文字：同じ一筆の中でも、いったん言霊から外れれば、もう一度なぞったときに再び当たる（往復で割れる）
+    for(const entry of entries){
+      const w=entry.w;
+      if(!w.dataset.swiped||!w.classList.contains('ta-metal')||w.classList.contains('got')||!w.isConnected)continue;
+      entry.r=w.getBoundingClientRect();
+      if(!taSegmentIntersectsRect(x0,y0,x1,y1,entry.r))delete w.dataset.swiped;
+    }
     for(const entry of entries){
       if(entry.r)continue;const w=entry.w;
       if(!w.isConnected || w.classList.contains('got') || w.dataset.swiped || !isSwipeable(w) || w.classList.contains('late'))continue;
@@ -7947,14 +8003,14 @@ function vortexRelease(){
       w.click();
       const perf=window.__taV54Perf;
       if(perf){const dt=performance.now()-__taV54PickupStart;perf.pickups++;perf.pickupMs+=dt;perf.maxPickupMs=Math.max(perf.maxPickupMs,dt);if(w.dataset.thunderBorn==='1'){perf.thunderPickups++;perf.maxThunderPickupMs=Math.max(perf.maxThunderPickupMs,dt);}}
-      if(!w.isConnected || w.classList.contains('got') || w.classList.contains('still')){
+      if(!w.isConnected || w.classList.contains('got') || w.classList.contains('still') || w.classList.contains('ta-metal')){   // 金属は割れなくても一閃の数に入れる
         collected.add(w);
         const cx=Math.max(r.left,Math.min(r.right,x1)),cy=Math.max(r.top,Math.min(r.bottom,y1));
         gessenHit(cx,cy);
       }
     }
   }
-  function hit(x,y){taSwipeSegment(x,y,x,y);}
+  function hit(x,y){taMetalTapHit=true;try{taSwipeSegment(x,y,x,y);}finally{taMetalTapHit=false;}}   // 押した瞬間の当たり（タップ）
   function sweep(x,y){
     taSwipeSegment(lx,ly,x,y);
     lx=x;ly=y;
@@ -8014,6 +8070,9 @@ function vortexRelease(){
   }
  function finish(){
     if(!active)return;
+    // 割れずに残った金属文字は、次の一筆・次のタップでまた当てられるようにする（同じ一筆の中では1回だけ）
+    field.querySelectorAll('.word.ta-metal[data-swiped]').forEach(m=>{if(!m.classList.contains('got'))delete m.dataset.swiped;});
+    taMetalFlushPending();   // 指を離した時点で割れていなければ「キン」とひび（心眼で割れたものは鳴らさない）
     active=false;window.__taSwipeActive=false;points=[];collected.clear();pointer=null;flashed=false;flashedTier=0;awardedBonus=0;shinsokuAwarded=false;gessenHits=[];gessenAwarded=false;gessenStraight=false;gessenLastAt=0;gessenChainCount=0;
   }
   // Center-tap bonus is evaluated on pointerup, since the swipe engine
@@ -8041,7 +8100,7 @@ function vortexRelease(){
       const rr=cw.getBoundingClientRect(),cx=rr.left+rr.width/2,cy=rr.top+rr.height/2;
       // Generous central area: 50% of word width, 60% of its height.
       if(Math.abs(e.clientX-cx)<=rr.width*.25 && Math.abs(e.clientY-cy)<=rr.height*.30)
-        centerTapCandidate={id:e.pointerId,x:e.clientX,y:e.clientY,cx,cy,width:rr.width,height:rr.height,radius:getComputedStyle(cw).borderRadius};
+        centerTapCandidate={w:cw,id:e.pointerId,x:e.clientX,y:e.clientY,cx,cy,width:rr.width,height:rr.height,radius:getComputedStyle(cw).borderRadius};
     }
     swipeFastCandidate=null;shinsokuAwarded=false;
     issenTrail=null;issenTrailAnimation=null;
@@ -8094,6 +8153,11 @@ function vortexRelease(){
         blink.animate([{opacity:0},{opacity:.95,offset:.15},{opacity:.12,offset:.45},{opacity:.9,offset:.63},{opacity:0,transform:'translate(-50%,-50%) scale(.84)'}],{duration:320,easing:'ease-out'}).onfinish=()=>blink.remove();
         taYuraSay('shingan');
         if(taTutOn())document.dispatchEvent(new CustomEvent('ta-tut',{detail:{kind:'shingan'}}));
+        // 心眼のダメージは3：押した瞬間のタップで1入っているので、残り2を加える
+        if(c.w && c.w.classList.contains('ta-metal') && c.w.isConnected && !c.w.classList.contains('got') && +c.w.dataset.metalHp > 0){
+          c.w.dataset.metalHp = String(Math.max(0, +c.w.dataset.metalHp - 2));
+          if(+c.w.dataset.metalHp <= 0) c.w.click();
+        }
         const heart=document.createElement('span');heart.className='ta-shingan-label';heart.textContent='心眼';
         heart.style.left=c.cx+'px';heart.style.top=(c.cy-36)+'px';document.body.append(heart);
         heart.animate([{opacity:0,transform:'translate(-50%,0)'},{opacity:1,transform:'translate(-50%,-8px)',offset:.2},{opacity:0,transform:'translate(-50%,-26px)'}],{duration:900,easing:'ease-out'}).onfinish=()=>heart.remove();
@@ -9239,6 +9303,36 @@ const sfx = (()=>{
   return {
     refill: playItemRefillChime,
     pickupShimmer(){const a=ac();if(a)taStereoShimmer(a.currentTime+.05,2093,.014,.52);},
+    // 金属文字が割れたとき：「ガシャッ」と砕ける短い音（約0.4秒）。打撃のあとに細かい破片が散らばる。
+    // まとめて割ったときは、続けて鳴る分の破片を省いて音が濁らないようにする。
+    metalBreak(){ const a = ac(); if(!a) return; const t = a.currentTime;
+      const now = performance.now(), burst = now - (this._mbAt||0) < 70; this._mbAt = now;
+      const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      src.buffer = noise; src.playbackRate.value = 1.1 + Math.random()*.3; bp.type = "bandpass"; bp.frequency.value = 2600; bp.Q.value = .55;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(burst ? .09 : .16, t + .002); g.gain.exponentialRampToValueAtTime(0.0001, t + .16);
+      src.connect(bp); bp.connect(g); g.connect(bus); src.start(t, Math.random()*.2); src.stop(t + .2);
+      [[520,.06,.06],[980,.045,.05],[1610,.03,.04]].forEach(([f,v,d])=>{ const o = ctx.createOscillator(), og = ctx.createGain();
+        o.type = "triangle"; o.frequency.value = f * (0.97 + Math.random()*.06);
+        og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(burst ? v*.6 : v, t + .002); og.gain.exponentialRampToValueAtTime(0.0001, t + d);
+        o.connect(og); og.connect(bus); o.start(t); o.stop(t + d + .02); });
+      const shards = burst ? 2 : 6;
+      for(let i=0;i<shards;i++){ const at = t + .02 + i*.028 + Math.random()*.01, f = 3000 + Math.random()*4000;
+        [[f,.03],[f*1.43,.012]].forEach(([ff,v])=>{ const o = ctx.createOscillator(), og = ctx.createGain();
+          o.type = "sine"; o.frequency.value = ff;
+          og.gain.setValueAtTime(0.0001, at); og.gain.exponentialRampToValueAtTime(v, at + .0015); og.gain.exponentialRampToValueAtTime(0.0001, at + .035);
+          o.connect(og); og.connect(bus); o.start(at); o.stop(at + .05); }); }
+    },
+    // 金属文字に当たって割れなかったとき：「キン」と澄んだ金属音（倍音がずれた短い響き＋ごく短い打撃音）
+    metalClink(){ const a = ac(); if(!a) return; const t = a.currentTime;
+      [[2380,.075,.32],[3620,.05,.22],[5170,.032,.15],[6980,.018,.09]].forEach(([f,v,d])=>{ const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = "sine"; o.frequency.value = f * (0.985 + Math.random()*.03);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + .002); g.gain.exponentialRampToValueAtTime(0.0002, t + d);
+        o.connect(g); g.connect(bus); o.start(t); o.stop(t + d + .02); });
+      const src = ctx.createBufferSource(), hp = ctx.createBiquadFilter(), g = ctx.createGain();
+      src.buffer = noise; hp.type = "highpass"; hp.frequency.value = 4200;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(.06, t + .001); g.gain.exponentialRampToValueAtTime(0.0001, t + .025);
+      src.connect(hp); hp.connect(g); g.connect(bus); src.start(t); src.stop(t + .04);
+    },
     // シャラーン：きらめきが転がり昇る分散音（軽いリバーブ）。白ユラ/黒ユラで音域を変える
     sharan(){ const a = ac(); if(!a) return; const t = a.currentTime, rv = reverb();
       const sc = night() ? [1109, 1245, 1480, 1661, 1865, 2217, 2489, 2960] : [1480, 1661, 1975, 2217, 2489, 2960, 3322, 3951];
@@ -9678,6 +9772,7 @@ window.addEventListener("resize", ()=>{ if(libOpen && !turning) renderShelf(); }
 
 // テスト用
 // 演出テスト用：今の章を「あと1頁」の状態にする（言霊を一つ消せば次の章へ。最後の章なら夜のボーナスへ）
+$("t-metal").onclick=()=>{taMetalTestRate=taMetalTestRate==null?.25:taMetalTestRate===.25?.6:taMetalTestRate===.6?0:null;const lab=taMetalTestRate==null?"章連動":taMetalTestRate===0?"なし":taMetalTestRate===.25?"少し":"多い";$("t-metal").textContent="金属:"+lab;toast(taMetalTestRate==null?"金属文字：章に合わせて出す（第三章から）":taMetalTestRate===0?"金属文字を出さない":"金属文字を出す（約"+Math.round(taMetalTestRate*100)+"%）");};
 $("t-density").onclick=()=>{taDensityFlat=!taDensityFlat;$("t-density").textContent=taDensityFlat?"言霊:以前の量":"言霊:章連動";toast(taDensityFlat?"言霊の量を以前の量（スマホ5／PC6）に固定しました":"言霊の量を章に合わせて増やします");};
 $("t-pages").onclick=()=>{ if(!taRunning){toast("ゲーム中に押すと、今の章があと1頁になります");return;} if(taNightActive()){toast("いまは夜のボーナス中です");return;}
   if(taStory.chapter>=taStoryChapters()){toast("この夜の章はすべて読み終えています");return;}
@@ -10874,7 +10969,7 @@ function taPickResultHint(){
 function taTutQuietFinish(){
   try{if(typeof flood!=='undefined'&&flood&&typeof endFlood==='function')endFlood();}catch(_){}
   ++taFinishToken;cancelAnimationFrame(taRaf);clearTimeout(bumpCombo.h);
-  taRunning=false;taStarting=false;
+  taRunning=false;taStarting=false;taMetalClear();
   taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;taFloodComboRemaining=null;
   const cb=document.getElementById('combo');if(cb){cb.classList.remove('on','x2','x3','run','heat','hold','paused','hit','up','ta-skill-grace');cb.style.removeProperty('--heat');cb.style.removeProperty('--ct');}
   const cn=document.getElementById('cbn');if(cn){cn.classList.remove('ta-chain-ten','ta-chain-hundred');cn.textContent='0';}
@@ -10908,7 +11003,7 @@ function taFinish(manualExit=false){
   ]){try{fn();}catch(e){console.error('Time Over '+label,e);}}
   // End the visual/gameplay century state immediately. The ranked-outro BGM
   // is deliberately managed separately by taCenturyMusic below.
-  taRunning=false;taStarting=false;
+  taRunning=false;taStarting=false;taMetalClear();
   taCancelFloodResume();combo=0;comboAt=0;comboWindowMs=COMBO_MS;comboPaused=false;
   taFloodComboRemaining=null;
   document.documentElement.classList.remove("ta-century-lit","ta-lamp-lit","ta-meteor-lit","ta-night-lit","ta-200-lit","ta-300-lit","ta-400-lit","ta-500-lit","ta-600-lit","ta-700-lit","ta-800-lit","ta-word-300");
@@ -12120,9 +12215,11 @@ if(!taWordFxAllowed())return;const r=taCrossRectCache.get(w)||w.getBoundingClien
   // Throttle dense sweeps to avoid excessive simultaneous audio voices.
   if(typeof sfx.touch==='function')sfx.touch();
  }
- function collect(w,type){
+ function collect(w,type,dmgOverride){
 const __ta100Start=window.__ta100Profile.start();try {
-if(!valid(w)||w.dataset.taElementClaim)return;w.dataset.taElementClaim='1';taMastery.add(type,w);if(type==='ice')iceContactSound();if(type!=='ice')wordFx(w,type);
+if(!valid(w)||w.dataset.taElementClaim)return;
+// 金属文字：紅Lv1〜4はダメージ2、紅Lv5は4、交差の爆発は5、蒼は全Lvで1（凍って止まったまま残る）
+if(w.classList.contains('ta-metal')){const dmg=dmgOverride!=null?dmgOverride:(type==='fire'?(taMastery.level('fire')>=5?4:2):1);if(!taMetalStrike(w,dmg,type))return;}w.dataset.taElementClaim='1';taMastery.add(type,w);if(type==='ice')iceContactSound();if(type!=='ice')wordFx(w,type);
  // During time-stop, stationary words use the original deferred award mechanism.
  // Elemental effects can collect them without bypassing the time-stop scoring rules.
  if(flood&&w.classList.contains('still')){
@@ -12490,7 +12587,7 @@ const __ta100Start=window.__ta100Profile.start();try {
    crossRewardOrbs(w,hit);
    if(taPerfEnabled)taPerfCost('orbs',performance.now()-phaseOrbStart);
    const phaseLogicStart=taPerfEnabled?performance.now():0;
-   taMastery.add('ice',w);collect(w,'fire');
+   taMastery.add('ice',w);collect(w,'fire',5);
    taCrossRectCache.delete(w);
    if(taPerfEnabled)taPerfCost('logic',performance.now()-phaseLogicStart);
    count++;
@@ -12528,7 +12625,7 @@ const __ta100Start=window.__ta100Profile.start();try {
    crossRewardOrbs(w,hit);
    if(taPerfEnabled)taPerfCost('orbs',performance.now()-phaseOrbStart);
    const phaseLogicStart=taPerfEnabled?performance.now():0;
-   taMastery.add('ice',w);collect(w,'fire');
+   taMastery.add('ice',w);collect(w,'fire',5);
    taCrossRectCache.delete(w);
    if(taPerfEnabled)taPerfCost('logic',performance.now()-phaseLogicStart);
    count++;
@@ -14579,6 +14676,32 @@ html.ta-night-bonus #viewMain>.hero #combo .cpause{background:transparent!import
 #slip #taHud .ta-stats{position:relative;gap:0!important;border:1px solid #262b35;box-shadow:0 30px 60px -30px color-mix(in srgb,var(--ink) 45%,transparent);background:rgba(255,255,255,.012)}
 #slip #taHud .ta-stats>div:not(.ta-countdown-frame),#slip #taHud.ta-hud-demo .ta-stats>div{border-color:transparent!important;background:transparent!important;box-shadow:none!important}
 #slip #taHud .ta-stats::after{content:"";position:absolute;left:50%;top:18%;bottom:18%;width:1px;background:linear-gradient(transparent,rgba(160,170,190,.28),transparent);pointer-events:none}
+/* 金属文字（HP2）：磨いた鋼の板。明るい地に細かいヘアライン、刻印のような濃い文字、面取りした縁。
+   ときどき光沢がすっと走る（小さな疑似要素だけの軽い演出）。 */
+#viewMain .drift .word.ta-metal:not(.got){color:#161b23!important;font-weight:600;letter-spacing:.06em;
+ border:1.5px solid #eef3f8!important;
+ background:repeating-linear-gradient(90deg,rgba(255,255,255,.07) 0 1px,rgba(0,0,0,.05) 1px 2px,transparent 2px 4px),
+  linear-gradient(180deg,#f6f8fb 0%,#d0d7df 16%,#a3acb8 42%,#7f8995 50%,#a2abb7 62%,#d3d9e1 86%,#f0f3f7 100%)!important;
+ box-shadow:0 0 0 1px rgba(12,15,20,.85),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1.5px 0 rgba(40,46,56,.55),0 2px 6px rgba(0,0,0,.55),0 0 12px rgba(205,220,240,.42)!important;
+ text-shadow:0 1px 0 rgba(255,255,255,.65),0 -1px 0 rgba(0,0,0,.25)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+ position:absolute;overflow:hidden}
+#viewMain .drift .word.ta-metal:not(.got)::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+ background:linear-gradient(105deg,transparent 0 38%,rgba(255,255,255,.85) 47%,rgba(255,255,255,.95) 50%,transparent 60%) no-repeat;
+ background-size:260% 100%;background-position:160% 0;animation:taMetalSheen 3.4s ease-in-out infinite;animation-delay:var(--ta-metal-delay,0s)}
+@keyframes taMetalSheen{0%,62%{background-position:160% 0}86%,100%{background-position:-60% 0}}
+/* 1回当たったあと：くすんで傷が増え、濃いひびが入る */
+#viewMain .drift .word.ta-metal.ta-metal-dmg:not(.got){color:#11151b!important;border-color:#c3ccd6!important;
+ background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cpath d='M48 0 L44 13 L52 19 L46 28 L50 40 M44 13 L33 17 M52 19 L64 15 L71 22 M46 28 L36 33' fill='none' stroke='rgba(255,255,255,.7)' stroke-width='2.4' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M48 0 L44 13 L52 19 L46 28 L50 40 M44 13 L33 17 M52 19 L64 15 L71 22 M46 28 L36 33' fill='none' stroke='rgba(18,22,28,.9)' stroke-width='1.2' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M8 30 L22 26 M78 8 L92 12 M14 9 L24 12' fill='none' stroke='rgba(30,36,44,.45)' stroke-width='.8' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center/100% 100% no-repeat,
+  repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,rgba(0,0,0,.06) 1px 2px,transparent 2px 4px),
+  linear-gradient(180deg,#dde2e8 0%,#b0b8c2 16%,#87909c 42%,#68717d 50%,#89929e 62%,#b4bcc6 86%,#d6dce3 100%)!important}
+#viewMain .drift .word.ta-metal.ta-metal-dmg:not(.got)::after{animation-duration:5s;opacity:.6}
+/* 蒼で削られて残ったとき：霜がついて凍り、数秒その場に止まる */
+#viewMain .drift .word.ta-metal.ta-metal-frozen,#viewMain .drift .word.ta-metal.ta-metal-frozen *,#viewMain .drift .word.ta-metal.ta-metal-frozen::after{animation-play-state:paused!important}
+#viewMain .drift .word.ta-metal.ta-metal-frozen:not(.got){opacity:1!important;border-color:#c9f4ff!important;color:#0d2430!important;
+ box-shadow:0 0 0 1px rgba(12,30,40,.85),inset 0 0 12px rgba(215,248,255,.95),0 0 14px rgba(120,210,255,.75)!important;
+ filter:hue-rotate(-8deg) saturate(1.3)}
+.ta-metal-spark{position:fixed;z-index:60;width:46px;height:46px;border-radius:50%;pointer-events:none;
+ background:radial-gradient(circle,rgba(255,255,255,.95) 0 8%,rgba(220,232,248,.7) 16%,rgba(170,190,220,.2) 42%,transparent 66%)}
 /* 枠を消すと「一時停止」と連鎖の数字が重なるので、一時停止中は「一時停止」だけを見せる */
 html.ta-night-bonus #viewMain>.hero #combo.paused,#viewMain>.hero.ta-cine-on #combo.paused{color:transparent!important;text-shadow:none!important}
 html.ta-night-bonus #viewMain>.hero #combo.paused>:not(.cpause),#viewMain>.hero.ta-cine-on #combo.paused>:not(.cpause){visibility:hidden!important}
