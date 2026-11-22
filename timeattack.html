@@ -14568,6 +14568,8 @@ html.ta-night-bonus #viewMain>.hero #combo .cpause{background:transparent!import
 #viewMain>.ta-items .ta-items-label{display:none!important}
 #viewMain>.ta-items .ta-item-counter{display:flex!important;flex-wrap:wrap;justify-content:center;align-items:baseline;row-gap:4px!important;column-gap:2px!important;width:min-content;margin-left:auto!important;line-height:1}
 #viewMain>.ta-items .ta-item-counter .ta-item-pips{flex:0 0 100%;display:flex;justify-content:center;margin-left:0!important;line-height:1;white-space:nowrap}
+/* 時間・得点エリアの外枠を左右に少し伸ばし、採集エリア・玉の欄の外枠と端をそろえる（外側の枠の内側余白7px＋枠線1px分） */
+#slip.ta-has-hud>#taHud{margin-left:-8px!important;margin-right:-8px!important;width:auto!important}
 /* 枠を消すと「一時停止」と連鎖の数字が重なるので、一時停止中は「一時停止」だけを見せる */
 html.ta-night-bonus #viewMain>.hero #combo.paused,#viewMain>.hero.ta-cine-on #combo.paused{color:transparent!important;text-shadow:none!important}
 html.ta-night-bonus #viewMain>.hero #combo.paused>:not(.cpause),#viewMain>.hero.ta-cine-on #combo.paused>:not(.cpause){visibility:hidden!important}
