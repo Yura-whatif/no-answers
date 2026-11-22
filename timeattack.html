@@ -874,6 +874,15 @@ html,body{overscroll-behavior-y:none;}
  box-shadow:0 0 7px 1px var(--glow-halo);
 }
 .glowbar.glowbar.moon,.glowbar.glowbar.sun{border-color:var(--glow-particle,#b9d7ff)}
+/* 処理落ち対策：スマホでは昇る想いの粒の明滅（filterのアニメーションは毎コマ描き直しになる）をやめる */
+@media (pointer:coarse){.glow-fx.sun .smote,.glow-fx-front.sun .smote{animation:smoteRise var(--d,8s) linear infinite!important}.glow-fx.sun .ray{filter:blur(4px)}}
+/* 重い状態が重なってコマが落ちたときだけ（html.ta-lowfx）、飾りの粒と光をいったん間引く。ゲームの判定・得点は変えない */
+html.ta-lowfx .glow-fx.sun .smote{animation:smoteRise var(--d,8s) linear infinite!important}
+html.ta-lowfx .glow-fx .mote:nth-of-type(n+11),html.ta-lowfx .glow-fx .smote:nth-of-type(n+11){display:none}
+html.ta-lowfx .glow-fx-front{display:none}
+html.ta-lowfx .glow-fx.sun .ray{filter:none;opacity:.35!important}
+html.ta-lowfx .glow-fx-front .mote,html.ta-lowfx .glow-fx-front .smote{filter:none}
+html.ta-lowfx .ta-night-hud-visible{animation:none!important}
 .glowbar.glowbar.moon i,.glowbar.glowbar.sun i{background:linear-gradient(90deg,#fff,var(--glow-particle,#b9d7ff))}
 /* 桜吹雪（白）／夜桜（黒）：絵の空気を変え、奥の花びら（言葉より奥）と、手前をよぎる大きなぼけ花びら（言葉より手前・触れない）を舞わせる */
 .sakura-fx{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;opacity:0}
@@ -10737,11 +10746,11 @@ function taScoreDraw(now){
   if(Math.abs(taScore-taShownScore)>.001)taScoreAnim=requestAnimationFrame(taScoreDraw);
 }
 
-// Reward supply: independent of combos. Each 200,000 points grants one charge.
+// Reward supply: independent of combos. Each 300,000 points grants one charge（得点30万点ごとに白銀玉1つ）.
 let taRewardScoreMilestone=0;
 function taCheckScoreItemRewards(){
   if(!taRunning)return;
-  const reached=Math.floor(Math.max(0,taScore*TA_SCORE_UNIT)/200000);
+  const reached=Math.floor(Math.max(0,taScore*TA_SCORE_UNIT)/300000);
   while(taRewardScoreMilestone<reached){
     taRewardScoreMilestone++;
     document.dispatchEvent(new CustomEvent('ta-item-score-recharge',{detail:{milestone:taRewardScoreMilestone}}));
@@ -11276,6 +11285,31 @@ function taPrepareAudio(src){
     a.load();setTimeout(done,1600);
   });
 }
+// 途中の章で初めて出る背景（第六章以降）、時が止まる反転、降る記憶の光、金属の言霊などを、読み込み中に一度描いておく
+async function taPrewarmHeavyFx(mobile){
+  try{
+    const later=['stage_06.webp','stage_07.webp','stage_08.webp','stage_09.webp','stage_10.webp'].map(n=>taPreloadImage('img/'+n));
+    const hero=document.querySelector('#viewMain>.hero'),drift=document.getElementById('drift');
+    const tmp=[];
+    // 時止めの反転（backdrop-filter）を、ほぼ見えない小さな円で1回描かせる
+    const veil=document.createElement('div');veil.style.cssText='position:fixed;inset:0;z-index:11;pointer-events:none;opacity:.004;clip-path:circle(24px at 50% 50%);-webkit-backdrop-filter:invert(1) hue-rotate(180deg);backdrop-filter:invert(1) hue-rotate(180deg)';
+    document.body.append(veil);tmp.push(veil);
+    if(hero&&drift){
+      // 降る記憶・昇る想いの光の層（粒は数個だけ）を見えない状態で置く
+      for(const k of ['moon','sun']){const fx=document.createElement('div');fx.className='glow-fx '+k;fx.style.opacity='0.004';
+        for(let i=0;i<3;i++){const d=document.createElement('i');d.className=k==='moon'?'mote':'smote';fx.append(d);}
+        if(k==='sun'){const r=document.createElement('i');r.className='ray';fx.append(r);}
+        hero.insertBefore(fx,drift);tmp.push(fx);}
+      // 金属の言霊（銀・金・ひび）の見た目を一度だけ計算させる
+      for(const cls of ['ta-metal','ta-metal ta-metal-gold','ta-metal ta-metal-dmg','ta-metal ta-metal-gold ta-metal-dmg ta-metal-dmg2']){
+        const w=document.createElement('span');w.className='word '+cls;w.textContent='言霊';w.style.cssText='position:absolute;left:-400px;top:0;animation:none;opacity:.01';drift.append(w);tmp.push(w);}
+    }
+    // 2コマ描かせてから片づける
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    tmp.forEach(e=>e.remove());
+    await Promise.race([Promise.allSettled(later),new Promise(r=>setTimeout(r,1500))]);
+  }catch(e){console.warn('Heavy FX prewarm fallback',e);}
+}
 async function taBegin(prepareOnly=false){
   if(taRunning||taStarting||taLoadingBusy)return;
   taLoadingBusy=true;
@@ -11361,6 +11395,9 @@ async function taBegin(prepareOnly=false){
         taPrepareAudio('audio/Beneath_the_Granite_Sky.mp3?v=20261121')
       ]);
     }
+    // 読み込み画面の残り時間で、途中で初めて使う重い見た目を先に一度だけ用意しておく（初回のカクつき対策）
+    progress(90,'夜の景色を重ねています');
+    await taPrewarmHeavyFx(mobile);
     progress(100,'準備が整いました');
   }catch(error){console.warn('Time Attack loading fallback',error);}
   finally{
@@ -11526,10 +11563,11 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   cf.beginPath();cf.ellipse(-22,-27,17,37,-.55,Math.PI*1.05,Math.PI*1.83);cf.stroke();
   cf.fillStyle='rgba(247,251,255,.24)';cf.beginPath();cf.ellipse(-31,-39,8,19,-.65,0,Math.PI*2);cf.fill();
  })();
+ const taClockMobile=matchMedia('(pointer:coarse)').matches;
  function drawCompletedClock(now){
   const fr=field.getBoundingClientRect(),hr=hero.getBoundingClientRect();
   const cw=Math.max(1,Math.round(fr.width)),ch=Math.max(1,Math.round(fr.height));
-  const ratio=Math.min(window.devicePixelRatio||1,2);
+  const ratio=Math.min(window.devicePixelRatio||1,taClockMobile?1:2);   // スマホは等倍で描く（重なったときの処理落ち対策）
   if(clockCanvas.width!==Math.round(cw*ratio)||clockCanvas.height!==Math.round(ch*ratio)){
    clockCanvas.width=Math.round(cw*ratio);clockCanvas.height=Math.round(ch*ratio);
   }
@@ -11590,7 +11628,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   }
   clockCtx.strokeStyle=elapsed<.52?'#d8f5ff':'#e7f2ff';
   clockCtx.lineCap='round';clockCtx.lineJoin='round';
-  clockCtx.shadowColor='#9fdfff';clockCtx.shadowBlur=frozen?2:6;
+  clockCtx.shadowColor='#9fdfff';clockCtx.shadowBlur=taClockMobile||document.documentElement.classList.contains('ta-lowfx')?0:(frozen?2:6);
   // Long hand: fast; short hand: slow. Independent rotations, shared center.
   clockCtx.save();clockCtx.rotate(longRot);clockCtx.lineWidth=4.2;
   clockCtx.beginPath();clockCtx.moveTo(0,0);
@@ -15090,6 +15128,24 @@ html.ta-tut.ta-tut-allow-fire .ta-items .ta-orb.fire,html.ta-tut.ta-tut-allow-ic
  // 練習中に×ボタンで終えたときも後片付けする
  setInterval(()=>{if(T.on&&T.step>=0&&!taRunning&&!taStarting)finish();},500);
  window.taTutorialStart=begin;window.taTutorialStop=()=>finish();
+})();
+</script>
+<script id="ta-lowfx-js">
+// 処理落ちの見張り：プレイ中にコマの間隔が長い状態（約30fps未満）が続いたら html.ta-lowfx を付けて飾りを間引き、
+// 3秒ほど軽い状態が続けば外す。降る記憶・時計・蒼など、重い状態が重なったときだけ効く。
+(function(){
+  const root=document.documentElement;let ema=16.7,last=0,bad=0,good=0,raf=0;
+  function frame(t){
+    raf=0;
+    if(typeof taRunning!=='undefined'&&taRunning&&!document.hidden){
+      if(last){const dt=Math.min(200,t-last);ema=ema*.9+dt*.1;}
+      last=t;
+      if(!root.classList.contains('ta-lowfx')){if(ema>30){if(++bad>40){root.classList.add('ta-lowfx');good=0;}}else bad=Math.max(0,bad-2);}
+      else{if(ema<20){if(++good>180){root.classList.remove('ta-lowfx');bad=0;}}else good=0;}
+    }else{last=0;bad=0;good=0;ema=16.7;root.classList.remove('ta-lowfx');}
+    raf=requestAnimationFrame(frame);
+  }
+  raf=requestAnimationFrame(frame);
 })();
 </script>
 </body>
