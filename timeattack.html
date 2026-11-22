@@ -6801,6 +6801,8 @@ function taMetalRate(){if(taMetalTestRate!=null)return taMetalTestRate;const c=t
 // プレイが終わってDEMOに戻るとき、残っている金属文字はふつうの言霊に戻す（DEMOには出さない）
 function taMetalClear(){document.querySelectorAll('#drift .word.ta-metal').forEach(w=>{w.classList.remove('ta-metal','ta-metal-gold','ta-metal-dmg','ta-metal-dmg2','ta-metal-frozen');delete w.dataset.metalHp;delete w.dataset.metalIce;});}
 const taMetalPendingFx=new Set();let taMetalTapHit=false;
+// 心眼になりうるタップ（言霊の真ん中を押した瞬間）は、普通の消去音を指を離すまで待つ。心眼が決まれば心眼の音だけにする。
+let taShinganPendingWord=null,taPendingTouchSound=null,taMuteTouch=false;
 function taMetalHitFx(w){
   if(w._metalBroke||!w.isConnected||w.classList.contains('got'))return;
   try{if(typeof sfx!=='undefined'&&sfx.on&&sfx.metalClink)sfx.metalClink();}catch(_){}
@@ -6988,7 +6990,8 @@ const __ta100Start=window.__ta100Profile.start();try {
     // Keep early hits expressive; omit overlapping effects after the fifth hit.
     const taDenseSwipe=taCoarse && combo<99 && !!w.dataset.swiped && taSwipeBurstCount>2; // 100+ always shows reward orbs
     // Do not start a separate oscillator for every word in a rapid swipe.
-    if(taRunning && taStoryLevel()>=600 && !flood){if(taNow-taSwipeLastTouch>95){sfx.goldTap();taSwipeLastTouch=taNow;}}else if(!taDenseSwipe || taNow-taSwipeLastTouch>210){sfx.touch();taSwipeLastTouch=taNow;}
+    {const playTouch=()=>{if(taMuteTouch)return;if(taRunning && taStoryLevel()>=600 && !flood){if(taNow-taSwipeLastTouch>95){sfx.goldTap();taSwipeLastTouch=taNow;}}else if(!taDenseSwipe || taNow-taSwipeLastTouch>210){sfx.touch();taSwipeLastTouch=taNow;}};
+     if(taMetalTapHit && w===taShinganPendingWord)taPendingTouchSound=playTouch;else playTouch();}
     // 300連鎖以降は専用のクリスタルSE。連鎖終了後は通常音へ戻る。
     // 黄玉の言葉は通常の採集演出で作る複数のコピー/飛行オーブが
     // 発動中のCanvas・引き寄せと競合して遅延するため、独立した軽量経路で採集する。
@@ -8118,7 +8121,7 @@ function vortexRelease(){
       const rr=cw.getBoundingClientRect(),cx=rr.left+rr.width/2,cy=rr.top+rr.height/2;
       // Generous central area: 50% of word width, 60% of its height.
       if(Math.abs(e.clientX-cx)<=rr.width*.25 && Math.abs(e.clientY-cy)<=rr.height*.30)
-        centerTapCandidate={w:cw,id:e.pointerId,x:e.clientX,y:e.clientY,cx,cy,width:rr.width,height:rr.height,radius:getComputedStyle(cw).borderRadius};
+        taShinganPendingWord=cw,centerTapCandidate={w:cw,id:e.pointerId,x:e.clientX,y:e.clientY,cx,cy,width:rr.width,height:rr.height,radius:getComputedStyle(cw).borderRadius};
     }
     swipeFastCandidate=null;shinsokuAwarded=false;
     issenTrail=null;issenTrailAnimation=null;
@@ -8129,6 +8132,8 @@ function vortexRelease(){
   });
   field.addEventListener('pointermove',e=>{
     if(!active||e.pointerId!==pointer)return;
+    // 押したまま動かした（心眼にならない）ら、待たせていた普通の消去音をすぐ鳴らす
+    if(taPendingTouchSound&&centerTapCandidate&&Math.hypot(e.clientX-centerTapCandidate.x,e.clientY-centerTapCandidate.y)>=10){try{taPendingTouchSound();}catch(_){}taPendingTouchSound=null;taShinganPendingWord=null;}
     const evs=e.getCoalescedEvents?e.getCoalescedEvents():[];
     // v54: snapshot only nodes, lazily resolve rectangles on first need.
     // This reduces layout work for swiped/removed words during a burst.
@@ -8161,7 +8166,11 @@ function vortexRelease(){
     if(e.pointerId===pointer){
       sweep(e.clientX,e.clientY);points.push({x:e.clientX,y:e.clientY});assessPath();
       const c=centerTapCandidate;
-      if(c && c.id===e.pointerId && Math.hypot(e.clientX-c.x,e.clientY-c.y)<10 && taRunning && !taNightActive()){
+      const shinganNow=!!(c && c.id===e.pointerId && Math.hypot(e.clientX-c.x,e.clientY-c.y)<10 && taRunning && !taNightActive());
+      // 心眼にならなかったタップは、ここで普通の消去音を鳴らす（心眼なら心眼の音だけ）
+      if(taPendingTouchSound){if(!shinganNow)try{taPendingTouchSound();}catch(_){}taPendingTouchSound=null;}
+      taShinganPendingWord=null;
+      if(shinganNow){
         taScore+=.5*taNightScoreRate();taScoreRefresh();taRender();
         taAward(true,1,false,null,false,.5);   // 心眼：残り時間 +0.5秒
         setComboSkillGrace("shingan");
@@ -8181,7 +8190,7 @@ function vortexRelease(){
         // 心眼のダメージは5：押した瞬間のタップで1入っているので、残り4を加える
         if(c.w && c.w.classList.contains('ta-metal') && c.w.isConnected && !c.w.classList.contains('got') && +c.w.dataset.metalHp > 0){
           c.w.dataset.metalHp = String(Math.max(0, +c.w.dataset.metalHp - 4));
-          if(+c.w.dataset.metalHp <= 0){ c.w._metalBreakDelay = 110; c.w.click(); }   // 「キン」と貫いた直後に「ガシャッ」と砕ける順に鳴らす
+          if(+c.w.dataset.metalHp <= 0){ c.w._metalBreakDelay = 150; taMuteTouch = true; try{ c.w.click(); } finally { taMuteTouch = false; } }   // 心眼の音と砕ける音だけにする   // 「キン」と貫いた直後に「ガシャッ」と砕ける順に鳴らす
         }
         const heart=document.createElement('span');heart.className='ta-shingan-label';heart.textContent='心眼';
         heart.style.left=c.cx+'px';heart.style.top=(c.cy-36)+'px';document.body.append(heart);
@@ -8199,7 +8208,7 @@ function vortexRelease(){
       centerTapCandidate=null;finish();
     }vortexRelease();
   });
-  field.addEventListener('pointercancel',()=>{centerTapCandidate=null;shinsokuCandidate=null;swipeFastCandidate=null;finish();vortexRelease();});
+  field.addEventListener('pointercancel',()=>{if(taPendingTouchSound){try{taPendingTouchSound();}catch(_){}taPendingTouchSound=null;}taShinganPendingWord=null;centerTapCandidate=null;shinsokuCandidate=null;swipeFastCandidate=null;finish();vortexRelease();});
   field.addEventListener('lostpointercapture',()=>{shinsokuCandidate=null;swipeFastCandidate=null;finish();vortexRelease();});
 })();
 // ---------- 断片を渡す（SNS共有） ----------
@@ -9328,23 +9337,31 @@ const sfx = (()=>{
   return {
     refill: playItemRefillChime,
     pickupShimmer(){const a=ac();if(a)taStereoShimmer(a.currentTime+.05,2093,.014,.52);},
-    // 心眼が発動したとき：「シュッ・キン」。息を吸うような短い溜め（約0.1秒）から、鋭く貫く澄んだ音。金属・普通の言霊の区別なし。
-    shingan(){ const a = ac(); if(!a) return; const t = a.currentTime, hit = t + .1;
+    // 心眼が発動したとき：「シャキーン」。刀を抜くような金属の擦れが約0.14秒で駆け上がり、一点で鳴って長く響く（約1秒）。
+    // 金属・普通の言霊の区別なし。続けて出したときは、前の余韻をすっと消してから鳴らす（濁らないように）。
+    shingan(){ const a = ac(); if(!a) return; const t = a.currentTime, rise = .14, hit = t + rise;
+      if(this._shgOut){ try{ const g0 = this._shgOut.gain; g0.cancelScheduledValues(t); g0.setValueAtTime(g0.value, t); g0.linearRampToValueAtTime(0, t + .03); }catch(_){} }
+      const out = ctx.createGain(); out.gain.value = 1; out.connect(bus); this._shgOut = out;
+      // ごく短い反響（2回）で、響きに広がりを出す
+      [[.085,.22],[.17,.1]].forEach(([d,v])=>{ const dl = ctx.createDelay(.3), dg = ctx.createGain(); dl.delayTime.value = d; dg.gain.value = v; out.connect(dl); dl.connect(dg); dg.connect(bus); });
+      // 擦れが駆け上がる：帯域を上げながら強くなるノイズ＋上がっていく音程
       { const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
-        src.buffer = noise; bp.type = "bandpass"; bp.Q.value = .7; bp.frequency.setValueAtTime(3200, t); bp.frequency.exponentialRampToValueAtTime(9000, hit);
-        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(.075, hit - .005); g.gain.exponentialRampToValueAtTime(0.0001, hit + .012);
-        src.connect(bp); bp.connect(g); g.connect(bus); src.start(t, Math.random()*.3); src.stop(hit + .03); }
-      { const src = ctx.createBufferSource(), hp = ctx.createBiquadFilter(), g = ctx.createGain();
-        src.buffer = noise; hp.type = "highpass"; hp.frequency.value = 6000;
-        g.gain.setValueAtTime(0.0001, hit); g.gain.exponentialRampToValueAtTime(.09, hit + .001); g.gain.exponentialRampToValueAtTime(0.0001, hit + .018);
-        src.connect(hp); hp.connect(g); g.connect(bus); src.start(hit, Math.random()*.3); src.stop(hit + .03); }
-      [[3136,.085,.22],[4699,.04,.12],[6272,.018,.07]].forEach(([f,v,d])=>{ const o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = "sine"; o.frequency.value = f; g.gain.setValueAtTime(0.0001, hit); g.gain.exponentialRampToValueAtTime(v, hit + .002); g.gain.exponentialRampToValueAtTime(0.0002, hit + d);
-        o.connect(g); g.connect(bus); o.start(hit); o.stop(hit + d + .02); });
+        src.buffer = noise; bp.type = "bandpass"; bp.Q.value = .8; bp.frequency.setValueAtTime(2000, t); bp.frequency.exponentialRampToValueAtTime(11000, hit);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(.085, hit - .004); g.gain.exponentialRampToValueAtTime(0.0001, hit + .015);
+        src.connect(bp); bp.connect(g); g.connect(out); src.start(t, Math.random()*.3); src.stop(hit + .03); }
       { const o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = "sine"; o.frequency.setValueAtTime(2200, hit); o.frequency.exponentialRampToValueAtTime(4200, hit + .12);
-        g.gain.setValueAtTime(0.0001, hit); g.gain.exponentialRampToValueAtTime(.022, hit + .004); g.gain.exponentialRampToValueAtTime(0.0001, hit + .1);
-        o.connect(g); g.connect(bus); o.start(hit); o.stop(hit + .13); }
+        o.type = "sine"; o.frequency.setValueAtTime(1800, t); o.frequency.exponentialRampToValueAtTime(5200, hit);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(.03, hit - .01); g.gain.exponentialRampToValueAtTime(0.0001, hit + .03);
+        o.connect(g); g.connect(out); o.start(t); o.stop(hit + .05); }
+      // 鳴った瞬間の鋭い一点
+      { const src = ctx.createBufferSource(), hp = ctx.createBiquadFilter(), g = ctx.createGain();
+        src.buffer = noise; hp.type = "highpass"; hp.frequency.value = 5000;
+        g.gain.setValueAtTime(0.0001, hit); g.gain.exponentialRampToValueAtTime(.11, hit + .001); g.gain.exponentialRampToValueAtTime(0.0001, hit + .02);
+        src.connect(hp); hp.connect(g); g.connect(out); src.start(hit, Math.random()*.3); src.stop(hit + .03); }
+      // 長く響く金属の鳴り（倍音ごとに消える速さを変える）
+      [[2960,.08,.75],[4440,.048,.5],[5920,.028,.3],[7400,.016,.18]].forEach(([f,v,d])=>{ const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = "sine"; o.frequency.value = f; g.gain.setValueAtTime(0.0001, hit); g.gain.exponentialRampToValueAtTime(v, hit + .002); g.gain.exponentialRampToValueAtTime(0.0002, hit + d);
+        o.connect(g); g.connect(out); o.start(hit); o.stop(hit + d + .02); });
     },
     // 金属文字が割れたとき：「ガシャッ」と砕ける短い音（約0.4秒）。打撃のあとに細かい破片が散らばる。
     // まとめて割ったときは、続けて鳴る分の破片を省いて音が濁らないようにする。
