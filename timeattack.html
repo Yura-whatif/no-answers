@@ -14570,6 +14570,15 @@ html.ta-night-bonus #viewMain>.hero #combo .cpause{background:transparent!import
 #viewMain>.ta-items .ta-item-counter .ta-item-pips{flex:0 0 100%;display:flex;justify-content:center;margin-left:0!important;line-height:1;white-space:nowrap}
 /* 時間・得点エリアの外枠を左右に少し伸ばし、採集エリア・玉の欄の外枠と端をそろえる（外側の枠の内側余白7px＋枠線1px分） */
 #slip.ta-has-hud>#taHud{margin-left:-8px!important;margin-right:-8px!important;width:auto!important}
+/* 時間・得点エリア：上下を横切る線と内側の二重枠を消し、「残り時間」と「得点」を一つの枠にまとめる（案A：ゲージは枠の外）。
+   枠のデザインは、通常時の採集エリアの外枠と同じ（光り方は別途）。残り時間が少ないときの赤枠と、増えたときの光は今まで通り。 */
+#slip.ta-has-hud{box-shadow:none!important}
+#slip.ta-has-hud>#taHud{border-color:transparent!important;box-shadow:none!important;background:transparent!important}
+#slip.ta-has-hud>#taHud::before,#slip.ta-has-hud>#taHud::after{display:none!important}
+#slip.ta-has-hud>.title{border-bottom-color:transparent!important}
+#slip #taHud .ta-stats{position:relative;gap:0!important;border:1px solid #262b35;box-shadow:0 30px 60px -30px color-mix(in srgb,var(--ink) 45%,transparent);background:rgba(255,255,255,.012)}
+#slip #taHud .ta-stats>div:not(.ta-countdown-frame),#slip #taHud.ta-hud-demo .ta-stats>div{border-color:transparent!important;background:transparent!important;box-shadow:none!important}
+#slip #taHud .ta-stats::after{content:"";position:absolute;left:50%;top:18%;bottom:18%;width:1px;background:linear-gradient(transparent,rgba(160,170,190,.28),transparent);pointer-events:none}
 /* 枠を消すと「一時停止」と連鎖の数字が重なるので、一時停止中は「一時停止」だけを見せる */
 html.ta-night-bonus #viewMain>.hero #combo.paused,#viewMain>.hero.ta-cine-on #combo.paused{color:transparent!important;text-shadow:none!important}
 html.ta-night-bonus #viewMain>.hero #combo.paused>:not(.cpause),#viewMain>.hero.ta-cine-on #combo.paused>:not(.cpause){visibility:hidden!important}
