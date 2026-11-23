@@ -6911,9 +6911,10 @@ function taMetalGoldShare(){
  const c=taStory&&typeof taStory.chapter==='number'?taStoryChapterEq():0,n=typeof taNightNumber==='number'?taNightNumber:1;
  if(taMetalTestRate!=null&&taMetalTestRate>0)return .35;   // テストモードで出しているときは黒も混ぜて確かめられるように
  if(n<=1||(n===2&&c<3))return 0;
- if(n===2)return Math.min(.45,.15+.05*(c-3));   // 第二夜：第四章15% → 第九章40%
- if(n===3)return Math.min(.6,.25+.04*c);        // 第三夜：25% → 61%（上限60%）
- return Math.min(.7,.35+.04*c);                 // 第四夜以降：35% → 上限70%
+ // 金の割合は控えめに（以前のおよそ6割）
+ if(n===2)return Math.min(.25,.10+.03*(c-3));   // 第二夜：夜明けの城10% → 最終章25%
+ if(n===3)return Math.min(.35,.15+.025*c);      // 第三夜：15% → 最終章35%
+ return Math.min(.42,.20+.025*c);               // 第四夜以降：20% → 上限42%
 }
 function taMetalRate(){if(taMetalTestRate!=null)return taMetalTestRate;const c=taStory&&typeof taStory.chapter==='number'?taStoryChapterEq():0;const n=typeof taNightNumber==='number'?taNightNumber:1;
  return Math.min(.4,TA_METAL_RATE[Math.max(0,Math.min(TA_METAL_RATE.length-1,c))]+TA_METAL_NIGHT_ADD[Math.max(0,Math.min(TA_METAL_NIGHT_ADD.length-1,n))]);}
@@ -7837,9 +7838,10 @@ function startSakura(from, opt){
       // 端末が重いとき（ta-lowfx）は、玉を使っていなくても同じだけ間引き、スマホでは手前の大きな花びらの画布を描かない
       const lowfx = document.documentElement.classList.contains('ta-lowfx');
       const paintGap = (fxBusy || lowfx) ? (skMobile ? 50 : 33) : (skMobile ? 32 : 0);
-      if(now-lastPaint>=paintGap){lastPaint=now;draw(bc, P, false, G, dprB);if((F.length && !(skMobile && lowfx)) || !skMobile)draw(fc, F, true, G, dprF);
-        else if(skMobile && lowfx && !fc.__cleared){fc.getContext('2d').clearRect(0,0,fc.width,fc.height);fc.__cleared=true;}
-        if(!(skMobile && lowfx))fc.__cleared=false;}
+      // 描画で例外が起きても桜吹雪の進行（ゲージ・終了処理）は止めない
+      if(now-lastPaint>=paintGap)try{lastPaint=now;draw(bc, P, false, G, dprB);if((F.length && !(skMobile && lowfx)) || !skMobile)draw(fc, F, true, G, dprF);
+        else if(skMobile && lowfx && !fc.__cleared){fc.clearRect(0,0,fc.canvas.width,fc.canvas.height);fc.__cleared=true;}
+        if(!(skMobile && lowfx))fc.__cleared=false;}catch(_){}
       if(sakuraBarFill) sakuraBarFill.style.transform = `scaleX(${Math.max(0, 1 - t / SAKURA_MS).toFixed(4)})`;
       if(t >= SAKURA_MS) return finish(false);
     }
