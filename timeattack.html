@@ -927,6 +927,12 @@ html,body{overscroll-behavior-y:none;}
 /* 重い状態が重なってコマが落ちたときだけ（html.ta-lowfx）、ぼかしなど重い飾りだけを外す。粒の数・判定・得点は変えない */
 html.ta-lowfx .glow-fx.sun .ray{filter:none;opacity:.45!important}
 html.ta-lowfx .glow-fx-front .mote,html.ta-lowfx .glow-fx-front .smote{filter:none}
+/* 重なり対策：引き寄せ・置き忘れたものの飾りを軽く（渦の影のぼかし、輪の流れ込み、飛ぶ言霊の影） */
+html.ta-lowfx .ta-eclipse-core,html.ta-lowfx .ta-eclipse-core.ta-eclipse-ice,html.ta-lowfx .ta-eclipse-core.ta-eclipse-fire{filter:none!important}
+html.ta-lowfx .pull-core svg{filter:none!important}
+html.ta-lowfx .pull-core svg.b{display:none}
+html.ta-lowfx .pull-ring::after{animation:none!important;opacity:.5}
+html.ta-lowfx .word.flying{box-shadow:none!important;text-shadow:none!important}
 html.ta-lowfx .ta-night-hud-visible{animation:none!important;opacity:.85!important}   /* 明滅を止めても文字は見えたままにする（止めると透明のままになっていた） */
 .glowbar.glowbar.moon i,.glowbar.glowbar.sun i{background:linear-gradient(90deg,#fff,var(--glow-particle,#b9d7ff))}
 /* 桜吹雪（白）／夜桜（黒）：絵の空気を変え、奥の花びら（言葉より奥）と、手前をよぎる大きなぼけ花びら（言葉より手前・触れない）を舞わせる */
@@ -7338,8 +7344,19 @@ function multiply(x, y, opt){
 // 引き寄せの渦：触れた場所に渦が1.5秒とどまり、範囲（半径＝絵の幅の約42%）に少しでもかかった言葉を順に吸い込む。範囲は触れた言葉の中心から0.9秒かけて広がる。
 // あとから湧いた言葉や、漂って範囲に入ってきた言葉も吸い込む。特殊語・見えていない言葉・止まった時間の言葉は吸わない
 const PULL_MS = 1500;
+// ---------- 重なり対策（スマホ）：重い演出が重なりそうなときは、処理落ちを待たずに先回りして飾りを減らす ----------
+// 桜吹雪・降る記憶／昇る想い・引き寄せ／置き忘れたもの・時間停止のうち、二つ以上が同時に動くと html.ta-lowfx を付ける。
+// 外すのは処理落ちの見張り（ta-lowfx-js）に任せる（約3秒なめらかに動けば自動で戻る）。粒の数・判定・得点は変えない。
+const taTouchDevice = !!(window.matchMedia && matchMedia('(pointer:coarse)').matches);
+let taPullActive = 0, taLastGulpAt = 0;
+function taHeavyGuard(extra=0){
+  if(!taTouchDevice) return;
+  const n = extra + (typeof sakuraOn!=='undefined' && sakuraOn ? 1 : 0) + (document.querySelector('.glow-fx') ? 1 : 0) + (taPullActive > 1 ? 1 : 0) + (typeof flood!=='undefined' && flood ? 1 : 0);
+  if(n >= 2) document.documentElement.classList.add('ta-lowfx');
+}
 function pullAll(x, y, self, eclipse=false, eclipseElement=null){
   track(eclipse ? "eclipse" : "pull", eclipse ? "蝕" : "引き寄せ");
+  taPullActive++;setTimeout(()=>{taPullActive=Math.max(0,taPullActive-1);},(eclipse?3000:PULL_MS)+1200);taHeavyGuard(eclipse?2:1);
   const field = $("drift"), fw = field.clientWidth || 300;
   const duration = eclipse ? 3000 : PULL_MS;
   const eclipseIce=eclipse && eclipseElement==='ice';
@@ -7362,11 +7379,12 @@ function pullAll(x, y, self, eclipse=false, eclipseElement=null){
   let sum = 0, n = 0, pending = 0, open = true, done = false; const collected = [];
   // 金属文字は「引き寄せ」では動かない。「置き忘れたもの」では他の言霊と同じように吸い込んで回収する（HPは関係なし）
   const skip = ".got,.special,.crack,.vortex,.pull,.glow,.multi,.odd,.petal,.reso,.still,.late,.flying" + (eclipse ? "" : ",.ta-metal");
-  const suck = w => {
-    const r = w.getBoundingClientRect(), word = w.dataset.word || w.textContent;
+  // 位置と淡さは、書き換えより先にまとめて読む（読み書きが交互になると、そのたびに画面全体の配置計算が走ってスマホで重くなる）
+  const suck = (w, rr) => {
+    const r = rr || w.getBoundingClientRect(), word = w.dataset.word || w.textContent, op0 = getComputedStyle(w).opacity;
     w.classList.add("got"); pending++;
     const f = w.cloneNode(true); f.classList.add("flying"); f.classList.remove("got"); f.style.left = r.left + "px"; f.style.top = r.top + "px"; f.style.animation = "none";
-    f.style.opacity = getComputedStyle(w).opacity;   // 現れかけの言葉は、その淡さのまま吸い込まれる
+    f.style.opacity = op0;   // 現れかけの言葉は、その淡さのまま吸い込まれる
     w.remove(); document.body.append(f);
     const sx = r.left + r.width/2, sy = r.top + r.height/2, r0 = Math.hypot(sx - x, sy - y), a0 = Math.atan2(sy - y, sx - x), K = [], o0 = +f.style.opacity || 1;
     for(let k=0;k<=6;k++){ const t = k/6, rr = r0*(1-t), a = a0 - t*Math.PI*1.6;
@@ -7377,7 +7395,7 @@ function pullAll(x, y, self, eclipse=false, eclipseElement=null){
       // The last elemental tap determines the Eclipse's reward. Each word is collected only once.
       const timeGain=eclipseIce ? 1 : null;
       collected.push({isTime,pts,timeGain}); sum += isTime ? (timeGain ?? 1) : pts; n++; addToDict(word);
-      if(n % 2) sfx.gulp();
+      if(n % 2 && performance.now()-taLastGulpAt>(taTouchDevice?110:0)){ taLastGulpAt=performance.now(); sfx.gulp(); }   // スマホでは「ポッ」を詰めて鳴らしすぎない
       pending--; if(!open && !pending) finish();
     };
   };
@@ -7387,13 +7405,17 @@ function pullAll(x, y, self, eclipse=false, eclipseElement=null){
     if(!open) return;
     if(performance.now() < nextAt) return;
     const Rn = R * ease(Math.min(1, (performance.now() - t0) / GROW));   // 広がりつつある輪の半径
-    let best = null, bd = Rn;
+    // 範囲内の言葉を近い順に。スマホでは一度の見張りで二つまで拾い、二つめは少し遅らせて吸い込む（見張りの回数＝位置を測る回数を半分にする）
+    const hits = [];
     field.querySelectorAll(".word").forEach(w => { if(w === self || w.matches(skip) || w.classList.contains('ta-thunder-launch-visual')) return;
       // 言葉の四角のうち、渦の中心にいちばん近い点までの距離（＝少しでも輪にかかれば吸い込む）
       const r = w.getBoundingClientRect(), qx = Math.max(r.left, Math.min(x, r.right)), qy = Math.max(r.top, Math.min(y, r.bottom)), d = Math.hypot(qx - x, qy - y);
-      if(d <= bd){ bd = d; best = w; } });
-    if(best){ suck(best); nextAt = performance.now() + (document.documentElement.classList.contains('ta-thunder-running') ? 130 : 70); }
-  }, document.documentElement.classList.contains('ta-thunder-running') ? 100 : 40);
+      if(d <= Rn) hits.push([d, w, r]); });
+    hits.sort((a, b) => a[0] - b[0]);
+    const best = hits.length ? hits[0][1] : null;
+    if(taTouchDevice && hits.length > 1){ const [, w2, r2] = hits[1]; setTimeout(() => { if(open && w2.isConnected && !w2.classList.contains("got")) suck(w2, r2); }, 55); }
+    if(best){ suck(best, hits[0][2]); nextAt = performance.now() + (document.documentElement.classList.contains('ta-thunder-running') ? 130 : taTouchDevice ? 95 : 70); }
+  }, document.documentElement.classList.contains('ta-thunder-running') ? 100 : taTouchDevice ? 70 : 40);   // スマホでは見張りの間隔を少し広げる（毎回すべての言霊の位置を測るため）
   // 渦のあいだにも、言葉はいつもどおり湧く。ときどき（1〜2個）余分に湧くが、場所は渦の近くとは限らない
   const extra = 1 + (Math.random() < .5 ? 1 : 0);
   for(let i = 0; i < extra; i++) setTimeout(()=>{
@@ -7455,11 +7477,12 @@ function orbsFromCollected(items, cx, cy, eclipse=false){
     const ang=(i/batches.length)*Math.PI*2-Math.PI/2;
     const ox=cx+Math.cos(ang)*30,oy=cy+Math.sin(ang)*30;
     const dur=1050,t0=performance.now();
+    // 着地点（得点・時間の表示）は動かないので、位置は最初に一度だけ測る（毎コマ測ると、そのたびに画面全体の配置計算が走る）
+    const target0=$(isTime?'taTime':'taScore'),r0=target0?target0.getBoundingClientRect():null;
     const step=now=>{
       const q=Math.min(1,(now-t0)/dur),e=q<.5?2*q*q:1-Math.pow(-2*q+2,2)/2;
-      const target=$(isTime?'taTime':'taScore');
-      if(!target||!taRunning){o.remove();return;}
-      const r=target.getBoundingClientRect(),tx=r.left+r.width/2,ty=r.top+r.height/2;
+      if(!r0||!taRunning){o.remove();return;}
+      const r=r0,tx=r.left+r.width/2,ty=r.top+r.height/2;
       const mx=(ox+tx)/2+Math.cos(ang)*40,my=(oy+ty)/2-50;
       const u=Math.max(0,Math.min(1,(e-.08)/.92));
       const px=q<.2?cx+(ox-cx)*q/.2:(1-u)*(1-u)*ox+2*(1-u)*u*mx+u*u*tx;
@@ -7519,6 +7542,7 @@ function resonate(x, y, self){
 // ---------- 陽だまり（白）・月明かり（黒）：絵がほのかに光り、10秒のあいだ違和感が2倍 ----------
 const GLOW_MS = 10000;
 function startGlow(silent, collectedName){
+  setTimeout(()=>{try{taHeavyGuard(1);}catch(_){}},0);
   const hero = document.querySelector(".hero"); if(!hero) return;
   // An already spawned moonlight word stays moonlight after reaching 100 chains.
   const moon = collectedName ? collectedName.trim() === "降る記憶" : nextGlowKind() === "memory";
@@ -7695,6 +7719,7 @@ function sakuraBloom(from){
   sakuraBloom.el = fl;
 }
 function startSakura(from, opt){
+  setTimeout(()=>{try{taHeavyGuard(1);}catch(_){}},0);
   opt = opt || {};
   if((sakuraOn && !opt.cont) || flood || shattering || libOpen){ if(opt.cont){ sakuraOn = false; } return; }
   const hero = document.querySelector(".hero"), field = $("drift"); if(!hero || !field) return;
@@ -9275,7 +9300,9 @@ const sfx = (()=>{
   const ac = () => {
     if(!on) return null;
     if(!ctx){
-      const C = window.AudioContext || window.webkitAudioContext; if(!C) return null; ctx = new C();
+      const C = window.AudioContext || window.webkitAudioContext; if(!C) return null;
+      // スマホでは音の受け渡しの余裕（バッファ）を少し大きくして、画面が重いときの音切れを防ぐ（遅れはごくわずか）
+      try{ ctx = (window.matchMedia && matchMedia('(pointer:coarse)').matches) ? new C({latencyHint:'balanced'}) : new C(); }catch(_){ ctx = new C(); }
       // 全体を軽く引き締めるコンプレッサー
       // 全体の音量を少し下げてから、ゆるいリミッターへ（音割れ・ジリジリを防ぐ）
       bus = ctx.createGain();
@@ -13165,7 +13192,7 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
   const AC=window.AudioContext||window.webkitAudioContext;
   if(!AC)return;
   try{
-   thunderAC=thunderAC||new AC();thunderSeDecodeStarted=true;
+   thunderAC=thunderAC||(()=>{try{return (window.matchMedia&&matchMedia('(pointer:coarse)').matches)?new AC({latencyHint:'balanced'}):new AC();}catch(_){return new AC();}})();thunderSeDecodeStarted=true;
    for(const kind of ['summon','dissolve']){
     const encoded=thunderSeUris[kind].split(',')[1];
     const raw=atob(encoded),bytes=new Uint8Array(raw.length);
@@ -13191,7 +13218,7 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
  function thunderSound(kind,i=0){
   if(kind==='summon'||kind==='dissolve'){thunderPlayRecordedSe(kind);return;}
   if(typeof sfx!=='undefined'&&!sfx.on)return;
-  try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;thunderAC=thunderAC||new AC();const ac=thunderAC;if(ac.state==='suspended')ac.resume();
+  try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;thunderAC=thunderAC||(()=>{try{return (window.matchMedia&&matchMedia('(pointer:coarse)').matches)?new AC({latencyHint:'balanced'}):new AC();}catch(_){return new AC();}})();const ac=thunderAC;if(ac.state==='suspended')ac.resume();
    const t=ac.currentTime+.01,out=ac.createGain();out.gain.value=.85;out.connect(ac.destination);
    const noise=(dur)=>{const b=ac.createBuffer(1,Math.max(1,Math.floor(ac.sampleRate*dur)),ac.sampleRate),d=b.getChannelData(0);for(let k=0;k<d.length;k++)d[k]=Math.random()*2-1;const s=ac.createBufferSource();s.buffer=b;return s;};
    const tone=(f,at,v,dur,type='sine',f2)=>{const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(f,at);if(f2)o.frequency.exponentialRampToValueAtTime(f2,at+dur);
