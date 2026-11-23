@@ -5054,11 +5054,11 @@ const taCenturyDust=(()=>{
       // 追加CanvasやDOMは作らず、描画中の乱数・ぼかしも使わない。
       ctx.globalAlpha=alpha*.82;
       ctx.fillStyle=g.light?'#fff1b8':'#efb94f';
-      ctx.fillRect(Math.round(x+g.dx),Math.round(y+g.dy),1,1);
+      ctx.fillRect(Math.round(x+g.dx),Math.round(y+g.dy),g.high?1.4:1,g.high?1.4:1);
       if(g.spark){
         ctx.globalAlpha=alpha*.66;
         ctx.fillStyle='#fff9d8';
-        ctx.fillRect(Math.round(x-g.dx*.65),Math.round(y+g.dy*.7),1,1);
+        ctx.fillRect(Math.round(x-g.dx*.65),Math.round(y+g.dy*.7),g.high?1.4:1,g.high?1.4:1);
       }
     }
     ctx.globalAlpha=1;
@@ -5087,7 +5087,8 @@ const taCenturyDust=(()=>{
         y:cy+(Math.random()-.5)*bounds.height*.5,
         vx:(Math.random()-.5)*(high?30:42),speed:high?150+Math.random()*130:55+Math.random()*70,high,
         phase:Math.random()*6.28,life:high?1.7+Math.random()*.9:.75+Math.random()*.35,
-        w:Math.random()<.75?1:2,h:Math.random()<.85?1:2,
+        // 夜のボーナスの金粉は、ほんの少しだけ大きく
+        w:high?(Math.random()<.6?1.6:2.4):(Math.random()<.75?1:2),h:high?(Math.random()<.7?1.6:2.4):(Math.random()<.85?1:2),
         spark:i%2===0,dx:(Math.random()-.5)*5,dy:(Math.random()-.5)*5,light:i%3===0,start:now});
     }
     if(grains.length>maxGrains)grains.splice(0,grains.length-maxGrains);
@@ -7834,7 +7835,11 @@ function startSakura(from, opt){
       const G = Math.min(1, t / 500) * Math.max(0, Math.min(1, (SAKURA_MS - t) / 1600));
       fx.style.opacity = (Math.min(1, t / 900) * Math.max(0, Math.min(1, (SAKURA_MS - t) / 1800))).toFixed(3);
       // Limit expensive canvas redraws on touch devices to 30fps; gameplay and falling words remain full-speed.
-      if(!skMobile || now-lastPaint>=32){lastPaint=now;draw(bc, P, false, G, dprB);if(F.length || !skMobile)draw(fc, F, true, G, dprF);}
+      // 玉の演出（紅・蒼などの軌跡や爆発）を描いているあいだは、花びらの描き直しをさらに間引いて（スマホ20fps・PC30fps）、
+      // 二つの大きな描画が同じフレームに重なってカクつくのを防ぐ。花びらの動きそのもの（位置の計算）は毎フレーム続ける。
+      const fxBusy = now - (window.__taFxPaintAt || -1e9) < 160;
+      const paintGap = fxBusy ? (skMobile ? 50 : 33) : (skMobile ? 32 : 0);
+      if(now-lastPaint>=paintGap){lastPaint=now;draw(bc, P, false, G, dprB);if(F.length || !skMobile)draw(fc, F, true, G, dprF);}
       if(sakuraBarFill) sakuraBarFill.style.transform = `scaleX(${Math.max(0, 1 - t / SAKURA_MS).toFixed(4)})`;
       if(t >= SAKURA_MS) return finish(false);
     }
@@ -13757,7 +13762,7 @@ const __ta100Start=window.__ta100Profile.start();try {
   const taDenseCombo=taMobileFx&&crossBursts.length>0&&(summonBursts.length>0||traces.some(f=>f.type==='summon')||taCompoundLevel===2);
   const targetMs=taMobileFx?(crossBursts.length?50:40):(crossBursts.length?33:16);
   if(now-lastFxPaint<targetMs){scheduleFxIdle(Math.max(8,Math.ceil(targetMs-(now-lastFxPaint))));return;}
-  lastFxPaint=now;fxWasDrawing=true;const taPaintStart=taPerfEnabled?performance.now():0;
+  lastFxPaint=now;fxWasDrawing=true;window.__taFxPaintAt=now;const taPaintStart=taPerfEnabled?performance.now():0;
   const dt=Math.min(.05,(now-last)/1000);last=now;
  const rect=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,taMobileFx?1:(crossBursts.length?1.25:2)),vw=window.innerWidth,vh=window.innerHeight,cw=Math.max(1,Math.round(vw*dpr)),ch=Math.max(1,Math.round(vh*dpr));if(canvas.style.height!==vh+'px'){canvas.style.width=vw+'px';canvas.style.height=vh+'px';}if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}taFxSchedulerStats.canvasPixels=cw*ch;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);ctx.translate(rect.left,rect.top);drawCompletedClock(now);renderSummons(now);
  if(gesture&&performance.now()-gesture.started>=GESTURE_MAX_MS){const g=gesture;gesture=null;makeTrace(g)}
@@ -14786,6 +14791,11 @@ window.taV54Report=function(){const p=window.__taV54Perf;return {
    ぼかしは1語ごとに毎コマ背景を読み直すため、数十個が漂うとスマホの描画が追いつかなくなる。
    代わりに地の色を少しだけ濃くして、文字の読みやすさと見た目の印象をそろえる。すでに出ている言霊は変えない。 */
 #drift .word.ta-lite-word{-webkit-backdrop-filter:none;backdrop-filter:none}
+/* 桜吹雪のあいだ（スマホ・重いとき）：言霊の後ろで花びらの画布が描き変わり続けるため、1語ごとの背景ぼかしが毎コマ計算し直しになる。
+   玉の演出と重なるとカクつくので、桜のあいだだけぼかしを外し、地の色を少し濃くして見た目をそろえる */
+@media (pointer:coarse){html.sakura-on #drift .word{-webkit-backdrop-filter:none;backdrop-filter:none}
+ html.sakura-on #drift .word:not(.special,.multi,.odd,.petal,.crack,.vortex,.sk-fall,.pull,.reso,.glow,.still){background:color-mix(in srgb,var(--paper) 80%,transparent)}}
+html.sakura-on.ta-lowfx #drift .word{-webkit-backdrop-filter:none;backdrop-filter:none}
 #drift .word.ta-lite-word:not(.special,.multi,.odd,.petal,.crack,.vortex,.sk-fall,.pull,.reso,.glow,.still){background:color-mix(in srgb,var(--paper) 80%,transparent)}
 /* スマホ：漂う言霊の外側の光を1重にして、1語ごとの描画範囲を小さくする（見た目の色味はほぼ同じ） */
 @media (pointer:coarse){
@@ -14837,6 +14847,9 @@ window.taV54Report=function(){const p=window.__taV54Perf;return {
 })();
 </script>
 <style id="ta-yura-bright">
+/* チュートリアルのあいだは、ヘッダーのゆらにかかる暗い覆いを外して明るく見せる（終われば元に戻る） */
+header>.brand.ta-face-header::after{transition:opacity 1.2s ease}
+html.ta-tut header>.brand.ta-face-header::after{opacity:0}
 /* 100連のたびに、ヘッダーのゆらが一瞬明るく照らされる（暗い覆いが引き、金の光がさす） */
 header>.brand.ta-face-header.ta-yura-bright::after{animation:taYuraUnveil 1.9s cubic-bezier(.2,.7,.3,1) both}
 header>.brand.ta-face-header.ta-yura-bright::before{animation:taYuraLight 1.9s cubic-bezier(.2,.7,.3,1) both}
