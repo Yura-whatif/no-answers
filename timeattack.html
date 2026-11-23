@@ -10,6 +10,7 @@
   const origPlay=HTMLMediaElement.prototype.play;
   function restoreOne(m){
     const st=saved.get(m);if(!st)return;saved.delete(m);
+    if(m.getAttribute('src'))return;   // ゲーム側が新しい曲を入れていたら、そちらを優先する（夜ごとの曲の切り替えなど）
     try{m.src=st.src;m.loop=st.loop;if(st.time>0)m.addEventListener('loadedmetadata',()=>{try{m.currentTime=st.time;}catch(_){}},{once:true});}catch(_){}
   }
   HTMLMediaElement.prototype.play=function(){
@@ -103,7 +104,7 @@ html.boot .wrap{opacity:0}
 #taPlay{display:grid;place-items:center;flex:none}
 #taPlay .ta-play-icon{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
 #taPlay:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-#taStartFlash{position:fixed;inset:0;z-index:95;display:grid;place-items:center;pointer-events:none;background:rgba(7,9,15,.15);color:#f5e5c7;font:600 clamp(3rem,10vw,6rem) var(--mincho);letter-spacing:.24em;text-shadow:0 0 28px rgba(255,220,164,.55)}
+#taStartFlash{position:fixed;inset:0;z-index:95;display:grid;place-items:center;pointer-events:none;background:rgba(7,9,15,.15);color:#f5e5c7;font:600 clamp(2.3rem,7.6vw,4.6rem) var(--mincho);letter-spacing:.22em;text-shadow:0 0 28px rgba(255,220,164,.55)}
 #taStartFlash[hidden]{display:none}
 #taStartFlash.ta-start-active{animation:taStartReveal .85s ease-out both}
 @keyframes taStartReveal{0%{opacity:0;letter-spacing:.38em;transform:scale(.92)}30%{opacity:1}72%{opacity:1}100%{opacity:0;letter-spacing:.26em;transform:scale(1.04)}}
@@ -525,6 +526,35 @@ html[data-yura="black"].ta-century-lit #viewMain>.hero.ta-active-visual>picture.
 
 /* 200 chains: existing golden sunrise artwork; files remain unchanged. */
 #viewMain>.hero>picture.ta-bg-picture.ta-day300{opacity:0!important;transition:opacity 4.5s ease-in-out;pointer-events:none;}
+/* 第一夜・六章：祝祭の夜（夕焼けの上に、5秒かけて重ねる） */
+#viewMain>.hero>picture.ta-bg-picture.ta-festival{opacity:0!important;transition:opacity 5s ease-in-out;pointer-events:none;}
+html[data-yura="black"].ta-festival-lit #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-festival{opacity:1!important;transition-duration:5s;}
+html:not(.ta-festival-lit) #viewMain>.hero>picture.ta-bg-picture.ta-festival{opacity:0!important;transition-duration:0s!important;}
+/* 第二夜の七章：荒野の月夜（bg_wasteland）。赤い空の城の上に5秒かけて重ねる */
+#viewMain>.hero>picture.ta-bg-picture.ta-wasteland{opacity:0!important;transition:opacity 5s ease-in-out;pointer-events:none;}
+html[data-yura="black"].ta-wasteland-lit #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-wasteland{opacity:1!important;transition-duration:5s;}
+html:not(.ta-wasteland-lit) #viewMain>.hero>picture.ta-bg-picture.ta-wasteland{opacity:0!important;transition-duration:0s!important;}
+/* 祝祭の夜：窓の外だけに、きらきらした光の粒が降る。
+   遠く（城側）の粒は小さく・暗く・ゆっくり、近く（窓側）の粒は大きく・明るく・速く落ちて奥行きを出す。
+   背景と同じ cover 寸法の板（JS が px で合わせる）に置き、窓のアーチの形で切り抜くので、画面の大きさが変わってもずれない */
+#viewMain>.hero>.ta-fest-light{position:absolute;inset:0;overflow:hidden;pointer-events:none;mix-blend-mode:screen;opacity:0;transition:opacity 5s ease-in-out;}
+html[data-yura="black"].ta-festival-lit:not(.ta-800-lit) #viewMain>.hero.ta-active-visual>.ta-fest-light{opacity:1;}
+html:not(.ta-festival-lit) #viewMain>.hero>.ta-fest-light{transition-duration:0s;}
+/* 板の大きさは JS（ta-fest-light-js）が背景と同じ cover の寸法を px で入れる */
+.ta-fest-plate{position:absolute;left:50%;top:50%;width:var(--fest-pw,100%);height:var(--fest-ph,100%);transform:translate(-50%,-50%);}
+/* 窓の外の範囲（画像 1440×812 基準：x705〜1175, y100〜592、上はアーチ） */
+.ta-fest-window{position:absolute;left:48.96%;top:12.32%;width:32.64%;height:60.59%;overflow:hidden;clip-path:polygon(0.0% 100.0%,0.0% 32.9%,0.6% 28.0%,2.4% 23.3%,5.4% 18.7%,9.5% 14.5%,14.6% 10.8%,20.6% 7.6%,27.3% 5.0%,34.5% 3.2%,42.2% 2.0%,50.0% 1.6%,57.8% 2.0%,65.5% 3.2%,72.7% 5.0%,79.4% 7.6%,85.4% 10.8%,90.5% 14.5%,94.6% 18.7%,97.6% 23.3%,99.4% 28.0%,100.0% 32.9%,100.0% 100.0%);}
+.ta-fest-window{container-type:size;}
+/* 粒は「降る記憶」と同じ作り：小さな光の点＋にじむ光。明滅させず、ふわっと現れて静かに降り、消えていく */
+.ta-fest-window>i{position:absolute;top:0;left:var(--x);width:var(--s);height:var(--s);margin-left:calc(var(--s)/-2);border-radius:50%;
+ background:var(--c);box-shadow:0 0 calc(var(--s)*1.6) calc(var(--s)*.35) var(--g);opacity:0;
+ transform:translate3d(0,-6cqh,0);will-change:transform,opacity;animation:taFestFall var(--d) linear var(--dl) infinite;}
+/* 窓側（手前）の粒：大きく、少しぼけて、速い */
+.ta-fest-window>i.n{filter:blur(.6px);}
+@keyframes taFestFall{0%{transform:translate3d(0,-6cqh,0);opacity:0}12%{opacity:var(--o)}85%{opacity:calc(var(--o)*.85)}100%{transform:translate3d(var(--dx),106cqh,0);opacity:0}}
+html:not(.ta-festival-lit) .ta-fest-window>i{animation:none;opacity:0;}
+.hero.flood .ta-fest-window>i{animation-play-state:paused;}
+html.ta-lowfx .ta-fest-window>i.n{filter:none;}
 html[data-yura="black"].ta-200-lit #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-day300{opacity:1!important;transition-duration:5s;}
 
 /* 300 / 400 chains: static silver and floating-sky artwork, no animation loop. */
@@ -571,6 +601,8 @@ html.ta-500-lit #viewMain>.hero{--ta-stage-edge:#44D9F5;--ta-stage-strength:.62;
 html.ta-600-lit #viewMain>.hero{--ta-stage-edge:#DCE5F5;--ta-stage-strength:.70;--ta-stage-soft:18px;}
 html.ta-700-lit #viewMain>.hero{--ta-stage-edge:#A7C9FF;--ta-stage-strength:.72;--ta-stage-soft:19px;}
 html.ta-800-lit #viewMain>.hero{--ta-stage-edge:#DCE5F5;--ta-stage-strength:.27;--ta-stage-soft:8px;}
+html.ta-festival-lit:not(.ta-800-lit) #viewMain>.hero{--ta-stage-edge:#FFD27A;--ta-stage-strength:.58;--ta-stage-soft:15px;}
+html.ta-wasteland-lit:not(.ta-400-lit) #viewMain>.hero{--ta-stage-edge:#B7A6D6;--ta-stage-strength:.56;--ta-stage-soft:14px;}
 /* The dedicated pseudo-element is always above scenery but cannot intercept
    pointer events or obscure the drifting words. No geometry is changed. */
 #viewMain>.hero::before{
@@ -3124,16 +3156,19 @@ header>.brand.ta-face-header::before{background-position:center,-118px center!im
 
   <figure class="hero"><span id="taNightStageLabel" aria-hidden="true"></span>
     <img class="w" src="img/key-white.webp" alt="白ユラ：祈るように手を組む人物。The world is less in order than I expected.">
-    <picture class="ta-bg-picture b ta-dark-start" aria-hidden="true"><img src="img/stage_01.webp" alt="" decoding="async"></picture>
-    <picture class="ta-bg-picture b ta-original-night"><img src="img/stage_02.webp" alt="夜の書斎と城下町"></picture>
-    <picture class="ta-bg-picture b ta-meteor50" aria-hidden="true"><img src="img/stage_03.webp" alt="" decoding="async"></picture>
-    <picture class="ta-bg-picture b castle-dim" aria-hidden="true"><img src="img/stage_04.webp" alt=""></picture>
-    <picture class="ta-bg-picture b ta-day300" aria-hidden="true"><img src="img/stage_05.webp" alt="" decoding="async"></picture>
-    <picture class="ta-bg-picture b ta-day-silver" aria-hidden="true"><img src="img/stage_06.webp" alt="" decoding="async"></picture>
-    <picture class="ta-bg-picture b ta-sky-ruins" aria-hidden="true"><img src="img/stage_07.webp" alt="" decoding="async"></picture>
-    <picture class="ta-bg-picture b ta-stage08" aria-hidden="true"><img src="img/stage_08.webp" alt="" decoding="async"></picture>
-    <picture class="ta-bg-picture b ta-stage09" aria-hidden="true"><img src="img/stage_09.webp" alt="" decoding="async"></picture>
-    <picture class="ta-bg-picture b ta-stage10" aria-hidden="true"><img src="img/stage_10.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-dark-start" aria-hidden="true"><img src="img/bg/night_study.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-original-night"><img src="img/bg/lantern_study.webp" alt="夜の書斎と城下町"></picture>
+    <picture class="ta-bg-picture b ta-meteor50" aria-hidden="true"><img src="img/bg/meteor_night.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b castle-dim" aria-hidden="true"><img src="img/bg/dawn_castle.webp" alt=""></picture>
+    <picture class="ta-bg-picture b ta-day300" aria-hidden="true"><img src="img/bg/sunset_castle.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-festival" aria-hidden="true"><img src="img/bg/festival_night.webp" alt="" decoding="async"></picture>
+    <div class="ta-fest-light" aria-hidden="true"><div class="ta-fest-plate"><div class="ta-fest-window"></div></div></div>
+    <picture class="ta-bg-picture b ta-day-silver" aria-hidden="true"><img src="img/bg/red_sky_castle.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-wasteland" aria-hidden="true"><img src="img/bg/wasteland_moon.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-sky-ruins" aria-hidden="true"><img src="img/bg/green_meadow.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-stage08" aria-hidden="true"><img src="img/bg/neon_city.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-stage09" aria-hidden="true"><img src="img/bg/white_light_study.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-stage10" aria-hidden="true"><img src="img/bg/above_clouds.webp" alt="" decoding="async"></picture>
     <div class="ta-stage9-void" aria-hidden="true"></div>
     <!-- 髪だけを、ゆるやかな揺らぎで重ねてなびかせる -->
     <img class="w hair hair-w" src="img/key-white.webp" alt="" aria-hidden="true">
@@ -4962,7 +4997,7 @@ function mist(r, n = 7){
 const taCenturyDust=(()=>{
   // 300連鎖以降の金粉は共用Canvas一枚で描画する（得点・オーブ処理とは独立）。
   let canvas=null,ctx=null,raf=0,last=0,grains=[];
-  const maxGrains=160;
+  const maxGrains=220;
   // Read-only counters are exposed only to the opt-in performance panel.
   const dustStats={emits:0,frames:0,skipped:0,totalMs:0,maxMs:0,lastMs:0,peak:0,level:0};
   window.__taGoldDustStats=dustStats;
@@ -5007,8 +5042,9 @@ const taCenturyDust=(()=>{
       if(age<0)continue;
       if(age>=g.life){grains.splice(i,1);continue;}
       const k=age/g.life;
-      const x=g.x+g.vx*age+Math.sin(age*5+g.phase)*2*k;
-      const y=g.y-g.speed*age;
+      const x=g.x+g.vx*age+Math.sin(age*(g.high?2.6:5)+g.phase)*(g.high?9:2)*k;
+      // 夜のボーナスの金粉（high）は、終わりに向けて少しずつ減速しながら高く昇る
+      const y=g.y-g.speed*age*(g.high?1-.3*k:1);
       const alpha=Math.min(1,age/.045)*Math.pow(1-k,0.95);
       // 丸い光球ではなく、細かな不規則な砂片を描く。影・blur・円弧は使わない。
       ctx.globalAlpha=alpha;
@@ -5043,12 +5079,14 @@ const taCenturyDust=(()=>{
     const now=performance.now(),bounds=textRect&&textRect.width>0?textRect:r;
     const cx=bounds.left+bounds.width/2,cy=bounds.top+bounds.height/2;
     // 通常文字は16片、時止めなどは10片。金色を明るくして砂の視認性を上げる。
-    const count=word?16:10;
+    // style==='high'（夜のボーナス）：ふだんの3〜4倍の高さまで、ゆっくり長く舞い上がる
+    const high=style==='high';
+    const count=word?(high?20:16):10;
     for(let i=0;i<count;i++){
       grains.push({x:cx+(Math.random()-.5)*bounds.width*.7,
         y:cy+(Math.random()-.5)*bounds.height*.5,
-        vx:(Math.random()-.5)*42,speed:55+Math.random()*70,
-        phase:Math.random()*6.28,life:.75+Math.random()*.35,
+        vx:(Math.random()-.5)*(high?30:42),speed:high?150+Math.random()*130:55+Math.random()*70,high,
+        phase:Math.random()*6.28,life:high?1.7+Math.random()*.9:.75+Math.random()*.35,
         w:Math.random()<.75?1:2,h:Math.random()<.85?1:2,
         spark:i%2===0,dx:(Math.random()-.5)*5,dy:(Math.random()-.5)*5,light:i%3===0,start:now});
     }
@@ -5569,7 +5607,7 @@ var taMeteorHadCentury=false;
 function taMeteorReset(){
   taCancelLampPulse();
   const doc=document.documentElement;
-  doc.classList.remove('ta-lamp-lit','ta-meteor-lit','ta-night-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit');
+  doc.classList.remove('ta-lamp-lit','ta-meteor-lit','ta-night-lit','ta-200-lit','ta-300-lit','ta-400-lit','ta-500-lit','ta-600-lit','ta-700-lit','ta-800-lit','ta-festival-lit','ta-wasteland-lit');
   if(taMeteorHadCentury)doc.classList.add('ta-meteor-skip');
   taMeteorHadCentury=false;
 }
@@ -5672,16 +5710,61 @@ function taApplyComboBackground(finalCombo, resumeFromStop=false){
 // ── 物語の頁 ─────────────────────────────────────────
 // 背景・BGMは連鎖数ではなく「頁」で進む。頁は言霊を拾うたびにたまり、連鎖が切れても減らない。
 // 連鎖は頁のたまる速さ（上乗せ）として残る。最終章を読み終えるとボーナス区間（夜の終わり）へ。
-const TA_STORY_STEPS=[80,90,100,120,120,135,135,135,150,150];   // 各章を読み終えるのに必要な頁
+const TA_STORY_STEPS=[80,90,100,120,120,135,135,135,150,150];   // 以前の十章構成（今は TA_NIGHT_PLANS を使う。参考として残す）
 const TA_STORY_LEVEL=[0,20,50,100,200,300,400,500,600,700];    // 20＝ランタンの灯る書斎（stage_02）    // 各章の景色（従来の連鎖数の段階にあたる）
 const taStory={pages:0,chapter:0,inChapter:0,pendingAnnounce:false};
-// 夜ごとの章の数：第一夜は八章、第二夜は九章、第三夜以降は十章まで（読み終えると夜のボーナスへ）
-function taStoryChapters(){const n=typeof taNightNumber==='number'?taNightNumber:1;return Math.min(TA_STORY_STEPS.length,n<=1?8:n===2?9:10);}
-function taStoryLevel(){return taStory.chapter>=taStoryChapters()?800:TA_STORY_LEVEL[taStory.chapter];}
-function taStoryProgress(){return taStory.chapter>=taStoryChapters()?1:Math.min(1,taStory.inChapter/TA_STORY_STEPS[taStory.chapter]);}
+// 第一夜は「城が栄えて夜を迎える」六章：夜→灯→流星→夜明けの城→夕焼け→祝祭の夜（bg_festival）→ 夜のボーナス。
+// 必要な頁の合計は、以前の第一夜（八章・915頁）と同じにして、夜全体の長さは変えない。
+const TA_NIGHT1_STEPS=[110,130,150,165,175,185];   // 合計915頁
+const TA_NIGHT1_LEVEL=[0,20,50,100,200,200];       // 六章は夕焼け（200）と同じ段階の上に、祝祭の夜の景色を重ねる
+// 言霊の量・金属文字の出現など「章の進み具合」で決まるものは、以前の八章のどこにあたるかで読み替える
+const TA_NIGHT1_EQ=[0,1,3,4,6,7];
+// 第二夜は七章：夜→灯→流星→夜明けの城→夕日の城→赤い空の城→荒野の月夜（bg_wasteland）→ 夜のボーナス。
+// 必要な頁の合計は、以前の第二夜（九章・1065頁）と同じにして、夜全体の長さは変えない。
+const TA_NIGHT2_STEPS=[100,115,130,150,160,195,215];   // 合計1065頁
+const TA_NIGHT2_LEVEL=[0,20,50,100,200,300,300];        // 七章は赤い空の城（300）と同じ段階の上に、荒野の景色を重ねる
+// 言霊の量・金属文字の出現は、以前の九章のどこにあたるかで読み替える（七章＝以前の最終章）
+const TA_NIGHT2_EQ=[0,1,2,3,4,5,8];
+// 第三夜は八章：夜→灯→流星→夜明けの城→赤い空の城→荒野の月夜→緑の草原→青く光る都市 → 夜のボーナス。
+// （夕日の城・白い光の書斎・雲の上は外した）必要な頁の合計は、以前の第三夜（十章・1215頁）と同じ。
+const TA_NIGHT3_STEPS=[95,110,125,145,160,170,195,215];   // 合計1215頁
+const TA_NIGHT3_LEVEL=[0,20,50,100,300,300,400,500];      // 六章は赤い空の城（300）の上に荒野の景色を重ねる
+// 言霊の量・金属文字の出現は、以前の十章のどこにあたるかで読み替える（八章＝以前の最終章）
+const TA_NIGHT3_EQ=[0,1,2,3,5,6,7,9];
+// 第四夜は八章：第三夜からランタンの書斎を抜き、最後に白い光の書斎を足す。
+// 夜→流星→夜明けの城→赤い空の城→荒野の月夜→緑の草原→青く光る都市→白い光の書斎 → 夜のボーナス。頁の合計は第三夜と同じ1215。
+const TA_NIGHT4_STEPS=[100,120,140,155,165,175,175,185];   // 合計1215頁
+const TA_NIGHT4_LEVEL=[0,50,100,300,300,400,500,600];      // 五章は赤い空の城（300）の上に荒野の景色。八章（600）で曲が Sora Vatum に替わる
+const TA_NIGHT4_EQ=[0,2,3,5,6,7,8,9];                     // 以前の十章のどこにあたるか（八章＝以前の最終章）
+// 第五夜（いまの最終夜。第六夜以降も同じ）は九章：第四夜の最後に雲の上の白い景色（stage_10）を足す。
+// 第一〜八章の頁は第四夜と同じで、九章ぶん長い夜になる。
+const TA_NIGHT5_STEPS=[100,120,140,155,165,175,175,185,195];   // 合計1410頁
+const TA_NIGHT5_LEVEL=[0,50,100,300,300,400,500,600,700];
+const TA_NIGHT5_EQ=[0,2,3,5,6,7,8,9,9];
+// 背景画像は img/bg/ に景色の名前で置く（旧名）：night_study(stage_01) lantern_study(02) meteor_night(03) dawn_castle(04)
+// sunset_castle(05) red_sky_castle(06) green_meadow(07) neon_city(08) white_light_study(09) above_clouds(10)
+// festival_night(bg_festival) wasteland_moon(bg_wasteland)
+// 夜ごとの章立て。waste＝荒野の月夜（bg_wasteland）を重ね始める章（0始まり）。重ねたまま次の景色が上に来る
+const TA_NIGHT_PLANS={
+  1:{steps:TA_NIGHT1_STEPS,level:TA_NIGHT1_LEVEL,eq:TA_NIGHT1_EQ,waste:-1},
+  2:{steps:TA_NIGHT2_STEPS,level:TA_NIGHT2_LEVEL,eq:TA_NIGHT2_EQ,waste:6},
+  3:{steps:TA_NIGHT3_STEPS,level:TA_NIGHT3_LEVEL,eq:TA_NIGHT3_EQ,waste:5},
+  4:{steps:TA_NIGHT4_STEPS,level:TA_NIGHT4_LEVEL,eq:TA_NIGHT4_EQ,waste:4},
+  5:{steps:TA_NIGHT5_STEPS,level:TA_NIGHT5_LEVEL,eq:TA_NIGHT5_EQ,waste:4}
+};
+function taNightPlan(){const n=typeof taNightNumber==='number'?taNightNumber:1;return TA_NIGHT_PLANS[Math.max(1,Math.min(5,n))];}
+function taIsNight2(){return typeof taNightNumber==='number'&&taNightNumber===2;}
+function taIsNight1(){return (typeof taNightNumber==='number'?taNightNumber:1)<=1;}
+function taStoryStep(i){return taNightPlan().steps[i];}
+function taStoryChapterEq(){const e=taNightPlan().eq;return e[Math.max(0,Math.min(e.length-1,taStory.chapter))];}
+// 夜ごとの章の数：第一夜は六章、第二夜は七章、第三夜・第四夜は八章、第五夜以降は九章（読み終えると夜のボーナスへ）
+function taStoryChapters(){return taNightPlan().steps.length;}
+function taStoryLevel(){return taStory.chapter>=taStoryChapters()?800:taNightPlan().level[taStory.chapter];}
+function taStoryProgress(){return taStory.chapter>=taStoryChapters()?1:Math.min(1,taStory.inChapter/taStoryStep(taStory.chapter));}
 function taStoryChainRate(){return combo>=600?1.5:combo>=300?1.35:combo>=100?1.2:1;}
 function taStoryReset(){
   taStory.pages=0;taStory.chapter=0;taStory.inChapter=0;taStory.pendingAnnounce=false;
+  document.documentElement.classList.remove('ta-festival-lit','ta-wasteland-lit');
   taCine.clear();
   try{window.taMoon?.reset();window.taMoon?.update(false);}catch(_){}
 }
@@ -5692,12 +5775,12 @@ function taStoryAdd(n){
   if(taStory.chapter>=taStoryChapters())return;
   taStory.pages+=n;taStory.inChapter+=n;
   let advanced=false;
-  while(taStory.chapter<taStoryChapters()&&taStory.inChapter>=TA_STORY_STEPS[taStory.chapter]){
-    taStory.inChapter-=TA_STORY_STEPS[taStory.chapter];taStory.chapter++;advanced=true;
+  while(taStory.chapter<taStoryChapters()&&taStory.inChapter>=taStoryStep(taStory.chapter)){
+    taStory.inChapter-=taStoryStep(taStory.chapter);taStory.chapter++;advanced=true;
   }
   if(taStory.chapter>=taStoryChapters())taStory.inChapter=0;
   try{window.taMoon?.update(advanced);}catch(_){}
-  if(!advanced&&taStory.chapter<taStoryChapters()&&taStory.inChapter>=TA_STORY_STEPS[taStory.chapter]*.85)taYuraSay('moonNear');
+  if(!advanced&&taStory.chapter<taStoryChapters()&&taStory.inChapter>=taStoryStep(taStory.chapter)*.85)taYuraSay('moonNear');
   if(advanced){taStory.pendingAnnounce=true;if(!flood)taStoryApply(false);}
 }
 // 技などの上乗せ（言霊ごとの頁とは別に足す）
@@ -5706,13 +5789,17 @@ function taStoryBonus(n){taStoryAdd(n);}
 function taStoryApply(resumeFromStop){
   const lv=taStoryLevel();
   taApplyComboBackground(lv,resumeFromStop);
+  // 第一夜の六章（とそのあとの夜のボーナス）は、祝祭の夜の景色
+  document.documentElement.classList.toggle('ta-festival-lit',taRunning&&taIsNight1()&&taStory.chapter>=5);
+  // 荒野の月夜：第二夜は七章から、第三夜以降は六章から（次の景色はその上に重なる）
+  {const w=taNightPlan().waste;document.documentElement.classList.toggle('ta-wasteland-lit',taRunning&&w>=0&&taStory.chapter>=w);}
   comboRush(lv>=100);   // 採集エリアの縁は章ごとの色だけで光る（連鎖の数は関係しない）。第一〜三章は消灯
   if(lv>=100 && !taCenturyMusic.isActive() && !taSilverMusic.isActive())taCenturyMusic.start();
   if(lv>=600 && !taSilverMusic.isActive())taSilverMusic.start();
   if(taStory.pendingAnnounce){taStory.pendingAnnounce=false;if(lv<800)taStoryAnnounce();}
   if(lv>=100 && !taStoryApply.prewarmed){
     taStoryApply.prewarmed=true;
-    for(const name of ['stage_06.webp','stage_07.webp','stage_08.webp','stage_09.webp','stage_10.webp']){const im=new Image();im.decoding='async';im.src='img/'+name;if(im.decode)im.decode().catch(()=>{});}
+    for(const name of ['bg/festival_night.webp','bg/wasteland_moon.webp','bg/red_sky_castle.webp','bg/green_meadow.webp','bg/neon_city.webp','bg/white_light_study.webp','bg/above_clouds.webp']){const im=new Image();im.decoding='async';im.src='img/'+name;if(im.decode)im.decode().catch(()=>{});}
   }
   if(lv>=800)taNightStart();
 }
@@ -5921,7 +6008,7 @@ function bumpCombo(){
   if(combo===100){
     // Non-blocking image prewarm: these stages are far ahead; never stall collection.
     const mobile=window.matchMedia&&window.matchMedia('(max-width:600px)').matches;
-    const names=mobile?['stage_06.webp','stage_07.webp','stage_08.webp','stage_09.webp','stage_10.webp']:['stage_06.webp','stage_07.webp','stage_08.webp','stage_09.webp','stage_10.webp'];
+    const names=mobile?['bg/red_sky_castle.webp','bg/green_meadow.webp','bg/neon_city.webp','bg/white_light_study.webp','bg/above_clouds.webp']:['bg/red_sky_castle.webp','bg/green_meadow.webp','bg/neon_city.webp','bg/white_light_study.webp','bg/above_clouds.webp'];
     for(const name of names){const im=new Image();im.decoding='async';im.src='img/'+name;if(im.decode)im.decode().catch(()=>{});}
   }
   // The previous offsetWidth read forced a full style/layout flush on EVERY
@@ -6824,14 +6911,14 @@ let taMetalTestRate=null;   // テストモードの切替（null＝章連動、
 // 第二夜以降はゆるやかに上乗せ（第二夜+4%、第三夜+8%、第四夜以降+12%）。上限40%。
 const TA_METAL_NIGHT_ADD=[0,0,.04,.08,.12];
 function taMetalGoldShare(){
- const c=taStory&&typeof taStory.chapter==='number'?taStory.chapter:0,n=typeof taNightNumber==='number'?taNightNumber:1;
+ const c=taStory&&typeof taStory.chapter==='number'?taStoryChapterEq():0,n=typeof taNightNumber==='number'?taNightNumber:1;
  if(taMetalTestRate!=null&&taMetalTestRate>0)return .35;   // テストモードで出しているときは黒も混ぜて確かめられるように
  if(n<=1||(n===2&&c<3))return 0;
  if(n===2)return Math.min(.45,.15+.05*(c-3));   // 第二夜：第四章15% → 第九章40%
  if(n===3)return Math.min(.6,.25+.04*c);        // 第三夜：25% → 61%（上限60%）
  return Math.min(.7,.35+.04*c);                 // 第四夜以降：35% → 上限70%
 }
-function taMetalRate(){if(taMetalTestRate!=null)return taMetalTestRate;const c=taStory&&typeof taStory.chapter==='number'?taStory.chapter:0;const n=typeof taNightNumber==='number'?taNightNumber:1;
+function taMetalRate(){if(taMetalTestRate!=null)return taMetalTestRate;const c=taStory&&typeof taStory.chapter==='number'?taStoryChapterEq():0;const n=typeof taNightNumber==='number'?taNightNumber:1;
  return Math.min(.4,TA_METAL_RATE[Math.max(0,Math.min(TA_METAL_RATE.length-1,c))]+TA_METAL_NIGHT_ADD[Math.max(0,Math.min(TA_METAL_NIGHT_ADD.length-1,n))]);}
 // プレイが終わってDEMOに戻るとき、残っている金属文字はふつうの言霊に戻す（DEMOには出さない）
 function taMetalClear(){document.querySelectorAll('#drift .word.ta-metal').forEach(w=>{w.classList.remove('ta-metal','ta-metal-gold','ta-metal-dmg','ta-metal-dmg2','ta-metal-frozen');delete w.dataset.metalHp;delete w.dataset.metalIce;});}
@@ -6872,7 +6959,7 @@ const TA_DENSITY_MOBILE=[5,5,6,6,7,7,8,8,9,9];
 const TA_DENSITY_PC=[6,6,7,7,8,8,9,9,10,10];
 const TA_DENSITY_GAP=[1,.95,.9,.85,.8,.76,.72,.68,.64,.6];
 let taDensityFlat=false;   // テストモード：章による増加を切って、以前の量（5／6個）で比べる
-function taDensityChapter(){if(taDensityFlat||!taRunning)return 0;const c=taStory&&typeof taStory.chapter==='number'?taStory.chapter:0;return Math.max(0,Math.min(TA_DENSITY_GAP.length-1,c));}
+function taDensityChapter(){if(taDensityFlat||!taRunning)return 0;const c=taStory&&typeof taStory.chapter==='number'?taStoryChapterEq():0;return Math.max(0,Math.min(TA_DENSITY_GAP.length-1,c));}
 function spawnLoop(){
   if(!flood&&!taNightActive()){
     const field = $("drift");
@@ -9876,7 +9963,7 @@ $("t-metal").onclick=()=>{taMetalTestRate=taMetalTestRate==null?.25:taMetalTestR
 $("t-density").onclick=()=>{taDensityFlat=!taDensityFlat;$("t-density").textContent=taDensityFlat?"言霊:以前の量":"言霊:章連動";toast(taDensityFlat?"言霊の量を以前の量（スマホ5／PC6）に固定しました":"言霊の量を章に合わせて増やします");};
 $("t-pages").onclick=()=>{ if(!taRunning){toast("ゲーム中に押すと、今の章があと1頁になります");return;} if(taNightActive()){toast("いまは夜のボーナス中です");return;}
   if(taStory.chapter>=taStoryChapters()){toast("この夜の章はすべて読み終えています");return;}
-  const need=TA_STORY_STEPS[taStory.chapter]-taStory.inChapter-1; if(need>0)taStoryAdd(need);
+  const need=taStoryStep(taStory.chapter)-taStory.inChapter-1; if(need>0)taStoryAdd(need);
   toast("第"+taNightKanji(taStory.chapter+1)+"章：あと1頁（言霊を一つ消すと次へ）"); };
 // 紅・蒼の演出の見比べ：Lvどおり → Lv1・2の演出 → Lv3・4の演出 の順に切り替える（見た目だけ。効果・時間・範囲はLvどおり）
 $("t-fxlv").onclick=()=>{ const v=window.taFxLvTest||0, nx=v===0?1:v===1?3:v===3?5:0; window.taFxLvTest=nx; const label=nx===0?"Lvどおり":nx===1?"Lv1・2の演出":nx===3?"Lv3・4の演出":"Lv5の演出"; $("t-fxlv").textContent="紅蒼の演出："+label; toast("紅蒼の演出を「"+label+"」にしました"); };
@@ -9963,7 +10050,7 @@ setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
 (function taPrewarmBackgrounds(){
   const run=()=>{
     const mobile=window.matchMedia&&window.matchMedia('(max-width: 700px)').matches;
-    const names=mobile?['stage_01.webp','stage_02.webp','stage_04.webp','stage_05.webp']:['stage_01.webp','stage_02.webp','stage_04.webp','stage_05.webp'];
+    const names=mobile?['bg/night_study.webp','bg/lantern_study.webp','bg/dawn_castle.webp','bg/sunset_castle.webp']:['bg/night_study.webp','bg/lantern_study.webp','bg/dawn_castle.webp','bg/sunset_castle.webp'];
     for(const name of names){
       const img=new Image();img.decoding='async';img.src='img/'+name;
       if(typeof img.decode==='function')img.decode().catch(()=>{});
@@ -10038,7 +10125,7 @@ function taNightCollectBlue(w){
  if(!['collect','interlude'].includes(taNightBonus.phase)||!w||!w.isConnected||w.dataset.taken)return;
  w.dataset.taken='1';w.classList.add('got');w.style.pointerEvents='none';
  const r=w.getBoundingClientRect();
- try{sfx.goldTap();taCenturyDust.emit(r,w.textContent,null,null);}catch(_){}
+ try{sfx.goldTap();taCenturyDust.emit(r,w.textContent,'high',null);}catch(_){}
  // Only time is awarded. The 800 combo and the score remain frozen.
  taAward(true,0,true,false,true,1,false);
  try{w.animate([{opacity:1},{opacity:0,transform:'translateY(-7px) scale(.9)'}],{duration:300,easing:'ease-out'});}catch(_){}
@@ -10197,7 +10284,7 @@ const taWordMastery=(()=>{
  const rate=()=>[1,1.10,1.20,1.30,1.40,1.45,1.50,1.55,1.60,1.65][level()-1];
  const scoreRate=()=>[1,1.02,1.04,1.06,1.08,1.10,1.12,1.14,1.16,1.20][level()-1];
  const timeRate=()=>[1,1.01,1.02,1.03,1.04,1.05,1.06,1.07,1.08,1.10][level()-1];
- const comboGraceMs=()=>2200+(level()-1)*50;
+ const comboGraceMs=()=>2200+(level()-1)*25;   // 言霊Lvによる連鎖の猶予：Lv10で2.425秒（以前は2.65秒。つながりやすすぎたため上限を下げた）
  const silverStart=()=>1+(level()>=3?1:0)+(level()>=5?1:0)+(level()>=8?1:0)+(level()>=10?1:0);
  const silverInterval=()=>[100,100,97,94,91,91,88,88,85,85][level()-1];   // 高Lvでの白銀玉の出現を少し控えめに（最短75%→85%）
  let fxQueue=[],fxBusy=false;
@@ -11319,7 +11406,7 @@ function taPrepareAudio(src){
 // 途中の章で初めて出る背景（第六章以降）、時が止まる反転、降る記憶の光、金属の言霊などを、読み込み中に一度描いておく
 async function taPrewarmHeavyFx(mobile){
   try{
-    const later=['stage_06.webp','stage_07.webp','stage_08.webp','stage_09.webp','stage_10.webp'].map(n=>taPreloadImage('img/'+n));
+    const later=['bg/festival_night.webp','bg/wasteland_moon.webp','bg/red_sky_castle.webp','bg/green_meadow.webp','bg/neon_city.webp','bg/white_light_study.webp','bg/above_clouds.webp'].map(n=>taPreloadImage('img/'+n));
     const hero=document.querySelector('#viewMain>.hero'),drift=document.getElementById('drift');
     const tmp=[];
     // 時止めの反転（backdrop-filter）を、ほぼ見えない小さな円で1回描かせる
@@ -11359,14 +11446,14 @@ async function taBegin(prepareOnly=false){
     const viewport=mobile?'mobile':'desktop';
     progress(15,'夜と朝の景色を準備しています');
     if(taPreparedViewport!==viewport){
-      const names=mobile?['stage_01.webp','stage_02.webp','stage_04.webp','stage_05.webp']:['stage_01.webp','stage_02.webp','stage_04.webp','stage_05.webp'];
+      const names=mobile?['bg/night_study.webp','bg/lantern_study.webp','bg/dawn_castle.webp','bg/sunset_castle.webp']:['bg/night_study.webp','bg/lantern_study.webp','bg/dawn_castle.webp','bg/sunset_castle.webp'];
       await Promise.all(names.map(n=>taPreloadImage('img/'+n)));
       taPreparedViewport=viewport;
     }
     // Stage 8: decode combo backgrounds before the first combo transition.
     // Failures remain nonfatal (same behavior as the other optional assets).
     await Promise.allSettled([
-      taPreloadImage(mobile?'img/stage_03.webp':'img/stage_03.webp')
+      taPreloadImage(mobile?'img/bg/meteor_night.webp':'img/bg/meteor_night.webp')
     ]);
     // Warm reward-orb CSS/paint once while the loading screen is visible.
     // Do not retain any active animations or change scoring behavior.
@@ -14520,7 +14607,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   const mobile=window.matchMedia('(max-width:600px)').matches;
   const img=new Image();
   img.decoding='async';
-  img.src=mobile?'img/stage_03.webp':'img/stage_03.webp';
+  img.src=mobile?'img/bg/meteor_night.webp':'img/bg/meteor_night.webp';
   if(img.decode)img.decode().catch(()=>{});
 })();
 </script>
@@ -15177,6 +15264,37 @@ html.ta-tut.ta-tut-allow-fire .ta-items .ta-orb.fire,html.ta-tut.ta-tut-allow-ic
     raf=requestAnimationFrame(frame);
   }
   raf=requestAnimationFrame(frame);
+})();
+</script>
+<script id="ta-fest-light-js">
+/* 祝祭の夜の窓の外の粒：板を背景画像（1440×812, object-fit:cover）と同じ寸法にそろえ、粒を作る */
+(function(){
+  const hero=document.querySelector('#viewMain>.hero');if(!hero)return;
+  function fit(){
+    const w=hero.clientWidth,h=hero.clientHeight;if(!w||!h)return;
+    const k=Math.max(w/1440,h/812);
+    hero.style.setProperty('--fest-pw',(1440*k).toFixed(1)+'px');
+    hero.style.setProperty('--fest-ph',(812*k).toFixed(1)+'px');
+  }
+  fit();
+  // 窓の外の光の粒。far：城側（小・暗・遅）、mid、near：窓側（大・明・速・きらめき付き）
+  const win=hero.querySelector('.ta-fest-window');
+  if(win&&!win.childElementCount){
+    // [数, 大きさ(窓の幅に対する%) 最小〜最大, 落下秒 最小〜最大, 明るさ, 種類]
+    // far：城側（小・暗・遅）／mid／near：窓側（大・明・速・少しぼける）
+    const C=[['#fbefcf','rgba(236,206,140,.7)'],['#f8e9c4','rgba(230,198,128,.65)'],['#fdf3dc','rgba(242,214,156,.7)']];   // 薄い金色
+    const L=[[34,.45,.65,24,32,.7,'f'],[18,.75,1,17,22,.85,'m'],[9,1.15,1.5,12,15,.95,'n']];
+    const R=(a,b)=>a+Math.random()*(b-a);
+    const frag=document.createDocumentFragment();
+    L.forEach(([n,s0,s1,d0,d1,o,k])=>{for(let i=0;i<n;i++){
+      const e=document.createElement('i');e.className=k;
+      const d=R(d0,d1),c=C[(Math.random()*C.length)|0];
+      e.style.cssText='--x:'+R(2,98).toFixed(1)+'%;--s:'+R(s0,s1).toFixed(2)+'cqw;--c:'+c[0]+';--g:'+c[1]+';--d:'+d.toFixed(1)+'s;--dl:'+(-R(0,d)).toFixed(1)+'s;--dx:'+R(-6,6).toFixed(1)+'cqw;--o:'+o;
+      frag.appendChild(e);}});
+    win.appendChild(frag);
+  }
+  if(window.ResizeObserver)new ResizeObserver(fit).observe(hero);
+  addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,300));
 })();
 </script>
 </body>
