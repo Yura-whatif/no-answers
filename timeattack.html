@@ -10241,7 +10241,7 @@ function taNightReturn(){
    seal.style.left=(r.left+r.width/2-h.left)+'px';seal.style.top=(r.top+r.height/2-h.top)+'px';
   }
   requestAnimationFrame(()=>requestAnimationFrame(()=>echo.classList.add('approach')));   // 黒い幕が晴れ、文字が収束する
-  taNightDawnFx(echo);   // 黒から景色が戻り、白銀の粒が舞い上がる
+  // 夜明けの演出は、黒から最初の景色へのクロスフェードだけ（以前の白銀のもや・舞い上がる粒は使わない。taNightDawnFx は残置）
   taNightLater(()=>{
    if(taNightBonus.phase!=='return')return;
    taNightNumber++;taUpdateNightHud();
