@@ -18,10 +18,15 @@
     restoreOne(this);pausedAt.delete(this);
     return origPlay.apply(this,arguments);
   };
+  // 解放するのは曲（ループ再生か、5秒以上の長さ）だけ。炎・氷・クロス爆発などの短い効果音は通知カードを作らないので触らない。
+  // （以前は効果音も解放していたため、次に鳴らすたびに読み込み直しになり、音が出ない・処理が重くなる原因になっていた）
+  function isTrack(m){const d=m.duration;return m.loop||(isFinite(d)&&d>=5);}
   function releaseOne(m){
     try{
-      if(saved.has(m))return;const src=m.currentSrc||m.getAttribute('src');if(!src)return;
-      saved.set(m,{src,time:m.currentTime||0,loop:m.loop});
+      if(saved.has(m)||!isTrack(m))return;const src=m.currentSrc||m.getAttribute('src');if(!src)return;
+      // 最後まで再生し終えた要素は、位置を戻さない（戻すと次の再生がいきなり終わりから始まって無音になる）
+      const d=m.duration,t=m.currentTime||0,time=(m.ended||(isFinite(d)&&t>=d-.25))?0:t;
+      saved.set(m,{src,time,loop:m.loop});
       m.pause();m.removeAttribute('src');m.load();
     }catch(_){}
   }
@@ -5336,7 +5341,7 @@ function comboStepBonus(n){
 // 100-chain BGM.  Keep its state independent of ranking/result music.
 const taCenturyMusic=(()=>{
   // 第四章の曲は夜ごとに変える: 第一夜=Granite / 第二夜=Threshold / 第三夜以降=Pendulum
-  function srcForNight(){const n=typeof taNightNumber==='number'?taNightNumber:1;return n<=1?'audio/Beneath_the_Granite_Sky.mp3?v=20261121':n===2?'audio/Upon_the_Silent_Threshold.mp3?v=20261102':'audio/chain100-weight-of-the-pendulum.mp3?v=20261024';}
+  function srcForNight(){const n=typeof taNightNumber==='number'?taNightNumber:1;return n<=1?'audio/Beneath_the_Granite_Sky.mp3?v=20261121':n===2?'audio/Upon_the_Silent_Threshold.mp3?v=20261102':n===3?'audio/chain100-weight-of-the-pendulum.mp3?v=20261024':n===4?'audio/Stone_Against_Time.mp3':'audio/Midnight_in_the_Nave.mp3';}   // 第四夜は夜明けの城から、第五夜は第一章から
   let audio=null,curSrc='',active=false,stoppedForTime=false,fadeId=0,fadeTimer=0,serial=0;
   const volume=.38; // Lower level; preserve existing fade and timing
   let heartbeatDuck=false,duckTimer=0;
@@ -5673,15 +5678,19 @@ function taApplyComboBackground(finalCombo, resumeFromStop=false){
   root.classList.toggle("ta-lamp-lit",finalCombo>=20);
   root.classList.toggle("ta-meteor-lit",finalCombo>=50);
   root.classList.toggle("ta-century-lit",finalCombo>=100);
-  root.classList.toggle("ta-200-lit",finalCombo>=200);
-  root.classList.toggle("ta-300-lit",finalCombo>=300);
-  root.classList.toggle("ta-word-300",finalCombo>=600);
+  // 夜のボーナス（800）に入るときは、まだ通っていない景色（200〜700）を新たに灯さない。
+  // 全部を灯すと、黒に沈むまでの数秒間に、通っていない景色（雲の上など）が一瞬透けて見えてしまうため。
+  const to800=finalCombo>=800,lit=c=>to800?root.classList.contains(c):null;
+  const tg=(c,on)=>{const keep=lit(c);root.classList.toggle(c,keep===null?on:keep);};
+  tg("ta-200-lit",finalCombo>=200);
+  tg("ta-300-lit",finalCombo>=300);
+  tg("ta-word-300",finalCombo>=600);
   taSilverDust.sync(false); // Performance: disable persistent upward silver particle layer.
-  root.classList.toggle("ta-400-lit",finalCombo>=400);
+  tg("ta-400-lit",finalCombo>=400);
   if(finalCombo>=800)taCancelVoidReturn();
-  root.classList.toggle("ta-500-lit",finalCombo>=500);
-  root.classList.toggle("ta-600-lit",finalCombo>=600);
-  root.classList.toggle("ta-700-lit",finalCombo>=700);
+  tg("ta-500-lit",finalCombo>=500);
+  tg("ta-600-lit",finalCombo>=600);
+  tg("ta-700-lit",finalCombo>=700);
   root.classList.toggle("ta-800-lit",finalCombo>=800);
   if(finalCombo>=50)root.classList.remove("ta-meteor-skip");
   if(finalCombo>=100)taMeteorHadCentury=true;
@@ -5773,8 +5782,11 @@ function taStoryApply(resumeFromStop){
   // 荒野の月夜：第二夜は七章から、第三夜以降は六章から（次の景色はその上に重なる）
   {const w=taNightPlan().waste;document.documentElement.classList.toggle('ta-wasteland-lit',taRunning&&w>=0&&taStory.chapter>=w);}
   comboRush(lv>=100);   // 採集エリアの縁は章ごとの色だけで光る（連鎖の数は関係しない）。第一〜三章は消灯
-  if(lv>=100 && !taCenturyMusic.isActive() && !taSilverMusic.isActive())taCenturyMusic.start();
-  if(lv>=600 && !taSilverMusic.isActive())taSilverMusic.start();
+  const taNightNo=typeof taNightNumber==='number'?taNightNumber:1;
+  // 夜の曲：第一〜四夜は夜明けの城（100）から、第五夜は第一章から流す
+  if((lv>=100||taNightNo>=5) && !taCenturyMusic.isActive() && !taSilverMusic.isActive())taCenturyMusic.start();
+  // Sora Vatum：第五夜は白い光の書斎（600）から。第一〜四夜は使わず、夜のボーナスまでその夜の曲を流し続ける
+  if(lv>=600 && taNightNo>=5 && !taSilverMusic.isActive())taSilverMusic.start();
   if(taStory.pendingAnnounce){taStory.pendingAnnounce=false;if(lv<800)taStoryAnnounce();}
   if(lv>=100 && !taStoryApply.prewarmed){
     taStoryApply.prewarmed=true;
@@ -7091,7 +7103,7 @@ const __ta100Start=window.__ta100Profile.start();try {
     // Keep early hits expressive; omit overlapping effects after the fifth hit.
     const taDenseSwipe=taCoarse && combo<99 && !!w.dataset.swiped && taSwipeBurstCount>2; // 100+ always shows reward orbs
     // Do not start a separate oscillator for every word in a rapid swipe.
-    {const playTouch=()=>{if(taMuteTouch)return;if(taRunning && taStoryLevel()>=600 && !flood){if(taNow-taSwipeLastTouch>95){sfx.goldTap();taSwipeLastTouch=taNow;}}else if(!taDenseSwipe || taNow-taSwipeLastTouch>210){sfx.touch();taSwipeLastTouch=taNow;}};
+    {const playTouch=()=>{if(taMuteTouch)return;if(taRunning && taStoryLevel()>=600 && taStoryLevel()<800 && !flood){if(taNow-taSwipeLastTouch>95){sfx.goldTap();taSwipeLastTouch=taNow;}}else if(!taDenseSwipe || taNow-taSwipeLastTouch>210){sfx.touch();taSwipeLastTouch=taNow;}};
      if(taMetalTapHit && w===taShinganPendingWord)taPendingTouchSound=playTouch;else playTouch();}
     // 300連鎖以降は専用のクリスタルSE。連鎖終了後は通常音へ戻る。
     // 黄玉の言葉は通常の採集演出で作る複数のコピー/飛行オーブが
@@ -10108,7 +10120,9 @@ function taNightCollectBlue(w){
  if(!['collect','interlude'].includes(taNightBonus.phase)||!w||!w.isConnected||w.dataset.taken)return;
  w.dataset.taken='1';w.classList.add('got');w.style.pointerEvents='none';
  const r=w.getBoundingClientRect();
- try{sfx.goldTap();taCenturyDust.emit(r,w.textContent,'high',null);}catch(_){}
+ // 「キン」は画面が完全に黒くなってから消した言霊だけ。黒に沈みきる前は通常のタッチ音にする
+ try{const v=document.querySelector('#viewMain>.hero>.ta-stage9-void');const black=!v||+getComputedStyle(v).opacity>=.97;
+  if(black)sfx.goldTap();else sfx.touch();taCenturyDust.emit(r,w.textContent,'high',null);}catch(_){}
  // Only time is awarded. The 800 combo and the score remain frozen.
  taAward(true,0,true,false,true,1,false);
  try{w.animate([{opacity:1},{opacity:0,transform:'translateY(-7px) scale(.9)'}],{duration:300,easing:'ease-out'});}catch(_){}
@@ -10208,7 +10222,7 @@ function taNightReturn(){
   const seal=document.createElement('div');seal.className='ta-night-echo-seal';seal.textContent=nextNight;seal.dataset.night=nextNight;
   echo.append(veil,seal);hero?.append(echo);
   taFadeChainScene();
-  taSilverMusic.stop(false,3200);taCenturyMusic.stop(false,3200);taSilverDust.sync(false);
+  taSilverMusic.stop(false,3200);taCenturyMusic.stop(false,3200);taSilverDust.sync(false);taNightBonus.musicStopAt=performance.now();
   // 右上の「第〇夜」は従来どおり：文字の波紋がHUDの位置へ収束して現れる
   const target=document.getElementById('taNightStageLabel');
   if(target&&hero){
@@ -10240,6 +10254,9 @@ function taNightReturn(){
      document.documentElement.classList.remove('ta-night-chain-retired');
      comboPaused=true;comboWindowMs=COMBO_MS;clearTimeout(bumpCombo.h);
      taStoryReset();comboRush(false);   // 新しい夜は第一章から（得点・連鎖はそのまま）。縁は第一章の色（消灯）に戻す
+     // 第五夜は第一章から曲を流す。前の夜の曲が消えきってから（3.2秒のフェードのあと）始める
+     if(taNightNumber>=5){const wait=Math.max(0,3400-(performance.now()-(taNightBonus.musicStopAt||0)));
+      setTimeout(()=>{if(taRunning&&taNightNumber>=5&&['idle','return'].includes(taNightBonus.phase)&&!taCenturyMusic.isActive()&&!taSilverMusic.isActive())taCenturyMusic.start();},wait);}
      taYuraSayLater('nightAgain',1800);
      const el=document.getElementById('combo');el?.classList.remove('run','hold','ta-skill-grace');el?.classList.add('paused');
      document.getElementById('cbn').textContent=String(combo);
