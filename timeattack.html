@@ -534,27 +534,6 @@ html:not(.ta-festival-lit) #viewMain>.hero>picture.ta-bg-picture.ta-festival{opa
 #viewMain>.hero>picture.ta-bg-picture.ta-wasteland{opacity:0!important;transition:opacity 5s ease-in-out;pointer-events:none;}
 html[data-yura="black"].ta-wasteland-lit #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-wasteland{opacity:1!important;transition-duration:5s;}
 html:not(.ta-wasteland-lit) #viewMain>.hero>picture.ta-bg-picture.ta-wasteland{opacity:0!important;transition-duration:0s!important;}
-/* 祝祭の夜：窓の外だけに、きらきらした光の粒が降る。
-   遠く（城側）の粒は小さく・暗く・ゆっくり、近く（窓側）の粒は大きく・明るく・速く落ちて奥行きを出す。
-   背景と同じ cover 寸法の板（JS が px で合わせる）に置き、窓のアーチの形で切り抜くので、画面の大きさが変わってもずれない */
-#viewMain>.hero>.ta-fest-light{position:absolute;inset:0;overflow:hidden;pointer-events:none;mix-blend-mode:screen;opacity:0;transition:opacity 5s ease-in-out;}
-html[data-yura="black"].ta-festival-lit:not(.ta-800-lit) #viewMain>.hero.ta-active-visual>.ta-fest-light{opacity:1;}
-html:not(.ta-festival-lit) #viewMain>.hero>.ta-fest-light{transition-duration:0s;}
-/* 板の大きさは JS（ta-fest-light-js）が背景と同じ cover の寸法を px で入れる */
-.ta-fest-plate{position:absolute;left:50%;top:50%;width:var(--fest-pw,100%);height:var(--fest-ph,100%);transform:translate(-50%,-50%);}
-/* 窓の外の範囲（画像 1440×812 基準：x705〜1175, y100〜592、上はアーチ） */
-.ta-fest-window{position:absolute;left:48.96%;top:12.32%;width:32.64%;height:60.59%;overflow:hidden;clip-path:polygon(0.0% 100.0%,0.0% 32.9%,0.6% 28.0%,2.4% 23.3%,5.4% 18.7%,9.5% 14.5%,14.6% 10.8%,20.6% 7.6%,27.3% 5.0%,34.5% 3.2%,42.2% 2.0%,50.0% 1.6%,57.8% 2.0%,65.5% 3.2%,72.7% 5.0%,79.4% 7.6%,85.4% 10.8%,90.5% 14.5%,94.6% 18.7%,97.6% 23.3%,99.4% 28.0%,100.0% 32.9%,100.0% 100.0%);}
-.ta-fest-window{container-type:size;}
-/* 粒は「降る記憶」と同じ作り：小さな光の点＋にじむ光。明滅させず、ふわっと現れて静かに降り、消えていく */
-.ta-fest-window>i{position:absolute;top:0;left:var(--x);width:var(--s);height:var(--s);margin-left:calc(var(--s)/-2);border-radius:50%;
- background:var(--c);box-shadow:0 0 calc(var(--s)*1.6) calc(var(--s)*.35) var(--g);opacity:0;
- transform:translate3d(0,-6cqh,0);will-change:transform,opacity;animation:taFestFall var(--d) linear var(--dl) infinite;}
-/* 窓側（手前）の粒：大きく、少しぼけて、速い */
-.ta-fest-window>i.n{filter:blur(.6px);}
-@keyframes taFestFall{0%{transform:translate3d(0,-6cqh,0);opacity:0}12%{opacity:var(--o)}85%{opacity:calc(var(--o)*.85)}100%{transform:translate3d(var(--dx),106cqh,0);opacity:0}}
-html:not(.ta-festival-lit) .ta-fest-window>i{animation:none;opacity:0;}
-.hero.flood .ta-fest-window>i{animation-play-state:paused;}
-html.ta-lowfx .ta-fest-window>i.n{filter:none;}
 html[data-yura="black"].ta-200-lit #viewMain>.hero.ta-active-visual>picture.ta-bg-picture.ta-day300{opacity:1!important;transition-duration:5s;}
 
 /* 300 / 400 chains: static silver and floating-sky artwork, no animation loop. */
@@ -3162,7 +3141,6 @@ header>.brand.ta-face-header::before{background-position:center,-118px center!im
     <picture class="ta-bg-picture b castle-dim" aria-hidden="true"><img src="img/bg/dawn_castle.webp" alt=""></picture>
     <picture class="ta-bg-picture b ta-day300" aria-hidden="true"><img src="img/bg/sunset_castle.webp" alt="" decoding="async"></picture>
     <picture class="ta-bg-picture b ta-festival" aria-hidden="true"><img src="img/bg/festival_night.webp" alt="" decoding="async"></picture>
-    <div class="ta-fest-light" aria-hidden="true"><div class="ta-fest-plate"><div class="ta-fest-window"></div></div></div>
     <picture class="ta-bg-picture b ta-day-silver" aria-hidden="true"><img src="img/bg/red_sky_castle.webp" alt="" decoding="async"></picture>
     <picture class="ta-bg-picture b ta-wasteland" aria-hidden="true"><img src="img/bg/wasteland_moon.webp" alt="" decoding="async"></picture>
     <picture class="ta-bg-picture b ta-sky-ruins" aria-hidden="true"><img src="img/bg/green_meadow.webp" alt="" decoding="async"></picture>
@@ -15277,37 +15255,6 @@ html.ta-tut.ta-tut-allow-fire .ta-items .ta-orb.fire,html.ta-tut.ta-tut-allow-ic
     raf=requestAnimationFrame(frame);
   }
   raf=requestAnimationFrame(frame);
-})();
-</script>
-<script id="ta-fest-light-js">
-/* 祝祭の夜の窓の外の粒：板を背景画像（1440×812, object-fit:cover）と同じ寸法にそろえ、粒を作る */
-(function(){
-  const hero=document.querySelector('#viewMain>.hero');if(!hero)return;
-  function fit(){
-    const w=hero.clientWidth,h=hero.clientHeight;if(!w||!h)return;
-    const k=Math.max(w/1440,h/812);
-    hero.style.setProperty('--fest-pw',(1440*k).toFixed(1)+'px');
-    hero.style.setProperty('--fest-ph',(812*k).toFixed(1)+'px');
-  }
-  fit();
-  // 窓の外の光の粒。far：城側（小・暗・遅）、mid、near：窓側（大・明・速・きらめき付き）
-  const win=hero.querySelector('.ta-fest-window');
-  if(win&&!win.childElementCount){
-    // [数, 大きさ(窓の幅に対する%) 最小〜最大, 落下秒 最小〜最大, 明るさ, 種類]
-    // far：城側（小・暗・遅）／mid／near：窓側（大・明・速・少しぼける）
-    const C=[['#fbefcf','rgba(236,206,140,.7)'],['#f8e9c4','rgba(230,198,128,.65)'],['#fdf3dc','rgba(242,214,156,.7)']];   // 薄い金色
-    const L=[[34,.45,.65,24,32,.7,'f'],[18,.75,1,17,22,.85,'m'],[9,1.15,1.5,12,15,.95,'n']];
-    const R=(a,b)=>a+Math.random()*(b-a);
-    const frag=document.createDocumentFragment();
-    L.forEach(([n,s0,s1,d0,d1,o,k])=>{for(let i=0;i<n;i++){
-      const e=document.createElement('i');e.className=k;
-      const d=R(d0,d1),c=C[(Math.random()*C.length)|0];
-      e.style.cssText='--x:'+R(2,98).toFixed(1)+'%;--s:'+R(s0,s1).toFixed(2)+'cqw;--c:'+c[0]+';--g:'+c[1]+';--d:'+d.toFixed(1)+'s;--dl:'+(-R(0,d)).toFixed(1)+'s;--dx:'+R(-6,6).toFixed(1)+'cqw;--o:'+o;
-      frag.appendChild(e);}});
-    win.appendChild(frag);
-  }
-  if(window.ResizeObserver)new ResizeObserver(fit).observe(hero);
-  addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,300));
 })();
 </script>
 </body>
