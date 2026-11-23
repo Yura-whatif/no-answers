@@ -431,6 +431,9 @@ html[data-view="lib"] #taPlay{display:none!important}
 .ta-center-hit-plus{color:#fff;font:700 15px var(--mincho,serif);font-size:clamp(.85rem,3.6vw,1.45rem)!important;text-shadow:0 0 7px #fff,0 1px 5px #111}
 .ta-ice-shard{position:fixed;z-index:121;pointer-events:none;width:3px;height:7px;background:linear-gradient(#fff,#8cdcff);clip-path:polygon(50% 0,100% 60%,65% 100%,0 70%);box-shadow:0 0 5px #a9edff}
 .ta-ice-frozen-word{color:#d7f4ff;font-weight:bold;text-shadow:0 0 5px #fff,0 0 13px #6dd8ff,0 0 22px #278cce;filter:drop-shadow(0 0 3px #9cecff)}
+/* スマホ・重いとき：凍った言霊の光は文字の影だけで出し、1語ごとのフィルター処理を省く */
+@media (pointer:coarse){.ta-ice-frozen-word{filter:none}}
+html.ta-lowfx .ta-ice-frozen-word{filter:none}
 .ta-reward-pickup-wave{position:fixed!important;box-sizing:border-box!important;transform-origin:center center!important;pointer-events:none!important;}
 
 /* Combo counter: slightly larger base frame, with number-only milestone pulses. */
@@ -924,7 +927,7 @@ html,body{overscroll-behavior-y:none;}
 /* 重い状態が重なってコマが落ちたときだけ（html.ta-lowfx）、ぼかしなど重い飾りだけを外す。粒の数・判定・得点は変えない */
 html.ta-lowfx .glow-fx.sun .ray{filter:none;opacity:.45!important}
 html.ta-lowfx .glow-fx-front .mote,html.ta-lowfx .glow-fx-front .smote{filter:none}
-html.ta-lowfx .ta-night-hud-visible{animation:none!important}
+html.ta-lowfx .ta-night-hud-visible{animation:none!important;opacity:.85!important}   /* 明滅を止めても文字は見えたままにする（止めると透明のままになっていた） */
 .glowbar.glowbar.moon i,.glowbar.glowbar.sun i{background:linear-gradient(90deg,#fff,var(--glow-particle,#b9d7ff))}
 /* 桜吹雪（白）／夜桜（黒）：絵の空気を変え、奥の花びら（言葉より奥）と、手前をよぎる大きなぼけ花びら（言葉より手前・触れない）を舞わせる */
 .sakura-fx{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;opacity:0}
@@ -1999,6 +2002,9 @@ html[data-yura="black"].ta-century-lit .hero.ta-active-visual img.b.castle-dim{o
 #viewMain>.ta-items .ta-orb.summon{background:radial-gradient(circle at 32% 23%,#f5ffe6 0%,#9af2bd 17%,#34aa80 47%,#155b55 75%,#102e36 100%)!important;border:2px solid #65bda2!important;color:#f1ffe3;text-shadow:0 0 9px #b5ffe6;box-shadow:inset -3px -5px 10px #071d1eaa,0 0 10px #4ee6a255}
 #viewMain>.ta-items .ta-orb.summon{--orb-glow:rgba(98,255,183,.85)}
 #viewMain>.ta-items[data-selected="summon"] .ta-orb.summon{filter:brightness(1.55) saturate(1.3);box-shadow:inset 0 0 7px #efffe0,0 0 10px 3px #f2e5a7,0 0 22px 6px #68f4be!important;animation:taSummonPulse .78s ease-in-out infinite alternate}
+/* スマホ・重いとき：翠玉を選んでいるあいだの明滅（玉の画布ごと毎コマ描き直しになる）を止め、明るく灯したままにする */
+@media (pointer:coarse){#viewMain>.ta-items[data-selected="summon"] .ta-orb.summon{animation:none!important}}
+html.ta-lowfx #viewMain>.ta-items[data-selected="summon"] .ta-orb.summon{animation:none!important}
 @keyframes taSummonPulse{from{filter:brightness(1.12);box-shadow:inset 0 0 4px #c4ffe0,0 0 6px #f3dca8}to{filter:brightness(2.1);box-shadow:inset 0 0 11px #fff,0 0 16px 4px #fff4bc,0 0 27px 8px #6affc4}}
 #viewMain>.ta-items .ta-orb.summon:disabled{filter:grayscale(1)!important;opacity:.35;animation:none!important;box-shadow:none!important}
 #viewMain>.ta-items{gap:clamp(5px,1.1vw,13px)}
@@ -7790,7 +7796,7 @@ function startSakura(from, opt){
     const dt = Math.min(.05, (now - last) / 1000); last = now;
     const paused = flood || libOpen || document.hidden;
     ema += ((dt * 1000) - ema) * .08;
-    if(t > 700){ if(ema > 21 && cap > 50) cap -= 1.2; else if(ema < 17.5 && cap < (reduce ? 45 : skMobile ? 82 : 140)) cap += .3; }
+    if(t > 700){ if(ema > 21 && cap > (skMobile ? 26 : 50)) cap -= 1.2; else if(ema < 17.5 && cap < (reduce ? 45 : skMobile ? 82 : 140)) cap += .3; }
     if(!paused){
       t += dt * 1000;
       const e = skEnv(t), gust = Math.exp(-Math.pow((t - 5600) / 1500, 2));
@@ -7828,8 +7834,12 @@ function startSakura(from, opt){
       // 玉の演出（紅・蒼などの軌跡や爆発）を描いているあいだは、花びらの描き直しをさらに間引いて（スマホ20fps・PC30fps）、
       // 二つの大きな描画が同じフレームに重なってカクつくのを防ぐ。花びらの動きそのもの（位置の計算）は毎フレーム続ける。
       const fxBusy = now - (window.__taFxPaintAt || -1e9) < 160;
-      const paintGap = fxBusy ? (skMobile ? 50 : 33) : (skMobile ? 32 : 0);
-      if(now-lastPaint>=paintGap){lastPaint=now;draw(bc, P, false, G, dprB);if(F.length || !skMobile)draw(fc, F, true, G, dprF);}
+      // 端末が重いとき（ta-lowfx）は、玉を使っていなくても同じだけ間引き、スマホでは手前の大きな花びらの画布を描かない
+      const lowfx = document.documentElement.classList.contains('ta-lowfx');
+      const paintGap = (fxBusy || lowfx) ? (skMobile ? 50 : 33) : (skMobile ? 32 : 0);
+      if(now-lastPaint>=paintGap){lastPaint=now;draw(bc, P, false, G, dprB);if((F.length && !(skMobile && lowfx)) || !skMobile)draw(fc, F, true, G, dprF);
+        else if(skMobile && lowfx && !fc.__cleared){fc.getContext('2d').clearRect(0,0,fc.width,fc.height);fc.__cleared=true;}
+        if(!(skMobile && lowfx))fc.__cleared=false;}
       if(sakuraBarFill) sakuraBarFill.style.transform = `scaleX(${Math.max(0, 1 - t / SAKURA_MS).toFixed(4)})`;
       if(t >= SAKURA_MS) return finish(false);
     }
@@ -10068,9 +10078,10 @@ function taUpdateNightHud(){
  const sc=document.getElementById('taScoreLevelLabel');
  if(sc){sc.textContent=visible?'得点 Lv'+Math.min(taNightNumber,5):'';sc.classList.toggle('ta-night-hud-visible',visible);}
 }
-// 夜を重ねるほど得点も上がる（時間の速さと同じ：第二夜×1.25 … 第五夜以降×2）。章は得点に関係しない。
+// 夜を重ねるほど得点も上がる（第二夜×1.25 … 第五夜以降×2）。章は得点に関係しない。
 function taNightScoreRate(){return 1+.25*(Math.min(taNightNumber,5)-1);}
-function taNightTimeRate(){return 1+.25*(Math.min(taNightNumber,5)-1);}
+// 時間の減る速さ（加速 Lv）：一夜ごとに +0.1（第二夜×1.1 … 第五夜以降×1.4）。以前は +0.25 で第五夜×2.0 だった
+function taNightTimeRate(){return 1+.1*(Math.min(taNightNumber,5)-1);}
 
 // 800-chain loop-clear: one bonus per 800 chains, then stage 01 with score/time retained.
 const taNightBonus={phase:'idle',serial:0,timers:[],born:0,spawned:0,wordCount:30,orbPending:false,specialWordStarted:false,overlay:null,curtain:null,unlockAtStart:false};
