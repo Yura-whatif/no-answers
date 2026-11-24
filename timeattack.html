@@ -836,6 +836,17 @@ html,body{overscroll-behavior-y:none;}
 /* 引き寄せ（ときどき）：淡い藍色の言葉。かすかに渦を巻くように縁が回る */
 .word.pull{color:var(--pull);border-color:color-mix(in srgb,var(--pull) 60%,transparent);background:color-mix(in srgb,var(--pull) 12%,var(--paper) 78%);font-weight:600;letter-spacing:.14em;
   box-shadow:0 0 12px color-mix(in srgb,var(--pull) 35%,transparent);animation:drift 9s linear forwards,pullPulse 1.3s ease-in-out infinite}
+.word.bomb{color:#ffe2c9;border-color:rgba(255,128,64,.75);background:color-mix(in srgb,#5a1608 62%,var(--paper) 30%);font-weight:700;letter-spacing:.14em;
+  text-shadow:0 0 6px rgba(255,120,40,.7);box-shadow:0 0 10px rgba(255,96,32,.45);animation:drift 9s linear forwards}
+/* 導火線のように、縁の火の粉が一定の間隔で脈打つ（明滅は重ねた層の濃さだけ） */
+.word.bomb::after{content:"";position:absolute;inset:-3px;border-radius:inherit;pointer-events:none;box-shadow:0 0 16px 2px rgba(255,140,50,.75),inset 0 0 8px rgba(255,170,90,.45);opacity:0;animation:taBombFuse .9s ease-in-out infinite}
+@keyframes taBombFuse{0%,100%{opacity:.1}50%{opacity:1}}
+.ta-bomb-fuse,.ta-bomb-core,.ta-bomb-ring,.ta-bomb-spark{position:fixed;pointer-events:none;z-index:19;border-radius:50%;will-change:transform,opacity}
+.ta-bomb-fuse{width:22px;height:22px;margin:-11px 0 0 -11px;background:radial-gradient(circle,#fff 0 22%,#ffd28a 40%,rgba(255,120,40,.55) 62%,rgba(255,90,30,0) 72%)}
+.ta-bomb-core{background:radial-gradient(circle,rgba(255,255,255,.95) 0 10%,rgba(255,226,170,.75) 26%,rgba(255,130,50,.35) 52%,rgba(255,90,30,0) 72%);mix-blend-mode:screen}
+.ta-bomb-ring{border:2px solid rgba(255,236,206,.95);box-shadow:0 0 14px rgba(255,150,70,.7),inset 0 0 10px rgba(255,160,80,.5)}
+.ta-bomb-spark{width:5px;height:5px;margin:-2.5px 0 0 -2.5px;background:#fff1d6;box-shadow:0 0 6px 2px rgba(255,150,60,.85)}
+html.ta-lowfx .ta-bomb-core{mix-blend-mode:normal;opacity:.8}
 @keyframes pullPulse{0%,100%{box-shadow:0 0 6px color-mix(in srgb,var(--pull) 25%,transparent),inset 0 0 0 0 transparent}50%{box-shadow:0 0 18px color-mix(in srgb,var(--pull) 55%,transparent),inset 0 0 8px color-mix(in srgb,var(--pull) 25%,transparent)}}
 .pull-core{position:fixed;z-index:19;width:72px;height:72px;margin:-36px 0 0 -36px;pointer-events:none}
 /* 引き寄せの届く範囲：薄い輪と、内側へ流れ込むような淡い光 */
@@ -2957,6 +2968,12 @@ html.ta-night-bonus #taTimeBox.ta-night-time-paused #taTime{opacity:.35}
 .ta-thunder-css-glyph canvas{position:absolute;display:block;width:auto;height:auto;max-width:none;transform:translate(-50%,-50%);transform-origin:center center;pointer-events:none;backface-visibility:hidden;will-change:transform}
 .ta-thunder-css-glyph canvas.outer{animation:taGlyphSpinOuter 17.95s linear infinite}
 .ta-thunder-css-glyph canvas.inner{animation:taGlyphSpinInner 11.42s linear infinite}
+/* 2秒ごとに白く光る陣：白い写しは最初から同じ速さで回しておき、重なりの濃さだけを脈打たせる */
+.ta-glyph-white{position:absolute;left:0;top:0;width:0;height:0;opacity:0;pointer-events:none;will-change:opacity}
+.ta-glyph-white.on{animation:taGlyphWhitePulse 2s ease-in-out infinite}
+.ta-glyph-white-halo{position:absolute;left:0;top:0;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.55) 0%,rgba(255,250,235,.22) 38%,rgba(255,255,255,0) 68%)}
+.ta-thunder-css-glyph.ta-glyph-leaving .ta-glyph-white{animation:none;opacity:0}
+@keyframes taGlyphWhitePulse{0%{opacity:0}50%{opacity:.95}100%{opacity:0}}   /* 1秒かけて明るくなり、1秒かけて戻る */
 @keyframes taGlyphSpinOuter{from{transform:translate(-50%,-50%) rotate(0)}to{transform:translate(-50%,-50%) rotate(360deg)}}
 @keyframes taGlyphSpinInner{from{transform:translate(-50%,-50%) rotate(0)}to{transform:translate(-50%,-50%) rotate(-360deg)}}
 /* Circle entrance begins only after the arena has darkened. Exit is opacity-only. */
@@ -3236,6 +3253,7 @@ header>.brand.ta-face-header::before{background-position:center,-118px center!im
       <button type="button" id="t-fire-levelup">紅玉Lvアップ</button>
       <button type="button" id="t-word-levelup">言霊Lvアップ</button>
       <button type="button" id="t-pages">頁追加</button>
+      <button type="button" id="t-bomb">爆弾発言出現</button>
       <button type="button" id="t-density">言霊:章連動</button>
       <button type="button" id="t-metal">金属:章連動</button>
       <button type="button" id="t-orblv">紅蒼の玉Lv +1</button>
@@ -5108,7 +5126,9 @@ function taFloodDurationMs(){
 let flood = false, nextSpecialAt = Date.now() + 60000, forceSpecial = false;
 let nextOddAt = Date.now() + 30000, forceOdd = false;
 let nextMultiAt = Date.now() + 15000, forceMulti = false;
-let nextPullAt = Date.now() + 30000, forcePull = false;
+let nextPullAt = Date.now() + 35000, forcePull = false;   // 引き寄せ：最短55秒おき（以前45秒）
+// 爆弾発言：触れると一拍おいて爆発し、引き寄せと同じ広さの言霊にダメージ2（金属の銀は砕け、金はひびが入る）。範囲内の爆弾発言は誘爆する
+let nextBombAt = Date.now() + 25000, forceBomb = false;   // 爆弾発言：最短25秒おき（引き寄せより出やすい）
 let nextResoAt = Date.now() + 30000, forceReso = false;     // 「共鳴」（出たあとは45秒あける）     // 「引き寄せ」（出たあとは50秒あける）
 let nextGlowAt = Date.now() + 70000, forceGlow = false;
 const GLOW_POST_COOLDOWN = 3000;
@@ -7061,13 +7081,17 @@ const __ta100Start=window.__ta100Profile.start();try {
   const multi = !opt.plain && !special && !odd && !flood && (forceMulti || (Date.now() > nextMultiAt && Math.random() < .07));
   if(multi){ w.textContent = "芽生え"; w.dataset.word = "芽生え"; w.classList.add("multi"); forceMulti = false; nextMultiAt = Date.now() + 35000; w.setAttribute("aria-label", "芽生え（触れると言葉が芽吹く）"); }
   // 引き寄せ：触れると、画面の言葉をすべて吸い寄せる
-  const pull = !opt.plain && !special && !odd && !multi && !flood && (forcePull || (Date.now() > nextPullAt && Math.random() < .06));
-  if(pull){ w.textContent = "引き寄せ"; w.dataset.word = "引き寄せ"; w.classList.add("pull"); forcePull = false; nextPullAt = Date.now() + 45000; w.setAttribute("aria-label", "引き寄せ（触れると言葉を吸い寄せる）");
+  const pull = !opt.plain && !special && !odd && !multi && !flood && (forcePull || (Date.now() > nextPullAt && Math.random() < .05));
+  if(pull){ w.textContent = "引き寄せ"; w.dataset.word = "引き寄せ"; w.classList.add("pull"); forcePull = false; nextPullAt = Date.now() + 55000; w.setAttribute("aria-label", "引き寄せ（触れると言葉を吸い寄せる）");
     for(let i=0;i<3;i++) setTimeout(()=>{ if(!flood && !shattering && !libOpen) spawnWord({force:true, plain:true}); }, 120 + i*160 + Math.random()*150); }   // 引き寄せと一緒に、吸い寄せる言葉を数個まいておく
+  // 爆弾発言：金属文字が出る章から、まれに現れる（テストモードでは「爆弾発言出現」でいつでも出せる）
+  const bomb = !opt.plain && !special && !odd && !multi && !pull && !flood && !sakuraOn && taRunning
+    && (forceBomb || (Date.now() > nextBombAt && taMetalRate() > 0 && Math.random() < .08));
+  if(bomb){ w.textContent = "爆弾発言"; w.dataset.word = "爆弾発言"; w.classList.add("bomb"); forceBomb = false; nextBombAt = Date.now() + 25000; w.setAttribute("aria-label", "爆弾発言（触れるとまわりの言霊ごと爆発する）"); }
   // 陽だまり（白）・月明かり（黒）：触れると、しばらく違和感が2倍
   // 懐中時計が近いとき（現れる20秒前から、漂っているあいだ）は、降る記憶・昇る想いが来やすい（待ち時間も短く）
   const preStop = Date.now() > nextSpecialAt - 20000 || !!field.querySelector(".word.special:not(.got)");
-  const glowW = !opt.plain && !special && !odd && !multi && !pull && !flood && !glowRemain && !sakuraOn
+  const glowW = !opt.plain && !special && !odd && !multi && !pull && !bomb && !flood && !glowRemain && !sakuraOn
     && !field.querySelector(".word.glow:not(.got),.word.petal:not(.got)")
     && Date.now()>glowSpawnBlockUntil
     && (forceGlow || (Date.now() > nextGlowAt - (preStop ? 45000 : 0) && Math.random() < (preStop ? .08 : .03)));
@@ -7079,18 +7103,18 @@ const __ta100Start=window.__ta100Profile.start();try {
     w.setAttribute("aria-label",nm+(kind==="memory"?"（10秒間、得点2倍）":"（10秒間、時間回復2倍・青い言葉が増加）"));
   }
   // ひとひらの花びら：触れると桜吹雪（白）／夜桜（黒）。降る記憶・昇る想いとは同時に出さない
-  const petalW = !opt.plain && !special && !odd && !multi && !pull && !glowW && !flood && !glowRemain && !sakuraOn && !field.querySelector(".word.glow:not(.got),.word.petal:not(.got)") && (forceSakura || (Date.now() > nextSakuraAt && Math.random() < SAKURA_P));
+  const petalW = !opt.plain && !special && !odd && !multi && !pull && !bomb && !glowW && !flood && !glowRemain && !sakuraOn && !field.querySelector(".word.glow:not(.got),.word.petal:not(.got)") && (forceSakura || (Date.now() > nextSakuraAt && Math.random() < SAKURA_P));
   if(petalW){ w.textContent = ""; w.dataset.word = "花びら"; w.innerHTML = '<span class="pt"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="skpg" x1="32" y1="60" x2="32" y2="6" gradientUnits="userSpaceOnUse"><stop offset="0" style="stop-color:var(--pb)"/><stop offset=".6" style="stop-color:var(--pt)"/></linearGradient></defs><path d="' + SK_PETAL_D + '" fill="url(#skpg)" stroke="rgba(255,255,255,.7)" stroke-width="1.2"/></svg></span>';
     w.classList.add("petal"); setTimeout(()=>sfx.prepSakura(), 300); forceSakura = false; nextSakuraAt = Date.now() + SAKURA_CD; w.setAttribute("aria-label", combo < 100 ? "花びら（触れると花の忘却）" : "花びら（触れると花の記憶）"); }
   // 共鳴：触れると、近くの言葉へ光が次々に伝わり、つながった言葉がまとめて違和感になる
   // 共鳴はいったん外している（活かせる場面が少ないため）。戻すときは先頭の false && を消す
-  const reso = false && !opt.plain && !special && !odd && !multi && !pull && !glowW && !flood && (forceReso || (Date.now() > nextResoAt && Math.random() < .04));
+  const reso = false && !opt.plain && !special && !odd && !multi && !pull && !bomb && !glowW && !flood && (forceReso || (Date.now() > nextResoAt && Math.random() < .04));
   if(reso){ w.textContent = "共鳴"; w.dataset.word = "共鳴"; w.classList.add("reso"); forceReso = false; nextResoAt = Date.now() + 45000; w.setAttribute("aria-label", "共鳴（触れると近くの言葉へ伝わる）"); }
   // 渦は引き寄せに置き換えたので、もう現れない
   const vortex = false && !opt.plain && !special && !odd && !multi && !flood && (forceVortex || (Date.now() > nextVortexAt && Math.random() < .015));
   if(vortex){ w.textContent = ""; w.innerHTML = '<span class="vx">' + vortexSVG() + '</span><span class="vx-n"></span>'; w.classList.add("vortex"); forceVortex = false; nextVortexAt = Date.now() + 150000;
     w.setAttribute("aria-label", "渦（長押しすると、言葉を吸い込む）"); w.addEventListener("contextmenu", e => e.preventDefault()); }
-  const crack = false && !opt.plain && !special && !odd && !multi && !pull && !glowW && !petalW && !reso && !vortex && !flood && (forceCrack || (Date.now() > nextCrackAt && Math.random() < .02));
+  const crack = false && !opt.plain && !special && !odd && !multi && !pull && !bomb && !glowW && !petalW && !reso && !vortex && !flood && (forceCrack || (Date.now() > nextCrackAt && Math.random() < .02));
   if(crack){ w.textContent = ""; w.innerHTML = crackSVG(); w.classList.add("crack"); forceCrack = false; nextCrackAt = Date.now() + 720000;
     w.setAttribute("aria-label", "ひび（何度も叩くと広がる）"); setTimeout(()=>sfx.crackAppear(), 250); w.addEventListener("click", e => { e.stopPropagation(); if(e.detail === 0) crackTap(w); }); }   // キーボード操作のときだけ（指やマウスは押した瞬間に処理）
   w.style.setProperty("--x", (opt.summonX != null ? Math.max(5,Math.min(81,opt.summonX)) : 4 + Math.random()*62).toFixed(1)+"%");
@@ -7101,7 +7125,7 @@ const __ta100Start=window.__ta100Profile.start();try {
   w.addEventListener("animationend", e => { if(e.animationName==="drift" || e.animationName==="gemFall" || e.animationName==="vxLife" || e.animationName==="crLife") w.remove(); });
   // 連鎖をシビアに：通常の言葉のうち、たまに「早く消える言葉」と「遅れて現れる言葉」を混ぜる（見た目は同じ）
   let lifeMs = flood ? 6000 : 9500;
-  const plainWord = !special && !odd && !multi && !pull && !glowW && !petalW && !reso && !vortex && !crack && (!opt.force || opt.thunderBorn) && !flood && !sakuraOn;
+  const plainWord = !special && !odd && !multi && !pull && !bomb && !glowW && !petalW && !reso && !vortex && !crack && (!opt.force || opt.thunderBorn) && !flood && !sakuraOn;
   // 金属文字（HP2）：黄・翠が生み出す言霊、練習・DEMO・夜のボーナス・時間停止中には出さない。いまはテストモードの切替でのみ出現。
   if(plainWord && !opt.plain && !opt.force && !opt.thunderBorn && taRunning && !taStarting && !flood && !taNightActive() && !(typeof taTutOn==='function'&&taTutOn()) && Math.random() < taMetalRate()){
     const black = Math.random() < taMetalGoldShare();   // 金の金属（HP3）：第二夜の第四章から、金属文字の中での割合を少しずつ増やす
@@ -7163,11 +7187,12 @@ const __ta100Start=window.__ta100Profile.start();try {
     }
     const isOdd = w.classList.contains("odd"); if(isOdd) track("odd", "逆さまの言葉");
     if(w.classList.contains("pull")){ const rr = w.getBoundingClientRect(); pullAll(rr.left + rr.width/2, rr.top + rr.height/2, w); }
+    if(w.classList.contains("bomb")){ const rr = w.getBoundingClientRect(); taBombExplode(rr.left + rr.width/2, rr.top + rr.height/2, w, !!w._bombChained); }
     if(w.classList.contains("glow")) startGlow(false, w.dataset.word || w.textContent);
     if(w.classList.contains("reso")){ const rr = w.getBoundingClientRect(); resonate(rr.left + rr.width/2, rr.top + rr.height/2, w); }
     if(w.classList.contains("multi")){ const fr = $("drift").getBoundingClientRect(), rr = w.getBoundingClientRect(); multiply(rr.left + rr.width/2 - fr.left, rr.top + rr.height/2 - fr.top, {boon: w.classList.contains("boon")}); }
     
-    if(w.matches('.special,.vortex,.crack,.petal,.multi,.pull,.glow,.reso,.odd'))taStoryBonus(5);   // 特別な言霊は物語を大きく進める
+    if(w.matches('.special,.vortex,.crack,.petal,.multi,.pull,.glow,.reso,.odd,.bomb'))taStoryBonus(5);   // 特別な言霊は物語を大きく進める
     const cm = nightResidual ? comboMult(combo) : bumpCombo(); if(cm>=100)window.taOrbDiag.mark("100+ hit");
     const g = isOdd ? ODD_PT : yieldNow() * cm;   // 時間停止中も連鎖倍率を引き継ぐ
     const wordText = w.dataset.word || w.textContent;
@@ -7377,6 +7402,49 @@ function taHeavyGuard(extra=0){
   const n = extra + (typeof sakuraOn!=='undefined' && sakuraOn ? 1 : 0) + (document.querySelector('.glow-fx') ? 1 : 0) + (taPullActive > 1 ? 1 : 0) + (typeof flood!=='undefined' && flood ? 1 : 0);
   if(n >= 2) document.documentElement.classList.add('ta-lowfx');
 }
+// 爆弾発言の爆発：触れた位置で導火線の火花が一瞬走り（0.26秒）、引き寄せと同じ広さの言霊にダメージ2。
+// 銀の金属は砕け、金の金属はひびが入る。ふつうの言霊は消えて、ふつうに消したのと同じく連鎖・得点・頁に数える。
+// 範囲内の爆弾発言は誘爆する。ほかの特別な言霊は巻き込まない。
+function taBombExplode(x, y, self, chained=false){
+  if(!taRunning) return;
+  track("bomb", "爆弾発言");
+  const field = $("drift"), fw = field.clientWidth || 300, R = Math.max(115, Math.min(185, fw * .42));
+  const fuse = document.createElement("span"); fuse.className = "ta-bomb-fuse"; fuse.style.left = x + "px"; fuse.style.top = y + "px"; document.body.append(fuse);
+  const FUSE = chained ? 110 : 260;   // 誘爆はため短く、連なって弾ける
+  fuse.animate([{transform:"scale(.4)",opacity:.6},{transform:"scale(1.25)",opacity:1,offset:.35},{transform:"scale(.8)",opacity:.9,offset:.6},{transform:"scale(1.5)",opacity:1}],{duration:FUSE,easing:"linear",fill:"forwards"}).onfinish=()=>fuse.remove();
+  if(!chained) try{ sfx.bombFuse && sfx.bombFuse(); }catch(_){}
+  setTimeout(() => {
+    if(!taRunning) return;
+    try{ sfx.bomb && sfx.bomb(); }catch(_){}
+    // 爆発の見た目：白い閃光、衝撃の輪、飛び散る火花
+    const core = document.createElement("span"); core.className = "ta-bomb-core"; Object.assign(core.style,{left:(x-R*.8)+"px",top:(y-R*.8)+"px",width:(R*1.6)+"px",height:(R*1.6)+"px"}); document.body.append(core);
+    core.animate([{transform:"scale(.15)",opacity:1},{transform:"scale(1)",opacity:.85,offset:.3},{transform:"scale(1.15)",opacity:0}],{duration:460,easing:"cubic-bezier(.2,.7,.3,1)",fill:"forwards"}).onfinish=()=>core.remove();
+    const ring = document.createElement("span"); ring.className = "ta-bomb-ring"; Object.assign(ring.style,{left:(x-R)+"px",top:(y-R)+"px",width:(R*2)+"px",height:(R*2)+"px"}); document.body.append(ring);
+    ring.animate([{transform:"scale(.08)",opacity:1},{transform:"scale(1)",opacity:0}],{duration:520,easing:"cubic-bezier(.15,.75,.35,1)",fill:"forwards"}).onfinish=()=>ring.remove();
+    const ring2 = ring.cloneNode(); ring2.style.borderWidth = "1px"; document.body.append(ring2);
+    ring2.animate([{transform:"scale(.05)",opacity:.9},{transform:"scale(.78)",opacity:0}],{duration:420,delay:60,easing:"cubic-bezier(.15,.75,.35,1)",fill:"both"}).onfinish=()=>ring2.remove();
+    const nSp = document.documentElement.classList.contains("ta-lowfx") ? 8 : 16;
+    for(let i=0;i<nSp;i++){ const a = Math.random()*Math.PI*2, d = R*(.45+Math.random()*.6), sp = document.createElement("span"); sp.className = "ta-bomb-spark"; sp.style.left = x + "px"; sp.style.top = y + "px"; document.body.append(sp);
+      sp.animate([{transform:"translate(0,0) scale(1)",opacity:1},{transform:`translate(${Math.cos(a)*d}px,${Math.sin(a)*d+14}px) scale(.3)`,opacity:0}],{duration:420+Math.random()*220,easing:"cubic-bezier(.1,.7,.3,1)",fill:"forwards"}).onfinish=()=>sp.remove(); }
+    if(!(typeof taTouchDevice!=='undefined' && taTouchDevice)) field.animate([{transform:"translate(0,0)"},{transform:"translate(3px,-2px)"},{transform:"translate(-2px,2px)"},{transform:"translate(0,0)"}],{duration:200,easing:"ease-out"});
+    // 範囲内の言霊：位置はまとめて先に読む
+    const others = ".special,.crack,.vortex,.pull,.glow,.multi,.odd,.petal,.reso,.still,.ta-thunder-launch-visual";
+    const hits = [];
+    field.querySelectorAll(".word:not(.got):not(.late):not(.flying)").forEach(w => { if(w === self || w.matches(others)) return;
+      const r = w.getBoundingClientRect(), qx = Math.max(r.left, Math.min(x, r.right)), qy = Math.max(r.top, Math.min(y, r.bottom)), d = Math.hypot(qx - x, qy - y);
+      if(d <= R) hits.push([d, w]); });
+    hits.sort((a,b) => a[0] - b[0]);
+    for(const [d, w] of hits){
+      // 近いものから順に、衝撃の輪が届いたときに消える
+      setTimeout(() => {
+        if(!w.isConnected || w.classList.contains("got") || !taRunning) return;
+        if(w.classList.contains("bomb")){ w._bombChained = true; w.click(); return; }   // 誘爆：その爆弾発言も爆発する
+        if(w.classList.contains("ta-metal") && !taMetalStrike(w, 2, "bomb")) return;   // 金はひびが入って残る
+        taMuteTouch = true; try{ w.click(); }finally{ taMuteTouch = false; }
+      }, 30 + d / R * 240);
+    }
+  }, FUSE);
+}
 function pullAll(x, y, self, eclipse=false, eclipseElement=null){
   track(eclipse ? "eclipse" : "pull", eclipse ? "蝕" : "引き寄せ");
   taPullActive++;setTimeout(()=>{taPullActive=Math.max(0,taPullActive-1);},(eclipse?3000:PULL_MS)+1200);taHeavyGuard(eclipse?2:1);
@@ -7401,7 +7469,7 @@ function pullAll(x, y, self, eclipse=false, eclipseElement=null){
   const snd = sfx.inhale(duration / 1000 + .3);
   let sum = 0, n = 0, pending = 0, open = true, done = false; const collected = [];
   // 金属文字は「引き寄せ」では動かない。「置き忘れたもの」では他の言霊と同じように吸い込んで回収する（HPは関係なし）
-  const skip = ".got,.special,.crack,.vortex,.pull,.glow,.multi,.odd,.petal,.reso,.still,.late,.flying" + (eclipse ? "" : ",.ta-metal");
+  const skip = ".got,.special,.crack,.vortex,.pull,.bomb,.glow,.multi,.odd,.petal,.reso,.still,.late,.flying" + (eclipse ? "" : ",.ta-metal");
   // 位置と淡さは、書き換えより先にまとめて読む（読み書きが交互になると、そのたびに画面全体の配置計算が走ってスマホで重くなる）
   const suck = (w, rr) => {
     const r = rr || w.getBoundingClientRect(), word = w.dataset.word || w.textContent, op0 = getComputedStyle(w).opacity;
@@ -9562,6 +9630,24 @@ const sfx = (()=>{
           og.gain.setValueAtTime(0.0001, at); og.gain.exponentialRampToValueAtTime(v, at + .0015); og.gain.exponentialRampToValueAtTime(0.0001, at + .035);
           o.connect(og); og.connect(bus); o.start(at); o.stop(at + .05); }); }
     },
+    // 爆弾発言：導火線の「チリッ」
+    bombFuse(){ const a = ac(); if(!a) return; const t = a.currentTime;
+      const src = ctx.createBufferSource(), hp = ctx.createBiquadFilter(), g = ctx.createGain();
+      src.buffer = noise; hp.type = "highpass"; hp.frequency.value = 3800;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(.05, t + .02);
+      for(let i=1;i<6;i++) g.gain.setValueAtTime(i%2 ? .015 : .055, t + .03 + i*.035);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + .26);
+      src.connect(hp); hp.connect(g); g.connect(bus); src.start(t, Math.random()*.3); src.stop(t + .28); },
+    // 爆弾発言：短く重い「ドン」（低い打撃＋ノイズのはじけ）
+    bomb(){ const a = ac(); if(!a) return; const t = a.currentTime;
+      const o = ctx.createOscillator(), og = ctx.createGain();
+      o.type = "sine"; o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(42, t + .35);
+      og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(.42, t + .006); og.gain.exponentialRampToValueAtTime(0.0001, t + .5);
+      o.connect(og); og.connect(bus); o.start(t); o.stop(t + .52);
+      const src = ctx.createBufferSource(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+      src.buffer = noise; lp.type = "lowpass"; lp.frequency.setValueAtTime(5200, t); lp.frequency.exponentialRampToValueAtTime(500, t + .4);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(.3, t + .004); g.gain.exponentialRampToValueAtTime(0.0001, t + .45);
+      src.connect(lp); lp.connect(g); g.connect(bus); src.start(t, Math.random()*.2); src.stop(t + .48); },
     // 金属文字に当たって割れなかったとき：「キン」と澄んだ金属音（倍音がずれた短い響き＋ごく短い打撃音）
     metalClink(){ const a = ac(); if(!a) return; const t = a.currentTime;
       [[2380,.075,.32],[3620,.05,.22],[5170,.032,.15],[6980,.018,.09]].forEach(([f,v,d])=>{ const o = ctx.createOscillator(), g = ctx.createGain();
@@ -10018,6 +10104,7 @@ window.addEventListener("resize", ()=>{ if(libOpen && !turning) renderShelf(); }
 // 演出テスト用：今の章を「あと1頁」の状態にする（言霊を一つ消せば次の章へ。最後の章なら夜のボーナスへ）
 $("t-metal").onclick=()=>{taMetalTestRate=taMetalTestRate==null?.25:taMetalTestRate===.25?.6:taMetalTestRate===.6?0:null;const lab=taMetalTestRate==null?"章連動":taMetalTestRate===0?"なし":taMetalTestRate===.25?"少し":"多い";$("t-metal").textContent="金属:"+lab;toast(taMetalTestRate==null?"金属文字：章に合わせて出す（第三章から）":taMetalTestRate===0?"金属文字を出さない":"金属文字を出す（約"+Math.round(taMetalTestRate*100)+"%）");};
 $("t-density").onclick=()=>{taDensityFlat=!taDensityFlat;$("t-density").textContent=taDensityFlat?"言霊:以前の量":"言霊:章連動";toast(taDensityFlat?"言霊の量を以前の量（スマホ5／PC6）に固定しました":"言霊の量を章に合わせて増やします");};
+$("t-bomb").onclick=()=>{ if(!taRunning){toast("ゲーム中に押すと、爆弾発言が現れます");return;} if(taNightActive()){toast("いまは夜のボーナス中です");return;} if(flood||sakuraOn){toast("時間停止・桜吹雪のあいだは出せません");return;} forceBomb=true; spawnWord({force:true}); if(forceBomb){forceBomb=false;toast("いまは出せませんでした");} };
 $("t-pages").onclick=()=>{ if(!taRunning){toast("ゲーム中に押すと、今の章があと1頁になります");return;} if(taNightActive()){toast("いまは夜のボーナス中です");return;}
   if(taStory.chapter>=taStoryChapters()){toast("この夜の章はすべて読み終えています");return;}
   const need=taStoryStep(taStory.chapter)-taStory.inChapter-1; if(need>0)taStoryAdd(need);
@@ -12058,7 +12145,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  }
  let consumedPointer=null;
  const active=()=>typeof taRunning!=='undefined'&&taRunning&&!taNightActive()&&!document.hidden&&document.getElementById('taLaunch')?.hidden!==false;
- const specials='.special,.vortex,.crack,.petal,.multi,.pull,.glow,.reso,.odd';
+ const specials='.special,.vortex,.crack,.petal,.multi,.pull,.glow,.reso,.odd,.bomb';
  const valid=w=>w.matches('.word')&&!w.classList.contains('got')&&!w.classList.contains('late')&&(!w.classList.contains('still')||flood);
  const thunderUnlocked=()=>location.hash==='#test'||!!window.taStars?.hasAward('orbs4');
  const summonUnlocked=()=>!!window.taStars?.hasAward('tutorial');   // 翠玉は「はじまりの栞」（練習の完了）で解放
@@ -12519,6 +12606,7 @@ if(w.classList.contains('ta-metal')){const fl=type==='fire'?taMastery.level('fir
   if(w.classList.contains('special')){startFlood(w);sfx.special();sfx.timeStop();}
   else if(w.classList.contains('petal'))sakuraBloom(w);
   else if(w.classList.contains('pull'))pullAll(cx,cy,w);
+  else if(w.classList.contains('bomb'))taBombExplode(cx,cy,w);
   else if(w.classList.contains('glow'))startGlow(false,w.dataset.word||w.textContent);
   else if(w.classList.contains('reso'))resonate(cx,cy,w);
   else if(w.classList.contains('multi')){const fr=field.getBoundingClientRect();multiply(cx-fr.left,cy-fr.top,{boon:w.classList.contains('boon')});}
@@ -13371,18 +13459,21 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
   const glow=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);
    g.addColorStop(0,'rgba(255,248,214,1)');g.addColorStop(.16,'rgba(255,214,110,.82)');g.addColorStop(.42,'rgba(255,160,40,.28)');g.addColorStop(1,'rgba(255,130,20,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return c;})();
   // 魔法陣（外輪と内側の紋）を一度だけ描いておく
-  const sprite=(draw)=>{const S=Math.ceil((R+14)*2*dpr),c=document.createElement('canvas');c.width=c.height=S;const x=c.getContext('2d');x.translate(S/2,S/2);x.scale(dpr,dpr);x.lineCap='round';x.lineJoin='round';
-   const pass=(w,a,col)=>{x.lineWidth=w;x.strokeStyle=col;x.fillStyle=col;x.globalAlpha=a;draw(x);};pass(4.2,.22,'#ffb648');pass(1.2,.95,'#fff1c2');return c;};
-  const outer=sprite(x=>{x.beginPath();x.arc(0,0,R,0,Math.PI*2);x.stroke();x.beginPath();x.arc(0,0,R-6,0,Math.PI*2);x.stroke();
+  const sprite=(draw,white)=>{const S=Math.ceil((R+14)*2*dpr),c=document.createElement('canvas');c.width=c.height=S;const x=c.getContext('2d');x.translate(S/2,S/2);x.scale(dpr,dpr);x.lineCap='round';x.lineJoin='round';
+   const pass=(w,a,col)=>{x.lineWidth=w;x.strokeStyle=col;x.fillStyle=col;x.globalAlpha=a;draw(x);};
+   if(white){pass(5,.32,'#ffffff');pass(1.6,1,'#ffffff');}else{pass(4.2,.22,'#ffb648');pass(1.2,.95,'#fff1c2');}return c;};
+  const drawOuter=(x=>{x.beginPath();x.arc(0,0,R,0,Math.PI*2);x.stroke();x.beginPath();x.arc(0,0,R-6,0,Math.PI*2);x.stroke();
    for(let k=0;k<24;k++){const a=k/24*Math.PI*2,r=R-3,px=Math.cos(a)*r,py=Math.sin(a)*r;x.save();x.translate(px,py);x.rotate(a);
     if(k%3===0){x.beginPath();x.moveTo(0,-2.2);x.lineTo(1.6,0);x.lineTo(0,2.2);x.lineTo(-1.6,0);x.closePath();x.stroke();}
     else if(k%3===1){x.beginPath();x.moveTo(-1.6,-1.4);x.lineTo(1.6,-1.4);x.moveTo(0,-1.4);x.lineTo(0,1.6);x.stroke();}
     else{x.beginPath();x.arc(0,0,.9,0,Math.PI*2);x.fill();}x.restore();}
    for(let k=0;k<8;k++){const a=k/8*Math.PI*2;x.beginPath();x.moveTo(Math.cos(a)*(R+3),Math.sin(a)*(R+3));x.lineTo(Math.cos(a)*(R+9),Math.sin(a)*(R+9));x.stroke();}});
-  const inner=sprite(x=>{const r=R*.72;x.beginPath();x.arc(0,0,r,0,Math.PI*2);x.stroke();
+  const outer=sprite(drawOuter);
+  const drawInner=(x=>{const r=R*.72;x.beginPath();x.arc(0,0,r,0,Math.PI*2);x.stroke();
    for(const off of [0,Math.PI]){x.beginPath();for(let k=0;k<3;k++){const a=-Math.PI/2+off+k*Math.PI*2/3;k?x.lineTo(Math.cos(a)*r,Math.sin(a)*r):x.moveTo(Math.cos(a)*r,Math.sin(a)*r);}x.closePath();x.stroke();}
    x.beginPath();x.arc(0,0,R*.3,0,Math.PI*2);x.stroke();
    for(let k=0;k<12;k++){const a=k/12*Math.PI*2;x.beginPath();x.moveTo(Math.cos(a)*R*.3,Math.sin(a)*R*.3);x.lineTo(Math.cos(a)*R*.4,Math.sin(a)*R*.4);x.stroke();}});
+  const inner=sprite(drawInner);
   // Persistent magic circle: compositor-only CSS rotation (no full canvas redraw in idle).
   const glyph=document.createElement('div');glyph.className='ta-thunder-css-glyph';
   const glyphEls={};
@@ -13393,6 +13484,11 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
    if(reduce)el.getContext('2d').drawImage(im,0,0);   // 動きを減らす設定では、描かれる演出を省いて最初から完成形
    glyphEls[cl]={el,im};glyph.append(el);
   }
+  // 陣が閉じたあと、2秒周期で陣が白く光る（1秒かけて明るく、1秒かけて戻る）：白い陣の写しを同じ速さで回し、その重なりの濃さだけを脈打たせる（CSSだけで動く）
+  const whiteGlyph=document.createElement('div');whiteGlyph.className='ta-glyph-white';
+  if(!reduce){const halo=document.createElement('i');halo.className='ta-glyph-white-halo';halo.style.width=halo.style.height=(R*2.9)+'px';whiteGlyph.append(halo);
+   for(const [d,cl] of [[drawOuter,'outer'],[drawInner,'inner']]){const im=sprite(d,true),el=document.createElement('canvas');el.className=cl;el.width=im.width;el.height=im.height;el.style.width=(im.width/dpr)+'px';el.style.height=(im.height/dpr)+'px';el.getContext('2d').drawImage(im,0,0);whiteGlyph.append(el);}
+   glyph.append(whiteGlyph);}
   const waveCount=document.createElement('span');waveCount.className='ta-thunder-wave-count';waveCount.setAttribute('aria-label','落雷継続回数');glyph.append(waveCount);
   // Match the level-up echo: a solid numeral plus two expanding outline afterimages.
   const thunderWaveEcho=(wave)=>{
@@ -13449,6 +13545,7 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
   if(!reduce)requestAnimationFrame(writeGlyph);
   // 陣が閉じた瞬間：一度だけ強く脈打ち、金の波紋と、中心から放射する光の筋
   later(()=>{circleBoost=1;rings.push({born:now(),life:700,max:R*2.4,w:2.2});sealAt=now();burst(cx,cy,reduce?0:14,90);},SEAL);
+  later(()=>{whiteGlyph.classList.add('on');},SEAL+600);   // 閉じた一拍あとから、2秒周期で白く光る
   // 稲妻：中点をずらす分割で、自然に枝分かれする形を作る
   const genBolt=(ax,ay,bx2,by2,rough=.2,branchy=.35)=>{const len=Math.hypot(bx2-ax,by2-ay);
    let pts=[[ax,ay],[bx2,by2]],disp=len*rough;const branches=[];
@@ -13461,7 +13558,7 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
   const addBolt=(ax,ay,bx2,by2,life,{width=1,regen=2,rough=.2,branchy=.35}={})=>{const b={ax,ay,bx:bx2,by:by2,born:now(),life,width,regen,rough,branchy,shape:genBolt(ax,ay,bx2,by2,rough,branchy),next:0};bolts.push(b);return b;};
   const burst=(x,y,n,sp=110)=>{if(reduce)return;for(let k=0;k<n;k++){const a=Math.random()*Math.PI*2,v=sp*(.35+Math.random());sparks.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-20,born:now(),life:320+Math.random()*380,r:.7+Math.random()*1.3});}};
   const born=performance.now(),now=()=>performance.now()-born;
-  let flashA=0,flashAt=-1e9,pillars=[],circleBoost=0,dissolveAt=0,raf=0,frontLit=false,idleWake=0,sealAt=-1e9;
+  let flashA=0,flashAt=-1e9,pillars=[],circleBoost=0,dissolveAt=0,raf=0,frontLit=false,idleWake=0,sealAt=-1e9,nextCrackle=SEAL+900;
   const DARK_IN=300,DARK_OUT=300; // 先に暗転→魔法陣→一拍→明転→落雷
   const CHARGE=1150,PAUSE=400;
   const RESTORE_AT=CHARGE+PAUSE,SCATTER1=RESTORE_AT+DARK_OUT+80;
@@ -13485,7 +13582,7 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
   const draw=()=>{
    if(!live()){if(epoch===thunderEpoch)thunderClear();return;}
    const t=now();
-   const idle=t>SCATTER1&&!bolts.length&&!sparks.length&&!rings.length&&!motes.length&&t-flashAt>600&&pillars.every(p=>t-p.born>760)&&(darkOutAt?t-darkOutAt>DARK_OUT:false)&&!dissolveAt;
+   let idle=t>SCATTER1&&!bolts.length&&!sparks.length&&!rings.length&&!motes.length&&t-flashAt>600&&pillars.every(p=>t-p.born>760)&&(darkOutAt?t-darkOutAt>DARK_OUT:false)&&!dissolveAt;
    // PCは演出中30fps、魔法陣だけの待機中15fps。画面が広くても描画し続けない。
    // RAF自体は維持し、既存の効果タイマーや採集処理には手を加えない。
    // v53: while dragging, prioritize hit handling over the decorative
@@ -13533,6 +13630,11 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
    // 衝撃の輪
    for(let k=rings.length-1;k>=0;k--){const r=rings[k],a=(t-r.born)/r.life;if(a<0)continue;if(a>=1){rings.splice(k,1);continue;}const e=1-Math.pow(1-a,3);
     bx.globalAlpha=(1-a)*.52;bx.strokeStyle='#ffe7a0';bx.lineWidth=r.w*(1-a*.65);bx.beginPath();bx.arc(cx,cy,r.max*e,0,Math.PI*2);bx.stroke();}
+   // ときどき、陣の縁からパチパチと小さな雷が外へ伸びる（1.4〜3.2秒おき、1〜2本）
+   if(!reduce&&!dissolveAt&&t>=nextCrackle){nextCrackle=t+1400+Math.random()*1800;idle=false;   // 雷が伸びきるまでは毎コマ描く
+    for(let k=0,n=Math.random()<.4?2:1;k<n;k++){const a=Math.random()*Math.PI*2,a2=a+(Math.random()-.5)*.6,r0=R+2,r1=R+34+Math.random()*40;
+     addBolt(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0,cx+Math.cos(a2)*r1,cy+Math.sin(a2)*r1,340+Math.random()*160,{width:1.05,regen:3,rough:.36,branchy:.7});
+     burst(cx+Math.cos(a2)*r1,cy+Math.sin(a2)*r1,thMobile?2:4,55);}}
    // 稲妻（数回だけ形を変えてちらつかせる）
    for(let k=bolts.length-1;k>=0;k--){const b=bolts[k],a=(t-b.born)/b.life;if(a>=1){bolts.splice(k,1);continue;}
     if(b.regen>0&&a>(b.next+1)/(b.regen+1)){b.next++;b.shape=genBolt(b.ax,b.ay,b.bx,b.by,b.rough,b.branchy);}
