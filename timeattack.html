@@ -841,7 +841,7 @@ html,body{overscroll-behavior-y:none;}
 /* 導火線のように、縁の火の粉が一定の間隔で脈打つ（明滅は重ねた層の濃さだけ） */
 .word.bomb::after{content:"";position:absolute;inset:-3px;border-radius:inherit;pointer-events:none;box-shadow:0 0 16px 2px rgba(255,140,50,.75),inset 0 0 8px rgba(255,170,90,.45);opacity:0;animation:taBombFuse .9s ease-in-out infinite}
 @keyframes taBombFuse{0%,100%{opacity:.1}50%{opacity:1}}
-.ta-bomb-charge{position:fixed;z-index:19;pointer-events:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;padding:0 .9em;border-radius:999px;transform:translate(-50%,-50%);
+.ta-bomb-charge{position:fixed;z-index:19;pointer-events:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;padding:0 .9em;border-radius:3px;transform:translate(-50%,-50%);
  font:700 14px/1 var(--mincho,serif);letter-spacing:.14em;color:#fff;background:rgba(255,248,236,.92);border:1px solid #fff;
  box-shadow:0 0 14px 4px rgba(255,255,255,.85),0 0 34px 10px rgba(255,190,120,.55);text-shadow:0 0 6px #fff;will-change:transform}
 .ta-bomb-glow{position:fixed;z-index:18;pointer-events:none;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.85) 0 12%,rgba(255,236,200,.4) 38%,rgba(255,200,140,0) 70%);mix-blend-mode:screen;will-change:transform,opacity}
@@ -938,11 +938,13 @@ html.ta-lowfx .ta-bomb-core{mix-blend-mode:normal;opacity:.8}
  box-shadow:0 0 7px 1px var(--glow-halo);
 }
 .glowbar.glowbar.moon,.glowbar.glowbar.sun{border-color:var(--glow-particle,#b9d7ff)}
-/* 処理落ち対策（粒の数は減らさない）：スマホでは光の筋のぼかしを弱める */
+/* 処理落ち対策：スマホでは粒を2/3にし（startGlow）、光の筋のぼかしを弱める */
 @media (pointer:coarse){.glow-fx.sun .ray{filter:blur(4px)}}
 /* 重い状態が重なってコマが落ちたときだけ（html.ta-lowfx）、ぼかしなど重い飾りだけを外す。粒の数・判定・得点は変えない */
 html.ta-lowfx .glow-fx.sun .ray{filter:none;opacity:.45!important}
 html.ta-lowfx .glow-fx-front .mote,html.ta-lowfx .glow-fx-front .smote{filter:none}
+/* コマが落ちている間だけ、奥の粒を3つに1つ休ませる（display:noneでアニメーションの計算ごと止まる） */
+html.ta-lowfx .glow-fx:not(.glow-fx-front) .mote:nth-child(3n),html.ta-lowfx .glow-fx:not(.glow-fx-front) .smote:nth-child(3n){display:none}
 /* 重なり対策：引き寄せ・置き忘れたものの飾りを軽く（渦の影のぼかし、輪の流れ込み、飛ぶ言霊の影） */
 html.ta-lowfx .ta-eclipse-core,html.ta-lowfx .ta-eclipse-core.ta-eclipse-ice,html.ta-lowfx .ta-eclipse-core.ta-eclipse-fire{filter:none!important}
 html.ta-lowfx .pull-core svg{filter:none!important}
@@ -5024,7 +5026,7 @@ const taCenturyDust=(()=>{
   const dustStats={emits:0,frames:0,skipped:0,totalMs:0,maxMs:0,lastMs:0,peak:0,level:0};
   window.__taGoldDustStats=dustStats;
   let previousFrame=0,stress=0,drawParity=0;
-  const dustDiagnostic=()=>((location.hash||'').includes('test')||new URLSearchParams(location.search).has('perf'));
+  const dustDiagnostic=()=>((location.hash||'').includes('diag')||new URLSearchParams(location.search).has('perf'));
 
   function ensure(){
     if(!canvas){
@@ -5945,7 +5947,7 @@ const TA_YURA_CHAT=['今夜は、静かだね','月が、きれい','この言�
 // いま出してよいヒントの種類（解放前の玉の効果は出さない）
 function taYuraHintKeys(){
   const has=id=>!!window.taStars?.hasAward?.(id);
-  const thunder=location.hash==='#test'||has('orbs4'),green=has('tutorial');
+  const thunder=location.hash.startsWith('#test')||has('orbs4'),green=has('tutorial');
   const keys=['hintFire','hintIce','hintSilver','hintTap','hintShingan','comboCross','comboClock','comboEclipse'];
   if(green)keys.push('hintGreen');
   keys.push(thunder?'hintThunder':'hintThunderLocked');
@@ -7094,7 +7096,7 @@ const __ta100Start=window.__ta100Profile.start();try {
   // 爆弾発言：金属文字が出る章から、まれに現れる（テストモードでは「爆弾発言出現」でいつでも出せる）
   const bomb = !opt.plain && !special && !odd && !multi && !pull && !flood && !sakuraOn && taRunning
     && (forceBomb || (Date.now() > nextBombAt && taMetalRate() > 0 && Math.random() < (taNightNumber >= 5 ? .16 : .08)));   // 第五夜は最初から出やすい
-  if(bomb){ w.textContent = "爆弾発言"; w.dataset.word = "爆弾発言"; w.classList.add("bomb"); try{ sfx._bombLoad(); }catch(_){} forceBomb = false; nextBombAt = Date.now() + (taNightNumber >= 5 ? 12000 : 25000); w.setAttribute("aria-label", "爆弾発言（触れるとまわりの言霊ごと爆発する）"); }
+  if(bomb){ w.textContent = "爆弾発言"; w.dataset.word = "爆弾発言"; w.classList.add("bomb","ta-metal"); w.dataset.metalHp = "2"; w.style.setProperty("--ta-metal-delay", (-Math.random()*3.4).toFixed(2)+"s"); try{ sfx._bombLoad(); }catch(_){} forceBomb = false; nextBombAt = Date.now() + (taNightNumber >= 5 ? 12000 : 25000); w.setAttribute("aria-label", "爆弾発言（黒鉄の金属：2回当てると、まわりの言霊ごと爆発する）"); }
   // 陽だまり（白）・月明かり（黒）：触れると、しばらく違和感が2倍
   // 懐中時計が近いとき（現れる20秒前から、漂っているあいだ）は、降る記憶・昇る想いが来やすい（待ち時間も短く）
   const preStop = Date.now() > nextSpecialAt - 20000 || !!field.querySelector(".word.special:not(.got)");
@@ -7440,7 +7442,7 @@ function taBombExplode(x, y, self, chained=false){
     for(const [d, w] of hits){ done.add(w);
       setTimeout(() => {
         if(!w.isConnected || w.classList.contains("got") || !taRunning) return;
-        if(w.classList.contains("bomb")){ w._bombChained = true; w.click(); return; }   // 誘爆
+        if(w.classList.contains("bomb")){ w._bombChained = true; w.dataset.metalHp = "0"; w._metalBreakDelay = 0; taMuteTouch = true; try{ w.click(); }finally{ taMuteTouch = false; } return; }   // 誘爆（金属でも一度で割れる）
         if(w.classList.contains("ta-metal") && !taMetalStrike(w, 2, "bomb")) return;   // 金はひびが入って残る
         taMuteTouch = true; try{ w.click(); }finally{ taMuteTouch = false; }
       }, stagger ? 30 + d / R * 240 : 0);
@@ -7449,7 +7451,8 @@ function taBombExplode(x, y, self, chained=false){
   setTimeout(() => {
     pill.remove(); glow.remove();
     if(!taRunning) return;
-    try{ sfx.bomb && sfx.bomb(); }catch(_){}
+    // 音は、爆発の見た目を置いたあと、それが画面に出る直前のコマで鳴らす（重いときに音だけ先に出ないように）
+    requestAnimationFrame(() => { if(taRunning) try{ sfx.bomb && sfx.bomb(); }catch(_){} });
     // 爆発の見た目：白い閃光、衝撃の輪、飛び散る火花
     const core = document.createElement("span"); core.className = "ta-bomb-core"; Object.assign(core.style,{left:(x-R*.8)+"px",top:(y-R*.8)+"px",width:(R*1.6)+"px",height:(R*1.6)+"px"}); document.body.append(core);
     core.animate([{transform:"scale(.15)",opacity:1},{transform:"scale(1)",opacity:.85,offset:.3},{transform:"scale(1.15)",opacity:0}],{duration:460,easing:"cubic-bezier(.2,.7,.3,1)",fill:"forwards"}).onfinish=()=>core.remove();
@@ -7673,13 +7676,14 @@ function startGlow(silent, collectedName){
   const color=glowStagePalette()[moon?0:1];
   glowSetPalette(fx,color,moon?'memory':'feeling');
   // 粒は見せ場なので多めに（明滅を軽い方式にしたぶん、1.5倍にしても負荷はほぼ変わらない）
-  if(moon) for(let i=0;i<33;i++){ const d = document.createElement("i"); d.className = "mote";
+  const glowN = (n) => taTouchDevice ? Math.round(n * .66) : n;   // スマホは粒を2/3に（見た目の密度はほぼ同じで、重なったときのスタイル計算を減らす）
+  if(moon) for(let i=0;i<glowN(33);i++){ const d = document.createElement("i"); d.className = "mote";
       d.style.left = (Math.random() * 100).toFixed(1) + "%"; d.style.animationDelay = (-Math.random() * 6).toFixed(2) + "s"; d.style.animationDuration = (5 + Math.random() * 4).toFixed(2) + "s";
       d.style.setProperty("--s", (.6 + Math.random() * 1.2).toFixed(2)); d.style.setProperty("--dx", ((Math.random() - .5) * 40).toFixed(0) + "px"); fx.append(d); }
   else { for(let i=0;i<5;i++){ const r = document.createElement("i"); r.className = "ray";
       r.style.right = (-10 + i * 13 + Math.random() * 6).toFixed(1) + "%"; r.style.width = (8 + Math.random() * 10).toFixed(1) + "%";
       r.style.animationDelay = (-Math.random() * 4).toFixed(2) + "s"; r.style.opacity = (.5 + Math.random() * .5).toFixed(2); fx.append(r); }
-    for(let i=0;i<36;i++){ const d = document.createElement("i"); d.className = "smote";
+    for(let i=0;i<glowN(36);i++){ const d = document.createElement("i"); d.className = "smote";
       d.style.left = (Math.random() * 100).toFixed(1) + "%"; d.style.setProperty("--d", (6 + Math.random() * 5).toFixed(2) + "s");
       d.style.animationDelay = (-Math.random() * 8).toFixed(2) + "s, " + (-Math.random() * 1.6).toFixed(2) + "s";
       d.style.setProperty("--s", (.6 + Math.random() * 1.3).toFixed(2)); d.style.setProperty("--dx", ((Math.random() - .5) * 50).toFixed(0) + "px"); fx.append(d); }
@@ -7691,7 +7695,7 @@ function startGlow(silent, collectedName){
   const front=document.createElement("div");
   front.className="glow-fx glow-fx-front " + (moon ? "moon" : "sun");
   glowSetPalette(front,color,moon?'memory':'feeling');
-  const frontCount=moon?12:13;
+  const frontCount=glowN(moon?12:13);
   for(let i=0;i<frontCount;i++){
     const d=document.createElement("i");
     d.className=moon?"mote":"smote";
@@ -10191,7 +10195,7 @@ $("t-all").onclick=()=>{
 const tut = {start(){}, on(){}, reset(){}};
 
 // テスト用ボタンは、URL の最後に #test を付けて開いたときだけ出す
-if(location.hash === "#test"){
+if(location.hash.startsWith("#test")){
  $("testbar").hidden = false;
 
 }
@@ -12189,7 +12193,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const active=()=>typeof taRunning!=='undefined'&&taRunning&&!taNightActive()&&!document.hidden&&document.getElementById('taLaunch')?.hidden!==false;
  const specials='.special,.vortex,.crack,.petal,.multi,.pull,.glow,.reso,.odd,.bomb';
  const valid=w=>w.matches('.word')&&!w.classList.contains('got')&&!w.classList.contains('late')&&(!w.classList.contains('still')||flood);
- const thunderUnlocked=()=>location.hash==='#test'||!!window.taStars?.hasAward('orbs4');
+ const thunderUnlocked=()=>location.hash.startsWith('#test')||!!window.taStars?.hasAward('orbs4');
  const summonUnlocked=()=>!!window.taStars?.hasAward('tutorial');   // 翠玉は「はじまりの栞」（練習の完了）で解放
  const THUNDER_COST=4;   // 黄玉に必要な白銀玉の数
  const thunderReady=()=>thunderUnlocked()&&usesLeft>=THUNDER_COST&&!thunderBusy;
@@ -12817,7 +12821,8 @@ const __ta100Start=window.__ta100Profile.start();try {
   if(taCrossOrbPool.length<TA_CROSS_ORB_POOL_LIMIT)taCrossOrbPool.push(orb);
  }
  // Stage 6-C diagnostics: passive sampling only; no gameplay or visual changes.
- const taPerfEnabled=(location.hash||'').includes('test') || new URLSearchParams(location.search).has('perf'); // Opt-in diagnostic; normal play avoids instrumentation
+ // 計測はテストモードでも既定では止める（#test-diag か ?perf のときだけ）。計測そのものが端末の負担になるため
+ const taPerfEnabled=(location.hash||'').includes('diag') || new URLSearchParams(location.search).has('perf'); // Opt-in diagnostic; normal play avoids instrumentation
  // Startup-only diagnostics: retained for TimeOver, never shown during play.
  const taStartupDiag={started:0,previousPlaying:false,bins:[0,1,2].map(()=>({frames:0,slow:0,maxGap:0,longTasks:0,longMax:0,paintCount:0,paintSum:0,paintMax:0,costs:{},events:{}})),lastFrame:0,lastBin:-1,orbAtStart:0,orbAt15:0};
  window.__taStartupDiag=taStartupDiag;
@@ -14942,7 +14947,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 }
 </style>
 <script id="ta-diagnostic-v43">
-if(location.hash==='#test'){
+// 診断ログ（全DOMの変化を見張る）は重いので、#test-diag のときだけ動かす
+if(location.hash==='#test-diag'){
 (()=>{
 'use strict';
 const BUILD='v48-word-effect-isolation-20261113',MAX=3500, records=[];let seq=0,lastMove=0,frames=0,lastFrame=performance.now(),fps=0;
@@ -15210,6 +15216,16 @@ html.ta-night-bonus #viewMain>.hero #combo .cpause{background:transparent!import
  --m-face:linear-gradient(180deg,#fff6d6 0%,#f3d68a 16%,#d4a945 42%,#a87c22 50%,#d2a644 62%,#f2d78e 86%,#fff3cf 100%);
  --m-rv1:#fffbe8;--m-rv2:#b08a3a;--m-rv3:#5a4210;color:#2a1d05!important;border-color:#fff0c0!important;
  box-shadow:inset 0 1px 0 rgba(255,250,230,.95),inset 0 -1.5px 0 rgba(80,55,10,.55)!important}
+/* 爆弾発言：黒鉄の金属板。文字は熾火のように赤く、縁がときどき導火線のように脈打つ */
+#viewMain .drift .word.ta-metal.bomb:not(.got){
+ --m-face:linear-gradient(180deg,#6b625d 0%,#3d3633 16%,#241f1d 42%,#151211 50%,#26201d 62%,#423935 86%,#5f5550 100%);
+ --m-rv1:#ffd2a0;--m-rv2:#c2521c;--m-rv3:#3a0d02;color:#ffb070!important;font-weight:700;letter-spacing:.14em;border-color:#ff9a52!important;
+ text-shadow:0 0 6px rgba(255,110,30,.95),0 0 1px #fff3e0!important;
+ box-shadow:inset 0 1px 0 rgba(255,190,140,.55),inset 0 -1.5px 0 rgba(0,0,0,.7),inset 0 0 10px rgba(255,90,20,.35)!important}
+#viewMain .drift .word.ta-metal.bomb:not(.got)::after{background:radial-gradient(ellipse at 50% 50%,rgba(255,120,40,.55),rgba(255,90,20,0) 70%);background-size:100% 100%;background-position:0 0;
+ opacity:.1;animation:taBombFuse .9s ease-in-out infinite}
+#viewMain .drift .word.ta-metal.bomb.ta-metal-dmg:not(.got){--m-face:linear-gradient(180deg,#5c4a40 0%,#3a2a22 16%,#2a1a12 42%,#1c0e08 50%,#2c1a10 62%,#43302a 86%,#5a463c 100%);color:#ffd080!important}
+#viewMain .drift .word.ta-metal.bomb.ta-metal-dmg:not(.got)::after{animation-duration:.42s;opacity:.6}
 /* 当たったあと：くすんでひびが入る（金は2回まで当たる） */
 #viewMain .drift .word.ta-metal.ta-metal-dmg:not(.got){--m-crack:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cpath d='M48 0 L44 13 L52 19 L46 28 L50 40 M44 13 L33 17 M52 19 L64 15 L71 22 M46 28 L36 33' fill='none' stroke='rgba(255,255,255,.7)' stroke-width='2.4' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M48 0 L44 13 L52 19 L46 28 L50 40 M44 13 L33 17 M52 19 L64 15 L71 22 M46 28 L36 33' fill='none' stroke='rgba(18,22,28,.9)' stroke-width='1.2' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center/100% 100% no-repeat;
  --m-face:linear-gradient(180deg,#dde2e8 0%,#b0b8c2 16%,#87909c 42%,#68717d 50%,#89929e 62%,#b4bcc6 86%,#d6dce3 100%);border-color:#c3ccd6!important}
