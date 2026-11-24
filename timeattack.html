@@ -5751,13 +5751,13 @@ const TA_NIGHT3_LEVEL=[0,20,50,100,300,300,400,500];      // 六章は赤い空�
 // 言霊の量・金属文字の出現は、以前の十章のどこにあたるかで読み替える（八章＝以前の最終章）
 const TA_NIGHT3_EQ=[0,1,2,3,5,6,7,9];
 // 第四夜は八章：第三夜からランタンの書斎を抜き、最後に白い光の書斎を足す。
-// 夜→流星→夜明けの城→赤い空の城→荒野の月夜→緑の草原→青く光る都市→白い光の書斎 → 夜のボーナス。頁の合計は第三夜と同じ1215。
-const TA_NIGHT4_STEPS=[100,120,140,155,165,175,175,185];   // 合計1215頁
+// 夜→流星→夜明けの城→赤い空の城→荒野の月夜→緑の草原→青く光る都市→白い光の書斎 → 夜のボーナス。頁の合計は1100。
+const TA_NIGHT4_STEPS=[90,110,125,140,150,160,160,165];    // 合計1100頁（以前1215。速さ・金属が最大の夜は長さで難しくしない）
 const TA_NIGHT4_LEVEL=[0,50,100,300,300,400,500,600];      // 五章は赤い空の城（300）の上に荒野の景色。八章（600）で曲が Sora Vatum に替わる
 const TA_NIGHT4_EQ=[0,2,3,5,6,7,8,9];                     // 以前の十章のどこにあたるか（八章＝以前の最終章）
 // 第五夜（いまの最終夜。第六夜以降も同じ）は九章：第四夜の最後に雲の上の白い景色（stage_10）を足す。
-// 第一〜八章の頁は第四夜と同じで、九章ぶん長い夜になる。
-const TA_NIGHT5_STEPS=[100,120,140,155,165,175,175,185,195];   // 合計1410頁
+// 頁の合計は1200。
+const TA_NIGHT5_STEPS=[85,100,115,130,140,150,150,160,170];   // 合計1200頁（以前1410）
 const TA_NIGHT5_LEVEL=[0,50,100,300,300,400,500,600,700];
 const TA_NIGHT5_EQ=[0,2,3,5,6,7,8,9,9];
 // 背景画像は img/bg/ に景色の名前で置く（旧名）：night_study(stage_01) lantern_study(02) meteor_night(03) dawn_castle(04)
@@ -10132,7 +10132,8 @@ function taNightScoreRate(){return 1+.25*(Math.min(taNightNumber,5)-1);}
 function taNightTimeRate(){return 1+.1*(Math.min(taNightNumber,5)-1);}
 
 // 800-chain loop-clear: one bonus per 800 chains, then stage 01 with score/time retained.
-const taNightBonus={phase:'idle',serial:0,timers:[],born:0,spawned:0,wordCount:30,orbPending:false,specialWordStarted:false,overlay:null,curtain:null,unlockAtStart:false};
+// 夜のボーナスの青い言霊：40個（以前30個。1つ+1秒、同じ20秒のうちに現れる）
+const taNightBonus={phase:'idle',serial:0,timers:[],born:0,spawned:0,wordCount:40,orbPending:false,specialWordStarted:false,overlay:null,curtain:null,unlockAtStart:false};
 const taNightActive=()=>taNightBonus.phase!=='idle';
 function taNightLater(fn,ms){const serial=taNightBonus.serial;const id=setTimeout(()=>{if(serial===taNightBonus.serial&&taRunning)fn();},ms);taNightBonus.timers.push(id);}
 function taNightClear(){document.querySelectorAll('.ta-night-echo').forEach(el=>el.remove());taNightBonus.serial++;taNightBonus.timers.forEach(clearTimeout);taNightBonus.timers=[];taNightBonus.phase='idle';taNightBonus.orbPending=false;taNightBonus.specialWordStarted=false;document.documentElement.classList.remove('ta-night-bonus');document.querySelectorAll('#drift .ta-night-word,#drift .ta-night-silver').forEach(el=>el.remove());taNightBonus.overlay?.remove();taNightBonus.overlay=null;taNightBonus.curtain?.remove();taNightBonus.curtain=null;}
