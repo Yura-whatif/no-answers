@@ -5217,6 +5217,25 @@ function taFieldPlusDuration(points){
   const level=Math.max(0,Math.min(1,Math.log10(displayed/500)/Math.log10(200)));
   return Math.round(1700+level*2300);
 }
+// 採集エリアの中心に浮かぶ文字（100連鎖の得点、言霊Lv・玉Lv、玉の解放）：
+// 中心にふわっと現れて約0.5秒とどまり、そのあと元の動き（上へ移動しながらフェードアウト）を続ける。
+// frames/opt は元の動き。返り値は「上へ移動する」アニメーション（onfinish で片付ける）。
+function taCenterHold(el, frames, opt, hold=500){
+  const D=opt.duration, n=frames.length;
+  const off=frames.map((f,i)=>f.offset!=null?f.offset:(i===0?0:i===n-1?1:null));
+  for(let i=1;i<n-1;i++)if(off[i]==null){let j=i+1;while(off[j]==null)j++;off[i]=off[i-1]+(off[j]-off[i-1])/(j-i+1);}
+  const A=frames.findIndex(f=>+f.opacity>=1);
+  if(A<0)return el.animate(frames,opt);
+  const entry=Math.min(off[A]*D,400), M=D-entry;
+  const center=String(frames[0].transform).replace(/translateY\([^)]*\)/,'translateY(0)');
+  // 現れて、中心でとどまる
+  el.animate([{opacity:frames[0].opacity,transform:frames[0].transform},{opacity:1,transform:center,offset:entry/(entry+hold)},{opacity:1,transform:center}],{duration:entry+hold,easing:'ease-out',fill:'forwards'});
+  // とどまったあと、元の動きのとおりに上へ移動して消える
+  const move=[{opacity:1,transform:center,offset:0}];
+  for(let k=A;k<n;k++){const t=off[k]*D;if(t<=entry+1)continue;move.push({opacity:frames[k].opacity,transform:frames[k].transform,offset:Math.min(1,(t-entry)/M)});}
+  move[move.length-1].offset=1;
+  return el.animate(move,{...opt,duration:M,delay:entry+hold,fill:'forwards'});
+}
 function taCenturyCenterPlus(){
   const area=document.getElementById('drift');if(!area)return;
   const r=area.getBoundingClientRect();
@@ -5230,7 +5249,7 @@ function taCenturyCenterPlus(){
     const current=parseFloat(getComputedStyle(p).fontSize);
     p.style.fontSize=(current*maxWidth/measured)+'px';
   }
-  p.animate([
+  taCenterHold(p,[
     {transform:'translate(-50%,-50%) translateY(8px)',opacity:0,offset:0},
     {transform:'translate(-50%,-50%) translateY(0)',opacity:1,offset:.12},
     {transform:'translate(-50%,-50%) translateY(-17px)',opacity:1,offset:.58},
@@ -10358,7 +10377,7 @@ const taWordMastery=(()=>{
   const bonus=document.createElement('span');bonus.className='ta-level-upgrades';bonus.textContent=upgrades.join('・');title.append(bonus);
   document.body.append(title);
   try{if(typeof sfx!=='undefined'&&sfx.comboMilestone)sfx.comboMilestone(true);}catch(_e){}
-  title.animate([{opacity:0,transform:'translate(-50%,-50%) translateY(8px)'},{opacity:1,transform:'translate(-50%,-50%) translateY(-15px)',offset:.55},{opacity:0,transform:'translate(-50%,-50%) translateY(-40px)'}],{duration:2100,easing:'ease-out',fill:'forwards'}).onfinish=()=>title.remove();
+  taCenterHold(title,[{opacity:0,transform:'translate(-50%,-50%) translateY(8px)'},{opacity:1,transform:'translate(-50%,-50%) translateY(-15px)',offset:.55},{opacity:0,transform:'translate(-50%,-50%) translateY(-40px)'}],{duration:2100,easing:'ease-out',fill:'forwards'}).onfinish=()=>title.remove();
   setTimeout(()=>{
    if(!taRunning&&!preview)return;
    const target=(badge||bar).getBoundingClientRect();
@@ -10554,7 +10573,7 @@ const taMastery=(()=>{
   title.append(number,bonus);document.body.append(title);
   // Use exactly the same entrance, rise, and fade timing as the 100-chain
   // +100,000 announcement; keep the independent orb/halo sequence unchanged.
-  const titleMotion=title.animate([
+  const titleMotion=taCenterHold(title,[
    {transform:'translate(-50%,-50%) translateY(8px)',opacity:0,offset:0},
    {transform:'translate(-50%,-50%) translateY(0)',opacity:1,offset:.12},
    {transform:'translate(-50%,-50%) translateY(-17px)',opacity:1,offset:.58},
@@ -12083,7 +12102,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    title.style.left=(heroRect.left+heroRect.width/2)+'px';title.style.top=(heroRect.top+heroRect.height/2)+'px';
    title.innerHTML='<span class="ta-level-number">翠玉解放</span><span class="ta-level-upgrades">言霊を呼ぶ力が使用可能になりました</span>';
    document.body.append(title);
-   title.animate([{opacity:0,transform:'translate(-50%,-50%) translateY(8px)'},{opacity:1,transform:'translate(-50%,-50%) translateY(-8px)',offset:.25},{opacity:1,transform:'translate(-50%,-50%) translateY(-18px)',offset:.65},{opacity:0,transform:'translate(-50%,-50%) translateY(-40px)'}],{duration:2700,easing:'ease-out',fill:'forwards'}).onfinish=()=>title.remove();
+   taCenterHold(title,[{opacity:0,transform:'translate(-50%,-50%) translateY(8px)'},{opacity:1,transform:'translate(-50%,-50%) translateY(-8px)',offset:.25},{opacity:1,transform:'translate(-50%,-50%) translateY(-18px)',offset:.65},{opacity:0,transform:'translate(-50%,-50%) translateY(-40px)'}],{duration:2700,easing:'ease-out',fill:'forwards'}).onfinish=()=>title.remove();
    try{if(typeof window.taPlayMasteryLevelSound==='function')window.taPlayMasteryLevelSound();else if(typeof sfx!=='undefined'&&sfx.comboMilestone)sfx.comboMilestone(true);}catch(_e){}
    const halo=document.createElement('div');halo.className='ta-level-halo';halo.style.setProperty('--level-color',color);
    halo.style.setProperty('--halo-size',Math.max(160,Math.min(310,heroRect.width*.55))+'px');
@@ -12102,7 +12121,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
    title.style.left=(heroRect.left+heroRect.width/2)+'px';title.style.top=(heroRect.top+heroRect.height/2)+'px';
    title.innerHTML='<span class="ta-level-number">黄玉解放</span><span class="ta-level-upgrades">雷の言霊が使用可能になりました</span>';
    document.body.append(title);
-   title.animate([{opacity:0,transform:'translate(-50%,-50%) translateY(8px)'},{opacity:1,transform:'translate(-50%,-50%) translateY(-8px)',offset:.25},{opacity:1,transform:'translate(-50%,-50%) translateY(-18px)',offset:.65},{opacity:0,transform:'translate(-50%,-50%) translateY(-40px)'}],{duration:2700,easing:'ease-out',fill:'forwards'}).onfinish=()=>title.remove();
+   taCenterHold(title,[{opacity:0,transform:'translate(-50%,-50%) translateY(8px)'},{opacity:1,transform:'translate(-50%,-50%) translateY(-8px)',offset:.25},{opacity:1,transform:'translate(-50%,-50%) translateY(-18px)',offset:.65},{opacity:0,transform:'translate(-50%,-50%) translateY(-40px)'}],{duration:2700,easing:'ease-out',fill:'forwards'}).onfinish=()=>title.remove();
    try{if(typeof window.taPlayMasteryLevelSound==='function')window.taPlayMasteryLevelSound();else if(typeof sfx!=='undefined'&&sfx.comboMilestone)sfx.comboMilestone(true);}catch(_e){}
    const halo=document.createElement('div');halo.className='ta-level-halo';halo.style.setProperty('--level-color',color);
    halo.style.setProperty('--halo-size',Math.max(160,Math.min(310,heroRect.width*.55))+'px');
