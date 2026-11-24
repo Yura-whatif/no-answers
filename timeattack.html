@@ -933,6 +933,10 @@ html.ta-lowfx .pull-core svg{filter:none!important}
 html.ta-lowfx .pull-core svg.b{display:none}
 html.ta-lowfx .pull-ring::after{animation:none!important;opacity:.5}
 html.ta-lowfx .word.flying{box-shadow:none!important;text-shadow:none!important}
+/* 斬撃で割れた金属の言霊の半分ずつ（見た目だけ。言霊の判定には含めない） */
+#viewMain>.hero>.drift.ta-cut-layer{position:absolute;inset:0;pointer-events:none;z-index:7;overflow:visible;background:none;border:0;box-shadow:none}
+#viewMain>.hero>.drift.ta-cut-layer::before,#viewMain>.hero>.drift.ta-cut-layer::after{content:none!important}
+.ta-cut-half{position:absolute;pointer-events:none;will-change:transform,opacity}
 html.ta-lowfx .ta-night-hud-visible{animation:none!important;opacity:.85!important}   /* 明滅を止めても文字は見えたままにする（止めると透明のままになっていた） */
 .glowbar.glowbar.moon i,.glowbar.glowbar.sun i{background:linear-gradient(90deg,#fff,var(--glow-particle,#b9d7ff))}
 /* 桜吹雪（白）／夜桜（黒）：絵の空気を変え、奥の花びら（言葉より奥）と、手前をよぎる大きなぼけ花びら（言葉より手前・触れない）を舞わせる */
@@ -12864,6 +12868,7 @@ const __ta100Start=window.__ta100Profile.start();try {
    crossRewardOrbs(w,hit);
    if(taPerfEnabled)taPerfCost('orbs',performance.now()-phaseOrbStart);
    const phaseLogicStart=taPerfEnabled?performance.now():0;
+   if(b.slash&&w.classList.contains('ta-metal'))taCrossCut(w,hit.rect,b,hr,b.pulses);
    taMastery.add('ice',w);collect(w,'fire',5);
    taCrossRectCache.delete(w);
    if(taPerfEnabled)taPerfCost('logic',performance.now()-phaseLogicStart);
@@ -12877,6 +12882,28 @@ const __ta100Start=window.__ta100Profile.start();try {
    const box=document.getElementById('taTimeBox');if(box){box.classList.remove('ta-frame-flash');requestAnimationFrame(()=>{if(box.isConnected)box.classList.add('ta-frame-flash');});}
   }
   if(taPerfEnabled)taPerfCost('hud',performance.now()-phaseHudStart);
+ }
+// 斬撃（紅・蒼ともLv4以上）：割れる金属の言霊を、斬線の向きに真っ二つにして左右へずらし落とす（見た目だけ）
+ let taCutLayer=null;
+ function taCrossCut(w,rect,b,hr,beat){
+  try{
+   if(!b.dirs||!hr||!rect||!rect.width)return;
+   if(!taCutLayer||!taCutLayer.isConnected){taCutLayer=document.createElement('div');taCutLayer.className='drift ta-cut-layer';taCutLayer.setAttribute('aria-hidden','true');hero.append(taCutLayer);}
+   // どの斬線で斬られたか：1回目＝紅の線、2回目＝蒼の線、それ以外は近いほう
+   const cx=rect.left+rect.width/2-hr.left,cy=rect.top+rect.height/2-hr.top;
+   const dist=d=>Math.abs((cx-b.x)*d.y-(cy-b.y)*d.x);
+   const d=beat===1?b.dirs[0]:beat===2?b.dirs[1]:(dist(b.dirs[0])<=dist(b.dirs[1])?b.dirs[0]:b.dirs[1]);
+   const n={x:-d.y,y:d.x},W=rect.width,H=rect.height,L=600,mx=W/2,my=H/2;
+   for(const side of [1,-1]){
+    const half=document.createElement('div');half.className='ta-cut-half';
+    const P=[[mx+d.x*L,my+d.y*L],[mx+d.x*L+n.x*L*side,my+d.y*L+n.y*L*side],[mx-d.x*L+n.x*L*side,my-d.y*L+n.y*L*side],[mx-d.x*L,my-d.y*L]];
+    half.style.cssText=`left:${rect.left-hr.left}px;top:${rect.top-hr.top}px;width:${W}px;height:${H}px;clip-path:polygon(${P.map(q=>q[0].toFixed(1)+'px '+q[1].toFixed(1)+'px').join(',')})`;
+    const c=w.cloneNode(true);c.classList.remove('got','flying');c.removeAttribute('id');c.style.cssText='position:absolute;left:0;top:0;margin:0;transform:none;animation:none;opacity:1;width:'+W+'px;height:'+H+'px;box-sizing:border-box;';
+    half.append(c);taCutLayer.append(half);
+    const sx=(n.x*7+d.x*9)*side,sy=(n.y*7+d.y*9)*side+6;
+    half.animate([{transform:'translate(0,0) rotate(0deg)',opacity:1},{transform:`translate(${sx*.35}px,${sy*.35}px) rotate(${side*1.5}deg)`,opacity:1,offset:.25},{transform:`translate(${sx}px,${sy+10}px) rotate(${side*5}deg)`,opacity:0}],{duration:560,easing:'cubic-bezier(.2,.6,.3,1)',fill:'forwards'}).onfinish=()=>half.remove();
+   }
+  }catch(_){}
  }
  function finalFlashCollect(b){
   if(!active())return;
@@ -12902,6 +12929,7 @@ const __ta100Start=window.__ta100Profile.start();try {
    crossRewardOrbs(w,hit);
    if(taPerfEnabled)taPerfCost('orbs',performance.now()-phaseOrbStart);
    const phaseLogicStart=taPerfEnabled?performance.now():0;
+   if(b.slash&&w.classList.contains('ta-metal'))taCrossCut(w,hit.rect,b,taCrossHeroRect,4);
    taMastery.add('ice',w);collect(w,'fire',5);
    taCrossRectCache.delete(w);
    if(taPerfEnabled)taPerfCost('logic',performance.now()-phaseLogicStart);
@@ -12943,12 +12971,63 @@ const __ta100Start=window.__ta100Profile.start();try {
   if(taTutOn())document.dispatchEvent(new CustomEvent('ta-tut',{detail:{kind:'cross'}}));
   // 紅玉・蒼玉がともにLv5のときだけ：最後に十字の光の刃を足し、言霊が消える時間を1秒延ばす
   let crossLv5=false;try{crossLv5=taMastery.level('fire')>=5&&taMastery.level('ice')>=5;}catch(_){}
-  const crossDirs=crossLv5?[a,b].map(f=>{const P=f.path,s0=P[0],z=P[P.length-1],l=Math.hypot(z.x-s0.x,z.y-s0.y)||1;return{x:(z.x-s0.x)/l,y:(z.y-s0.y)/l,type:f.type};}):null;
-  crossBursts.push({lv5:crossLv5,dirs:crossDirs,ultimateId,x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({points:taCrossBladePoints(f.path)})),rain:Array.from({length:taCompoundFxLevel()===2?12:(taMobileFx?18:105)},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taCompoundFxLevel()===2?9:(taMobileFx?12:30)},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?12:30)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
+  // 紅玉・蒼玉がともにLv4以上：爆発の見た目を「斬撃」に替える（消すタイミングと範囲は同じ）
+  let crossSlash=false;try{crossSlash=Math.min(taMastery.level('fire'),taMastery.level('ice'))>=4;}catch(_){}
+  if(window.taCrossSlashForce!=null)crossSlash=!!window.taCrossSlashForce;
+  const crossDirs=(crossLv5||crossSlash)?[a,b].map(f=>{const P=f.path,s0=P[0],z=P[P.length-1],l=Math.hypot(z.x-s0.x,z.y-s0.y)||1;return{x:(z.x-s0.x)/l,y:(z.y-s0.y)/l,type:f.type};}):null;
+  let crossClip=null;if(crossSlash){try{const fr=field.getBoundingClientRect(),hr=hero.getBoundingClientRect();crossClip={x:fr.left-hr.left,y:fr.top-hr.top,w:fr.width,h:fr.height};}catch(_){}}
+  crossBursts.push({lv5:crossLv5,slash:crossSlash,clip:crossClip,dirs:crossDirs,ultimateId,x:hit.x,y:hit.y,start:now,pulses:0,flashCollected:false,lastAfterCollect:0,whiteTraces:[a,b].map(f=>({points:taCrossBladePoints(f.path)})),rain:Array.from({length:taCompoundFxLevel()===2?12:(taMobileFx?18:105)},(_,i)=>{const depth=Math.random(),layer=depth<.48?0:depth<.84?1:2;return{x:Math.random(),y:Math.random(),depth:layer,speed:[.10,.17,.26][layer]*(.75+Math.random()*.5),drift:(Math.random()-.5)*[.016,.028,.045][layer],r:[.65,1.35,2.5][layer]*(.75+Math.random()*.65),delay:Math.random()*.85,twinkle:Math.random()*6.283,phase:Math.random()*6.283}}),shards:Array.from({length:taCompoundFxLevel()===2?9:(taMobileFx?12:30)},(_,i)=>({angle:i*Math.PI*2/(taMobileFx?12:30)+(Math.random()-.5)*.3,speed:110+Math.random()*250,size:1+Math.random()*3.5,kind:i%3}))});
   spark(hit.x,hit.y,'fire',taMobileFx?5:10);spark(hit.x,hit.y,'ice',taMobileFx?5:10);
   playElementSound('cross');
   if(taPerfEnabled)taPerfCost('cross',performance.now()-taCrossStarted);
  }
+// 斬撃の見た目（紅・蒼ともLv4以上）。消すタイミング・範囲は従来の三度の爆発と最後の閃光のまま、上に描く絵だけを替える。
+ //   0〜0.15秒：交わった瞬間の白い閃き／1秒：紅の線の向きに一閃／2秒：蒼の線の向きに一閃／3秒：二本が交差して一閃
+ //   （1〜3秒の斬線の長さは、その回で言霊を消す円の大きさに合わせる）／3.2秒：十字の斬線が画面の端まで走り、切り口がずれて光る
+ //   Lv5：最後の延長のあいだ、十字の切り口が残り火のように光り続ける
+ function taDrawCrossSlash(b,t){
+  const S=taMobileFx?.78:1,FULL=Math.hypot(innerWidth,innerHeight);
+  const col=d=>d.type==='fire'?['rgba(255,110,55,.55)','#ffd2a6']:['rgba(80,180,255,.55)','#cdeeff'];
+  // 刃：中心が太く、両端が鋭い。start〜cur まで伸びていく
+  const blade=(d,L,prog,fade,core)=>{
+   if(fade<=0)return;const n={x:-d.y,y:d.x},sx=b.x-d.x*L,sy=b.y-d.y*L,len=2*L*prog,ex=sx+d.x*len,ey=sy+d.y*len,mx=(sx+ex)/2,my=(sy+ey)/2,[glow,edge]=col(d);
+   for(const [w,a,c,op] of [[11*core,.5,glow,'screen'],[4.2*core,.9,edge,'screen'],[1.6*core,1,'#ffffff','lighter']]){
+    ctx.globalCompositeOperation=op;ctx.globalAlpha=a*fade;ctx.fillStyle=c;const ww=w*S;
+    ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(mx+n.x*ww,my+n.y*ww);ctx.lineTo(ex,ey);ctx.lineTo(mx-n.x*ww,my-n.y*ww);ctx.closePath();ctx.fill();}
+  };
+  // 切り口のずれ：細い暗い溝と、溝の両側で互い違いにずれた光の縁
+  const gap=(d,L,fade)=>{
+   if(fade<=0)return;const n={x:-d.y,y:d.x},off=3.2*S;
+   ctx.globalCompositeOperation='source-over';ctx.globalAlpha=.55*fade;ctx.strokeStyle='rgba(4,8,16,1)';ctx.lineWidth=2.4*S;
+   ctx.beginPath();ctx.moveTo(b.x-d.x*L,b.y-d.y*L);ctx.lineTo(b.x+d.x*L,b.y+d.y*L);ctx.stroke();
+   ctx.globalCompositeOperation='lighter';ctx.lineWidth=1.1*S;ctx.strokeStyle='#eaf6ff';
+   for(const s of [1,-1]){const ox=n.x*off*s+d.x*5*s,oy=n.y*off*s+d.y*5*s;ctx.globalAlpha=.75*fade;
+    ctx.beginPath();ctx.moveTo(b.x-d.x*L+ox,b.y-d.y*L+oy);ctx.lineTo(b.x+d.x*L+ox,b.y+d.y*L+oy);ctx.stroke();}
+  };
+  const [d1,d2]=b.dirs;
+  // 一閃〜三閃は採集エリアの中だけに描く（最後の十字は、従来どおり枠の外まで伸ばす）
+  ctx.save();if(b.clip){ctx.beginPath();ctx.rect(b.clip.x,b.clip.y,b.clip.w,b.clip.h);ctx.clip();}
+  // 交わった瞬間の閃き
+  if(t<.16){ctx.globalCompositeOperation='screen';ctx.globalAlpha=.32*(1-t/.16);ctx.fillStyle='#ffffff';ctx.fillRect(b.x-FULL,b.y-FULL,FULL*2,FULL*2);}
+  // 三度の斬撃
+  for(let i=1;i<=3;i++){
+   const age=t-i;if(age<0||age>.62)continue;
+   const L=CROSS_PULSE_RADII[i-1],prog=Math.min(1,age/.09),fade=age<.09?1:Math.pow(Math.max(0,1-(age-.09)/.53),1.3);
+   for(const d of (i===1?[d1]:i===2?[d2]:[d1,d2]))blade(d,L,prog,fade,i===3?1.6:1.35);
+   // 斬った範囲の目安：ごく淡い円
+   ctx.globalCompositeOperation='screen';ctx.globalAlpha=.18*fade;ctx.strokeStyle='#dff4ff';ctx.lineWidth=1;ctx.beginPath();ctx.arc(b.x,b.y,L,0,Math.PI*2);ctx.stroke();
+  }
+  ctx.restore();
+  // 斬り抜け：十字が画面の端まで（採集エリアの枠の外まで伸ばす）
+  if(t>=3.22){
+   const age=t-3.22,prog=Math.min(1,age/.12),fade=age<.12?1:Math.pow(Math.max(0,1-(age-.12)/.6),1.4);
+   for(const d of [d1,d2]){blade(d,FULL,prog,fade,1.6);if(prog>=1)gap(d,FULL,fade);}
+   if(b.lv5&&age>.5){const f2=Math.max(0,.4*(1-(age-.5)/1.5));for(const d of [d1,d2]){blade(d,FULL,1,f2,.9);gap(d,FULL,f2*.8);}}
+  }
+  ctx.globalCompositeOperation='screen';
+ }
+ // 確認用：交点 (x,y)（採集エリア内の座標）で、紅と蒼の直線を交差させたことにして「全部なかったことに」を起こす
+ window.taTestCross=(x,y,deg=20,len=240)=>{const r=deg*Math.PI/180,mk=(type,ang)=>{const dx=Math.cos(ang),dy=Math.sin(ang),path=[];for(let i=0;i<=12;i++){const t=-len/2+len*i/12;path.push({x:x+dx*t,y:y+dy*t});}return{type,path,isTap:false};};triggerCross(mk('fire',r),mk('ice',r+Math.PI/2));};
  // Cached radial core: pulse changes size/opacity, not the expensive gradient raster.
  const taCrossHaloCanvas=document.createElement('canvas');
  taCrossHaloCanvas.width=taCrossHaloCanvas.height=256;
@@ -13021,8 +13100,9 @@ const __ta100Start=window.__ta100Profile.start();try {
     ctx.globalAlpha=(.5+beat*.35)*orbAlpha;ctx.strokeStyle='#e5f9ff';ctx.lineWidth=1.5;
     ctx.beginPath();ctx.arc(b.x,b.y,r*.82,0,Math.PI*2);ctx.stroke();
    }
+   if(b.slash&&b.dirs)taDrawCrossSlash(b,t);
    // At each beat a broad, thin ring expands across the collection field.
-   for(let i=1;i<=3;i++){
+   for(let i=1;i<=3;i++){if(b.slash)break;
     const age=t-i;if(age<0||age>.62)continue;
     const u=age/.62,rr=24+(CROSS_PULSE_RADII[i-1]-24)*(1-(1-u)*(1-u));
     ctx.globalAlpha=Math.pow(1-u,1.6)*(.7+i*.08);ctx.strokeStyle=i%2?'#bcefff':'#f8dfba';ctx.lineWidth=(2.6+i*.55)*(1-u)+.6;
@@ -13031,11 +13111,11 @@ const __ta100Start=window.__ta100Profile.start();try {
    // Final sharp shatter after the third pulse.
    if(t>=3.22){const u=Math.min(1,(t-3.22)/.5),flash=Math.max(0,1-u*3);
     const rr=18+250*u;
-    ctx.globalAlpha=Math.pow(1-u,1.4)*.9;ctx.strokeStyle='#ecfbff';ctx.lineWidth=5*(1-u)+.5;
-    ctx.beginPath();ctx.arc(b.x,b.y,rr,0,Math.PI*2);ctx.stroke();
+    if(!b.slash){ctx.globalAlpha=Math.pow(1-u,1.4)*.9;ctx.strokeStyle='#ecfbff';ctx.lineWidth=5*(1-u)+.5;
+    ctx.beginPath();ctx.arc(b.x,b.y,rr,0,Math.PI*2);ctx.stroke();}
     if(flash>0){const glow=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,95+90*u);glow.addColorStop(0,`rgba(255,255,255,${flash*.85})`);glow.addColorStop(1,'rgba(120,225,255,0)');ctx.globalAlpha=1;ctx.fillStyle=glow;ctx.beginPath();ctx.arc(b.x,b.y,95+90*u,0,Math.PI*2);ctx.fill();}
     // 両方Lv5のときだけ：2本の線の向きに、十字の光の刃が画面の端まで伸びる（紅の刃は朱、蒼の刃は水色の縁）
-    if(b.lv5&&b.dirs){const S=taMobileFx?.72:1,uu=Math.min(1,(t-3.22)/.6),e=1-Math.pow(1-Math.min(1,uu*2.5),3),fade=Math.pow(1-uu,1.4);
+    if(b.lv5&&b.dirs&&!b.slash){const S=taMobileFx?.72:1,uu=Math.min(1,(t-3.22)/.6),e=1-Math.pow(1-Math.min(1,uu*2.5),3),fade=Math.pow(1-uu,1.4);
      for(const d of b.dirs){const n={x:-d.y,y:d.x},L=60+760*e,fire=d.type==='fire';
       for(const [w,al,col,op] of [[34,.55,fire?'rgba(230,50,30,.9)':'rgba(60,150,255,.9)','screen'],[16,.85,fire?'#ffc070':'#c8f4ff','screen'],[6,1,'#ffffff','lighter']]){
        ctx.globalCompositeOperation=op;ctx.globalAlpha=al*fade;ctx.fillStyle=col;const ww=w*S*fade+.5;ctx.beginPath();ctx.moveTo(b.x+d.x*L,b.y+d.y*L);ctx.lineTo(b.x+n.x*ww,b.y+n.y*ww);ctx.lineTo(b.x-d.x*L,b.y-d.y*L);ctx.lineTo(b.x-n.x*ww,b.y-n.y*ww);ctx.closePath();ctx.fill();}}
