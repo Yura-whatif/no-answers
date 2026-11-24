@@ -5403,7 +5403,7 @@ const taCenturyMusic=(()=>{
   // 第四章の曲は夜ごとに変える: 第一夜=Granite / 第二夜=Threshold / 第三夜以降=Pendulum
   function srcForNight(){const n=typeof taNightNumber==='number'?taNightNumber:1;return n<=1?'audio/Beneath_the_Granite_Sky.mp3?v=20261121':n===2?'audio/Upon_the_Silent_Threshold.mp3?v=20261102':n===3?'audio/chain100-weight-of-the-pendulum.mp3?v=20261024':n===4?'audio/Stone_Against_Time.mp3':'audio/Midnight_in_the_Nave.mp3';}   // 第四夜は夜明けの城から、第五夜は第一章から
   let audio=null,curSrc='',active=false,stoppedForTime=false,fadeId=0,fadeTimer=0,serial=0;
-  const volume=.38; // Lower level; preserve existing fade and timing
+  const volume=.33; // 曲の音量（以前.38）
   let heartbeatDuck=false,duckTimer=0;
   function clearDuck(){if(duckTimer){clearInterval(duckTimer);duckTimer=0;}}
   function fadeVolume(target,duration){
@@ -5480,13 +5480,15 @@ const taCenturyMusic=(()=>{
   function fadeTo(target,ms=3000){fadeVolume(target,ms);}
   function isActive(){return active;}
   function retry(){if(active&&!stoppedForTime&&audio&&audio.paused&&!taSilverMusic.isActive())play();}
-  return {start,stop,timeStop,timeResume,retry,resultOutro,isActive,setHeartbeatDuck,fadeTo};
+  return {start,stop,timeStop,timeResume,retry,resultOutro,isActive,setHeartbeatDuck,fadeTo,setLoop:v=>{if(audio)audio.loop=v;}};
 })();
+// 夜のボーナス中は、流れている曲が終わってもくり返さない（ボーナス以外では従来どおりくり返す）
+setInterval(()=>{try{const on=!taNightActive();taCenturyMusic.setLoop(on);taSilverMusic.setLoop(on);}catch(_){}},300);
 // 300-chain music: fade out century over 4s, hold 1s silence, then start new track at full volume.
 const taSilverMusic=(()=>{
   let audio=null,active=false,pausedForTime=false,fadeTimer=0,fadeTicket=0,outroTimer=0;
   let transitionTimer=0,transitionGeneration=0,phase='idle',phaseStarted=0,phaseRemaining=0;
-  const volume=.38;
+  const volume=.33;   // 曲の音量（以前.38）
   let heartbeatDuck=false;
   function ensure(){if(!audio){audio=new Audio('audio/Sora_Vatum.mp3');audio.loop=true;audio.preload='auto';audio.volume=0;}return audio;}
   function cancelTransition(){
@@ -5592,7 +5594,7 @@ const taSilverMusic=(()=>{
     },delayMs);
   }
   function retry(){if(active&&!pausedForTime&&phase==='playing'){play();if(audio&&audio.volume===0)audio.volume=heartbeatDuck?volume*.28:volume;}}
-  return {start,stop,timeStop,timeResume,resultOutro,retry,setHeartbeatDuck,isActive:()=>active};
+  return {start,stop,timeStop,timeResume,resultOutro,retry,setHeartbeatDuck,isActive:()=>active,setLoop:v=>{if(audio)audio.loop=v;}};
 })();
 // Sparse, independent silver motes: CSS animations only; no animation-frame loop.
 const taSilverDust=(()=>{
@@ -7091,8 +7093,8 @@ const __ta100Start=window.__ta100Profile.start();try {
     for(let i=0;i<3;i++) setTimeout(()=>{ if(!flood && !shattering && !libOpen) spawnWord({force:true, plain:true}); }, 120 + i*160 + Math.random()*150); }   // 引き寄せと一緒に、吸い寄せる言葉を数個まいておく
   // 爆弾発言：金属文字が出る章から、まれに現れる（テストモードでは「爆弾発言出現」でいつでも出せる）
   const bomb = !opt.plain && !special && !odd && !multi && !pull && !flood && !sakuraOn && taRunning
-    && (forceBomb || (Date.now() > nextBombAt && taMetalRate() > 0 && Math.random() < .08));
-  if(bomb){ w.textContent = "爆弾発言"; w.dataset.word = "爆弾発言"; w.classList.add("bomb"); try{ sfx._bombLoad(); }catch(_){} forceBomb = false; nextBombAt = Date.now() + 25000; w.setAttribute("aria-label", "爆弾発言（触れるとまわりの言霊ごと爆発する）"); }
+    && (forceBomb || (Date.now() > nextBombAt && taMetalRate() > 0 && Math.random() < (taNightNumber >= 5 ? .16 : .08)));   // 第五夜は最初から出やすい
+  if(bomb){ w.textContent = "爆弾発言"; w.dataset.word = "爆弾発言"; w.classList.add("bomb"); try{ sfx._bombLoad(); }catch(_){} forceBomb = false; nextBombAt = Date.now() + (taNightNumber >= 5 ? 12000 : 25000); w.setAttribute("aria-label", "爆弾発言（触れるとまわりの言霊ごと爆発する）"); }
   // 陽だまり（白）・月明かり（黒）：触れると、しばらく違和感が2倍
   // 懐中時計が近いとき（現れる20秒前から、漂っているあいだ）は、降る記憶・昇る想いが来やすい（待ち時間も短く）
   const preStop = Date.now() > nextSpecialAt - 20000 || !!field.querySelector(".word.special:not(.got)");
@@ -8241,7 +8243,7 @@ function vortexRelease(){
   const isSwipeable = w => !w.matches('.vortex,.crack') && !w.classList.contains('got') && (!w.classList.contains('still') || flood);
   // One pointer event shares one word-rectangle snapshot across all 9px hit samples.
   // This avoids repeated layout reads on dense green-orb sweeps.
-  let swipeHitSnapshot=null;
+  let swipeHitSnapshot=null,swipeLastActivity=0;
   // v52: process the full pointer segment once, rather than sampling every 9px
   // and scanning every word at each sample.  Snapshot all word rectangles once
   // per pointer event, including its coalesced positions.
@@ -8374,6 +8376,9 @@ function vortexRelease(){
     if(vx){e.preventDefault();active=false;try{field.setPointerCapture(e.pointerId)}catch(_){}vortexHold(vx);return;}
     const cr=e.target.closest&&e.target.closest('.word.crack');
     if(cr){e.preventDefault();active=false;crackTap(cr);return;}
+    // 前の指の「離した」知らせが届かずに一筆が開いたまま残ると、以後のタップがすべて無視されてしまう。
+    // 別の指で、前の一筆が0.8秒以上動いていなければ、前の一筆は終わったものとして閉じる。
+    if(active && e.pointerId!==pointer && performance.now()-swipeLastActivity>800) finish();
     if(active)return;
     const cw=e.target.closest&&e.target.closest('.word');
     centerTapCandidate=null;
@@ -8394,13 +8399,14 @@ function vortexRelease(){
     }
     swipeFastCandidate=null;shinsokuAwarded=false;
     issenTrail=null;issenTrailAnimation=null;
-    active=true;pointer=e.pointerId;started=performance.now();lx=e.clientX;ly=e.clientY;
+    active=true;pointer=e.pointerId;started=performance.now();swipeLastActivity=started;lx=e.clientX;ly=e.clientY;
     points=[{x:lx,y:ly}];collected.clear();flashed=false;flashedTier=0;awardedBonus=0;gessenHits=[];gessenAwarded=false;gessenStraight=false;gessenLastAt=0;gessenChainCount=0;
     window.__taSwipeActive=true;
     try{field.setPointerCapture(e.pointerId)}catch(_){}hit(lx,ly);
   });
   field.addEventListener('pointermove',e=>{
     if(!active||e.pointerId!==pointer)return;
+    swipeLastActivity=performance.now();
     // 押したまま動かした（心眼にならない）ら、待たせていた普通の消去音をすぐ鳴らす
     if(taPendingTouchSound&&centerTapCandidate&&Math.hypot(e.clientX-centerTapCandidate.x,e.clientY-centerTapCandidate.y)>=10){try{taPendingTouchSound();}catch(_){}taPendingTouchSound=null;taShinganPendingWord=null;}
     const evs=e.getCoalescedEvents?e.getCoalescedEvents():[];
@@ -9472,7 +9478,7 @@ const sfx = (()=>{
     }catch(error){console.error('Embedded antique tick initialization failed',error);return Promise.resolve(null);}
   }
   let clickBuf = null;
-  let bgm = null, bgmBuf = null, bgmMaking = null; const BGM_VOL = .6;
+  let bgm = null, bgmBuf = null, bgmMaking = null; const BGM_VOL = .52;   // 以前.6
   const BGM_PROG = [[53,57,60,64],[52,55,59,62],[50,57,60,64],[48,55,59,64]], BGM_STEP = 8.5, BGM_DUR = 11;
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
   function makeBgm(){
@@ -10253,8 +10259,8 @@ function taNightScoreRate(){return 1+.25*(Math.min(taNightNumber,5)-1);}
 function taNightTimeRate(){return 1+.1*(Math.min(taNightNumber,5)-1);}
 
 // 800-chain loop-clear: one bonus per 800 chains, then stage 01 with score/time retained.
-// 夜のボーナスの青い言霊：40個（以前30個。1つ+1秒、同じ20秒のうちに現れる）
-const taNightBonus={phase:'idle',serial:0,timers:[],born:0,spawned:0,wordCount:40,orbPending:false,specialWordStarted:false,overlay:null,curtain:null,unlockAtStart:false};
+// 夜のボーナスの青い言霊：30個（1つ+1秒、20秒のうちに現れる）
+const taNightBonus={phase:'idle',serial:0,timers:[],born:0,spawned:0,wordCount:30,orbPending:false,specialWordStarted:false,overlay:null,curtain:null,unlockAtStart:false};
 const taNightActive=()=>taNightBonus.phase!=='idle';
 function taNightLater(fn,ms){const serial=taNightBonus.serial;const id=setTimeout(()=>{if(serial===taNightBonus.serial&&taRunning)fn();},ms);taNightBonus.timers.push(id);}
 function taNightClear(){document.querySelectorAll('.ta-night-echo').forEach(el=>el.remove());taNightBonus.serial++;taNightBonus.timers.forEach(clearTimeout);taNightBonus.timers=[];taNightBonus.phase='idle';taNightBonus.orbPending=false;taNightBonus.specialWordStarted=false;document.documentElement.classList.remove('ta-night-bonus');document.querySelectorAll('#drift .ta-night-word,#drift .ta-night-silver').forEach(el=>el.remove());taNightBonus.overlay?.remove();taNightBonus.overlay=null;taNightBonus.curtain?.remove();taNightBonus.curtain=null;}
@@ -10312,6 +10318,11 @@ function taNightCollectBlue(w){
 // Capture before the game's normal collectors, for both tap and continuous swipe.
 // The hit is resolved by the actual element under the pointer, not by an earlier target.
 // A final ordinary blue word after the 30-word bonus; preserve the 20-second spawning window.
+// 夜のボーナスの青い言霊は、ふつうの一筆の仕組みとは別に、指の下にあれば必ず拾う（ほかの仕組みの状態に左右されない保険）
+(()=>{const pick=(x,y)=>{try{for(const el of document.elementsFromPoint(x,y)){const w=el.closest&&el.closest('.word.ta-night-word');if(w&&!w.dataset.taken&&!w.classList.contains('got')){taNightCollectBlue(w);return;}}}catch(_){}};
+ const on=e=>{if(!taNightActive()||!['collect','interlude'].includes(taNightBonus.phase))return;if(e.type==='pointermove'&&!e.buttons&&e.pointerType==='mouse')return;
+  const evs=e.getCoalescedEvents?e.getCoalescedEvents():[];const pts=evs.length?evs.filter((_,i)=>i%2===1||i===evs.length-1):[e];for(const v of pts)pick(v.clientX,v.clientY);};
+ document.addEventListener('pointerdown',on,true);document.addEventListener('pointermove',on,{capture:true,passive:true});})();
 function taNightSpawnFinalBlue(){
  if(taNightBonus.phase!=='interlude')return;
  const w=spawnWord({force:true,plain:true,nightBonus:true,forceBlue:true,summonX:19,summonY:40});
@@ -10436,6 +10447,7 @@ function taNightReturn(){
      comboPaused=true;comboWindowMs=COMBO_MS;clearTimeout(bumpCombo.h);
      taStoryReset();comboRush(false);   // 新しい夜は第一章から（得点・連鎖はそのまま）。縁は第一章の色（消灯）に戻す
      // 第五夜は第一章から曲を流す。前の夜の曲が消えきってから（3.2秒のフェードのあと）始める
+     if(taNightNumber>=5)nextBombAt=Math.min(nextBombAt,Date.now()+4000);   // 第五夜は始まってすぐから爆弾発言が出られる
      if(taNightNumber>=5){const wait=Math.max(0,3400-(performance.now()-(taNightBonus.musicStopAt||0)));
       setTimeout(()=>{if(taRunning&&taNightNumber>=5&&['idle','return'].includes(taNightBonus.phase)&&!taCenturyMusic.isActive()&&!taSilverMusic.isActive())taCenturyMusic.start();},wait);}
      taYuraSayLater('nightAgain',1800);
