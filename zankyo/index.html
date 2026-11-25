@@ -5406,9 +5406,9 @@ function comboStepBonus(n){
 }
 // 100-chain BGM.  Keep its state independent of ranking/result music.
 const taCenturyMusic=(()=>{
-  // 第四章の曲は夜ごとに変える: 第一夜=Granite / 第二夜=Threshold / 第三夜以降=Pendulum
-  function srcForNight(){const n=typeof taNightNumber==='number'?taNightNumber:1;return n<=1?'../audio/Beneath_the_Granite_Sky.mp3?v=20261121':n===2?'../audio/Upon_the_Silent_Threshold.mp3?v=20261102':n===3?'../audio/chain100-weight-of-the-pendulum.mp3?v=20261024':n===4?'../audio/Stone_Against_Time.mp3':'../audio/Midnight_in_the_Nave.mp3';}   // 第四夜は夜明けの城から、第五夜は第一章から
-  let audio=null,curSrc='',active=false,stoppedForTime=false,fadeId=0,fadeTimer=0,serial=0;
+  // 夜ごとの曲: 第一夜・第二夜=Granite / 第三夜=Threshold / 第四夜=Pendulum / 第五夜=Midnight in the Nave（流れ始める章は変えない：第一〜四夜は夜明けの城から、第五夜は第一章から）
+  function srcForNight(){const n=typeof taNightNumber==='number'?taNightNumber:1;return n<=2?'../audio/Beneath_the_Granite_Sky.mp3?v=20261121':n===3?'../audio/Upon_the_Silent_Threshold.mp3?v=20261102':n===4?'../audio/chain100-weight-of-the-pendulum.mp3?v=20261024':'../audio/Midnight_in_the_Nave.mp3';}
+  let audio=null,curSrc='',active=false,stoppedForTime=false,fadeId=0,fadeTimer=0,serial=0,endedHold=false;
   const volume=.33; // 曲の音量（以前.38）
   let heartbeatDuck=false,duckTimer=0;
   function clearDuck(){if(duckTimer){clearInterval(duckTimer);duckTimer=0;}}
@@ -5428,9 +5428,11 @@ const taCenturyMusic=(()=>{
     if(audio && !audio.paused)fadeVolume(on?volume*.28:volume,on?350:restoreMs);
   }
   function clearFade(){++fadeId;if(fadeTimer){cancelAnimationFrame(fadeTimer);fadeTimer=0;}}
-  function ensure(){const want=srcForNight();if(!audio){audio=new Audio(want);curSrc=want;audio.loop=true;audio.preload='auto';audio.volume=0;}else if(curSrc!==want&&audio.paused){audio.src=want;curSrc=want;try{audio.currentTime=0;}catch(e){}}return audio;}
+  function ensure(){const want=srcForNight();if(!audio){audio=new Audio(want);curSrc=want;audio.loop=true;audio.preload='auto';audio.volume=0;audio.addEventListener('ended',()=>{if(!audio.loop)endedHold=true;});}else if(curSrc!==want&&audio.paused){audio.src=want;curSrc=want;try{audio.currentTime=0;}catch(e){}}return audio;}
   function play(){
     if(!active||stoppedForTime||!taRunning||!sfx.on||document.hidden)return;
+    // 夜のボーナス中に最後まで流れ終えた曲は、タップなどで最初から鳴り直さないようにする（余韻を残す）
+    if(endedHold)return;
     const a=ensure();clearFade();
     // Start immediately at the target level; keep pause/resume and outro fades unchanged.
     a.volume=heartbeatDuck?volume*.28:volume;
@@ -5440,7 +5442,7 @@ const taCenturyMusic=(()=>{
   }
   function start(){
     if(active)return;
-    active=true;heartbeatDuck=false;stoppedForTime=!!flood;serial++;
+    active=true;heartbeatDuck=false;stoppedForTime=!!flood;serial++;endedHold=false;
     const a=ensure();clearFade();try{a.currentTime=0;}catch(_){}
     if(!stoppedForTime)play();
   }
@@ -5448,7 +5450,7 @@ const taCenturyMusic=(()=>{
   function timeResume(){if(!active)return;stoppedForTime=false;if(taSilverMusic.isActive())return;play();}
   function stop(immediate=false,fadeMs=900){
     if(!active&&!audio)return;
-    active=false;heartbeatDuck=false;clearDuck();stoppedForTime=false;serial++;clearFade();sfx.setCenturyMix(false);
+    active=false;heartbeatDuck=false;clearDuck();stoppedForTime=false;serial++;clearFade();sfx.setCenturyMix(false);endedHold=false;
     if(!audio)return;
     const a=audio;
     if(immediate||a.paused){a.pause();try{a.currentTime=0;}catch(_){}a.volume=0;return;}
@@ -5496,7 +5498,8 @@ const taSilverMusic=(()=>{
   let transitionTimer=0,transitionGeneration=0,phase='idle',phaseStarted=0,phaseRemaining=0;
   const volume=.33;   // 曲の音量（以前.38）
   let heartbeatDuck=false;
-  function ensure(){if(!audio){audio=new Audio('../audio/Sora_Vatum.mp3');audio.loop=true;audio.preload='auto';audio.volume=0;}return audio;}
+  let silverEndedHold=false;
+  function ensure(){if(!audio){audio=new Audio('../audio/Sora_Vatum.mp3');audio.loop=true;audio.preload='auto';audio.volume=0;audio.addEventListener('ended',()=>{if(!audio.loop)silverEndedHold=true;});}return audio;}
   function cancelTransition(){
     ++transitionGeneration;
     if(transitionTimer){clearTimeout(transitionTimer);transitionTimer=0;}
@@ -5520,12 +5523,12 @@ const taSilverMusic=(()=>{
     if(active&&phase==='playing'&&audio&&!audio.paused)fadeTo(on?volume*.28:volume,on?350:restoreMs);
   }
   function play(){
-    if(!active||pausedForTime||!sfx.on||document.hidden)return;
+    if(!active||pausedForTime||!sfx.on||document.hidden||silverEndedHold)return;   // 夜のボーナス中に流れ終えたら、鳴り直さない
     const a=ensure();a.play().catch(()=>{});
   }
   function beginNewTrack(){
     if(!active||pausedForTime)return;
-    phase='playing';phaseRemaining=0;transitionTimer=0;
+    phase='playing';phaseRemaining=0;transitionTimer=0;silverEndedHold=false;
     document.documentElement.classList.remove('ta-300-gold-fading');
     document.documentElement.classList.add('ta-silver-music-started');
     const a=ensure();a.volume=heartbeatDuck?volume*.28:volume;
@@ -5581,7 +5584,7 @@ const taSilverMusic=(()=>{
     }
   }
   function stop(immediate=false,ms=900){
-    active=false;heartbeatDuck=false;pausedForTime=false;phase='idle';phaseRemaining=0;
+    active=false;heartbeatDuck=false;pausedForTime=false;phase='idle';phaseRemaining=0;silverEndedHold=false;
     document.documentElement.classList.remove('ta-silver-music-started','ta-300-gold-fading');
     cancelFade();if(!audio)return;const a=audio;
     if(immediate||a.paused){a.pause();a.volume=0;try{a.currentTime=0;}catch(_){}return;}
@@ -5590,7 +5593,7 @@ const taSilverMusic=(()=>{
   }
   function resultOutro(delayMs=20000,fadeMs=3000){
     if(!active||!audio)return;
-    active=false;heartbeatDuck=false;pausedForTime=false;phase='idle';phaseRemaining=0;
+    active=false;heartbeatDuck=false;pausedForTime=false;phase='idle';phaseRemaining=0;silverEndedHold=false;
     document.documentElement.classList.remove('ta-silver-music-started','ta-300-gold-fading');
     cancelFade();const a=audio;
     if(a.paused&&sfx.on)a.play().catch(()=>{});
@@ -5790,7 +5793,7 @@ const TA_NIGHT3_EQ=[0,1,2,3,5,6,7,9];
 // 第四夜は八章：第三夜からランタンの書斎を抜き、最後に白い光の書斎を足す。
 // 夜→流星→夜明けの城→赤い空の城→荒野の月夜→緑の草原→青く光る都市→白い光の書斎 → 夜のボーナス。頁の合計は1100。
 const TA_NIGHT4_STEPS=[90,110,125,140,150,160,160,165];    // 合計1100頁（以前1215。速さ・金属が最大の夜は長さで難しくしない）
-const TA_NIGHT4_LEVEL=[0,50,100,300,300,400,500,600];      // 五章は赤い空の城（300）の上に荒野の景色。八章（600）で曲が Sora Vatum に替わる
+const TA_NIGHT4_LEVEL=[0,50,100,300,300,400,500,600];      // 五章は赤い空の城（300）の上に荒野の景色。八章は白い光の書斎（600）
 const TA_NIGHT4_EQ=[0,2,3,5,6,7,8,9];                     // 以前の十章のどこにあたるか（八章＝以前の最終章）
 // 第五夜（いまの最終夜。第六夜以降も同じ）は九章：第四夜の最後に雲の上の白い景色（stage_10）を足す。
 // 頁の合計は1200。
