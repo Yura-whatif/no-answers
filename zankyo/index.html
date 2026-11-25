@@ -842,7 +842,7 @@ html,body{overscroll-behavior-y:none;}
 /* 導火線のように、縁の火の粉が一定の間隔で脈打つ（明滅は重ねた層の濃さだけ） */
 .word.bomb::after{content:"";position:absolute;inset:-3px;border-radius:inherit;pointer-events:none;box-shadow:0 0 16px 2px rgba(255,140,50,.75),inset 0 0 8px rgba(255,170,90,.45);opacity:0;animation:taBombFuse .9s ease-in-out infinite}
 @keyframes taBombFuse{0%,100%{opacity:.1}50%{opacity:1}}
-.ta-bomb-charge{position:fixed;z-index:19;pointer-events:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;padding:0 .9em;border-radius:3px;transform:translate(-50%,-50%);
+.ta-bomb-charge{position:fixed;z-index:19;pointer-events:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;padding:0 .9em;border-radius:3px;transform:translate(-50%,-50%);overflow:hidden;white-space:nowrap;
  font:700 14px/1 var(--mincho,serif);letter-spacing:.14em;color:#fff;background:rgba(255,248,236,.92);border:1px solid #fff;
  box-shadow:0 0 14px 4px rgba(255,255,255,.85),0 0 34px 10px rgba(255,190,120,.55);text-shadow:0 0 6px #fff;will-change:transform}
 .ta-bomb-glow{position:fixed;z-index:18;pointer-events:none;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.85) 0 12%,rgba(255,236,200,.4) 38%,rgba(255,200,140,0) 70%);mix-blend-mode:screen;will-change:transform,opacity}
@@ -2659,6 +2659,12 @@ html.ta-native-return-all.ta-native-return-800 #viewMain>.hero.ta-active-visual>
 #taStarOutcome .ta-star-result-summary{font-size:15px;}
 #taStarOutcome .ta-star-unlock-heading{display:block;margin:14px 0 8px;padding:8px 3px;font-size:19px;color:#ffe4a5;text-shadow:0 0 12px #e2ad6188;}
 #taStarOutcome .ta-star-unlock{margin:7px 0;padding:10px 6px;font-size:16px;font-weight:bold;border:1px solid #b28b56;border-radius:8px;background:#8d683524;color:#ffe3a2;}
+</style>
+<style id="ta-kickframe-css">
+/* 第五夜：曲のバスドラムに合わせて、採集エリアの枠がほのかに光る（玉を使ったときの枠の光より弱く、外へは広げない） */
+.ta-kickframe{position:absolute;inset:0;z-index:63;pointer-events:none;border-radius:inherit;opacity:0;will-change:opacity;
+ box-shadow:inset 0 0 0 1.5px rgba(222,234,255,.55),inset 0 0 12px 2px rgba(170,200,255,.30)}
+@media(prefers-reduced-motion:reduce){.ta-kickframe{display:none}}
 </style>
 <style id="ta-orbframe-css">
 /* 紅・蒼 Lv5：炎・氷が出ている間の枠の光 */
@@ -5488,7 +5494,9 @@ const taCenturyMusic=(()=>{
   function fadeTo(target,ms=3000){fadeVolume(target,ms);}
   function isActive(){return active;}
   function retry(){if(active&&!stoppedForTime&&audio&&audio.paused&&!taSilverMusic.isActive())play();}
-  return {start,stop,timeStop,timeResume,retry,resultOutro,isActive,setHeartbeatDuck,fadeTo,setLoop:v=>{if(audio)audio.loop=v;}};
+  // 第五夜の曲のバスドラムに合わせて枠を光らせるため、いま流れている曲と再生位置を教える（流れていなければ -1）
+  const playingAt=name=>audio&&active&&!audio.paused&&curSrc.includes(name)?audio.currentTime:-1;
+  return {start,stop,timeStop,timeResume,retry,resultOutro,isActive,setHeartbeatDuck,fadeTo,playingAt,setLoop:v=>{if(audio)audio.loop=v;}};
 })();
 // 夜のボーナス中は、流れている曲が終わってもくり返さない（ボーナス以外では従来どおりくり返す）
 setInterval(()=>{try{const on=!taNightActive();taCenturyMusic.setLoop(on);taSilverMusic.setLoop(on);}catch(_){}},300);
@@ -7030,7 +7038,8 @@ function spawnLoop(){
     // Keep natural arrivals at 75% cadence during Sakura, independent of falling words.
     const sakuraNatural = sakuraOn && taRunning;
     const dCh = taDensityChapter();
-    const target = taRunning ? (matchMedia("(pointer:coarse)").matches ? TA_DENSITY_MOBILE[dCh] : TA_DENSITY_PC[dCh]) : 4;
+    const n5 = taRunning && typeof taNightNumber==='number' && taNightNumber >= 5;   // 第五夜は言霊を多めに（同時に1個多く、出る間隔を0.85倍）
+    const target = taRunning ? (matchMedia("(pointer:coarse)").matches ? TA_DENSITY_MOBILE[dCh] : TA_DENSITY_PC[dCh]) + (n5 ? 1 : 0) : 4;
     const now = performance.now();
     // At <=1 remaining word, bring forward the next single spawn without clustering.
     if(taRunning && count<=1 && nextNaturalSpawnAt>now+260)nextNaturalSpawnAt=now+110;
@@ -7066,7 +7075,7 @@ function spawnLoop(){
           }, staggerMs);
         }
       }
-      nextNaturalSpawnAt = now + (taRunning ? (400+Math.random()*450)*TA_DENSITY_GAP[dCh]*(sakuraNatural ? 4/3 : 1) : 720+Math.random()*700);
+      nextNaturalSpawnAt = now + (taRunning ? (400+Math.random()*450)*TA_DENSITY_GAP[dCh]*(sakuraNatural ? 4/3 : 1)*(n5 ? .85 : 1) : 720+Math.random()*700);
     }
   }
   setTimeout(spawnLoop, flood ? 430 : (taRunning ? (180+Math.random()*150)*TA_DENSITY_GAP[taDensityChapter()] : 520+Math.random()*340));
@@ -7423,17 +7432,29 @@ function taHeavyGuard(extra=0){
 // ふつうの言霊は消えて、ふつうに消したのと同じく連鎖・得点・頁に数える。範囲内の爆弾発言は誘爆し、芽生えは芽吹く。ほかの特別な言霊は巻き込まない。
 const TA_BOMB_CHARGE_MP3="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";
 const TA_BOMB_BOOM_MP3="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Xq1O6T3LytLn//tYxPEDENxxBg7hI8nyNuHJwIrxUYmW6/cvty9rWMv/77TLN/+/mcp+cPNvyMp2nYtzzhXzEqdNdq/WfFhMuEbeE0+Xq7ZRUYOZACUk2m4d7YUi4PVFFH7pZDCqT6uNLd+9iMLwcJUOdpMP3uufHubkfDyLW/lXpVCd7z1LslHu27UiimZcyUpwiypE3/2l3PPM4d8J9ztvgyNksmvcjMlZT3mxN7cO9fyO9/vcmh/9v61D/jLS26VK+U7UyudzjEYOPMLRMNHaEEAAYsOrgwynXmYcJ1eA4LMgCAcIrBd8vQX4LbJhf4ZNLtuKgv+r9BRkDEYCcr/9piRbL2nw9MuTDv//rEZw6jL2vuvNOU/0y/sO////sQdCTMvfeLuB//tYxPSDEn25Ag4wbwoAtyFJxgyxDk1GrVWM2dVv////+BHLd+Lv4/kYduXyLu6Wz+Xf5W//////93H8lkPv/fhyQRSNxO2/n63+Ov/HLKtv////////4YkDvw/K3YjECSOG5fGH4oobh+3jKctSqrjVrU0qq0sRpqaGv//////////9nEOUTtxeRw4+khd+G427FFFJfD8PxB/LlWq+sqjTtSl/XBlUadqUxl2Yk/ztRF/Ws0xBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tYxPAAD8IDDvWhgAvbvl/LN4AAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tYxHoDwAABpBwAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
+let taBombLive = 0;   // いま爆発の効果が続いている爆弾発言の数（誘爆が重なったときに見た目を間引く）
 function taBombExplode(x, y, self, chained=false){
   if(!taRunning) return;
   track("bomb", "爆弾発言");
+  taBombLive++; setTimeout(() => { taBombLive = Math.max(0, taBombLive - 1); }, (chained ? 140 : 500) + 1300);
+  // スマホで誘爆が重なったら：重い演出に数えて早めに軽い状態へ。火花・二重の輪・重ね合わせの光を間引く
+  const crowd = typeof taTouchDevice!=='undefined' && taTouchDevice && taBombLive >= 2;
+  if(crowd) taHeavyGuard(2);
   const field = $("drift"), fw = field.clientWidth || 300, R = Math.max(115, Math.min(185, fw * .42));
   const CHARGE = chained ? 140 : 500, LINGER = 1000;
-  // 力をためる：言霊の形のまま白く発光し、少しずつふくらむ
+  // 力をためる：言霊の形から白く発光しながら丸く縮まり（文字は光に溶ける）、少しずつふくらむ
   const sr = self && self.getBoundingClientRect ? self.getBoundingClientRect() : null;
   const pill = document.createElement("span"); pill.className = "ta-bomb-charge"; pill.textContent = "爆弾発言";
-  pill.style.left = x + "px"; pill.style.top = y + "px"; if(sr && sr.width){ pill.style.minWidth = sr.width + "px"; pill.style.height = sr.height + "px"; }
+  pill.style.left = x + "px"; pill.style.top = y + "px";
+  const pw = sr && sr.width ? sr.width : 96, ph = sr && sr.height ? sr.height : 32, D = Math.max(36, ph * 1.55);
+  pill.style.width = pw + "px"; pill.style.height = ph + "px";
   document.body.append(pill);
-  pill.animate([{transform:"translate(-50%,-50%) scale(1)",filter:"brightness(1)",offset:0},{transform:"translate(-50%,-50%) scale(1.06)",offset:.5},{transform:"translate(-50%,-50%) scale(1.18)",filter:"brightness(1.6)",offset:1}],{duration:CHARGE,easing:"ease-in",fill:"forwards"});
+  if(self && self.style) self.style.visibility = "hidden";   // 元の言霊は隠し、光る札だけを見せる（丸く縮むときに下から覗かないように）
+  pill.animate([
+    {transform:"translate(-50%,-50%) scale(1)",width:pw+"px",height:ph+"px",borderRadius:"3px",color:"rgba(255,255,255,1)",filter:"brightness(1)",offset:0},
+    {transform:"translate(-50%,-50%) scale(1.04)",width:D+"px",height:D+"px",borderRadius:(D/2)+"px",color:"rgba(255,255,255,0)",offset:.6},
+    {transform:"translate(-50%,-50%) scale(1.22)",width:D+"px",height:D+"px",borderRadius:(D/2)+"px",color:"rgba(255,255,255,0)",filter:"brightness(1.6)",offset:1}],
+    {duration:CHARGE,easing:"cubic-bezier(.5,0,.6,1)",fill:"forwards"});
   const glow = document.createElement("span"); glow.className = "ta-bomb-glow"; glow.style.left = x + "px"; glow.style.top = y + "px"; document.body.append(glow);
   glow.animate([{transform:"scale(.4)",opacity:.2},{transform:"scale(1.1)",opacity:.9}],{duration:CHARGE,easing:"ease-in",fill:"forwards"});
   if(!chained) try{ sfx.bombCharge ? sfx.bombCharge() : (sfx.bombFuse && sfx.bombFuse()); }catch(_){}
@@ -7446,14 +7467,24 @@ function taBombExplode(x, y, self, chained=false){
       const r = w.getBoundingClientRect(), qx = Math.max(r.left, Math.min(x, r.right)), qy = Math.max(r.top, Math.min(y, r.bottom)), d = Math.hypot(qx - x, qy - y);
       if(d <= R) hits.push([d, w]); });
     hits.sort((a,b) => a[0] - b[0]);
-    for(const [d, w] of hits){ done.add(w);
-      setTimeout(() => {
+    // 衝撃が届く時刻を40msごとにまとめ、まとめた分は1つのタイマーで順に消す（タイマーと再計算の回数を減らす）
+    const buckets = new Map();
+    for(const [d, w] of hits){ done.add(w); const at = stagger ? Math.round((30 + d / R * 240) / 40) * 40 : 0; if(!buckets.has(at)) buckets.set(at, []); buckets.get(at).push(w); }
+    for(const [at, ws] of buckets) setTimeout(() => {
+      // まとめた分の位置と、得点・時間の表示の位置を、先に1回で読む（このあと消していく間は読み直さない）
+      const rb = new Map();
+      try{ for(const w of ws) if(w.isConnected) rb.set(w, w.getBoundingClientRect()); for(const id of ["taTime","taScore","taTimeBox"]){ const el = document.getElementById(id); if(el) rb.set(el, el.getBoundingClientRect()); } const hero = document.querySelector("#viewMain>.hero"); if(hero) rb.set(hero, hero.getBoundingClientRect()); rb.set(field, field.getBoundingClientRect()); }catch(_){}
+      window.taRectBatch = rb;
+      try{ for(const w of ws) hitOne(w); } finally { window.taRectBatch = null; }
+    }, at);
+  };
+  const hitOne = (w) => {
+      {
         if(!w.isConnected || w.classList.contains("got") || !taRunning) return;
         if(w.classList.contains("bomb")){ w._bombChained = true; w.dataset.metalHp = "0"; w._metalBreakDelay = 0; taMuteTouch = true; try{ w.click(); }finally{ taMuteTouch = false; } return; }   // 誘爆（金属でも一度で割れる）
         if(w.classList.contains("ta-metal") && !taMetalStrike(w, 2, "bomb")) return;   // 金はひびが入って残る
         taMuteTouch = true; try{ w.click(); }finally{ taMuteTouch = false; }
-      }, stagger ? 30 + d / R * 240 : 0);
-    }
+      }
   };
   setTimeout(() => {
     pill.remove(); glow.remove();
@@ -7465,19 +7496,20 @@ function taBombExplode(x, y, self, chained=false){
     core.animate([{transform:"scale(.15)",opacity:1},{transform:"scale(1)",opacity:.85,offset:.3},{transform:"scale(1.15)",opacity:0}],{duration:460,easing:"cubic-bezier(.2,.7,.3,1)",fill:"forwards"}).onfinish=()=>core.remove();
     const ring = document.createElement("span"); ring.className = "ta-bomb-ring"; Object.assign(ring.style,{left:(x-R)+"px",top:(y-R)+"px",width:(R*2)+"px",height:(R*2)+"px"}); document.body.append(ring);
     ring.animate([{transform:"scale(.08)",opacity:1},{transform:"scale(1)",opacity:0}],{duration:520,easing:"cubic-bezier(.15,.75,.35,1)",fill:"forwards"}).onfinish=()=>ring.remove();
-    const ring2 = ring.cloneNode(); ring2.style.borderWidth = "1px"; document.body.append(ring2);
-    ring2.animate([{transform:"scale(.05)",opacity:.9},{transform:"scale(.78)",opacity:0}],{duration:420,delay:60,easing:"cubic-bezier(.15,.75,.35,1)",fill:"both"}).onfinish=()=>ring2.remove();
+    if(crowd) core.style.mixBlendMode = "normal";
+    const ring2 = crowd ? null : ring.cloneNode(); if(ring2){ ring2.style.borderWidth = "1px"; document.body.append(ring2); }
+    if(ring2) ring2.animate([{transform:"scale(.05)",opacity:.9},{transform:"scale(.78)",opacity:0}],{duration:420,delay:60,easing:"cubic-bezier(.15,.75,.35,1)",fill:"both"}).onfinish=()=>ring2.remove();
     // 効果が続く1秒のあいだ、範囲の縁がほのかに燃えて残る
     const zone = document.createElement("span"); zone.className = "ta-bomb-zone"; Object.assign(zone.style,{left:(x-R)+"px",top:(y-R)+"px",width:(R*2)+"px",height:(R*2)+"px"}); document.body.append(zone);
     zone.animate([{opacity:0},{opacity:.8,offset:.15},{opacity:.55,offset:.7},{opacity:0}],{duration:LINGER+200,easing:"ease-out",fill:"forwards"}).onfinish=()=>zone.remove();
-    const nSp = document.documentElement.classList.contains("ta-lowfx") ? 8 : 16;
+    const nSp = crowd ? 6 : document.documentElement.classList.contains("ta-lowfx") ? 8 : 16;
     for(let i=0;i<nSp;i++){ const a = Math.random()*Math.PI*2, d = R*(.45+Math.random()*.6), sp = document.createElement("span"); sp.className = "ta-bomb-spark"; sp.style.left = x + "px"; sp.style.top = y + "px"; document.body.append(sp);
       sp.animate([{transform:"translate(0,0) scale(1)",opacity:1},{transform:`translate(${Math.cos(a)*d}px,${Math.sin(a)*d+14}px) scale(.3)`,opacity:0}],{duration:420+Math.random()*220,easing:"cubic-bezier(.1,.7,.3,1)",fill:"forwards"}).onfinish=()=>sp.remove(); }
     if(!(typeof taTouchDevice!=='undefined' && taTouchDevice)) field.animate([{transform:"translate(0,0)"},{transform:"translate(3px,-2px)"},{transform:"translate(-2px,2px)"},{transform:"translate(0,0)"}],{duration:200,easing:"ease-out"});
     sweep(true);
     // 爆発のあと1秒間は、範囲に入ってきた言霊も消す
     const until = performance.now() + LINGER;
-    const iv = setInterval(() => { if(!taRunning || performance.now() > until){ clearInterval(iv); return; } sweep(false); }, 120);
+    const iv = setInterval(() => { if(!taRunning || performance.now() > until){ clearInterval(iv); return; } sweep(false); }, crowd ? 200 : 120);   // 重なっているときは、見回りの間隔を少しあける
   }, CHARGE);
 }
 function pullAll(x, y, self, eclipse=false, eclipseElement=null){
@@ -10276,7 +10308,7 @@ function taUpdateNightHud(){
 // 夜を重ねるほど得点も上がる（第二夜×1.25 … 第五夜以降×2）。章は得点に関係しない。
 function taNightScoreRate(){return 1+.25*(Math.min(taNightNumber,5)-1);}
 // 時間の減る速さ（加速 Lv）：一夜ごとに +0.1（第二夜×1.1 … 第五夜以降×1.4）。以前は +0.25 で第五夜×2.0 だった
-function taNightTimeRate(){return 1+.1*(Math.min(taNightNumber,5)-1);}
+function taNightTimeRate(){const n=Math.min(taNightNumber,5);return n>=5?1.5:1+.1*(n-1);}   // 第五夜は少し速く（1.4→1.5倍）
 
 // 800-chain loop-clear: one bonus per 800 chains, then stage 01 with score/time retained.
 // 夜のボーナスの青い言霊：30個（1つ+1秒、20秒のうちに現れる）
@@ -11059,7 +11091,8 @@ function taFormatTimeGain(n){return Number.isInteger(n)?String(n):n.toFixed(1).r
 // Visual-only score units: retain original score values for gameplay and stored records.
 const TA_SCORE_UNIT=1000;
 let taShownScore=0,taScoreAnim=0,taScoreLast=0;
-function taScoreFormat(n){return Math.round(n*TA_SCORE_UNIT).toLocaleString('ja-JP');}
+const taScoreNF=(()=>{try{return new Intl.NumberFormat('ja-JP');}catch(_){return null;}})();   // 毎コマ使うので、書式は一度だけ作って使い回す（toLocaleString は呼ぶたびに作り直して重い）
+function taScoreFormat(n){const v=Math.round(n*TA_SCORE_UNIT);return taScoreNF?taScoreNF.format(v):v.toLocaleString('ja-JP');}
 function taPointPlus(n){return '+'+taScoreFormat(n);}
 function taScoreDraw(now){
   taScoreAnim=0;
@@ -15053,6 +15086,30 @@ window.taV54Report=function(){const p=window.__taV54Perf;return {
 #viewMain>.ta-items:not(.ta-thunder-locked) .ta-mastery-thunder,
 #viewMain>.ta-items:not(.ta-thunder-locked) .ta-thunder-cost{display:inline-flex}
 </style>
+<script id="ta-kick-frame">
+// 第五夜の曲（Midnight in the Nave）のバスドラムに合わせて、採集エリアの枠をほのかに光らせる。
+// バスドラムの時刻は曲を前もって解析した一覧（220回）。曲の再生位置を毎コマ見て、時刻が来たら光らせる。
+// 曲が Sora Vatum に替わったら（第八章から）光らない。曲が流れていない間は、0.5秒おきに様子を見るだけ。
+(()=>{
+ const ENC="1be301d501f501e401e601e501e701e401d601f601e601e501e501e401e601e601d501f601e601e701e501e501e601d701e601f601e501e701e60114012500p401e402s401e501e501e501e301e301e401e601e5046501e601d401f502s501e601e501e401e401d401f502s301e601e604530m9502s402s402s402s401e400p500p400p400p400p400p405k8046901e901e801e801e801e601e301e501e301d501f502s300r100n501e301e401e301e700o100q801e801e901e701e401e501e501e501e501d30124012500p501e901e801e801e901e601e801e702s301e402s501e501e501e401e501e401d501f401e601e801e901e801e701e601e501e501e305k601e302s301e002s201e401e401e701e401e401e401e301e301e401d401f601e401e201e501e501e601d601f500o300q200p400p200p100p200p600p605k801e601e802s601e601d501f601e701e401e301e601e501e401d501f601e502s502s501e701e801e701e601e401e401e401e501d301e40123012300p601e501e501e501d401f501e401e301e401e7045501f401e400n100r501e601e501e702s701e401e601e801e801e501e501e501e501e501e401110124";
+ const T=[],S=[];let acc=0;for(let i=0;i<ENC.length;i+=4){acc+=parseInt(ENC.slice(i,i+3),36);T.push(acc/100);S.push(.55+.45*(+ENC[i+3])/9);}
+ const ATTACK=.03,TAU=.13,SPAN=.6;
+ let el=null,raf=0,idx=0,lastT=-1,shown=0;
+ const frameEl=()=>{if(el&&el.isConnected)return el;const host=document.querySelector('#viewMain>.hero');if(!host)return null;el=document.createElement('div');el.className='ta-kickframe';el.setAttribute('aria-hidden','true');host.appendChild(el);return el;};
+ const now=()=>{try{return (typeof taCenturyMusic!=='undefined'&&taRunning&&!document.hidden)?taCenturyMusic.playingAt('Midnight_in_the_Nave'):-1;}catch(_){return -1;}};
+ const set=v=>{if(Math.abs(v-shown)<.01&&!(v===0&&shown!==0))return;shown=v;const e=frameEl();if(e)e.style.opacity=v.toFixed(3);};
+ const frame=()=>{
+  const t=now();
+  if(t<0){set(0);raf=0;return;}
+  if(t<lastT-1)idx=0;lastT=t;   // 曲がくり返して頭に戻ったら一覧も頭から
+  while(idx<T.length&&T[idx]<t-SPAN)idx++;
+  let a=0;for(let i=idx;i<T.length&&T[i]<=t+ATTACK;i++){const d=t-T[i];const e=d<0?(d+ATTACK)/ATTACK:Math.exp(-d/TAU);if(e*S[i]>a)a=e*S[i];}
+  set(a<.01?0:a);
+  raf=requestAnimationFrame(frame);
+ };
+ setInterval(()=>{if(!raf&&now()>=0){idx=0;lastT=-1;raf=requestAnimationFrame(frame);}},500);
+})();
+</script>
 <script id="ta-perf-frame-rect-cache">
 // 負荷対策：採集エリア（.hero と #drift）の位置は、同じコマの中では変わらない。
 // 毎コマ何度も読まれるため、同じコマの中では最初に読んだ値を使い回す（画面の大きさやスクロールが変われば読み直す）。
@@ -15065,7 +15122,7 @@ window.taV54Report=function(){const p=window.__taV54Perf;return {
  const cacheRect=el=>{
   if(!el||Object.prototype.hasOwnProperty.call(el,'getBoundingClientRect'))return;
   let k=null,e=-1,r=null;
-  el.getBoundingClientRect=function(){const kk=frameKey();if(r&&kk!==-1&&kk===k&&e===epoch&&this.isConnected)return r;r=native.call(this);k=kk;e=epoch;return r;};
+  el.getBoundingClientRect=function(){const rb=window.taRectBatch;if(rb&&rb.has(this))return rb.get(this);const kk=frameKey();if(r&&kk!==-1&&kk===k&&e===epoch&&this.isConnected)return r;r=native.call(this);k=kk;e=epoch;return r;};
  };
  const install=()=>{cacheRect(document.querySelector('#viewMain>.hero'));cacheRect(document.getElementById('drift'));};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
@@ -15135,14 +15192,15 @@ html.sakura-on.ta-lowfx #drift .word{-webkit-backdrop-filter:none;backdrop-filte
 (()=>{
  const native=Element.prototype.getBoundingClientRect;let pinned=[];
  const unpin=()=>{for(const el of pinned)delete el.getBoundingClientRect;pinned=[];};
- const pin=el=>{if(!el||!el.isConnected||Object.prototype.hasOwnProperty.call(el,'getBoundingClientRect'))return;const r=native.call(el);el.getBoundingClientRect=function(){return this.isConnected?r:native.call(this);};pinned.push(el);};
+ // まとめて消すとき（爆弾発言の衝撃など）は、先に1回で読んでおいた位置（window.taRectBatch）を使い、1語ごとの再計算を避ける
+ const pin=el=>{if(!el||!el.isConnected||Object.prototype.hasOwnProperty.call(el,'getBoundingClientRect'))return;const rb=window.taRectBatch,r=(rb&&rb.get(el))||native.call(el);el.getBoundingClientRect=function(){return this.isConnected?r:native.call(this);};pinned.push(el);};
  const run=()=>{
   const field=document.getElementById('drift');if(!field)return;
   field.addEventListener('click',e=>{
    const w=e.target&&e.target.closest?e.target.closest('.word'):null;if(!w||w.classList.contains('got'))return;
    unpin();
    pin(w);for(const id of ['taTime','taScore','taTimeBox'])pin(document.getElementById(id));
-   try{document.querySelector('#viewMain>.hero')?.getBoundingClientRect();field.getBoundingClientRect();}catch(_){}
+   if(!window.taRectBatch)try{document.querySelector('#viewMain>.hero')?.getBoundingClientRect();field.getBoundingClientRect();}catch(_){}
    setTimeout(unpin,0);
   },{capture:true});
   field.addEventListener('click',unpin);   // 言霊自身の処理が終わった直後に戻す
