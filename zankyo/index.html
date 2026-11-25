@@ -3271,6 +3271,7 @@ header>.brand.ta-face-header::before{background-position:center,-118px center!im
       <button type="button" id="t-word-levelup">言霊Lvアップ</button>
       <button type="button" id="t-pages">頁追加</button>
       <button type="button" id="t-bomb">爆弾発言出現</button>
+      <button type="button" id="t-night5">開始：第一夜</button>
       <button type="button" id="t-density">言霊:章連動</button>
       <button type="button" id="t-metal">金属:章連動</button>
       <button type="button" id="t-orblv">紅蒼の玉Lv +1</button>
@@ -5412,8 +5413,8 @@ function comboStepBonus(n){
 }
 // 100-chain BGM.  Keep its state independent of ranking/result music.
 const taCenturyMusic=(()=>{
-  // 夜ごとの曲: 第一夜・第二夜=Granite / 第三夜=Threshold / 第四夜=Pendulum / 第五夜=Midnight in the Nave（流れ始める章は変えない：第一〜四夜は夜明けの城から、第五夜は第一章から）
-  function srcForNight(){const n=typeof taNightNumber==='number'?taNightNumber:1;return n<=2?'../audio/Beneath_the_Granite_Sky.mp3?v=20261121':n===3?'../audio/Upon_the_Silent_Threshold.mp3?v=20261102':n===4?'../audio/chain100-weight-of-the-pendulum.mp3?v=20261024':'../audio/Midnight_in_the_Nave.mp3';}
+  // 夜ごとの曲: 第一夜・第二夜=Granite / 第三夜=Threshold / 第四夜=Pendulum / 第五夜=Waltz for the Midnight Throne（流れ始める章は変えない：第一〜四夜は夜明けの城から、第五夜は第一章から）
+  function srcForNight(){const n=typeof taNightNumber==='number'?taNightNumber:1;return n<=2?'../audio/Beneath_the_Granite_Sky.mp3?v=20261121':n===3?'../audio/Upon_the_Silent_Threshold.mp3?v=20261102':n===4?'../audio/chain100-weight-of-the-pendulum.mp3?v=20261024':'../audio/Waltz_for_the_Midnight_Throne.mp3';}
   let audio=null,curSrc='',active=false,stoppedForTime=false,fadeId=0,fadeTimer=0,serial=0,endedHold=false;
   const volume=.33; // 曲の音量（以前.38）
   let heartbeatDuck=false,duckTimer=0;
@@ -10191,6 +10192,12 @@ window.addEventListener("resize", ()=>{ if(libOpen && !turning) renderShelf(); }
 // テスト用
 // 演出テスト用：今の章を「あと1頁」の状態にする（言霊を一つ消せば次の章へ。最後の章なら夜のボーナスへ）
 $("t-metal").onclick=()=>{taMetalTestRate=taMetalTestRate==null?.25:taMetalTestRate===.25?.6:taMetalTestRate===.6?0:null;const lab=taMetalTestRate==null?"章連動":taMetalTestRate===0?"なし":taMetalTestRate===.25?"少し":"多い";$("t-metal").textContent="金属:"+lab;toast(taMetalTestRate==null?"金属文字：章に合わせて出す（第三章から）":taMetalTestRate===0?"金属文字を出さない":"金属文字を出す（約"+Math.round(taMetalTestRate*100)+"%）");};
+// テスト：次のプレイを第五夜から始める（切り替えはこのブラウザに覚えておく）
+try{ if(localStorage.getItem("taTestStartNight")==="5") window.taTestStartNight = 5; }catch(_){}
+const taTestNightLabel = () => { const b = $("t-night5"); if(b) b.textContent = window.taTestStartNight === 5 ? "開始：第五夜" : "開始：第一夜"; };
+taTestNightLabel();
+$("t-night5").onclick=()=>{ window.taTestStartNight = window.taTestStartNight === 5 ? 1 : 5; try{ localStorage.setItem("taTestStartNight", String(window.taTestStartNight)); }catch(_){} taTestNightLabel();
+  toast(window.taTestStartNight === 5 ? "次のプレイは第五夜の第一章から始まります" : "次のプレイは第一夜から始まります"); };
 $("t-density").onclick=()=>{taDensityFlat=!taDensityFlat;$("t-density").textContent=taDensityFlat?"言霊:以前の量":"言霊:章連動";toast(taDensityFlat?"言霊の量を以前の量（スマホ5／PC6）に固定しました":"言霊の量を章に合わせて増やします");};
 $("t-bomb").onclick=()=>{ if(!taRunning){toast("ゲーム中に押すと、爆弾発言が現れます");return;} if(taNightActive()){toast("いまは夜のボーナス中です");return;} if(flood||sakuraOn){toast("時間停止・桜吹雪のあいだは出せません");return;} forceBomb=true; spawnWord({force:true}); if(forceBomb){forceBomb=false;toast("いまは出せませんでした");} };
 $("t-pages").onclick=()=>{ if(!taRunning){toast("ゲーム中に押すと、今の章があと1頁になります");return;} if(taNightActive()){toast("いまは夜のボーナス中です");return;}
@@ -11532,7 +11539,10 @@ function taBeginReady(){
   const quiet=taTutOn();   // 練習：DEMO PLAY の見た目のまま静かに始める
   taNightClear();
   document.documentElement.classList.remove('ta-night-chain-retired');
-  taNightNumber=1;document.getElementById('taNightStageLabel')?.classList.remove('ta-night-seal-settled');taUpdateNightHud();
+  // テストモードで「開始：第五夜」にしていれば、第五夜の第一章から始める（曲・時間の速さ・言霊の量・爆弾発言も第五夜のもの）
+  const testNight=(location.hash||'').startsWith('#test')&&window.taTestStartNight===5?5:1;
+  taNightNumber=testNight;if(testNight>=5)nextBombAt=Math.min(nextBombAt,Date.now()+4000);
+  document.getElementById('taNightStageLabel')?.classList.remove('ta-night-seal-settled');taUpdateNightHud();
   window.taSoumatou?.stop();
   if(taRunning||taStarting)return;
   // Defensive cleanup: a previous unranked result must never block another run.
@@ -11601,7 +11611,7 @@ function taBeginReady(){
   flash.textContent='START';flash.hidden=false;flash.classList.remove('ta-start-active','ta-end-active');void flash.offsetWidth;flash.classList.add('ta-start-active');
    // START時は音声ボタンと同じ操作音を鳴らす。
    sfx.toggle();
-  const token=taFinishToken;setTimeout(()=>{if(token!==taFinishToken||!taStarting)return;flash.hidden=true;taStarting=false;taRunning=true;document.dispatchEvent(new Event('ta-item-start-activate'));taUpdatePlay();taLast=performance.now();taRaf=requestAnimationFrame(taTick)},1800);
+  const token=taFinishToken;setTimeout(()=>{if(token!==taFinishToken||!taStarting)return;flash.hidden=true;taStarting=false;taRunning=true;document.dispatchEvent(new Event('ta-item-start-activate'));taUpdatePlay();taLast=performance.now();taRaf=requestAnimationFrame(taTick);if(taNightNumber>=5&&!taCenturyMusic.isActive()&&!taSilverMusic.isActive())taCenturyMusic.start();},1800);   // テストで第五夜から始めたときは、最初から第五夜の曲
 }
 
 // Prepare the actual viewport assets before the timer starts. No gameplay FX are removed.
@@ -15087,16 +15097,16 @@ window.taV54Report=function(){const p=window.__taV54Perf;return {
 #viewMain>.ta-items:not(.ta-thunder-locked) .ta-thunder-cost{display:inline-flex}
 </style>
 <script id="ta-kick-frame">
-// 第五夜の曲（Midnight in the Nave）のバスドラムに合わせて、採集エリアの枠をほのかに光らせる。
-// バスドラムの時刻は曲を前もって解析した一覧（220回）。曲の再生位置を毎コマ見て、時刻が来たら光らせる。
+// 第五夜の曲（Waltz for the Midnight Throne）のバスドラムに合わせて、採集エリアの枠をほのかに光らせる。
+// バスドラムの時刻は曲を前もって解析した一覧（196回）。曲の再生位置を毎コマ見て、時刻が来たら光らせる。
 // 曲が Sora Vatum に替わったら（第八章から）光らない。曲が流れていない間は、0.5秒おきに様子を見るだけ。
 (()=>{
- const ENC="1be301d501f501e401e601e501e701e401d601f601e601e501e501e401e601e601d501f601e601e701e501e501e601d701e601f601e501e701e60114012500p401e402s401e501e501e501e301e301e401e601e5046501e601d401f502s501e601e501e401e401d401f502s301e601e604530m9502s402s402s402s401e400p500p400p400p400p400p405k8046901e901e801e801e801e601e301e501e301d501f502s300r100n501e301e401e301e700o100q801e801e901e701e401e501e501e501e501d30124012500p501e901e801e801e901e601e801e702s301e402s501e501e501e401e501e401d501f401e601e801e901e801e701e601e501e501e305k601e302s301e002s201e401e401e701e401e401e401e301e301e401d401f601e401e201e501e501e601d601f500o300q200p400p200p100p200p600p605k801e601e802s601e601d501f601e701e401e301e601e501e401d501f601e502s502s501e701e801e701e601e401e401e401e501d301e40123012300p601e501e501e501d401f501e401e301e401e7045501f401e400n100r501e601e501e702s701e401e601e801e801e501e501e501e501e501e401110124";
+ const ENC="006307m110u701e801e701e801e801e800s100m701e801e801e901e801e901e801e901e901e901e701e801e801e801e801e701e701e701e601d701f801e801e801e801e701e601e501d801f801e801e801e901e801e701d501f801e801e801e801e801e801e801e601e601e601e601e501e501e501e501d601f801e801e901e901e901e900o300q701d31b9901e900q400n801e901e900p100q901e101e801e701e700s100n401d701e601e801e301e601e401e501e101e501e301e601f101d601e601e601f301d700s100m501e601e301e701e701e701e901e600t000l801e701e601e801e801e701e701e701e701e601e601e601e501e501e301e501e401f501d501e700s000m801e601e900o000q601e600t100l30gp100r00fx11kx506w101e112y701e700q300o701e800s100m601e601e101e701f701d701e501e601e701e701e401e601e301f501d201e601f301d301e201e601f401d502q002x101c50b2201e001e101e001e002t101c001f201e001e201e201e002t102t101c001f001e102x001i001n1";
  const T=[],S=[];let acc=0;for(let i=0;i<ENC.length;i+=4){acc+=parseInt(ENC.slice(i,i+3),36);T.push(acc/100);S.push(.55+.45*(+ENC[i+3])/9);}
  const ATTACK=.03,TAU=.13,SPAN=.6;
  let el=null,raf=0,idx=0,lastT=-1,shown=0;
  const frameEl=()=>{if(el&&el.isConnected)return el;const host=document.querySelector('#viewMain>.hero');if(!host)return null;el=document.createElement('div');el.className='ta-kickframe';el.setAttribute('aria-hidden','true');host.appendChild(el);return el;};
- const now=()=>{try{return (typeof taCenturyMusic!=='undefined'&&taRunning&&!document.hidden)?taCenturyMusic.playingAt('Midnight_in_the_Nave'):-1;}catch(_){return -1;}};
+ const now=()=>{try{return (typeof taCenturyMusic!=='undefined'&&taRunning&&!document.hidden)?taCenturyMusic.playingAt('Waltz_for_the_Midnight_Throne'):-1;}catch(_){return -1;}};
  const set=v=>{if(Math.abs(v-shown)<.01&&!(v===0&&shown!==0))return;shown=v;const e=frameEl();if(e)e.style.opacity=v.toFixed(3);};
  const frame=()=>{
   const t=now();
