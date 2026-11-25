@@ -1,8 +1,8 @@
 {
-  "name": "No Answers — 言葉の残響 —",
+  "name": "No Answers — 違和感採集 —",
   "short_name": "No Answers",
   "description": "違和感を集め、ユラの3行思考を一行ずつ言葉にしていく、静かなブラウザゲーム。",
-  "start_url": "./",
+  "start_url": "./iwakan/",
   "scope": "./",
   "display": "standalone",
   "background_color": "#060817",
