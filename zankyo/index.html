@@ -581,16 +581,17 @@ html.ta-meteor-skip #viewMain>.hero>picture.ta-bg-picture.ta-meteor50{opacity:0!
   --ta-stage-strength:0;
   --ta-stage-soft:0px;
 }
-html.ta-century-lit #viewMain>.hero{--ta-stage-edge:#E9C58B;--ta-stage-strength:.40;--ta-stage-soft:9px;}
-html.ta-200-lit #viewMain>.hero{--ta-stage-edge:#FFB347;--ta-stage-strength:.46;--ta-stage-soft:11px;}
-html.ta-300-lit #viewMain>.hero{--ta-stage-edge:#D94A62;--ta-stage-strength:.54;--ta-stage-soft:13px;}
-html.ta-400-lit #viewMain>.hero{--ta-stage-edge:#73D6A0;--ta-stage-strength:.57;--ta-stage-soft:14px;}
-html.ta-500-lit #viewMain>.hero{--ta-stage-edge:#44D9F5;--ta-stage-strength:.62;--ta-stage-soft:16px;}
-html.ta-600-lit #viewMain>.hero{--ta-stage-edge:#DCE5F5;--ta-stage-strength:.70;--ta-stage-soft:18px;}
-html.ta-700-lit #viewMain>.hero{--ta-stage-edge:#A7C9FF;--ta-stage-strength:.72;--ta-stage-soft:19px;}
-html.ta-800-lit #viewMain>.hero{--ta-stage-edge:#DCE5F5;--ta-stage-strength:.27;--ta-stage-soft:8px;}
-html.ta-festival-lit:not(.ta-800-lit) #viewMain>.hero{--ta-stage-edge:#FFD27A;--ta-stage-strength:.58;--ta-stage-soft:15px;}
-html.ta-wasteland-lit:not(.ta-400-lit) #viewMain>.hero{--ta-stage-edge:#B7A6D6;--ta-stage-strength:.56;--ta-stage-soft:14px;}
+/* 通常時の枠は、バスドラムや玉の発光が引き立つよう、もとの約7割の明るさにしている（2026-11-26） */
+html.ta-century-lit #viewMain>.hero{--ta-stage-edge:#E9C58B;--ta-stage-strength:0.28;--ta-stage-soft:9px;}
+html.ta-200-lit #viewMain>.hero{--ta-stage-edge:#FFB347;--ta-stage-strength:0.32;--ta-stage-soft:11px;}
+html.ta-300-lit #viewMain>.hero{--ta-stage-edge:#D94A62;--ta-stage-strength:0.38;--ta-stage-soft:13px;}
+html.ta-400-lit #viewMain>.hero{--ta-stage-edge:#73D6A0;--ta-stage-strength:0.40;--ta-stage-soft:14px;}
+html.ta-500-lit #viewMain>.hero{--ta-stage-edge:#44D9F5;--ta-stage-strength:0.43;--ta-stage-soft:16px;}
+html.ta-600-lit #viewMain>.hero{--ta-stage-edge:#DCE5F5;--ta-stage-strength:0.49;--ta-stage-soft:18px;}
+html.ta-700-lit #viewMain>.hero{--ta-stage-edge:#A7C9FF;--ta-stage-strength:0.50;--ta-stage-soft:19px;}
+html.ta-800-lit #viewMain>.hero{--ta-stage-edge:#DCE5F5;--ta-stage-strength:0.19;--ta-stage-soft:8px;}
+html.ta-festival-lit:not(.ta-800-lit) #viewMain>.hero{--ta-stage-edge:#FFD27A;--ta-stage-strength:0.41;--ta-stage-soft:15px;}
+html.ta-wasteland-lit:not(.ta-400-lit) #viewMain>.hero{--ta-stage-edge:#B7A6D6;--ta-stage-strength:0.39;--ta-stage-soft:14px;}
 /* The dedicated pseudo-element is always above scenery but cannot intercept
    pointer events or obscure the drifting words. No geometry is changed. */
 #viewMain>.hero::before{
@@ -605,14 +606,14 @@ html.ta-wasteland-lit:not(.ta-400-lit) #viewMain>.hero{--ta-stage-edge:#B7A6D6;-
 /* Retain the existing outer frame shape, but stage colors govern its edge.
    Previous gold/silver frame rules are superseded only at 100+ chains. */
 html.ta-century-lit #viewMain>.hero.rush{
-  border-color:var(--ta-stage-edge)!important;
-  box-shadow:0 0 var(--ta-stage-soft) 1px color-mix(in srgb,var(--ta-stage-edge) 45%,transparent),
+  border-color:color-mix(in srgb,var(--ta-stage-edge) 70%,transparent)!important;
+  box-shadow:0 0 var(--ta-stage-soft) 1px color-mix(in srgb,var(--ta-stage-edge) 31%,transparent),
              0 30px 60px -30px color-mix(in srgb,var(--ink) 45%,transparent)!important;
   transition:border-color 2.6s ease-in-out,box-shadow 2.6s ease-in-out!important;
 }
 html.ta-800-lit #viewMain>.hero.rush{
-  border-color:rgba(220,229,245,.27)!important;
-  box-shadow:0 0 8px rgba(220,229,245,.13)!important;
+  border-color:rgba(220,229,245,.19)!important;
+  box-shadow:0 0 8px rgba(220,229,245,.09)!important;
 }
 @media(prefers-reduced-motion:reduce){#viewMain>.hero::before{transition:none!important;}}
 
@@ -1137,8 +1138,8 @@ html.glow-moon .up-fly{color:#bcd0ff;text-shadow:0 0 8px rgba(160,190,255,.85);s
 #viewMain>.hero.rush{animation:none;border-color:var(--accent);box-shadow:0 0 22px 2px color-mix(in srgb,var(--accent) 55%,transparent),0 30px 60px -30px color-mix(in srgb,var(--ink) 45%,transparent);transition-duration:10s;}
 /* 内側の金色の光も同じ時間でフェードする。疑似要素は連鎖終了後も保持してフェードアウトさせる。 */
 #viewMain>.hero .drift::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:6;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 85%,transparent),inset 0 0 34px color-mix(in srgb,var(--accent) 45%,transparent);opacity:0;transition:opacity 4.5s ease-in-out;}
-#viewMain>.hero.rush .drift::after{animation:none;opacity:1;transition-duration:10s;}
-@media (prefers-reduced-motion:reduce){#viewMain>.hero,#viewMain>.hero.rush,#viewMain>.hero .drift::after,#viewMain>.hero.rush .drift::after{transition:none;}#viewMain>.hero.rush .drift::after{opacity:.6;}}
+#viewMain>.hero.rush .drift::after{animation:none;opacity:.7;transition-duration:10s;}
+@media (prefers-reduced-motion:reduce){#viewMain>.hero,#viewMain>.hero.rush,#viewMain>.hero .drift::after,#viewMain>.hero.rush .drift::after{transition:none;}#viewMain>.hero.rush .drift::after{opacity:.42;}}
 .combo.hit b{animation:comboHit .3s ease}
 /* 連鎖ボーナス：「連鎖 N」の文字がふわっと金色に光る */
 .combo.bonus{color:color-mix(in srgb,#c8861e 70%,var(--ink));animation:comboBonusRing 1s ease}
@@ -2366,8 +2367,8 @@ html[data-yura="black"].ta-400-lit:not(.ta-500-lit) #viewMain>.hero.ta-active-vi
 <style id="ta-chain-collection-frame-300-500">
 /* Collection-area frame only: silver at 300-499 chains; lights out at 500+. */
 html.ta-silver-music-started:not(.ta-800-lit) #viewMain>.hero.rush{
-  border-color:#e6f3ff;
-  box-shadow:0 0 22px 2px rgba(194,224,255,.62),0 30px 60px -30px rgba(160,195,225,.38);
+  border-color:rgba(230,243,255,.72);
+  box-shadow:0 0 22px 2px rgba(194,224,255,.43),0 30px 60px -30px rgba(160,195,225,.38);
 }
 html.ta-silver-music-started:not(.ta-800-lit) #viewMain>.hero.rush .drift::after{
   box-shadow:inset 0 0 0 1.5px rgba(236,247,255,.94),inset 0 0 34px rgba(184,216,245,.5);
@@ -2413,7 +2414,7 @@ html.ta-silver-music-started:not(.ta-800-lit) #viewMain>.hero.rush{
  transition:border-color 1.35s ease-in-out,box-shadow 1.35s ease-in-out;
 }
 html.ta-silver-music-started:not(.ta-800-lit) #viewMain>.hero.rush .drift::after{
- opacity:1;transition:opacity 1.35s ease-in-out,box-shadow 1.35s ease-in-out;
+ opacity:.7;transition:opacity 1.35s ease-in-out,box-shadow 1.35s ease-in-out;
 }
 /* The existing 500-chain rule still extinguishes the collection frame only. */
 html.ta-800-lit #viewMain>.hero.rush{border-color:transparent;box-shadow:none}
