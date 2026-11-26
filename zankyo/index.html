@@ -13366,6 +13366,8 @@ const __ta100Start=window.__ta100Profile.start();try {
     ctx.beginPath();ctx.arc(b.x,b.y,r*.82,0,Math.PI*2);ctx.stroke();
    }
    if(b.slash&&b.dirs)taDrawCrossSlash(b,t);
+   // クロス爆発Lv5：最後の十字が走る瞬間にスマホを震わせる（Android のみ。iPhone・PC は震えない）。「ドッ」と短く強く、続けて「ゴォ」と長めに
+   if(b.lv5&&b.slash&&!b.vibed&&t>=3.22){b.vibed=true;try{if(navigator.vibrate&&!matchMedia('(prefers-reduced-motion: reduce)').matches)navigator.vibrate([90,40,140]);}catch(_){}}
    // At each beat a broad, thin ring expands across the collection field.
    for(let i=1;i<=3;i++){if(b.slash)break;
     const age=t-i;if(age<0||age>.62)continue;
