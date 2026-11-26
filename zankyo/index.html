@@ -2661,9 +2661,11 @@ html.ta-native-return-all.ta-native-return-800 #viewMain>.hero.ta-active-visual>
 #taStarOutcome .ta-star-unlock{margin:7px 0;padding:10px 6px;font-size:16px;font-weight:bold;border:1px solid #b28b56;border-radius:8px;background:#8d683524;color:#ffe3a2;}
 </style>
 <style id="ta-kickframe-css">
-/* 第五夜：曲のバスドラムに合わせて、採集エリアの枠がほのかに光る（玉を使ったときの枠の光より弱く、外へは広げない） */
-.ta-kickframe{position:absolute;inset:0;z-index:63;pointer-events:none;border-radius:inherit;opacity:0;will-change:opacity;
- box-shadow:inset 0 0 0 1.5px rgba(222,234,255,.55),inset 0 0 12px 2px rgba(170,200,255,.30)}
+/* 第五夜：曲のバスドラムに合わせて、採集エリアの枠がほのかに光る（玉を使ったときの枠の光より弱く、外へは広げない。色は章の枠の色） */
+.ta-kickframe{position:absolute;inset:0;z-index:63;pointer-events:none;border-radius:inherit;opacity:0;will-change:opacity;--kc:#dee9ff;
+ box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--kc) 60%,transparent),inset 0 0 12px 2px color-mix(in srgb,var(--kc) 36%,transparent)}
+/* 枠に章の色がついている章（第四章以降）は、その章の枠の色で光る。枠が消灯している第一〜三章は青白い光のまま */
+html.ta-century-lit #viewMain>.hero>.ta-kickframe{--kc:var(--ta-stage-edge)}
 @media(prefers-reduced-motion:reduce){.ta-kickframe{display:none}}
 </style>
 <style id="ta-orbframe-css">
