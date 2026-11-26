@@ -1185,6 +1185,8 @@ html.glow-moon .up-fly{color:#bcd0ff;text-shadow:0 0 8px rgba(160,190,255,.85);s
 .ta-ultimate-labels{position:absolute;left:12px;top:10px;z-index:4;display:flex;flex-direction:column;align-items:flex-start;gap:6px;pointer-events:none;max-width:calc(100% - 24px)}
 .ta-ultimate-label{box-sizing:border-box;max-width:100%;padding:6px 12px 7px;border-radius:10px;background:color-mix(in srgb,var(--paper) 82%,transparent);border:1px solid var(--accent);font-family:var(--mincho);font-size:.78rem;font-weight:600;letter-spacing:.10em;color:var(--ink);white-space:nowrap;opacity:0;transform:translateY(-4px);transition:opacity .38s ease,transform .38s ease}
 .ta-ultimate-label.visible{opacity:1;transform:translateY(0)}
+/* 「全部なかったことに」「置き忘れたもの」は上の黒帯に名前が出るので、左上の枠つきの名前は出さない（「あの日のままで」はゲージがあるので従来どおり） */
+.ta-ultimate-label[data-kind="cross"],.ta-ultimate-label[data-kind="eclipse"]{display:none!important}
 .ta-ultimate-label.leaving{opacity:0;transform:translateY(-3px)}
 /* 渦：まれに降ってくる。長押しすると、画面の言葉を螺旋を描いて吸い込む（1つにつき通常の2倍） */
 .word.vortex{z-index:3;width:64px;height:64px;padding:0;border:0;border-radius:50%;background:none;-webkit-backdrop-filter:none;backdrop-filter:none;font-size:0;color:transparent;
@@ -3096,6 +3098,18 @@ html.glow-sun #taHud #taTimeBox::before {
 #taNightStageLabel.ta-night-arrival-flash,#taAccelerationLabel.ta-night-arrival-flash,#taScoreLevelLabel.ta-night-arrival-flash{animation:taNightArrivalFlash 1.15s ease-out both!important}
 @keyframes taNightArrivalFlash{0%{filter:brightness(2.2) drop-shadow(0 0 15px #fff)}50%{filter:brightness(1.6) drop-shadow(0 0 9px #d7ebff)}100%{filter:brightness(1) drop-shadow(0 0 3px #fff)}}
 @media(prefers-reduced-motion:reduce){.ta-night-echo-veil{transition:none!important}.ta-night-echo-seal,.ta-night-echo-seal::before,.ta-night-echo-seal::after{animation:none!important}}
+</style>
+<style id="ta-night-lv-seal">
+/* 新しい夜の「加速 Lv」「得点 Lv」：第〇夜と少しずつずらして重ね、大きくにじんだ文字が元の表記の上へ収束してから光る */
+.ta-lv-seal{position:fixed;z-index:1200;transform:translate(-50%,-50%);color:#f7fbff;white-space:nowrap;pointer-events:none;opacity:0;
+ text-shadow:0 0 6px #f5fbff,0 0 14px rgba(206,232,255,.7);animation:taLvSealIn 1.5s cubic-bezier(.16,.55,.24,1) both}
+.ta-lv-seal::before,.ta-lv-seal::after{content:attr(data-t);position:absolute;inset:0;text-align:center;color:#e4f0ff;opacity:0;animation:taNightSealTrail 1.5s .04s ease-out both}
+.ta-lv-seal::after{animation-delay:.16s}
+.ta-lv-seal.out{animation:none;opacity:0;transition:opacity .45s ease-out}
+.ta-lv-seal.out::before,.ta-lv-seal.out::after{animation:none;opacity:0}
+/* 光らせている間も表記を消さない（光の演出は明るさだけで、もとの呼吸のアニメーションが外れると不透明度0に戻ってしまっていた） */
+#taAccelerationLabel.ta-night-hud-visible.ta-night-arrival-flash,#taScoreLevelLabel.ta-night-hud-visible.ta-night-arrival-flash{opacity:1!important}
+@keyframes taLvSealIn{0%{opacity:0;filter:blur(6px);scale:3.6}20%{opacity:.6;filter:blur(2px)}70%{opacity:.92;filter:blur(0);scale:1.22}88%{opacity:1;scale:1;text-shadow:0 0 12px #fff,0 0 28px #c4e4ff}100%{opacity:1;scale:1}}
 </style>
 <style id="ta-night-continuity-fix">
 /* The chain badge retires before the night declaration and never flashes again on return. */
@@ -7053,8 +7067,9 @@ function spawnLoop(){
     // Keep natural arrivals at 75% cadence during Sakura, independent of falling words.
     const sakuraNatural = sakuraOn && taRunning;
     const dCh = taDensityChapter();
-    const n5 = taRunning && typeof taNightNumber==='number' && taNightNumber >= 5;   // 第五夜は言霊を多めに（同時に1個多く、出る間隔を0.85倍）
-    const target = taRunning ? (matchMedia("(pointer:coarse)").matches ? TA_DENSITY_MOBILE[dCh] : TA_DENSITY_PC[dCh]) + (n5 ? 1 : 0) : 4;
+    // 第五夜からは言霊を多めに：第五〜七夜は同時に1個多く、第八夜からは2個多く。出る間隔は第五夜0.85倍から一夜ごとに縮み、第十夜で0.7倍
+    const nN = taRunning && typeof taNightNumber==='number' ? Math.min(taNightNumber, 10) : 1, n5 = nN >= 5;
+    const target = taRunning ? (matchMedia("(pointer:coarse)").matches ? TA_DENSITY_MOBILE[dCh] : TA_DENSITY_PC[dCh]) + (nN >= 8 ? 2 : n5 ? 1 : 0) : 4;
     const now = performance.now();
     // At <=1 remaining word, bring forward the next single spawn without clustering.
     if(taRunning && count<=1 && nextNaturalSpawnAt>now+260)nextNaturalSpawnAt=now+110;
@@ -7090,7 +7105,7 @@ function spawnLoop(){
           }, staggerMs);
         }
       }
-      nextNaturalSpawnAt = now + (taRunning ? (400+Math.random()*450)*TA_DENSITY_GAP[dCh]*(sakuraNatural ? 4/3 : 1)*(n5 ? .85 : 1) : 720+Math.random()*700);
+      nextNaturalSpawnAt = now + (taRunning ? (400+Math.random()*450)*TA_DENSITY_GAP[dCh]*(sakuraNatural ? 4/3 : 1)*(n5 ? .85 - .03 * (nN - 5) : 1) : 720+Math.random()*700);
     }
   }
   setTimeout(spawnLoop, flood ? 430 : (taRunning ? (180+Math.random()*150)*TA_DENSITY_GAP[taDensityChapter()] : 520+Math.random()*340));
@@ -10207,11 +10222,14 @@ window.addEventListener("resize", ()=>{ if(libOpen && !turning) renderShelf(); }
 // 演出テスト用：今の章を「あと1頁」の状態にする（言霊を一つ消せば次の章へ。最後の章なら夜のボーナスへ）
 $("t-metal").onclick=()=>{taMetalTestRate=taMetalTestRate==null?.25:taMetalTestRate===.25?.6:taMetalTestRate===.6?0:null;const lab=taMetalTestRate==null?"章連動":taMetalTestRate===0?"なし":taMetalTestRate===.25?"少し":"多い";$("t-metal").textContent="金属:"+lab;toast(taMetalTestRate==null?"金属文字：章に合わせて出す（第三章から）":taMetalTestRate===0?"金属文字を出さない":"金属文字を出す（約"+Math.round(taMetalTestRate*100)+"%）");};
 // テスト：次のプレイを第五夜から始める（切り替えはこのブラウザに覚えておく）
-try{ if(localStorage.getItem("taTestStartNight")==="5") window.taTestStartNight = 5; }catch(_){}
-const taTestNightLabel = () => { const b = $("t-night5"); if(b) b.textContent = window.taTestStartNight === 5 ? "開始：第五夜" : "開始：第一夜"; };
+// 押すたびに 第一夜 → 第五夜 → 第六夜 … 第十夜 → 第一夜 と切り替わる
+const taTestKanji = n => ["","一","二","三","四","五","六","七","八","九","十"][n] || String(n);
+try{ const v = +localStorage.getItem("taTestStartNight"); if(v >= 5 && v <= 10) window.taTestStartNight = v; }catch(_){}
+const taTestNightLabel = () => { const b = $("t-night5"); if(b) b.textContent = "開始：第" + taTestKanji(window.taTestStartNight >= 5 ? window.taTestStartNight : 1) + "夜"; };
 taTestNightLabel();
-$("t-night5").onclick=()=>{ window.taTestStartNight = window.taTestStartNight === 5 ? 1 : 5; try{ localStorage.setItem("taTestStartNight", String(window.taTestStartNight)); }catch(_){} taTestNightLabel();
-  toast(window.taTestStartNight === 5 ? "次のプレイは第五夜の第一章から始まります" : "次のプレイは第一夜から始まります"); };
+$("t-night5").onclick=()=>{ const cur = window.taTestStartNight >= 5 ? window.taTestStartNight : 1; window.taTestStartNight = cur === 1 ? 5 : cur >= 10 ? 1 : cur + 1;
+  try{ localStorage.setItem("taTestStartNight", String(window.taTestStartNight)); }catch(_){} taTestNightLabel();
+  toast("次のプレイは第" + taTestKanji(window.taTestStartNight) + "夜" + (window.taTestStartNight > 1 ? "の第一章" : "") + "から始まります"); };
 $("t-density").onclick=()=>{taDensityFlat=!taDensityFlat;$("t-density").textContent=taDensityFlat?"言霊:以前の量":"言霊:章連動";toast(taDensityFlat?"言霊の量を以前の量（スマホ5／PC6）に固定しました":"言霊の量を章に合わせて増やします");};
 $("t-bomb").onclick=()=>{ if(!taRunning){toast("ゲーム中に押すと、爆弾発言が現れます");return;} if(taNightActive()){toast("いまは夜のボーナス中です");return;} if(flood||sakuraOn){toast("時間停止・桜吹雪のあいだは出せません");return;} forceBomb=true; spawnWord({force:true}); if(forceBomb){forceBomb=false;toast("いまは出せませんでした");} };
 $("t-pages").onclick=()=>{ if(!taRunning){toast("ゲーム中に押すと、今の章があと1頁になります");return;} if(taNightActive()){toast("いまは夜のボーナス中です");return;}
@@ -10315,27 +10333,50 @@ setTimeout(()=>{ if(mode!=="black") $("m-black").click(); },120);
 /* Rules only. All original FX remain in the original inline script. */
 const TA_TIME_MAX=80;   // 残り時間の上限（秒）
 let taRunning=false,taSeconds=60,taScore=0,taLast=0,taRaf=0,taFinishToken=0;
-// Night advances only after a completed 800-chain interlude. Acceleration caps at Lv5.
+// Night advances only after a completed 800-chain interlude. Acceleration caps at Lv10.
 let taNightNumber=1;
 function taNightKanji(n){const digits=['零','一','二','三','四','五','六','七','八','九'];if(n<10)return digits[n];if(n<20)return '十'+(n%10?digits[n%10]:'');if(n<100)return digits[Math.floor(n/10)]+'十'+(n%10?digits[n%10]:'');return String(n);}
 function taUpdateNightHud(){
  const night=document.getElementById('taNightStageLabel'),acc=document.getElementById('taAccelerationLabel');
  const visible=taRunning&&taNightNumber>=2;
  if(night){night.textContent=visible?'第'+taNightKanji(taNightNumber)+'夜':'';night.classList.toggle('ta-night-hud-visible',visible);}
- if(acc){acc.textContent=visible?'加速 Lv'+Math.min(taNightNumber,5):'';acc.classList.toggle('ta-night-hud-visible',visible);}
+ if(acc){acc.textContent=visible?'加速 Lv'+taNightLv():'';acc.classList.toggle('ta-night-hud-visible',visible);}
  const sc=document.getElementById('taScoreLevelLabel');
- if(sc){sc.textContent=visible?'得点 Lv'+Math.min(taNightNumber,5):'';sc.classList.toggle('ta-night-hud-visible',visible);}
+ if(sc){sc.textContent=visible?'得点 Lv'+taNightLv():'';sc.classList.toggle('ta-night-hud-visible',visible);}
 }
-// 夜を重ねるほど得点も上がる（第二夜×1.25 … 第五夜以降×2）。章は得点に関係しない。
-function taNightScoreRate(){return 1+.25*(Math.min(taNightNumber,5)-1);}
-// 時間の減る速さ（加速 Lv）：一夜ごとに +0.1（第二夜×1.1 … 第五夜以降×1.4）。以前は +0.25 で第五夜×2.0 だった
-function taNightTimeRate(){const n=Math.min(taNightNumber,5);return n>=5?1.5:1+.1*(n-1);}   // 第五夜は少し速く（1.4→1.5倍）
+// 加速 Lv・得点 Lv は夜の数と同じ（第十夜の Lv10 で頭打ち。第十一夜以降も Lv10 のまま）
+const TA_NIGHT_LV_MAX=10;
+function taNightLv(){return Math.max(1,Math.min(taNightNumber,TA_NIGHT_LV_MAX));}
+// 夜を重ねるほど得点も上がる。第二〜五夜は一夜ごとに +0.25（第五夜×2）、第六夜からは一夜ごとに +0.3（第十夜×3.5）。章は得点に関係しない。
+function taNightScoreRate(){const n=taNightLv();return n<=5?1+.25*(n-1):2+.3*(n-5);}
+// 時間の減る速さ（加速 Lv）：第二〜四夜は一夜ごとに +0.1、第五夜×1.5、第六夜からは一夜ごとに +0.12（第十夜×2.1）
+function taNightTimeRate(){const n=taNightLv();return n<=4?1+.1*(n-1):1.5+.12*(n-5);}
 
 // 800-chain loop-clear: one bonus per 800 chains, then stage 01 with score/time retained.
 // 夜のボーナスの青い言霊：30個（1つ+1秒、20秒のうちに現れる）
 const taNightBonus={phase:'idle',serial:0,timers:[],born:0,spawned:0,wordCount:30,orbPending:false,specialWordStarted:false,overlay:null,curtain:null,unlockAtStart:false};
 const taNightActive=()=>taNightBonus.phase!=='idle';
 function taNightLater(fn,ms){const serial=taNightBonus.serial;const id=setTimeout(()=>{if(serial===taNightBonus.serial&&taRunning)fn();},ms);taNightBonus.timers.push(id);}
+// 新しい夜：「第〇夜」が収束し始めるのと重ねて、0.2秒ずつずらして「加速 Lv」「得点 Lv」の新しい文字も、にじんだ大きな文字から元の表記の上へ収束させる。
+// 元の表記は消さない（収束しきったところで新しい Lv に替わり、光る）
+function taNightLvAnnounce(nextNight){
+ const lv=Math.max(1,Math.min(nextNight,TA_NIGHT_LV_MAX));
+ const items=[['taAccelerationLabel','加速 Lv'+lv,200],['taScoreLevelLabel','得点 Lv'+lv,400]];
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ for(const [id,text,delay] of items){
+  setTimeout(()=>{
+   const el=document.getElementById(id);if(!el||!taRunning)return;
+   const r=el.getBoundingClientRect(),cs=getComputedStyle(el);
+   const seal=document.createElement('div');seal.className='ta-lv-seal';seal.textContent=text;seal.dataset.t=text;seal.setAttribute('aria-hidden','true');
+   Object.assign(seal.style,{left:(r.left+r.width/2)+'px',top:(r.top+r.height/2)+'px',fontFamily:cs.fontFamily,fontSize:cs.fontSize,fontWeight:cs.fontWeight,letterSpacing:cs.letterSpacing});
+   document.body.append(seal);
+   setTimeout(()=>{   // 収束しきったら、本来の表記（この時点で新しい Lv になっている）を光らせ、重ねた文字を消す
+    el.classList.add('ta-night-arrival-flash');seal.classList.add('out');
+    setTimeout(()=>el.classList.remove('ta-night-arrival-flash'),1200);setTimeout(()=>seal.remove(),520);
+   },1500);
+  },delay);
+ }
+}
 function taNightClear(){document.querySelectorAll('.ta-night-echo').forEach(el=>el.remove());taNightBonus.serial++;taNightBonus.timers.forEach(clearTimeout);taNightBonus.timers=[];taNightBonus.phase='idle';taNightBonus.orbPending=false;taNightBonus.specialWordStarted=false;document.documentElement.classList.remove('ta-night-bonus');document.querySelectorAll('#drift .ta-night-word,#drift .ta-night-silver').forEach(el=>el.remove());taNightBonus.overlay?.remove();taNightBonus.overlay=null;taNightBonus.curtain?.remove();taNightBonus.curtain=null;}
 function taNightStart(){
  if(!taRunning||taNightActive()||taStoryLevel()<800)return;
@@ -10356,6 +10397,20 @@ function taNightStart(){
   document.dispatchEvent(new Event('ta-night-silver-check'));
   // End naturally after the 40th birth; existing words keep their usual lifetime.
  },80);
+ // 夜のボーナスに持ち越した普通の言霊（金属・爆弾発言も）は、ボーナス中は拾えないので、画面が黒くなりきったところで一緒に静かに消す。
+ // 黒くなる演出がない場合も、4秒たったら消す
+ const serial=taNightBonus.serial,born=performance.now();
+ const sweepLeft=()=>{
+  if(serial!==taNightBonus.serial||!taNightActive())return;
+  let black=false;try{const v=document.querySelector('#viewMain>.hero>.ta-stage9-void');black=!!v&&+getComputedStyle(v).opacity>=.97;}catch(_){}
+  if(!black&&performance.now()-born<4000){taNightLater(sweepLeft,200);return;}
+  document.querySelectorAll('#drift .word:not(.ta-night-word):not(.got):not(.flying)').forEach(w=>{
+   w.classList.add('got');w.style.pointerEvents='none';
+   const a=w.animate([{opacity:+getComputedStyle(w).opacity||1,filter:'blur(0)'},{opacity:0,filter:'blur(3px)'}],{duration:600,easing:'ease-out',fill:'forwards'});
+   a.onfinish=()=>w.remove();
+  });
+ };
+ taNightLater(sweepLeft,300);
 }
 function taNightScheduleBlue(){
  // 700+ words' ordinary drift/expiration are reused, not a second animation mode.
@@ -10497,7 +10552,7 @@ function taNightReturn(){
    seal.style.lineHeight=font.lineHeight;seal.style.letterSpacing=font.letterSpacing;
    seal.style.left=(r.left+r.width/2-h.left)+'px';seal.style.top=(r.top+r.height/2-h.top)+'px';
   }
-  requestAnimationFrame(()=>requestAnimationFrame(()=>echo.classList.add('approach')));   // 黒い幕が晴れ、文字が収束する
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{echo.classList.add('approach');taNightLvAnnounce(taNightNumber+1);}));   // 黒い幕が晴れ、文字が収束する。加速 Lv・得点 Lv も0.2秒ずつずらして重ねる
   // 夜明けの演出は、黒から最初の景色へのクロスフェードだけ（以前の白銀のもや・舞い上がる粒は使わない。taNightDawnFx は残置）
   taNightLater(()=>{
    if(taNightBonus.phase!=='return')return;
@@ -10510,7 +10565,7 @@ function taNightReturn(){
      if(taNightBonus.phase!=='return')return;
      const nightHud=document.getElementById('taNightStageLabel');
      const speedHud=document.getElementById('taAccelerationLabel'),scoreHud=document.getElementById('taScoreLevelLabel');
-     for(const node of [nightHud,speedHud,scoreHud]){
+     for(const node of [nightHud]){   // 加速 Lv・得点 Lv は taNightLvAnnounce が重ねた文字の収束に合わせて光らせる
       if(!node)continue;
       node.classList.add('ta-night-arrival-flash');
       setTimeout(()=>node.classList.remove('ta-night-arrival-flash'),1200);
@@ -11554,7 +11609,7 @@ function taBeginReady(){
   taNightClear();
   document.documentElement.classList.remove('ta-night-chain-retired');
   // テストモードで「開始：第五夜」にしていれば、第五夜の第一章から始める（曲・時間の速さ・言霊の量・爆弾発言も第五夜のもの）
-  const testNight=(location.hash||'').startsWith('#test')&&window.taTestStartNight===5?5:1;
+  const testNight=(location.hash||'').startsWith('#test')&&window.taTestStartNight>=5&&window.taTestStartNight<=10?window.taTestStartNight:1;
   taNightNumber=testNight;if(testNight>=5)nextBombAt=Math.min(nextBombAt,Date.now()+4000);
   document.getElementById('taNightStageLabel')?.classList.remove('ta-night-seal-settled');taUpdateNightHud();
   window.taSoumatou?.stop();
