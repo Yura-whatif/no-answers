@@ -2662,16 +2662,19 @@ html.ta-native-return-all.ta-native-return-800 #viewMain>.hero.ta-active-visual>
 #taStarOutcome .ta-star-unlock{margin:7px 0;padding:10px 6px;font-size:16px;font-weight:bold;border:1px solid #b28b56;border-radius:8px;background:#8d683524;color:#ffe3a2;}
 </style>
 <style id="ta-kickframe-css">
-/* 第五夜：曲のバスドラムに合わせて、採集エリアの枠がほのかに光る（玉を使ったときの枠の光より弱く、外へは広げない。色は章の枠の色） */
-.ta-kickframe{position:absolute;inset:0;z-index:63;pointer-events:none;border-radius:inherit;opacity:0;will-change:opacity;--kc:#dee9ff;
- box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--kc) 60%,transparent),inset 0 0 12px 2px color-mix(in srgb,var(--kc) 36%,transparent)}
-/* 枠に章の色がついている章（第四章以降）は、その章の枠の色で光る。枠が消灯している第一〜三章は青白い光のまま */
-html.ta-century-lit #viewMain>.hero>.ta-kickframe{--kc:var(--ta-stage-edge)}
+/* 第五夜：曲のバスドラムに合わせて、採集エリアの枠がほのかに光る（玉を使ったときの枠の光より弱く、外へは広げない。色は青白、章の枠も同じ拍で脈打つ） */
+.ta-kickframe{position:absolute;inset:0;z-index:188;pointer-events:none;border-radius:inherit;opacity:0;will-change:opacity;--kc:#dee9ff;
+ box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--kc) 82%,transparent),inset 0 0 16px 3px color-mix(in srgb,var(--kc) 46%,transparent)}
+/* どの章も青白く光る。加えて、枠に章の色がついている章では、章の色の枠の線とにじみを同じ拍で重ねて、枠そのものが脈打って見えるようにする
+   （消灯している章は --ta-stage-strength が 0 なので、重ねる枠は見えない）。光の層の明るさを変えるだけなので軽い */
+#viewMain>.hero>.ta-kickframe::before{content:"";position:absolute;inset:0;border-radius:inherit;box-sizing:border-box;
+ border:2px solid var(--ta-stage-edge);box-shadow:inset 0 0 calc(var(--ta-stage-soft) * 1.8) 2px var(--ta-stage-edge),inset 0 0 3px var(--ta-stage-edge);
+ opacity:min(.85,calc(var(--ta-stage-strength) * 2.4))}
 @media(prefers-reduced-motion:reduce){.ta-kickframe{display:none}}
 </style>
 <style id="ta-orbframe-css">
 /* 紅・蒼 Lv5：炎・氷が出ている間の枠の光 */
-.ta-orbframe{position:absolute;inset:0;z-index:64;pointer-events:none;border-radius:inherit;overflow:hidden;opacity:0;transition:opacity .6s ease}
+.ta-orbframe{position:absolute;inset:0;z-index:188;pointer-events:none;border-radius:inherit;overflow:hidden;opacity:0;transition:opacity .6s ease}
 .ta-orbframe.on{opacity:1}
 .ta-orbframe:not(.on) *{animation-play-state:paused!important}
 .ta-orbframe i,.ta-orbframe b{position:absolute;display:block;pointer-events:none}
@@ -5452,7 +5455,7 @@ const taCenturyMusic=(()=>{
   }
   function start(){
     if(active)return;
-    active=true;heartbeatDuck=false;stoppedForTime=!!flood;serial++;endedHold=false;
+    active=true;heartbeatDuck=false;stoppedForTime=!!flood;serial++;endedHold=false;vStart=performance.now();
     const a=ensure();clearFade();try{a.currentTime=0;}catch(_){}
     if(!stoppedForTime)play();
   }
@@ -5499,7 +5502,15 @@ const taCenturyMusic=(()=>{
   function isActive(){return active;}
   function retry(){if(active&&!stoppedForTime&&audio&&audio.paused&&!taSilverMusic.isActive())play();}
   // 第五夜の曲のバスドラムに合わせて枠を光らせるため、いま流れている曲と再生位置を教える（流れていなければ -1）
-  const playingAt=name=>audio&&active&&!audio.paused&&curSrc.includes(name)?audio.currentTime:-1;
+  // 音を切っている・自動再生が止められているときも枠は光らせたいので、曲が流れていない間は「流れていたらこの位置」という時計で進める。
+  // 曲が実際に流れている間は、その再生位置に時計を合わせ続ける（音を切り替えても拍がずれない）
+  let vStart=performance.now();
+  const playingAt=name=>{
+    if(!active||stoppedForTime||!curSrc.includes(name))return -1;
+    if(audio&&!audio.paused){vStart=performance.now()-audio.currentTime*1000;return audio.currentTime;}
+    const len=(audio&&isFinite(audio.duration)&&audio.duration>0)?audio.duration:180;
+    return ((performance.now()-vStart)/1000)%len;
+  };
   return {start,stop,timeStop,timeResume,retry,resultOutro,isActive,setHeartbeatDuck,fadeTo,playingAt,setLoop:v=>{if(audio)audio.loop=v;}};
 })();
 // 夜のボーナス中は、流れている曲が終わってもくり返さない（ボーナス以外では従来どおりくり返す）
@@ -15254,6 +15265,14 @@ html.ta-active-moon #viewMain>.hero .ta-moon{opacity:1}
 /* 章の名前：映画風の黒帯（フェードイン）＋下の帯の文字。帯は月（z-index:186）より手前 */
 #viewMain>.hero.ta-cine-on #combo{z-index:189;background:transparent!important;border-color:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}   /* 黒帯の上では枠を消して文字だけに */
 #viewMain>.hero .ta-story-cine{position:absolute;inset:0;z-index:187;pointer-events:none;overflow:hidden;border-radius:inherit}
+/* 黒帯が出ても枠が隠れないように：玉の枠の光・バスドラムの光は帯より手前（z-index:188）に置き、
+   帯の下に隠れる「枠の内側の縁取り」は、帯の部分にだけ同じ縁取りを描き直す（真ん中は元の縁取りのまま） */
+#viewMain>.hero .ta-story-cine::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;
+ box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 85%,transparent),inset 0 0 34px color-mix(in srgb,var(--accent) 45%,transparent);
+ -webkit-mask:linear-gradient(#000 0 13%,transparent 13% 87%,#000 87% 100%);mask:linear-gradient(#000 0 13%,transparent 13% 87%,#000 87% 100%)}
+#viewMain>.hero.rush .ta-story-cine::after{opacity:.7}
+html.ta-silver-music-started:not(.ta-800-lit) #viewMain>.hero.rush .ta-story-cine::after{box-shadow:inset 0 0 0 1.5px rgba(236,247,255,.94),inset 0 0 34px rgba(184,216,245,.5)}
+html.ta-800-lit #viewMain>.hero .ta-story-cine::after,html.ta-300-gold-fading:not(.ta-silver-music-started) #viewMain>.hero .ta-story-cine::after{opacity:0}
 #viewMain>.hero .ta-story-cine-bar{position:absolute;left:0;right:0;height:13%;background:#030305;opacity:0;transition:opacity 1.2s ease-in-out}
 #viewMain>.hero .ta-story-cine-bar{display:flex;align-items:center;justify-content:center}
 #viewMain>.hero .ta-story-cine-bar.top{top:0}
