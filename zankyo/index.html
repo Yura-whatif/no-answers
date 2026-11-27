@@ -8060,11 +8060,16 @@ function startSakura(from, opt){
       const fxBusy = now - (window.__taFxPaintAt || -1e9) < 160;
       // 端末が重いとき（ta-lowfx）は、玉を使っていなくても同じだけ間引き、スマホでは手前の大きな花びらの画布を描かない
       const lowfx = document.documentElement.classList.contains('ta-lowfx');
-      const paintGap = (fxBusy || lowfx) ? (skMobile ? 50 : 33) : (skMobile ? 32 : 0);
+      // 交差の爆発・爆弾発言が重なっている間（いちばん重い組み合わせ）は、花びらの描き直しをさらに間引き（スマホ15fps・PC20fps）、
+      // 新しく舞わせる花びらも減らす（今舞っている花びらはそのまま）。スマホでは手前の大きな花びらも描かない
+      const burst = (typeof taBombLive === 'number' && taBombLive > 0) || document.documentElement.classList.contains('ta-cross-live');
+      if(burst) cap = Math.min(cap, skMobile ? 26 : 70);
+      const paintGap = burst ? (skMobile ? 66 : 50) : (fxBusy || lowfx) ? (skMobile ? 50 : 33) : (skMobile ? 32 : 0);
       // 描画で例外が起きても桜吹雪の進行（ゲージ・終了処理）は止めない
-      if(now-lastPaint>=paintGap)try{lastPaint=now;draw(bc, P, false, G, dprB);if((F.length && !(skMobile && lowfx)) || !skMobile)draw(fc, F, true, G, dprF);
-        else if(skMobile && lowfx && !fc.__cleared){fc.clearRect(0,0,fc.canvas.width,fc.canvas.height);fc.__cleared=true;}
-        if(!(skMobile && lowfx))fc.__cleared=false;}catch(_){}
+      const skipFront = skMobile && (lowfx || burst);
+      if(now-lastPaint>=paintGap)try{lastPaint=now;draw(bc, P, false, G, dprB);if((F.length && !skipFront) || !skMobile)draw(fc, F, true, G, dprF);
+        else if(skipFront && !fc.__cleared){fc.clearRect(0,0,fc.canvas.width,fc.canvas.height);fc.__cleared=true;}
+        if(!skipFront)fc.__cleared=false;}catch(_){}
       if(sakuraBarFill) sakuraBarFill.style.transform = `scaleX(${Math.max(0, 1 - t / SAKURA_MS).toFixed(4)})`;
       if(t >= SAKURA_MS) return finish(false);
     }
@@ -12104,6 +12109,10 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
  const CLOCK_GRACE_MS=1000;
  const CLOCK_WINDOW=CLOCK_VISIBLE_MS+CLOCK_FADE_MS+CLOCK_GRACE_MS;
  // Initialize the capture scene only after clockDial has been declared.
+ // 文字盤（タップで置いた紅・蒼の円）の受付：最短でも CLOCK_WINDOW。円そのものがまだ見えているあいだは、時間が過ぎても受け付ける
+ // （Lv4・5 の円は5〜6秒残るのに、受付だけ4.3秒で切れて「円は見えているのに時計・月蝕が出ない」ことがあった）
+ const dialTraceAlive=d=>!!(d&&d.trace&&traces.includes(d.trace)&&!d.trace.retiring&&d.trace.left>.35);
+ const dialAlive=d=>!!d&&(performance.now()<=d.expires||dialTraceAlive(d));
  function clearClock(){clearTimeout(clockTimer);clockTimer=null;clockDial=null;if(clockFx){const old=clockFx;clockFx=null;old.classList.add('clock-expiring');setTimeout(()=>old.remove(),460);}}
  function clockDialFx(pt,type){
   if(flood){
@@ -12128,11 +12137,13 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   // The shape-recognition grace period remains independent of visibility.
   const createdDial=el;
   setTimeout(()=>{if(clockFx===createdDial&&clockDial)createdDial.classList.add('clock-grace')},CLOCK_VISIBLE_MS);
-  clockTimer=setTimeout(()=>{if(clockFx===createdDial&&clockDial)clearClock()},CLOCK_WINDOW);
+  const dialAtCreate=clockDial;
+  const expireCheck=()=>{if(clockDial!==dialAtCreate)return;if(dialTraceAlive(clockDial)){clockTimer=setTimeout(expireCheck,150);return;}if(clockFx===createdDial||!clockFx)clearClock();};
+  clockTimer=setTimeout(expireCheck,CLOCK_WINDOW);
  }
  function clockHands(g,pts){
   const dial=clockDial;
-  if(!dial||dial.type===g.type||performance.now()>dial.expires||pts.length<3)return false;
+  if(!dial||dial.type===g.type||!dialAlive(dial)||pts.length<3)return false;
   const cx=dial.x,cy=dial.y,rad=70;
   const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const origin={x:cx,y:cy},first=pts[0],last=pts[pts.length-1];
@@ -12433,7 +12444,7 @@ new MutationObserver(taSyncDemo).observe(document.getElementById('viewLib'),{att
   if(performance.now()-lastOrbPointerAt<750){e.preventDefault();return;}
   selectOrb(b); // keyboard / assistive technology activation
  });
- function clear(){thunderClear();document.querySelectorAll(".ta-eclipse-session-fx").forEach(el=>{el.getAnimations().forEach(a=>a.cancel());el.remove();});taUltimateClear();clearPaintedClock();clockCanvas.classList.remove('ta-clock-front');clearClock();if(taCompletedClock){taCompletedClock.remove();taCompletedClock=null;}taClockVeilCenter=null;taCompletedClockAnchor=null;selected=null;sync();gesture=null;consumedPointer=null;taLastDualFinisher=-Infinity;traces=[];eclipseRims=[];layer.classList.remove("ta-eclipse-rim-front");particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.restore();clockCtx.save();clockCtx.setTransform(1,0,0,1,0,0);clockCtx.clearRect(0,0,clockCanvas.width,clockCanvas.height);clockCtx.restore();fxWasDrawing=false;}
+ function clear(){thunderClear();document.documentElement.classList.remove('ta-cross-live');document.querySelectorAll(".ta-eclipse-session-fx").forEach(el=>{el.getAnimations().forEach(a=>a.cancel());el.remove();});taUltimateClear();clearPaintedClock();clockCanvas.classList.remove('ta-clock-front');clearClock();if(taCompletedClock){taCompletedClock.remove();taCompletedClock=null;}taClockVeilCenter=null;taCompletedClockAnchor=null;selected=null;sync();gesture=null;consumedPointer=null;taLastDualFinisher=-Infinity;traces=[];eclipseRims=[];layer.classList.remove("ta-eclipse-rim-front");particles=[];summonBursts=[];crossBursts=[];summonTimers.forEach(clearTimeout);summonTimers=[];ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.restore();clockCtx.save();clockCtx.setTransform(1,0,0,1,0,0);clockCtx.clearRect(0,0,clockCanvas.width,clockCanvas.height);clockCtx.restore();fxWasDrawing=false;}
  // Eclipse perimeter uses exactly the same renderFire/renderIce as a normal tap circle.
  window.taEclipseRimStart=(x,y,radius,type,duration)=>{
    const hr=hero.getBoundingClientRect();
@@ -13106,6 +13117,8 @@ const __ta100Start=window.__ta100Profile.start();try {
    a.oncancel=cleanup;
   }
  }
+ // まとめて消すとき：消す言霊と得点・時間の表示の位置を先に1回で読んでおき、1語ずつ消す間は読み直さない（爆弾発言と同じ方式）
+ function taCrossRectBatch(hits){const rb=new Map();try{for(const h of hits)rb.set(h.w,h.rect);for(const id of ['taTime','taScore','taTimeBox']){const el=document.getElementById(id);if(el)rb.set(el,el.getBoundingClientRect());}rb.set(hero,hero.getBoundingClientRect());rb.set(field,field.getBoundingClientRect());}catch(_){}return rb;}
  function pulseCollect(b,radius){
   if(!active())return;
   const hr=hero.getBoundingClientRect();let count=0;
@@ -13123,30 +13136,7 @@ const __ta100Start=window.__ta100Profile.start();try {
    if(dx*dx+dy*dy<=radiusSq)hits.push({w,x:r.left+r.width/2,y:r.top+r.height/2,rect:r});
   }
   if(taPerfEnabled)taPerfCost('read',performance.now()-phaseReadStart);
-  taCrossRewardTargets=taCrossTargets();
-  taCrossHeroRect=hr;
-  for(const hit of hits){
-   const w=hit.w;
-   if(!valid(w)||w.dataset.taElementClaim)continue;
-   taCrossRectCache.set(w,hit.rect);
-   const phaseOrbStart=taPerfEnabled?performance.now():0;
-   crossRewardOrbs(w,hit);
-   if(taPerfEnabled)taPerfCost('orbs',performance.now()-phaseOrbStart);
-   const phaseLogicStart=taPerfEnabled?performance.now():0;
-   if(b.slash&&w.classList.contains('ta-metal'))taCrossCut(w,hit.rect,b,hr,b.pulses);
-   taMastery.add('ice',w);collect(w,'fire',5);
-   taCrossRectCache.delete(w);
-   if(taPerfEnabled)taPerfCost('logic',performance.now()-phaseLogicStart);
-   count++;
-  }
-  taCrossRewardTargets=null;
-  taCrossHeroRect=null;
-  const phaseHudStart=taPerfEnabled?performance.now():0;
-  if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
-   taSeconds+=count*0.5;taSessionTimeGain+=count*0.5;taRender();
-   const box=document.getElementById('taTimeBox');if(box){box.classList.remove('ta-frame-flash');requestAnimationFrame(()=>{if(box.isConnected)box.classList.add('ta-frame-flash');});}
-  }
-  if(taPerfEnabled)taPerfCost('hud',performance.now()-phaseHudStart);
+  taCrossCollectChunked(b,hits,hr,null);
  }
 // 斬撃（紅・蒼ともLv4以上）：割れる金属の言霊を、斬線の向きに真っ二つにして左右へずらし落とす（見た目だけ）
  let taCutLayer=null;
@@ -13183,32 +13173,43 @@ const __ta100Start=window.__ta100Profile.start();try {
    hits.push({w,x:r.left+r.width/2,y:r.top+r.height/2,rect:r});
   }
   if(taPerfEnabled)taPerfCost('read',performance.now()-phaseReadStart);
-  taCrossRewardTargets=taCrossTargets();
-  taCrossHeroRect=hero.getBoundingClientRect();
-  let count=0;
-  for(const hit of hits){
-   const w=hit.w;
-   if(!valid(w)||w.dataset.taElementClaim)continue;
-   taCrossRectCache.set(w,hit.rect);
-   const phaseOrbStart=taPerfEnabled?performance.now():0;
-   crossRewardOrbs(w,hit);
-   if(taPerfEnabled)taPerfCost('orbs',performance.now()-phaseOrbStart);
-   const phaseLogicStart=taPerfEnabled?performance.now():0;
-   if(b.slash&&w.classList.contains('ta-metal'))taCrossCut(w,hit.rect,b,taCrossHeroRect,4);
-   taMastery.add('ice',w);collect(w,'fire',5);
-   taCrossRectCache.delete(w);
-   if(taPerfEnabled)taPerfCost('logic',performance.now()-phaseLogicStart);
-   count++;
-  }
-  taCrossRewardTargets=null;
-  taCrossHeroRect=null;
-  const phaseHudStart=taPerfEnabled?performance.now():0;
-  if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
-   taSeconds+=count*0.5;taSessionTimeGain+=count*0.5;taRender();
-   const box=document.getElementById('taTimeBox');
-   if(box){box.classList.remove('ta-frame-flash');requestAnimationFrame(()=>{if(box.isConnected)box.classList.add('ta-frame-flash');});}
-  }
-  if(taPerfEnabled)taPerfCost('hud',performance.now()-phaseHudStart);
+  taCrossCollectChunked(b,hits,hero.getBoundingClientRect(),4);
+ }
+ // 交差の爆発で言霊をまとめて消す：一度に全部ではなく、1コマに最大6語ずつ、続きは次のコマで消す（得点・時間・連鎖は同じ。
+ // 20語近くを1コマで消すと、そのコマだけ0.1〜0.3秒止まっていた）。各回は位置を先に1回で読み、消している間は読み直さない
+ function taCrossCollectChunked(b,hits,hr,cutBeat){
+  const PER=taMobileFx?5:8;
+  const run=(start)=>{
+   if(!active())return;
+   const part=hits.slice(start,start+PER);
+   taCrossRewardTargets=taCrossTargets();taCrossHeroRect=hr;
+   window.taRectBatch=taCrossRectBatch(part);
+   let count=0;
+   try{
+    for(const hit of part){
+     const w=hit.w;
+     if(!valid(w)||w.dataset.taElementClaim)continue;
+     taCrossRectCache.set(w,hit.rect);
+     const phaseOrbStart=taPerfEnabled?performance.now():0;
+     crossRewardOrbs(w,hit);
+     if(taPerfEnabled)taPerfCost('orbs',performance.now()-phaseOrbStart);
+     const phaseLogicStart=taPerfEnabled?performance.now():0;
+     if(b.slash&&w.classList.contains('ta-metal'))taCrossCut(w,hit.rect,b,hr,cutBeat==null?b.pulses:cutBeat);
+     taMastery.add('ice',w);collect(w,'fire',5);
+     taCrossRectCache.delete(w);
+     if(taPerfEnabled)taPerfCost('logic',performance.now()-phaseLogicStart);
+     count++;
+    }
+   }finally{window.taRectBatch=null;taCrossRewardTargets=null;taCrossHeroRect=null;}
+   const phaseHudStart=taPerfEnabled?performance.now():0;
+   if(count&&typeof taSeconds!=='undefined'&&typeof taRender==='function'){
+    taSeconds+=count*0.5;taSessionTimeGain+=count*0.5;taRender();
+    const box=document.getElementById('taTimeBox');if(box){box.classList.remove('ta-frame-flash');requestAnimationFrame(()=>{if(box.isConnected)box.classList.add('ta-frame-flash');});}
+   }
+   if(taPerfEnabled)taPerfCost('hud',performance.now()-phaseHudStart);
+   if(start+PER<hits.length)requestAnimationFrame(()=>run(start+PER));
+  };
+  run(0);
  }
  // Static blade normals and taper profile: calculate once at the cross trigger.
  function taCrossBladePoints(path){
@@ -13292,6 +13293,8 @@ const __ta100Start=window.__ta100Profile.start();try {
   ctx.globalCompositeOperation='screen';
  }
  // 確認用：交点 (x,y)（採集エリア内の座標）で、紅と蒼の直線を交差させたことにして「全部なかったことに」を起こす
+ // 確認用：紅・蒼のタップ／スワイプを、玉を消費せずに採集エリア内の座標で起こす（テストモードのみ）
+ if((location.hash||'').startsWith('#test'))window.taTestGesture=(type,points)=>makeTrace({type,points:points.map(p=>({x:p[0],y:p[1]}))});
  window.taTestCross=(x,y,deg=20,len=240)=>{const r=deg*Math.PI/180,mk=(type,ang)=>{const dx=Math.cos(ang),dy=Math.sin(ang),path=[];for(let i=0;i<=12;i++){const t=-len/2+len*i/12;path.push({x:x+dx*t,y:y+dy*t});}return{type,path,isTap:false};};triggerCross(mk('fire',r),mk('ice',r+Math.PI/2));};
  // Cached radial core: pulse changes size/opacity, not the expensive gradient raster.
  const taCrossHaloCanvas=document.createElement('canvas');
@@ -13309,6 +13312,7 @@ const __ta100Start=window.__ta100Profile.start();try {
 const __ta100Start=window.__ta100Profile.start();try {
 
   crossBursts=crossBursts.filter(b=>{if(now-b.start<7000)return true;taUltimateHide(b.ultimateId);return false;});
+  {const live=crossBursts.some(b=>now-b.start<4400);const root=document.documentElement;if(live!==root.classList.contains('ta-cross-live'))root.classList.toggle('ta-cross-live',live);}   // 交差の爆発のいちばん重い間（桜吹雪が描き直しを間引く目印）
   for(const b of crossBursts){
    const t=(now-b.start)/1000;
    if(t>=3.22&&!b.flashCollected){b.flashCollected=true;taFlashArenaEdge("cross");{const tm=taPerfEnabled?performance.now():0;finalFlashCollect(b);if(taPerfEnabled)taPerfCost('collect',performance.now()-tm);}b.lastAfterCollect=now;}
@@ -13503,7 +13507,7 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
  // Clock hands remain swipe-only; a second tap never attempts clock recognition.
  const eclipseDial=clockDial;
  const eclipseTap=isTap && eclipseDial && eclipseDial.type!==g.type &&
-   performance.now()<=eclipseDial.expires &&
+   dialAlive(eclipseDial) &&
    Math.hypot(pts[0].x-eclipseDial.x,pts[0].y-eclipseDial.y)<=28;
  const soumatouTap=false; // Retired mode: keep ordinary elemental gesture handling.
  const completed=!isTap&&clockHands(g,pts);
@@ -13531,7 +13535,7 @@ taBorderGlow(g);if(g.type==='summon'){if(!taGreenTouchesInfinity(g.points))summo
  const hitStep=Math.max(0,Math.min(5,hitLv)-2),fireBoost=g.type==='fire',swipeR=23+4*hitStep+(fireBoost?7:0),tapR=94+8*hitStep+(fireBoost?16:0);   // 紅玉は範囲を少し広げて強化（線+7px・円+16px）
  const segs=[];if(isTap){const c=pts[0];segs.push([c,{x:c.x+.01,y:c.y},tapR]);}
  else for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(Math.hypot(b.x-a.x,b.y-a.y)>1)segs.push([a,b,swipeR]);}
- if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:(completed||eclipseTap)?.30:(typeof taStarRunValue==='function'?taStarRunValue((isTap?'tap'+(g.type==='fire'?'Fire':'Ice'):g.type)):3.1),total:(typeof taStarRunValue==='function'?taStarRunValue((isTap?'tap'+(g.type==='fire'?'Fire':'Ice'):g.type)):3.1),age:0,resonated:false,clockDissolve:completed||eclipseTap};traces.push(trace);if(!completed&&!eclipseTap&&!soumatouTap&&(g.type==='fire'||g.type==='ice'))window.taStars?.track(g.type);if(traces.length>2){for(const older of traces.slice(0,-2)){if(!older.clockDissolve){older.left=Math.min(older.left,1.85);older.total=3.1;older.retiring=true;}}}if(traces.length>6)traces.splice(0,traces.length-6);for(const other of traces){if(!completed&&!eclipseTap&&!soumatouTap&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed&&!eclipseTap)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
+ if(!segs.length)return;const renderSegs=isTap?Array.from({length:20},(_,i)=>{const a=i*Math.PI/10,b=(i+1)*Math.PI/10,c=pts[0],r=70;return [{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r},{x:c.x+Math.cos(b)*r,y:c.y+Math.sin(b)*r},25];}):segs;const trace={type:g.type,segs,renderSegs,path:pts,isTap,left:(completed||eclipseTap)?.30:(typeof taStarRunValue==='function'?taStarRunValue((isTap?'tap'+(g.type==='fire'?'Fire':'Ice'):g.type)):3.1),total:(typeof taStarRunValue==='function'?taStarRunValue((isTap?'tap'+(g.type==='fire'?'Fire':'Ice'):g.type)):3.1),age:0,resonated:false,clockDissolve:completed||eclipseTap};traces.push(trace);if(isTap&&clockDial&&!clockDial.trace&&clockDial.type===g.type&&clockDial.x===pts[0].x&&clockDial.y===pts[0].y)clockDial.trace=trace;if(!completed&&!eclipseTap&&!soumatouTap&&(g.type==='fire'||g.type==='ice'))window.taStars?.track(g.type);if(traces.length>2){for(const older of traces.slice(0,-2)){if(!older.clockDissolve){older.left=Math.min(older.left,1.85);older.total=3.1;older.retiring=true;}}}if(traces.length>6)traces.splice(0,traces.length-6);for(const other of traces){if(!completed&&!eclipseTap&&!soumatouTap&&other!==trace&&other.type!==trace.type)triggerCross(trace,other);}if(!completed&&!eclipseTap)for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/18)))spark(pts[i].x,pts[i].y,g.type,5);
  checkWords();
 } finally {window.__ta100Profile.end('makeTrace',__ta100Start)}
 }
@@ -15202,8 +15206,12 @@ window.taV54Report=function(){const p=window.__taV54Perf;return {
  const frameKey=()=>document.timeline&&document.timeline.currentTime!=null?document.timeline.currentTime:-1;
  const cacheRect=el=>{
   if(!el||Object.prototype.hasOwnProperty.call(el,'getBoundingClientRect'))return;
-  let k=null,e=-1,r=null;
-  el.getBoundingClientRect=function(){const rb=window.taRectBatch;if(rb&&rb.has(this))return rb.get(this);const kk=frameKey();if(r&&kk!==-1&&kk===k&&e===epoch&&this.isConnected)return r;r=native.call(this);k=kk;e=epoch;return r;};
+  // さらに、コマをまたいでも 250ms までは使い回す（重なった演出で毎コマのはじめに位置を読むと、そのたびに画面の再計算が起きていた）。
+  // 大きさが変わったとき（ResizeObserver）・画面の大きさやスクロールが変わったときは、すぐ読み直す
+  let k=null,e=-1,r=null,at=0;
+  try{new ResizeObserver(bump).observe(el);}catch(_){}
+  el.getBoundingClientRect=function(){const rb=window.taRectBatch;if(rb&&rb.has(this))return rb.get(this);const kk=frameKey(),now=performance.now();
+   if(r&&e===epoch&&this.isConnected&&((kk!==-1&&kk===k)||now-at<250))return r;r=native.call(this);k=kk;e=epoch;at=now;return r;};
  };
  const install=()=>{cacheRect(document.querySelector('#viewMain>.hero'));cacheRect(document.getElementById('drift'));};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
