@@ -3221,7 +3221,7 @@ header>.brand.ta-face-header::before{background-position:center,-118px center!im
     <picture class="ta-bg-picture b ta-sky-ruins" aria-hidden="true"><img src="../img/bg/green_meadow.webp" alt="" decoding="async"></picture>
     <picture class="ta-bg-picture b ta-stage08" aria-hidden="true"><img src="../img/bg/neon_city.webp" alt="" decoding="async"></picture>
     <picture class="ta-bg-picture b ta-stage09" aria-hidden="true"><img src="../img/bg/white_light_study.webp" alt="" decoding="async"></picture>
-    <picture class="ta-bg-picture b ta-stage10" aria-hidden="true"><img src="../img/bg/above_clouds.webp" alt="" decoding="async"></picture>
+    <picture class="ta-bg-picture b ta-stage10" aria-hidden="true"><img src="../img/bg/above_clouds.webp?v=20261127" alt="" decoding="async"></picture>
     <div class="ta-stage9-void" aria-hidden="true"></div>
     <!-- 髪だけを、ゆるやかな揺らぎで重ねてなびかせる -->
     <img class="w hair hair-w" src="../img/key-white.webp" alt="" aria-hidden="true">
@@ -5898,7 +5898,7 @@ function taStoryApply(resumeFromStop){
   if(taStory.pendingAnnounce){taStory.pendingAnnounce=false;if(lv<800)taStoryAnnounce();}
   if(lv>=100 && !taStoryApply.prewarmed){
     taStoryApply.prewarmed=true;
-    for(const name of ['bg/festival_night.webp','bg/wasteland_moon.webp','bg/red_sky_castle.webp','bg/green_meadow.webp','bg/neon_city.webp','bg/white_light_study.webp','bg/above_clouds.webp']){const im=new Image();im.decoding='async';im.src='../img/'+name;if(im.decode)im.decode().catch(()=>{});}
+    for(const name of ['bg/festival_night.webp','bg/wasteland_moon.webp','bg/red_sky_castle.webp','bg/green_meadow.webp','bg/neon_city.webp','bg/white_light_study.webp','bg/above_clouds.webp?v=20261127']){const im=new Image();im.decoding='async';im.src='../img/'+name;if(im.decode)im.decode().catch(()=>{});}
   }
   if(lv>=800)taNightStart();
 }
@@ -6107,7 +6107,7 @@ function bumpCombo(){
   if(combo===100){
     // Non-blocking image prewarm: these stages are far ahead; never stall collection.
     const mobile=window.matchMedia&&window.matchMedia('(max-width:600px)').matches;
-    const names=mobile?['bg/red_sky_castle.webp','bg/green_meadow.webp','bg/neon_city.webp','bg/white_light_study.webp','bg/above_clouds.webp']:['bg/red_sky_castle.webp','bg/green_meadow.webp','bg/neon_city.webp','bg/white_light_study.webp','bg/above_clouds.webp'];
+    const names=mobile?['bg/red_sky_castle.webp','bg/green_meadow.webp','bg/neon_city.webp','bg/white_light_study.webp','bg/above_clouds.webp?v=20261127']:['bg/red_sky_castle.webp','bg/green_meadow.webp','bg/neon_city.webp','bg/white_light_study.webp','bg/above_clouds.webp?v=20261127'];
     for(const name of names){const im=new Image();im.decoding='async';im.src='../img/'+name;if(im.decode)im.decode().catch(()=>{});}
   }
   // The previous offsetWidth read forced a full style/layout flush on EVERY
@@ -11736,7 +11736,7 @@ function taPrepareAudio(src){
 // 途中の章で初めて出る背景（第六章以降）、時が止まる反転、降る記憶の光、金属の言霊などを、読み込み中に一度描いておく
 async function taPrewarmHeavyFx(mobile){
   try{
-    const later=['bg/festival_night.webp','bg/wasteland_moon.webp','bg/red_sky_castle.webp','bg/green_meadow.webp','bg/neon_city.webp','bg/white_light_study.webp','bg/above_clouds.webp'].map(n=>taPreloadImage('../img/'+n));
+    const later=['bg/festival_night.webp','bg/wasteland_moon.webp','bg/red_sky_castle.webp','bg/green_meadow.webp','bg/neon_city.webp','bg/white_light_study.webp','bg/above_clouds.webp?v=20261127'].map(n=>taPreloadImage('../img/'+n));
     const hero=document.querySelector('#viewMain>.hero'),drift=document.getElementById('drift');
     const tmp=[];
     // 時止めの反転（backdrop-filter）を、ほぼ見えない小さな円で1回描かせる
