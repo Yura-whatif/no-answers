@@ -1220,6 +1220,10 @@ html.glow-moon .up-fly{color:#bcd0ff;text-shadow:0 0 8px rgba(160,190,255,.85);s
 .vx-flash{position:fixed;z-index:21;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;pointer-events:none;
   background:radial-gradient(circle,#fff 0,rgba(255,250,230,.95) 18%,rgba(255,226,160,.55) 42%,transparent 70%)}
 .vx-ring{position:fixed;z-index:21;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;pointer-events:none;border:2px solid rgba(255,244,214,.95);box-shadow:0 0 18px rgba(255,220,150,.8)}
+/* 爆弾発言の爆発：引き寄せの最後の爆発の赤版 */
+.vx-flash.ta-bomb-red{background:radial-gradient(circle,#fff4ec 0,rgba(255,170,130,.95) 16%,rgba(240,70,40,.62) 42%,rgba(190,20,10,.18) 60%,transparent 70%)}
+.vx-ring.ta-bomb-red{border-color:rgba(255,120,90,.95);box-shadow:0 0 18px rgba(255,60,30,.8),inset 0 0 10px rgba(255,170,130,.55)}
+.hero-flash.ta-bomb-red{background:radial-gradient(circle at var(--fx,50%) var(--fy,50%),rgba(255,236,226,.85),rgba(255,110,80,.5) 35%,rgba(200,30,20,.2) 70%,transparent 95%)}
 .vx-flash.gold{background:radial-gradient(circle,#fffbe8 0,rgba(255,222,140,.95) 20%,rgba(235,175,65,.6) 45%,transparent 70%)}
 .vx-ring.gold{border-color:rgba(225,170,70,.95);box-shadow:0 0 18px rgba(230,165,55,.85),inset 0 0 10px rgba(255,220,140,.6)}
 .hero-flash{position:absolute;inset:0;z-index:4;pointer-events:none;background:radial-gradient(circle at var(--fx,50%) var(--fy,50%),rgba(255,252,240,.95),rgba(255,236,190,.6) 40%,rgba(255,220,150,.25) 75%)}
@@ -3084,13 +3088,15 @@ html.glow-sun #taHud #taTimeBox::before {
 .ta-night-echo.approach .ta-night-echo-veil{opacity:0}
 .ta-night-dawn-canvas{position:absolute;left:0;top:0;z-index:97;pointer-events:none}
 /* All ripples share the exact centre of the small HUD text; no screen-traversing motion. */
-.ta-night-echo-seal{position:absolute;z-index:3;transform:translate(-50%,-50%);color:#f7fbff;font:600 15px/1.5 var(--mincho);letter-spacing:.12em;white-space:nowrap;opacity:0;text-shadow:0 0 7px #f5fbff,0 0 18px rgba(206,232,255,.65)}
-.ta-night-echo-seal::before,.ta-night-echo-seal::after{content:attr(data-night);position:absolute;inset:0;text-align:center;color:#e4f0ff;pointer-events:none;opacity:0}
+.ta-night-echo-seal{position:absolute;z-index:3;transform:translate(-50%,-50%);color:#f7fbff;font:600 15px/1.5 var(--mincho);letter-spacing:.12em;white-space:nowrap;opacity:0;text-shadow:0 0 7px #f5fbff,0 0 18px rgba(206,232,255,.65);will-change:transform,opacity}
+.ta-night-echo-seal::before,.ta-night-echo-seal::after{content:attr(data-night);position:absolute;inset:0;text-align:center;color:#e4f0ff;pointer-events:none;opacity:0;text-shadow:0 0 6px rgba(228,240,255,.9);will-change:transform,opacity}
 .ta-night-echo.approach .ta-night-echo-seal{animation:taNightSealConverge 1.65s cubic-bezier(.16,.55,.24,1) both}
 .ta-night-echo.approach .ta-night-echo-seal::before{animation:taNightSealTrail 1.65s .04s ease-out both}
 .ta-night-echo.approach .ta-night-echo-seal::after{animation:taNightSealTrail 1.65s .16s ease-out both}
-@keyframes taNightSealConverge{0%{opacity:0;filter:blur(7px);scale:3.4;text-shadow:0 0 6px #fff}20%{opacity:.56;filter:blur(2px)}70%{opacity:.88;filter:blur(0);scale:1.25}88%{opacity:1;scale:1;text-shadow:0 0 16px #fff,0 0 38px #c4e4ff}100%{opacity:1;scale:1;text-shadow:0 0 9px #fff,0 0 20px #c4e4ff}}
-@keyframes taNightSealTrail{0%{opacity:0;scale:4;filter:blur(3px)}28%{opacity:.35}82%{opacity:.22;scale:1.15;filter:blur(1px)}100%{opacity:0;scale:1;filter:blur(9px)}}
+/* 軽量化：にじみ（filter:blur）と光の強さ（text-shadow）を毎コマ描き直すと重かったので、動かすのは大きさと透明度だけにした。
+   にじんだ感じは、光をまとった文字を大きく拡大した状態から縮めることで出している（GPU が合成するだけなので軽い） */
+@keyframes taNightSealConverge{0%{opacity:0;scale:3.4}20%{opacity:.5}70%{opacity:.88;scale:1.25}88%{opacity:1;scale:1}100%{opacity:1;scale:1}}
+@keyframes taNightSealTrail{0%{opacity:0;scale:4}28%{opacity:.3}82%{opacity:.2;scale:1.15}100%{opacity:0;scale:1.6}}
 /* Crossfade the converged ripple directly into the permanent HUD lettering. */
 .ta-night-echo.approach.handoff .ta-night-echo-seal{animation:none!important;opacity:0!important;transition:opacity 320ms ease-out}
 .ta-night-echo.approach.handoff .ta-night-echo-seal::before,
@@ -3102,14 +3108,14 @@ html.glow-sun #taHud #taTimeBox::before {
 <style id="ta-night-lv-seal">
 /* 新しい夜の「加速 Lv」「得点 Lv」：第〇夜と少しずつずらして重ね、大きくにじんだ文字が元の表記の上へ収束してから光る */
 .ta-lv-seal{position:fixed;z-index:1200;transform:translate(-50%,-50%);color:#f7fbff;white-space:nowrap;pointer-events:none;opacity:0;
- text-shadow:0 0 6px #f5fbff,0 0 14px rgba(206,232,255,.7);animation:taLvSealIn 1.5s cubic-bezier(.16,.55,.24,1) both}
-.ta-lv-seal::before,.ta-lv-seal::after{content:attr(data-t);position:absolute;inset:0;text-align:center;color:#e4f0ff;opacity:0;animation:taNightSealTrail 1.5s .04s ease-out both}
+ text-shadow:0 0 6px #f5fbff,0 0 14px rgba(206,232,255,.7);will-change:transform,opacity;animation:taLvSealIn 1.5s cubic-bezier(.16,.55,.24,1) both}
+.ta-lv-seal::before,.ta-lv-seal::after{content:attr(data-t);position:absolute;inset:0;text-align:center;color:#e4f0ff;opacity:0;text-shadow:0 0 6px rgba(228,240,255,.9);will-change:transform,opacity;animation:taNightSealTrail 1.5s .04s ease-out both}
 .ta-lv-seal::after{animation-delay:.16s}
 .ta-lv-seal.out{animation:none;opacity:0;transition:opacity .45s ease-out}
 .ta-lv-seal.out::before,.ta-lv-seal.out::after{animation:none;opacity:0}
 /* 光らせている間も表記を消さない（光の演出は明るさだけで、もとの呼吸のアニメーションが外れると不透明度0に戻ってしまっていた） */
 #taAccelerationLabel.ta-night-hud-visible.ta-night-arrival-flash,#taScoreLevelLabel.ta-night-hud-visible.ta-night-arrival-flash{opacity:1!important}
-@keyframes taLvSealIn{0%{opacity:0;filter:blur(6px);scale:3.6}20%{opacity:.6;filter:blur(2px)}70%{opacity:.92;filter:blur(0);scale:1.22}88%{opacity:1;scale:1;text-shadow:0 0 12px #fff,0 0 28px #c4e4ff}100%{opacity:1;scale:1}}
+@keyframes taLvSealIn{0%{opacity:0;scale:3.6}20%{opacity:.6}70%{opacity:.92;scale:1.22}88%{opacity:1;scale:1}100%{opacity:1;scale:1}}
 </style>
 <style id="ta-night-continuity-fix">
 /* The chain badge retires before the night declaration and never flashes again on return. */
@@ -5167,6 +5173,9 @@ let nextMultiAt = Date.now() + 15000, forceMulti = false;
 let nextPullAt = Date.now() + 35000, forcePull = false;   // 引き寄せ：最短55秒おき（以前45秒）
 // 爆弾発言：触れると一拍おいて爆発し、引き寄せと同じ広さの言霊にダメージ2（金属の銀は砕け、金はひびが入る）。範囲内の爆弾発言は誘爆する
 let nextBombAt = Date.now() + 25000, forceBomb = false;   // 爆弾発言：最短25秒おき（引き寄せより出やすい）
+// 爆弾発言の出やすさ：第一〜四夜は8%・最短25秒おき。第五夜は16%・12秒おき。第六夜からは一夜ごとに +3%・1秒ずつ短く（第十夜 31%・7秒おき）
+function taBombChance(){const n=typeof taNightNumber==='number'?Math.min(taNightNumber,10):1;return n>=5?.16+.03*(n-5):.08;}
+function taBombGap(){const n=typeof taNightNumber==='number'?Math.min(taNightNumber,10):1;return n>=5?12000-1000*(n-5):25000;}
 let nextResoAt = Date.now() + 30000, forceReso = false;     // 「共鳴」（出たあとは45秒あける）     // 「引き寄せ」（出たあとは50秒あける）
 let nextGlowAt = Date.now() + 70000, forceGlow = false;
 const GLOW_POST_COOLDOWN = 3000;
@@ -7007,8 +7016,8 @@ function naturalSpawnPosition(){
 // 出現率：第三章から混ざり始め、章が進むほど増える（終盤で約3割）。章は夜ごとに第一章から。
 const TA_METAL_RATE=[0,0,.08,.12,.15,.18,.21,.24,.27,.3];
 let taMetalTestRate=null;   // テストモードの切替（null＝章連動、0＝なし、数値＝その割合で固定）
-// 第二夜以降はゆるやかに上乗せ（第二夜+4%、第三夜+8%、第四夜以降+12%）。上限40%。
-const TA_METAL_NIGHT_ADD=[0,0,.04,.08,.12];
+// 第二夜以降はゆるやかに上乗せ（第二夜+4%、第三夜+8%、第四夜+12%、第五夜からは一夜ごとに+3%で第十夜+30%）。上限は第四夜まで40%、第十夜で52%。
+const TA_METAL_NIGHT_ADD=[0,0,.04,.08,.12,.15,.18,.21,.24,.27,.30];   // 第五夜からも一夜ごとに +3%（第十夜 +30%）
 function taMetalGoldShare(){
  const c=taStory&&typeof taStory.chapter==='number'?taStoryChapterEq():0,n=typeof taNightNumber==='number'?taNightNumber:1;
  if(taMetalTestRate!=null&&taMetalTestRate>0)return .35;   // テストモードで出しているときは黒も混ぜて確かめられるように
@@ -7019,7 +7028,9 @@ function taMetalGoldShare(){
  return Math.min(.42,.20+.025*c);               // 第四夜以降：20% → 上限42%
 }
 function taMetalRate(){if(taMetalTestRate!=null)return taMetalTestRate;const c=taStory&&typeof taStory.chapter==='number'?taStoryChapterEq():0;const n=typeof taNightNumber==='number'?taNightNumber:1;
- return Math.min(.4,TA_METAL_RATE[Math.max(0,Math.min(TA_METAL_RATE.length-1,c))]+TA_METAL_NIGHT_ADD[Math.max(0,Math.min(TA_METAL_NIGHT_ADD.length-1,n))]);}
+
+ // 上限：第四夜までは40%、第五夜からは一夜ごとに +2%（第十夜で52%）
+ return Math.min(n>=5?.4+.02*(Math.min(n,10)-4):.4,TA_METAL_RATE[Math.max(0,Math.min(TA_METAL_RATE.length-1,c))]+TA_METAL_NIGHT_ADD[Math.max(0,Math.min(TA_METAL_NIGHT_ADD.length-1,n))]);}
 // プレイが終わってDEMOに戻るとき、残っている金属文字はふつうの言霊に戻す（DEMOには出さない）
 function taMetalClear(){document.querySelectorAll('#drift .word.ta-metal').forEach(w=>{w.classList.remove('ta-metal','ta-metal-gold','ta-metal-dmg','ta-metal-dmg2','ta-metal-frozen');delete w.dataset.metalHp;delete w.dataset.metalIce;});}
 const taMetalPendingFx=new Set();let taMetalTapHit=false;
@@ -7141,8 +7152,8 @@ const __ta100Start=window.__ta100Profile.start();try {
     for(let i=0;i<3;i++) setTimeout(()=>{ if(!flood && !shattering && !libOpen) spawnWord({force:true, plain:true}); }, 120 + i*160 + Math.random()*150); }   // 引き寄せと一緒に、吸い寄せる言葉を数個まいておく
   // 爆弾発言：金属文字が出る章から、まれに現れる（テストモードでは「爆弾発言出現」でいつでも出せる）
   const bomb = !opt.plain && !special && !odd && !multi && !pull && !flood && !sakuraOn && taRunning
-    && (forceBomb || (Date.now() > nextBombAt && taMetalRate() > 0 && Math.random() < (taNightNumber >= 5 ? .16 : .08)));   // 第五夜は最初から出やすい
-  if(bomb){ w.textContent = "爆弾発言"; w.dataset.word = "爆弾発言"; w.classList.add("bomb","ta-metal"); w.dataset.metalHp = "2"; w.style.setProperty("--ta-metal-delay", (-Math.random()*3.4).toFixed(2)+"s"); try{ sfx._bombLoad(); }catch(_){} forceBomb = false; nextBombAt = Date.now() + (taNightNumber >= 5 ? 12000 : 25000); w.setAttribute("aria-label", "爆弾発言（黒鉄の金属：2回当てると、まわりの言霊ごと爆発する）"); }
+    && (forceBomb || (Date.now() > nextBombAt && taMetalRate() > 0 && Math.random() < taBombChance()));   // 第五夜からは最初から出やすく、夜が進むほど増える
+  if(bomb){ w.textContent = "爆弾発言"; w.dataset.word = "爆弾発言"; w.classList.add("bomb","ta-metal"); w.dataset.metalHp = "2"; w.style.setProperty("--ta-metal-delay", (-Math.random()*3.4).toFixed(2)+"s"); try{ sfx._bombLoad(); }catch(_){} forceBomb = false; nextBombAt = Date.now() + taBombGap(); w.setAttribute("aria-label", "爆弾発言（黒鉄の金属：2回当てると、まわりの言霊ごと爆発する）"); }
   // 陽だまり（白）・月明かり（黒）：触れると、しばらく違和感が2倍
   // 懐中時計が近いとき（現れる20秒前から、漂っているあいだ）は、降る記憶・昇る想いが来やすい（待ち時間も短く）
   const preStop = Date.now() > nextSpecialAt - 20000 || !!field.querySelector(".word.special:not(.got)");
@@ -7521,14 +7532,19 @@ function taBombExplode(x, y, self, chained=false){
     if(!taRunning) return;
     // 音は、爆発の見た目を置いたあと、それが画面に出る直前のコマで鳴らす（重いときに音だけ先に出ないように）
     requestAnimationFrame(() => { if(taRunning) try{ sfx.bomb && sfx.bomb(); }catch(_){} });
-    // 爆発の見た目：白い閃光、衝撃の輪、飛び散る火花
-    const core = document.createElement("span"); core.className = "ta-bomb-core"; Object.assign(core.style,{left:(x-R*.8)+"px",top:(y-R*.8)+"px",width:(R*1.6)+"px",height:(R*1.6)+"px"}); document.body.append(core);
-    core.animate([{transform:"scale(.15)",opacity:1},{transform:"scale(1)",opacity:.85,offset:.3},{transform:"scale(1.15)",opacity:0}],{duration:460,easing:"cubic-bezier(.2,.7,.3,1)",fill:"forwards"}).onfinish=()=>core.remove();
-    const ring = document.createElement("span"); ring.className = "ta-bomb-ring"; Object.assign(ring.style,{left:(x-R)+"px",top:(y-R)+"px",width:(R*2)+"px",height:(R*2)+"px"}); document.body.append(ring);
-    ring.animate([{transform:"scale(.08)",opacity:1},{transform:"scale(1)",opacity:0}],{duration:520,easing:"cubic-bezier(.15,.75,.35,1)",fill:"forwards"}).onfinish=()=>ring.remove();
-    if(crowd) core.style.mixBlendMode = "normal";
-    const ring2 = crowd ? null : ring.cloneNode(); if(ring2){ ring2.style.borderWidth = "1px"; document.body.append(ring2); }
-    if(ring2) ring2.animate([{transform:"scale(.05)",opacity:.9},{transform:"scale(.78)",opacity:0}],{duration:420,delay:60,easing:"cubic-bezier(.15,.75,.35,1)",fill:"both"}).onfinish=()=>ring2.remove();
+    // 爆発の見た目：引き寄せの最後の爆発と同じ作り（中心から広がる光・2重の衝撃の輪・採集エリアを照らす光）を、赤で。
+    // 広がる大きさは爆発の範囲（R）に合わせる。誘爆が重なるときは、採集エリアを照らす光と2本目の輪を省く
+    {
+      const S = (R * 2) / 40;   // 40px の光を、範囲の直径まで広げる倍率
+      const f = document.createElement("span"); f.className = "vx-flash ta-bomb-red"; f.style.left = x + "px"; f.style.top = y + "px"; document.body.append(f);
+      f.animate([{transform:"scale(.6)", opacity:1},{transform:`scale(${(S*.85).toFixed(2)})`, opacity:.92, offset:.35},{transform:`scale(${(S*1.3).toFixed(2)})`, opacity:0}], {duration:820, easing:"cubic-bezier(.2,.7,.3,1)", fill:"forwards"}).onfinish = () => f.remove();
+      (crowd ? [0] : [0, 130]).forEach(d => { const r = document.createElement("span"); r.className = "vx-ring ta-bomb-red"; r.style.left = x + "px"; r.style.top = y + "px"; document.body.append(r);
+        r.animate([{transform:"scale(1)", opacity:1},{transform:`scale(${S.toFixed(2)})`, opacity:0}], {duration:760, delay:d, easing:"cubic-bezier(.2,.7,.3,1)", fill:"both"}).onfinish = () => r.remove(); });
+      const hero = document.querySelector("#viewMain>.hero");
+      if(hero && !crowd){ const h = hero.getBoundingClientRect(), hf = document.createElement("div"); hf.className = "hero-flash ta-bomb-red";
+        hf.style.setProperty("--fx", (x - h.left) + "px"); hf.style.setProperty("--fy", (y - h.top) + "px"); hero.append(hf);
+        hf.animate([{opacity:0},{opacity:.9, offset:.12},{opacity:0}], {duration:780, easing:"ease-out", fill:"forwards"}).onfinish = () => hf.remove(); }
+    }
     // 効果が続く1秒のあいだ、範囲の縁がほのかに燃えて残る
     const zone = document.createElement("span"); zone.className = "ta-bomb-zone"; Object.assign(zone.style,{left:(x-R)+"px",top:(y-R)+"px",width:(R*2)+"px",height:(R*2)+"px"}); document.body.append(zone);
     zone.animate([{opacity:0},{opacity:.8,offset:.15},{opacity:.55,offset:.7},{opacity:0}],{duration:LINGER+200,easing:"ease-out",fill:"forwards"}).onfinish=()=>zone.remove();
