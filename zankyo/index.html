@@ -3345,6 +3345,7 @@ header>.brand.ta-face-header::before{background-position:center,-118px center!im
       <button type="button" id="t-pages">頁追加</button>
       <button type="button" id="t-bomb">爆弾発言出現</button>
       <button type="button" id="t-boss">ボス出現</button>
+      <button type="button" id="t-endroll">エンドロール</button>
       <button type="button" id="t-night5">開始：第一夜</button>
       <button type="button" id="t-density">言霊:章連動</button>
       <button type="button" id="t-metal">金属:章連動</button>
@@ -5922,6 +5923,7 @@ function taStoryReset(){
   try{window.taMoon?.reset();window.taMoon?.update(false);}catch(_){}
 }
 // n頁を足す。章をまたいだら景色・BGMを進める（時止め中は、時が戻ったときにまとめて進める）。
+function taFinalNight(){return typeof taRunning!=='undefined'&&taRunning&&typeof taNightNumber==='number'&&taNightNumber>=10;}
 function taStoryAdd(n){
   if(!taRunning||!(n>0)||taTutOn())return;
   if(typeof taNightActive==='function'&&taNightActive())return;
@@ -5930,6 +5932,7 @@ function taStoryAdd(n){
   let advanced=false;
   while(taStory.chapter<taStoryChapters()&&taStory.inChapter>=taStoryStep(taStory.chapter)){
     taStory.inChapter-=taStoryStep(taStory.chapter);taStory.chapter++;advanced=true;
+    if(taFinalNight()&&taStory.chapter>=taStoryChapters())taStory.chapter=0;   // 第十夜は夜のボーナスへ行かず、第一章の景色へ戻ってくり返す
   }
   if(taStory.chapter>=taStoryChapters())taStory.inChapter=0;
   try{window.taMoon?.update(advanced);}catch(_){}
@@ -5952,7 +5955,7 @@ function taStoryApply(resumeFromStop){
   if((lv>=100||taNightNo>=5) && !taCenturyMusic.isActive() && !taSilverMusic.isActive())taCenturyMusic.start();
   // Sora Vatum：第五夜以降は夜のボーナスに入ったときから（第八・九章はその夜の曲のまま）。第一〜四夜は使わず、夜のボーナスまでその夜の曲を流し続ける
   if(lv>=800 && taNightNo>=5 && !taSilverMusic.isActive())taSilverMusic.start();
-  if(taStory.pendingAnnounce){taStory.pendingAnnounce=false;if(lv<800)taStoryAnnounce();}
+  if(taStory.pendingAnnounce){taStory.pendingAnnounce=false;if(lv<800&&!taFinalNight())taStoryAnnounce();}   // 第十夜は「第〇章」も黒帯も出さず、景色だけ替える
   if(lv>=100 && !taStoryApply.prewarmed){
     taStoryApply.prewarmed=true;
     for(const name of ['bg/festival_night.webp','bg/wasteland_moon.webp','bg/red_sky_castle.webp','bg/green_meadow.webp','bg/neon_city.webp','bg/white_light_study.webp','bg/above_clouds.webp?v=20261127']){const im=new Image();im.decoding='async';im.src='../img/'+name;if(im.decode)im.decode().catch(()=>{});}
@@ -6262,6 +6265,7 @@ function stopTap(w){
   if(w.classList.contains("got")) return; w.classList.add("got");
   bumpCombo(); // Time-stop word taps are intentionally silent.
   const g = yieldNow(), word = w.dataset.word || w.textContent, field = $("drift").getBoundingClientRect(), r = w.getBoundingClientRect();
+  try{window.taEndLog&&taEndLog.add(word,'');}catch(_){}
   const cx = r.left + r.width/2 - field.left, cy = r.top + r.height/2 - field.top;
   if(taStoryLevel()>=800)taCenturyDust.emit(r);   // 金の砂は夜のボーナスから
   // Time-stop: two halves are pulled in opposite random directions, stretched and torn apart.
@@ -7083,6 +7087,7 @@ function taMetalRate(){if(taMetalTestRate!=null)return taMetalTestRate;const c=t
 // 中央に漂い、一定間隔でまわりに言霊を生み出す。HP100。叩く・玉・奥義で削る（金属の言霊と同じ仕組みで当たる）。
 // HPの表示は採集エリアの上部。倒すと大きな光と輪で砕ける。
 let taBoss=null;   // {w, ui, fill, spawnTimer, watch, last, max, aura}
+let taEnding=false,taClearFin=false;   // ボスを倒してエンドロールへ向かう間：残り時間を止め、新しい言霊も出さない
 // ボスの紫の稲妻：言霊を生むときに、ボスから枝分かれした雷を伸ばす（黄玉の雷の描き方を参考に、紫で軽く）。
 // 採集エリアに重ねた1枚のキャンバスに描き、稲妻が残っている間だけ描き直す（ないときは何もしない）
 const taBossBolts=(()=>{
@@ -7112,7 +7117,7 @@ const taBossBolts=(()=>{
 })();
 // ボスの中心（画面の座標）：位置は --bx / --by（採集エリアに対する%）で決めている
 function taBossCenter(){const fr=$("drift").getBoundingClientRect();const bx=taBoss?taBoss.bx:50,by=taBoss?taBoss.by:44;return [fr.left+fr.width*bx/100,fr.top+fr.height*by/100];}
-function taBossSpawn(hp=100){
+function taBossSpawn(hp=1000){
   if(!taRunning||taBoss)return;
   const field=$("drift");const before=new Set(field.querySelectorAll('.word'));
   spawnWord({force:true,plain:true,boss:true,bossHp:hp});
@@ -7189,7 +7194,7 @@ function taBossRender(){
   if(hp<=0)taBossDefeat();
 }
 function taBossDefeat(){
-  if(!taBoss)return;const b=taBoss;taBoss=null;b.sheen&&setTimeout(()=>b.sheen.remove(),400);clearInterval(b.spawnTimer);clearInterval(b.watch);setTimeout(()=>taBossBolts.clear(),500);
+  if(!taBoss)return;const b=taBoss;taBoss=null;try{window.taEndLog&&taEndLog.add('答えはない','boss');}catch(_){}b.sheen&&setTimeout(()=>b.sheen.remove(),400);clearInterval(b.spawnTimer);clearInterval(b.watch);setTimeout(()=>taBossBolts.clear(),500);
   // 爆発の中心：ボスの定位置（倒した瞬間は言霊として回収が始まり、位置がずれるため、採集エリアから求める）
   const [cx,cy]=[fr0x(b),fr0y(b)];
   clearTimeout(b.warpTimer);
@@ -7204,6 +7209,15 @@ function taBossDefeat(){
   try{vortexFlash({getBoundingClientRect:()=>({left:cx,top:cy,width:0,height:0})});}catch(_){}
   for(const [d,sc,cls] of [[0,16,''],[120,22,' ta-bomb-red'],[260,28,'']]){const rg=document.createElement('span');rg.className='vx-ring'+cls;rg.style.left=cx+'px';rg.style.top=cy+'px';document.body.append(rg);
    rg.animate([{transform:'scale(1)',opacity:1},{transform:`scale(${sc})`,opacity:0}],{duration:1100,delay:d,easing:'cubic-bezier(.2,.7,.3,1)',fill:'both'}).onfinish=()=>rg.remove();}
+  // ボスを倒したら：残り時間を止め、言霊を出さず、撃破の演出が落ち着いたらエンドロールへ
+  if(typeof taRunning!=='undefined'&&taRunning){taEnding=true;
+   // 曲をフェードアウトして、撃破の音を聞かせる
+   try{taCenturyMusic.stop(false,2200);taSilverMusic.stop(false,2200);}catch(_){}
+   // 画面に残った言霊も、タップしたときのように一斉にほどけて消える（得点・音はなし）
+   try{document.querySelectorAll('#drift .word:not(.ta-boss)').forEach(w=>{if(w.dataset.taEnd)return;w.dataset.taEnd='1';w.style.pointerEvents='none';
+     const a=w.animate([{scale:1,opacity:1},{scale:1.18,opacity:.35,offset:.55},{scale:1.3,opacity:0}],{duration:620,delay:Math.random()*260,easing:'cubic-bezier(.2,.6,.3,1)',fill:'forwards'});
+     a.onfinish=()=>w.remove();});}catch(_){}
+   setTimeout(()=>{if(taRunning&&window.taEndRoll)taEndRoll.start({final:true});},4600);}
   const msg=document.createElement('div');msg.className='ta-boss-down';msg.textContent='答えはない、を越えた';document.querySelector('#viewMain>.hero')?.append(msg);
   msg.animate([{opacity:0,scale:1.4,filter:'blur(4px)'},{opacity:1,scale:1,filter:'blur(0)',offset:.25},{opacity:1,offset:.75},{opacity:0}],{duration:2600,easing:'ease-out',fill:'forwards'}).onfinish=()=>msg.remove();
   const fld=$("drift");fld.animate([{translate:'0 0'},{translate:'6px -4px'},{translate:'-5px 3px'},{translate:'2px -1px'},{translate:'0 0'}],{duration:420});
@@ -7292,7 +7306,7 @@ const TA_DENSITY_GAP=[1,.95,.9,.85,.8,.76,.72,.68,.64,.6];
 let taDensityFlat=false;   // テストモード：章による増加を切って、以前の量（5／6個）で比べる
 function taDensityChapter(){if(taDensityFlat||!taRunning)return 0;const c=taStory&&typeof taStory.chapter==='number'?taStoryChapterEq():0;return Math.max(0,Math.min(TA_DENSITY_GAP.length-1,c));}
 function spawnLoop(){
-  if(!flood&&!taNightActive()){
+  if(!flood&&!taNightActive()&&!taEnding){
     const field = $("drift");
     const count = field.querySelectorAll(".word:not(.got):not(.late):not(.sk-fall)").length;
     // Keep natural arrivals at 75% cadence during Sakura, independent of falling words.
@@ -7485,6 +7499,7 @@ const __ta100Start=window.__ta100Profile.start();try {
     const cm = nightResidual ? comboMult(combo) : bumpCombo(); if(cm>=100)window.taOrbDiag.mark("100+ hit");
     const g = isOdd ? ODD_PT : yieldNow() * cm;   // 時間停止中も連鎖倍率を引き継ぐ
     const wordText = w.dataset.word || w.textContent;
+    try{if(window.taEndLog&&!w.classList.contains('ta-boss'))taEndLog.add(wordText,w.classList.contains('bomb')?'bomb':w.classList.contains('ta-metal-gold')?'gold':w.classList.contains('ta-metal')?'metal':w.dataset.taTime==='1'?'blue':w.matches('.pull,.glow,.reso,.odd,.multi')?'special':'');}catch(_){}   // エンドロール用の記録
     const toPen = false;
     const taTime = w.dataset.taTime === "1";
     const fireScore = w.dataset.taFireScore === "1" && !taTime;
@@ -10565,7 +10580,8 @@ taTestNightLabel();
 $("t-night5").onclick=()=>{ const cur = window.taTestStartNight >= 5 ? window.taTestStartNight : 1; window.taTestStartNight = cur === 1 ? 5 : cur >= 10 ? 1 : cur + 1;
   try{ localStorage.setItem("taTestStartNight", String(window.taTestStartNight)); }catch(_){} taTestNightLabel();
   toast("次のプレイは第" + taTestKanji(window.taTestStartNight) + "夜" + (window.taTestStartNight > 1 ? "の第一章" : "") + "から始まります"); };
-$("t-boss").onclick=()=>{ if(typeof taBossSpawn==="function") taBossSpawn(100); };
+$("t-boss").onclick=()=>{ if(typeof taBossSpawn==="function") taBossSpawn(1000); };
+$("t-endroll").onclick=()=>{ if(window.taEndRoll) taEndRoll.start(); };
 $("t-density").onclick=()=>{taDensityFlat=!taDensityFlat;$("t-density").textContent=taDensityFlat?"言霊:以前の量":"言霊:章連動";toast(taDensityFlat?"言霊の量を以前の量（スマホ5／PC6）に固定しました":"言霊の量を章に合わせて増やします");};
 $("t-bomb").onclick=()=>{ if(!taRunning){toast("ゲーム中に押すと、爆弾発言が現れます");return;} if(taNightActive()){toast("いまは夜のボーナス中です");return;} if(flood||sakuraOn){toast("時間停止・桜吹雪のあいだは出せません");return;} forceBomb=true; spawnWord({force:true}); if(forceBomb){forceBomb=false;toast("いまは出せませんでした");} };
 $("t-pages").onclick=()=>{ if(!taRunning){toast("ゲーム中に押すと、今の章があと1頁になります");return;} if(taNightActive()){toast("いまは夜のボーナス中です");return;}
@@ -10770,6 +10786,7 @@ function taNightSpawnBlue(){
 function taNightCollectBlue(w){
  if(!['collect','interlude'].includes(taNightBonus.phase)||!w||!w.isConnected||w.dataset.taken)return;
  w.dataset.taken='1';w.classList.add('got');w.style.pointerEvents='none';
+ try{window.taEndLog&&taEndLog.add(w.dataset.word||w.textContent,'blue');}catch(_){}
  const r=w.getBoundingClientRect();
  // 「キン」は画面が完全に黒くなってから消した言霊だけ。黒に沈みきる前は通常のタッチ音にする
  try{const v=document.querySelector('#viewMain>.hero>.ta-stage9-void');const black=!v||+getComputedStyle(v).opacity>=.97;
@@ -11902,7 +11919,7 @@ function taFinish(manualExit=false){
   else{if(silverRanked)taCenturyMusic.stop(true);else taSilverMusic.stop(true);sfx.resultStop(true);}
   setTimeout(()=>{
     if(token!==taFinishToken)return;
-    flash.textContent='Time Over';flash.hidden=false;
+    flash.textContent=taClearFin?'Fin':'Time Over';flash.hidden=false;   // ボスを倒して終えたときは Fin
     void flash.offsetWidth;flash.classList.add('ta-end-active');
   },500);
   document.getElementById('taHud').classList.remove('ta-hud-reveal');
@@ -11933,7 +11950,7 @@ function taFinish(manualExit=false){
     if(qualified)document.getElementById('taResultClose').focus();
   },2450);
 }
-function taTick(now){if(!taRunning)return;const delta=Math.min(0.1,(now-taLast)/1000);taLast=now;if(typeof flood!=='undefined'&&!flood&&!window.taSoumatou?.active()&&!taNightActive()&&!taTutOn()){taSeconds-=delta*taNightTimeRate();}if(taSeconds<=0){taSeconds=0;taFinish();}taRender();if(taRunning)taRaf=requestAnimationFrame(taTick)}
+function taTick(now){if(!taRunning)return;const delta=Math.min(0.1,(now-taLast)/1000);taLast=now;if(typeof flood!=='undefined'&&!flood&&!window.taSoumatou?.active()&&!taNightActive()&&!taTutOn()&&!taEnding){taSeconds-=delta*taNightTimeRate();}if(taSeconds<=0){taSeconds=0;taFinish();}taRender();if(taRunning)taRaf=requestAnimationFrame(taTick)}
 // Android Chrome: prevent a downward field swipe from triggering pull-to-refresh.
 document.addEventListener('touchmove',e=>{
   if(!taRunning || !e.cancelable)return;
@@ -11974,7 +11991,7 @@ function taBeginReady(){
   if(quiet){
    try{sfx.toggle();}catch(_){}   // 練習の開始も、プレイ開始と同じ音
    document.getElementById('taLaunch').hidden=true;
-   taSeconds=60;taScore=0;taScoreReset();taSessionMaxCombo=0;taSessionTimeGain=0;taSessionRecordAt=null;
+   taSeconds=60;taScore=0;taScoreReset();taSessionMaxCombo=0;taSessionTimeGain=0;taSessionRecordAt=null;taEnding=false;taClearFin=false;try{window.taEndLog&&taEndLog.reset();}catch(_){}
    document.dispatchEvent(new Event('ta-item-reset'));
    taRender();cancelAnimationFrame(taRaf);taSyncDemo();
    const qt=taFinishToken;setTimeout(()=>{if(qt!==taFinishToken||!taStarting)return;taStarting=false;taRunning=true;document.dispatchEvent(new Event('ta-item-start-activate'));taUpdatePlay();taLast=performance.now();taRaf=requestAnimationFrame(taTick);},300);
@@ -15526,6 +15543,205 @@ window.taV54Report=function(){const p=window.__taV54Perf;return {
  setInterval(()=>{if(!raf&&now()>=0){idx=0;lastT=-1;raf=requestAnimationFrame(frame);}},500);
 })();
 </script>
+<style id="ta-endroll-style">
+/* エンドロール（試作）：全画面の重ね。背景は景色を第十夜から第一夜へさかのぼり、文字は1枚の巻物を動かすだけ（重いぼかしは使わない） */
+.ta-er{position:fixed;inset:0;z-index:20000;overflow:hidden;background:#000;color:#ece6d8;font-family:var(--mincho);opacity:0;transition:opacity .9s ease;touch-action:none;-webkit-user-select:none;user-select:none}
+.ta-er.on{opacity:1}
+.ta-er-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 2.6s ease;will-change:opacity,transform}
+.ta-er-bg.show{opacity:1}
+.ta-er-veil{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(4,5,12,.88) 0%,rgba(4,5,12,.5) 22%,rgba(4,5,12,.46) 78%,rgba(4,5,12,.9) 100%)}
+.ta-er-roll{position:absolute;left:0;right:0;top:0;padding:0 24px;text-align:center;will-change:transform}
+.ta-er-sec{margin:0 0 110px}
+.ta-er-h{font-size:11px;letter-spacing:.5em;color:rgba(220,212,195,.62);margin:0 0 26px;padding-left:.5em}
+.ta-er-t{font-size:20px;letter-spacing:.32em;color:#fff;margin:0 0 30px;padding-left:.32em;text-shadow:0 0 14px rgba(190,200,255,.45)}
+.ta-er-r{font-size:12px;letter-spacing:.2em;color:rgba(225,218,202,.72);margin:0 0 4px}
+.ta-er-n{font-size:17px;letter-spacing:.18em;color:#f4efe2;margin:0 0 26px;text-shadow:0 0 10px rgba(0,0,0,.6)}
+.ta-er-sub{font-size:11px;letter-spacing:.08em;color:rgba(225,218,202,.6)}
+.ta-er-song{font-size:13px;letter-spacing:.08em;color:rgba(240,234,220,.85);margin:0 0 7px;font-style:italic}
+.ta-er-words{position:relative}
+.ta-er-w{position:relative;display:block;width:max-content;max-width:86%;transform:translateX(-50%);font-size:16px;letter-spacing:.12em;color:#ece6d8;text-shadow:0 0 8px rgba(0,0,0,.7)}
+.ta-er-w.k-blue{color:#a9d6ff;text-shadow:0 0 10px rgba(90,170,255,.75)}
+.ta-er-w.k-metal{color:#dfe4ec;text-shadow:0 0 9px rgba(200,210,230,.6)}
+.ta-er-w.k-gold{color:#f4dc9a;text-shadow:0 0 10px rgba(240,200,110,.65)}
+.ta-er-w.k-bomb{color:#ffb2a2;text-shadow:0 0 10px rgba(255,110,90,.6)}
+.ta-er-w.k-special{color:#f7e9b8;text-shadow:0 0 12px rgba(255,220,140,.7)}
+.ta-er-w.k-boss{color:#efe6ff;text-shadow:0 0 10px rgba(180,140,255,.95),0 0 22px rgba(120,70,230,.6);font-size:19px}
+.ta-er-w.big{font-size:22px}
+.ta-er-rec{display:grid;grid-template-columns:auto auto;justify-content:center;gap:10px 22px;text-align:left;font-size:14px;letter-spacing:.12em}
+.ta-er-rec dt{color:rgba(225,218,202,.66);text-align:right}
+.ta-er-rec dd{margin:0;color:#f6f1e4}
+.ta-er-c{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-size:17px;line-height:2.2;letter-spacing:.22em;padding:0 20px;opacity:0;pointer-events:none;text-shadow:0 0 12px rgba(0,0,0,.8)}
+.ta-er-fin{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);display:flex;gap:.18em;font-size:30px;letter-spacing:0;pointer-events:none}
+.ta-er-ch{position:relative;display:inline-block;width:1.1em;height:1.3em}
+.ta-er-ch>span{position:absolute;inset:0;text-align:center;line-height:1.3em}
+.ta-er-ch .a{color:#efe6ff;text-shadow:0 0 12px rgba(170,120,255,.95),0 0 28px rgba(110,60,220,.7);opacity:0}
+.ta-er-ch .b{color:#fff;text-shadow:0 0 12px rgba(200,215,255,.8),0 0 30px rgba(140,170,255,.45);opacity:0}
+.ta-er-thanks{position:absolute;left:0;right:0;top:60%;text-align:center;font-size:14px;letter-spacing:.3em;opacity:0;pointer-events:none}
+.ta-er-hint{position:absolute;left:0;right:0;bottom:calc(34px + env(safe-area-inset-bottom));text-align:center;font-size:11px;letter-spacing:.3em;color:rgba(225,218,202,.55);opacity:0;pointer-events:none}
+.ta-er-skip{position:absolute;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));padding:7px 14px;border:1px solid rgba(225,218,202,.35);border-radius:999px;background:rgba(0,0,0,.35);color:rgba(235,228,212,.8);font:12px/1 var(--mincho);letter-spacing:.18em;z-index:2}
+.ta-er-fast{position:absolute;left:14px;bottom:calc(18px + env(safe-area-inset-bottom));font-size:11px;letter-spacing:.2em;color:rgba(235,228,212,.7);opacity:0;transition:opacity .2s}
+.ta-er.fast .ta-er-fast{opacity:1}
+</style>
+<script id="ta-endroll">
+// ── 拾った言霊の記録（エンドロールで流す）。1回のプレイごとに作り直す ──
+const taEndLog=(()=>{
+ let list=[],count=new Map(),total=0;
+ return {
+  add(text,kind){text=String(text||'').trim();if(!text)return;total++;count.set(text,(count.get(text)||0)+1);if(list.length<4000)list.push({t:text,k:kind||''});},
+  reset(){list=[];count=new Map();total=0;},
+  get list(){return list;},get total(){return total;},
+  top(){let best='',n=1;for(const [k,v] of count)if(v>n){n=v;best=k;}return best;}   // 2回以上拾った言葉だけ
+ };
+})();
+window.taEndLog=taEndLog;
+
+// ── エンドロール本体（試作：テストモードの「エンドロール」ボタンから） ──
+const taEndRoll=(()=>{
+ const BGS=['above_clouds.webp?v=20261127','white_light_study.webp','neon_city.webp','green_meadow.webp','wasteland_moon.webp','red_sky_castle.webp','festival_night.webp','sunset_castle.webp','dawn_castle.webp','meteor_night.webp','lantern_study.webp','night_study.webp'];
+ const SPEED=46;            // 巻物の速さ（px/秒）
+ const INTRO=9;             // 序の2行（約9秒）のあとに巻物が始まる
+ let root=null,running=false;
+ const el=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;};
+ const fmt=n=>Math.floor(Number(n)||0).toLocaleString('ja-JP');
+ const kanji=n=>typeof taNightKanji==='function'?taNightKanji(n):String(n);
+
+ // 流す言霊を選ぶ：拾った順に、同じ言葉は1回だけ。多いときは間引き、特別な言霊は残す（最大44語）
+ function pickWords(){
+  const seen=new Set(),uniq=[];
+  for(const e of taEndLog.list){if(seen.has(e.t))continue;seen.add(e.t);uniq.push(e);}
+  let src=uniq;
+  if(!src.length){   // まだ何も拾っていない（試作をすぐ流したとき）は、辞典から見本を並べる
+   const pool=[...(WORDS.white||[]),...(WORDS.black||[])];
+   src=[];for(let i=0;i<36&&pool.length;i++){const w=pool.splice(Math.floor(Math.random()*pool.length),1)[0];src.push({t:w,k:i%9===4?'blue':i%11===7?'metal':i%13===9?'gold':i%17===5?'bomb':''});}
+  }
+  const MAX=44;if(src.length<=MAX)return src;
+  const special=src.filter(e=>e.k&&e.k!=='blue'),rest=src.filter(e=>!(e.k&&e.k!=='blue'));
+  const keep=new Set(special.slice(0,14));const need=MAX-keep.size;
+  for(let i=0;i<need;i++)keep.add(rest[Math.floor(i*rest.length/need)]);
+  return src.filter(e=>keep.has(e));
+ }
+ function build(){
+  const roll=el('div','ta-er-roll');
+  // あなたの言霊
+  const s1=el('div','ta-er-sec');s1.append(el('div','ta-er-h','あなたが拾った言霊'));
+  const ws=el('div','ta-er-words');const top=taEndLog.top();
+  pickWords().forEach((e,i)=>{const w=el('span','ta-er-w'+(e.k?' k-'+e.k:'')+(e.t===top?' big':''),e.t);
+   w.style.left=(22+Math.random()*56).toFixed(1)+'%';w.style.marginTop=(i?14+Math.random()*26:0).toFixed(0)+'px';ws.append(w);});
+  s1.append(ws);roll.append(s1);
+  // 記録
+  const s2=el('div','ta-er-sec');s2.append(el('div','ta-er-h','記録'));
+  const dl=el('dl','ta-er-rec');
+  const night=typeof taNightNumber==='number'?taNightNumber:1,ch=typeof taStory!=='undefined'?Math.min(taStory.chapter+1,taStoryChapters()):1;
+  const rows=[['拾った言霊',fmt(taEndLog.total)],['最大連鎖',fmt(typeof taSessionMaxCombo!=='undefined'?taSessionMaxCombo:0)],['得点',fmt(typeof taScore!=='undefined'?taScore:0)]];
+  if(top)rows.push(['いちばん多く拾った言葉','「'+top+'」']);
+  for(const [a,b] of rows){dl.append(el('dt',null,a),el('dd',null,b));}
+  s2.append(dl);roll.append(s2);
+  // 制作
+  const s3=el('div','ta-er-sec');s3.append(el('div','ta-er-t','言葉の残響'));
+  {s3.append(el('div','ta-er-r','原案'));const gn=el('div','ta-er-n','ユラ「思考実験の記録」');gn.append(el('div','ta-er-sub','note.com/whatif_lab'));s3.append(gn);}
+  s3.append(el('div','ta-er-r','企画・制作'),el('div','ta-er-n','ユラ'));
+  s3.append(el('div','ta-er-r','音楽'));const mn=el('div','ta-er-n','ユラ');mn.append(el('div','ta-er-sub','Google Gemini にて制作'));mn.style.marginBottom='14px';s3.append(mn);
+  for(const t of ['Beneath the Granite Sky','Upon the Silent Threshold','Where the Pendulum Rests','Waltz for the Midnight Throne','Sora Vatum','Where the Map Ends',"Winter's Gentle Close"])s3.append(el('div','ta-er-song',t));
+  {const sp=el('div');sp.style.height='26px';s3.append(sp);}
+  s3.append(el('div','ta-er-r','背景画像'),el('div','ta-er-n','ユラ'));
+  s3.append(el('div','ta-er-r','効果音'),el('div','ta-er-n','ユラ'));
+  s3.append(el('div','ta-er-r','制作協力'),el('div','ta-er-n','Claude（Anthropic）'));
+  roll.append(s3);
+  return roll;
+ }
+ function start(opt={}){
+  if(running)return;running=true;const final=!!opt.final;let closing=false;
+  const wasRunning=typeof taRunning!=='undefined'&&taRunning;
+  // 試作：流している間は残り時間を止め、ゲームの曲を消す
+  const freezeSec=typeof taSeconds!=='undefined'?taSeconds:0;
+  const freeze=wasRunning&&!final?setInterval(()=>{try{taSeconds=freezeSec;}catch(_){}},200):0;
+  try{taCenturyMusic.stop(false,1200);taSilverMusic.stop(false,1200);}catch(_){}
+  root=el('div','ta-er');root.setAttribute('aria-label','エンドロール');if(final)root.style.transitionDuration='3.4s';   // ボスを倒したあとは、ゆっくり暗転する
+  const imgs=[el('img','ta-er-bg'),el('img','ta-er-bg')];imgs.forEach(i=>{i.alt='';i.decoding='async';root.append(i);});
+  root.append(el('div','ta-er-veil'));
+  const roll=build();root.append(roll);
+  const c1=el('div','ta-er-c','言葉は消えても、響きは残る。'),c2=el('div','ta-er-c','あなたが拾い集めた、\nいくつもの夜の言葉。');c2.style.whiteSpace='pre-line';
+  const c3=el('div','ta-er-c','夜は明け、\nまた夜がくる。');c3.style.whiteSpace='pre-line';
+  const c4=el('div','ta-er-c','答えは、まだない。\nけれど、問い続けた言葉は\nここに残っている。');c4.style.whiteSpace='pre-line';
+  root.append(c1,c2,c3,c4);
+  const fin=el('div','ta-er-fin');const A='答えはない',B='言葉の残響';const chars=[];
+  for(let i=0;i<5;i++){const ch=el('span','ta-er-ch');const a=el('span','a',A[i]),b=el('span','b',B[i]);ch.append(a,b);fin.append(ch);chars.push([a,b]);}
+  const thanks=el('div','ta-er-thanks','遊んでくれて、ありがとう。'),hint=el('div','ta-er-hint','タップで閉じる');
+  const skip=el('button','ta-er-skip','スキップ ▸▸');skip.type='button';const fastTag=el('div','ta-er-fast','▸▸ 早送り');
+  root.append(fin,thanks,hint,fastTag,skip);
+  document.body.append(root);
+  requestAnimationFrame(()=>root.classList.add('on'));
+  // 曲：Sora Vatum をゆっくり上げる
+  let music=null;
+  if(typeof sfx!=='undefined'&&sfx.on)setTimeout(()=>{if(!running||closing)return;music=new Audio('../audio/Sora_Vatum.mp3');music.volume=0;music.play().catch(()=>{});
+   const t0=performance.now();const up=()=>{if(!music)return;const k=Math.min(1,(performance.now()-t0)/3500);music.volume=.33*k;if(k<1)requestAnimationFrame(up);};requestAnimationFrame(up);},final?1800:0);
+  // 長さ：巻物の高さから決める
+  const H=innerHeight,RH=roll.offsetHeight,R=(RH+H)/SPEED,E=INTRO+R;
+  // 背景の切り替え時刻：序の始まりから巻物の終わりまでに12枚
+  const bgStep=(E-1)/(BGS.length-1);let bgIdx=-1,front=0;
+  const showBg=i=>{bgIdx=i;const img=imgs[front^1];img.onload=()=>{imgs[front].classList.remove('show');img.classList.add('show');front^=1;
+    img.animate([{transform:'scale(1.09)'},{transform:'scale(1)'}],{duration:bgStep*1600,easing:'linear',fill:'forwards'});};img.src='../img/bg/'+BGS[i];
+   const nx=BGS[i+1];if(nx){const p=new Image();p.src='../img/bg/'+nx;}};
+  // 文字のフェード（序・結び）：t の中で in→hold→out
+  const fades=[[c1,1,4.2],[c2,5,8.6],[c3,E+.6,E+4.4],[c4,E+5,E+10.4]];
+  const FIN=E+11;   // 「答えはない」が現れる
+  let t=final?-3.8:0,last=performance.now(),rate=1,finStage=0,ended=false;   // final：暗転が終わってから序の文字を出す
+  const fadeA=(x,a,b)=>{const k=t<a||t>b?0:Math.min(1,(t-a)/1,(b-t)/1);x.style.opacity=k.toFixed(3);};
+  const frame=now=>{
+   if(!running)return;
+   const dt=Math.min(.1,(now-last)/1000);last=now;t+=dt*rate;
+   const want=Math.max(0,Math.min(BGS.length-1,Math.floor(t/bgStep)));if(want!==bgIdx&&t>=0)showBg(want);   // final：真っ暗になってから景色を浮かべる
+   for(const [x,a,b] of fades)fadeA(x,a,b);
+   const y=H-(t-INTRO)*SPEED;roll.style.transform=`translateY(${(t<INTRO?H:y).toFixed(1)}px)`;
+   if(t>=E&&skip.isConnected){skip.remove();setFast(false);}
+   if(finStage===0&&t>=FIN){finStage=1;finale();}
+   requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+  // 最後：「答えはない」→ 1文字ずつ「言葉の残響」へ → ありがとう
+  function finale(){
+   chars.forEach(([a],i)=>a.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:1200,delay:i*120,easing:'ease-out',fill:'forwards'}));
+   setTimeout(()=>{if(!running)return;
+    chars.forEach(([a,b],i)=>{const d=i*260;
+     a.animate([{opacity:1,transform:'none',filter:'blur(0)'},{opacity:0,transform:'translateY(-14px) scale(1.15)',filter:'blur(4px)'}],{duration:1100,delay:d,easing:'ease-in',fill:'forwards'});
+     b.animate([{opacity:0,transform:'translateY(10px)',filter:'blur(4px)'},{opacity:1,transform:'none',filter:'blur(0)'}],{duration:1300,delay:d+500,easing:'ease-out',fill:'forwards'});});
+   },3000);
+   setTimeout(()=>{if(running)thanks.animate([{opacity:0},{opacity:1}],{duration:1800,fill:'forwards'});},6800);
+   setTimeout(()=>{if(!running)return;ended=true;hint.animate([{opacity:0},{opacity:1}],{duration:1200,fill:'forwards'});},9300);
+   setTimeout(()=>{if(music)fadeMusic(6000);},8000);
+  }
+  function fadeMusic(ms){const m=music;if(!m)return;const v0=m.volume,t0=performance.now();const st=()=>{const k=Math.min(1,(performance.now()-t0)/ms);m.volume=v0*(1-k);if(k<1)requestAnimationFrame(st);else{m.pause();m.removeAttribute('src');m.load();}};requestAnimationFrame(st);music=null;}
+  function setFast(on){rate=on?4:1;root.classList.toggle('fast',on);}
+  function close(){
+   if(closing)return;closing=true;fadeMusic(900);root.classList.remove('on');
+   setTimeout(()=>{running=false;root.remove();root=null;clearInterval(freeze);
+    if(final){try{if(typeof taRunning!=='undefined'&&taRunning){taClearFin=true;taFinish();}}catch(e){console.warn('ending finish',e);}taEnding=false;return;}   // ボスを倒したあとのエンドロール：閉じたらプレイを終えて記録へ
+    // 試作：ゲーム中に流したときは、その夜の曲を戻す
+    try{if(typeof taRunning!=='undefined'&&taRunning){if(taNightActive()&&taNightNumber>=5)taSilverMusic.start();else if(taStoryLevel()>=100||taNightNumber>=5)taCenturyMusic.start();}}catch(_){}
+   },950);
+  }
+  skip.addEventListener('pointerdown',e=>e.stopPropagation());
+  skip.addEventListener('click',e=>{e.stopPropagation();if(t<E)t=E;});
+  root.addEventListener('pointerdown',()=>{if(ended){close();return;}if(t<E)setFast(true);});
+  const off=()=>setFast(false);root.addEventListener('pointerup',off);root.addEventListener('pointercancel',off);root.addEventListener('pointerleave',off);
+ }
+ return {start,get running(){return running;}};
+})();
+window.taEndRoll=taEndRoll;
+// 第十夜：始まってから16秒（時止め・夜の演出中・画面を離れている間は数えない）でボス「答えはない」が現れる。1回のプレイで1度だけ
+(()=>{
+ let acc=0,spawned=false,last=performance.now();
+ setInterval(()=>{
+  const now=performance.now(),dt=Math.min(.5,(now-last)/1000);last=now;
+  const fin=typeof taFinalNight==='function'&&taFinalNight();
+  document.documentElement.classList.toggle('ta-final-night',fin);
+  if(!fin){acc=0;if(typeof taRunning==='undefined'||!taRunning)spawned=false;return;}
+  if(spawned||taBoss||taEnding||flood||document.hidden||(typeof taNightActive==='function'&&taNightActive())||(typeof taTutOn==='function'&&taTutOn()))return;
+  acc+=dt;
+  if(acc>=16){spawned=true;try{taBossSpawn(1000);}catch(e){console.warn('boss spawn',e);}}
+ },250);
+})();
+</script>
 <script id="ta-perf-frame-rect-cache">
 // 負荷対策：採集エリア（.hero と #drift）の位置は、同じコマの中では変わらない。
 // 毎コマ何度も読まれるため、同じコマの中では最初に読んだ値を使い回す（画面の大きさやスクロールが変われば読み直す）。
@@ -15646,6 +15862,7 @@ header>.brand.ta-face-header.ta-yura-bright{animation:taYuraHalo 1.9s ease-out b
 /* 物語の月：もとは★が並んでいた右下に置く。章ごとに新月から満ちていき、満月で次の章へ */
 #viewMain>.hero .ta-moon{position:absolute;right:12px;bottom:10px;z-index:186;width:44px;height:44px;pointer-events:none;opacity:0;transition:opacity .6s ease}
 html.ta-active-moon #viewMain>.hero .ta-moon{opacity:1}
+html.ta-active-moon.ta-final-night #viewMain>.hero .ta-moon{opacity:0!important;visibility:hidden}   /* 第十夜は右下の月を出さない */
 #viewMain>.hero .ta-moon svg{width:100%;height:100%;overflow:visible;display:block}
 #viewMain>.hero .ta-moon .halo{transition:opacity .5s ease}
 /* 完成が近づくと、ゆっくり明るく点滅する */
